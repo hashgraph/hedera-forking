@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.9;
 
-import '@hedera/contracts/system-contracts/HederaResponseCodes.sol';
-import '@hedera/contracts/system-contracts/hedera-token-service/KeyHelper.sol';
-import {IHederaTokenService} from '@hedera/contracts/system-contracts/hedera-token-service/IHederaTokenService.sol';
-import '@hedera/contracts/base/NoDelegateCall.sol';
-import '@hedera/contracts/libraries/Constants.sol';
-
-// import './IHtsPrecompileMock.sol';
-import './HederaTokenValidation.sol';
-import './TokenProxy.sol';
-
 import {console} from "forge-std/Test.sol";
+
+import {HederaResponseCodes} from '@hedera/system-contracts/HederaResponseCodes.sol';
+import {KeyHelper} from '@hedera/system-contracts/hedera-token-service/KeyHelper.sol';
+import {IHederaTokenService} from '@hedera/system-contracts/hedera-token-service/IHederaTokenService.sol';
+import {NoDelegateCall} from '@hedera/base/NoDelegateCall.sol';
+import {Constants} from '@hedera/libraries/Constants.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+
+import {HederaTokenValidation} from './HederaTokenValidation.sol';
+import {TokenProxy} from './TokenProxy.sol';
 
 contract HtsSystemContract is NoDelegateCall, KeyHelper {
 

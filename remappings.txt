@@ -1,2 +1,2 @@
 @openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
-@hedera/contracts/=lib/hedera-smart-contracts/contracts/
+@hedera/=lib/hedera-smart-contracts/contracts/
