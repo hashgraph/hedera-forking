@@ -4,3 +4,6 @@
 [submodule "lib/openzeppelin-contracts"]
 	path = lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "launch-token"]
+	path = launch-token
+	url = https://github.com/defigirlxo/My-First-Crypto.git
