@@ -1,67 +1,36 @@
-# hedera-forking
-## Foundry
-
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
-
-Foundry consists of:
-
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
-
-## Documentation
-
-https://book.getfoundry.sh/
+# Hedera Fork Testing Support
 
 ## Usage
 
 ### Build
 
-```shell
-$ forge build
+To compile the contracts
+
+```console
+forge build
 ```
 
 ### Test
 
-```shell
-$ forge test
+Given we are interested in analyze Solidity traces, we can use the `forge` flag `-vvvv` to display them.
+It is useful to filter to a specific test file, for example
+
+```console
+forge test --match-contract USDCTest -vvvv
 ```
 
-### Format
+## Use Cases
 
-```shell
-$ forge fmt
-```
+create token using launch-token
 
-### Gas Snapshots
+# Token bytecode
 
-```shell
-$ forge snapshot
-```
+https://hips.hedera.com/hip/hip-719#specification
 
-### Anvil
+https://github.com/hashgraph/hedera-services/blob/fbac99e75c27bf9c70ebc78c5de94a9109ab1851/hedera-node/hedera-smart-contract-service-impl/src/main/java/com/hedera/node/app/service/contract/impl/state/DispatchingEvmFrameState.java#L96
 
-```shell
-$ anvil
-```
+another alternative could be something like
+https://book.getfoundry.sh/cheatcodes/etch
+https://book.getfoundry.sh/reference/forge-std/deployCodeTo
 
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+The `launch-token` is used to deploy new Tokens using HTS to `testnet`.
