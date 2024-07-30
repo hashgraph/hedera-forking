@@ -2,9 +2,9 @@
 pragma solidity >=0.5.0 <0.9.0;
 pragma experimental ABIEncoderV2;
 
-import "../user/HederaTokenService.sol";
-import "./ExpiryHelper.sol";
-import "./KeyHelper.sol";
+import 'hedera-smart-contracts/system-contracts/hedera-token-service/HederaTokenService.sol';
+import '@hedera/contracts/system-contracts/hedera-token-service/ExpiryHelper.sol';
+import '@hedera/contracts/system-contracts/hedera-token-service/KeyHelper.sol';
 
 contract TokenCreateContract is HederaTokenService, ExpiryHelper, KeyHelper {
 

@@ -4,7 +4,7 @@ pragma solidity ^0.8.17;
 import {Test, Vm, console} from "forge-std/Test.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import {TokenCreateContract} from "../src/wrap/TokenCreateContract.sol";
+import {TokenCreateContract} from "../src/TokenCreateContract.sol";
 
 contract TokenTest is Test {
     /**
@@ -14,7 +14,7 @@ contract TokenTest is Test {
 
     function setUp() external {
         // To be returned by the Relay
-        deployCodeTo("HtsSystemContractMock.sol", address(0x167));
+        deployCodeTo("HtsSystemContract.sol", address(0x167));
     }
 
     function test_DeployWrapAndCreateToken() external {

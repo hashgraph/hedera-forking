@@ -29,7 +29,7 @@ contract USDCTest is Test {
 
     function setUp() external {
         // To be returned by the Relay
-        deployCodeTo("HtsSystemContractMock.sol", address(0x167));
+        deployCodeTo("HtsSystemContract.sol", address(0x167));
         deployCodeTo("TokenProxy.sol", USDC);
 
         alice = makeAddr("alice");

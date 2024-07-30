@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.6.12;
+// pragma solidity 0.6.12;
+pragma solidity ^0.8.9;
 
 import {console} from "forge-std/Test.sol";
-import {IHTS} from "./lib/IHTS.sol";
 
 contract TokenProxy {
  fallback() external payable {
      address precompileAddress = address(0x167);
-        // console.log("pre is %s", precompileAddress);
-        // console.logBytes(msg.data);
-        // IHTS(precompileAddress).redirectForToken(0xfefeFEFeFEFEFEFEFeFefefefefeFEfEfefefEfe, msg.data);
      assembly {
          mstore(0, 0x618dc65eFEFEFEFEFEFEFEFEFEFEFEFEFEFEFEFEFEFEFEFE)
          calldatacopy(32, 0, calldatasize())
