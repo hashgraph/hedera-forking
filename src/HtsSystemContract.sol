@@ -17,6 +17,13 @@ contract HtsSystemContract is NoDelegateCall, KeyHelper {
 
     error HtsPrecompileError(int64 responseCode);
 
+    uint private _slot0;
+    uint private _slot1;
+    uint private _slot2;
+    uint private _slot3;
+    uint private _slot4;
+    uint private _slot5;
+
     /// @dev only for Fungible tokens
     // Fungible token -> FungibleTokenInfo
     mapping(address => IHederaTokenService.FungibleTokenInfo) internal _fungibleTokenInfos;
@@ -1872,13 +1879,14 @@ contract HtsSystemContract is NoDelegateCall, KeyHelper {
     }
 
     // TODO
-    function redirectForToken(address token, bytes memory encodedFunctionSelector) internal view returns (bytes memory) {
+    function __redirectForToken(address token, bytes memory encodedFunctionSelector) internal view returns (bytes memory) {
+        uint selector = uint32(bytes4(msg.data[24:28]));
 
-        // console.logBytes(msg.data);
-        console.log("token is %s", token);
+        console.logBytes(msg.data[24:28]);
+        console.log("Token %s, encodedFunctionSelector %s", token, selector);
         // return (HederaResponseCodes.SUCCESS, abi.encode(uint256(0x1)));
         // return (HederaResponseCodes.SUCCESS, bytes(""));
-        return abi.encode(0x42);
+        return abi.encode(0x43 + _slot5 + _slot3);
         // return bytes("A");
     }
 
@@ -1889,8 +1897,7 @@ contract HtsSystemContract is NoDelegateCall, KeyHelper {
         console.log("HTS fallback selector %s %s", selector, token);
         console.logBytes(args);
         if (selector == 0x618dc65e) {
-            console.log("selector found, calling redirect");
-            return redirectForToken(token, args);
+            return __redirectForToken(token, args);
         }
     }
 
