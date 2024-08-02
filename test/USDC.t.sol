@@ -28,9 +28,12 @@ contract USDCTest is Test {
     address alice;
 
     function setUp() external {
-        // To be returned by the Relay
-        deployCodeTo("HtsSystemContract.sol", address(0x167));
-        deployCodeTo("TokenProxy.sol", USDC);
+        if (address(0x167).code.length == 0) {
+            console.log("HTS code empty, deploying HTS locally to `0x167`");
+            deployCodeTo("HtsSystemContract.sol", address(0x167));
+            deployCodeTo("TokenProxy.sol", USDC);
+        } else
+            console.log("HTS code coming from fork (%d bytes), skip local deployment", address(0x167).code.length);
 
         alice = makeAddr("alice");
 
