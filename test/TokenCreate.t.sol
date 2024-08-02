@@ -3,10 +3,9 @@ pragma solidity ^0.8.17;
 
 import {Test, Vm, console} from "forge-std/Test.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {TokenCreateContract} from '@hedera/system-contracts/hedera-token-service/examples/token-create/TokenCreateContract.sol';
 
-import {TokenCreateContract} from "../src/TokenCreateContract.sol";
-
-contract TokenTest is Test {
+contract TokenCreateTest is Test {
     /**
      * https://hashscan.io/testnet/token/0.0.4630846
      */
