@@ -23,27 +23,35 @@ contract USDCTest is Test {
      * https://hashscan.io/testnet/token/0.0.429274
      */
     address USDC_testnet = 0x0000000000000000000000000000000000068cDa;
-
     address USDC = USDC_testnet;
-    address alice;
 
     function setUp() external {
-        if (address(0x167).code.length == 0) {
-            console.log("HTS code empty, deploying HTS locally to `0x167`");
+        if (address(0x167).code.length <= 1) {
+            console.log("HTS code empty or `0xfe`, deploying HTS locally to `0x167`");
             deployCodeTo("HtsSystemContract.sol", address(0x167));
             deployCodeTo("TokenProxy.sol", USDC);
         } else
             console.log("HTS code coming from fork (%d bytes), skip local deployment", address(0x167).code.length);
 
-        alice = makeAddr("alice");
-
-        deal(alice, 100 * 10e8);
-        // deal(USDC, alice, 1000 * 10e8);
+        vm.allowCheatcodes(USDC);
     }
 
-    function test_UserBalance() external view {
-        uint256 userBalance = IERC20(USDC).balanceOf(alice);
-        console.log("alice balance %s", userBalance);
-        // assertEq(userBalance, 1000 * 10e8);
+    function test_ERC20_balanceOf_dealt() external {
+        address alice = makeAddr("alice");
+
+        deal(alice, 100 * 10e8);
+        deal(USDC, alice, 1000 * 10e8);
+
+        uint256 balance = IERC20(USDC).balanceOf(alice);
+        console.log("alice's balance %s", balance);
+        assertEq(balance, 1000 * 10e8);
+    }
+
+    function test_ERC20_balanceOf_call() view external {
+        address alice = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
+
+        uint256 balance = IERC20(USDC).balanceOf(alice);
+        console.log("alice's balance %s", balance);
+        assertEq(balance, 49300000);
     }
 }

@@ -2,6 +2,7 @@
 pragma solidity ^0.8.9;
 
 import {console} from "forge-std/Test.sol";
+import {Vm} from "forge-std/Vm.sol";
 
 import {HederaResponseCodes} from '@hedera/system-contracts/HederaResponseCodes.sol';
 import {IHederaTokenService} from '@hedera/system-contracts/hedera-token-service/IHederaTokenService.sol';
@@ -1878,24 +1879,29 @@ contract HtsSystemContract is NoDelegateCall, KeyHelper {
         }
     }
 
-    // TODO
-    function __redirectForToken(address token, bytes memory encodedFunctionSelector) internal view returns (bytes memory) {
+    function __redirectForToken(address token, bytes memory encodedFunctionSelector) internal returns (bytes memory) {
+        address VM_ADDRESS = address(uint160(uint256(keccak256("hevm cheat code"))));
+        Vm vm = Vm(VM_ADDRESS);
+
         uint selector = uint32(bytes4(msg.data[24:28]));
 
-        console.logBytes(msg.data[24:28]);
-        console.log("Token %s, encodedFunctionSelector %s", token, selector);
-        // return (HederaResponseCodes.SUCCESS, abi.encode(uint256(0x1)));
+        // console.logBytes(msg.data[24:28]);
+        console.log("HTS fallback redirectForToken, Token %s, encodedFunctionSelector %s", token, selector);
+
+        string memory json = string.concat('[{"to":"', vm.toString(token), '", "data":"', vm.toString(encodedFunctionSelector),'"}, ', '"latest"]');
+        console.log("JSON-RPC request: %s", json);
+        bytes memory result = vm.rpc("eth_call", json);
+        console.logBytes(result);
+
         // return (HederaResponseCodes.SUCCESS, bytes(""));
-        return abi.encode(0x43 + _slot5 + _slot3);
-        // return bytes("A");
+        return abi.encode(_slot5 | uint256(bytes32(result)));
     }
 
     fallback(bytes calldata) external returns (bytes memory) {
         uint selector = uint32(bytes4(msg.data[0:4]));
         address token = address(bytes20(msg.data[4:24]));
         bytes memory args = msg.data[24:];
-        console.log("HTS fallback selector %s %s", selector, token);
-        console.logBytes(args);
+        // console.logBytes(args);
         if (selector == 0x618dc65e) {
             return __redirectForToken(token, args);
         }
