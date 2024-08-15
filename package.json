@@ -1,0 +1,13 @@
+{
+  "name": "hedera-forking",
+  "version": "0.0.1",
+  "description": "Hedera HTS Forking Support",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "format": "npx prettier out/HtsSystemContract.sol/HtsSystemContract.json --write",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}
