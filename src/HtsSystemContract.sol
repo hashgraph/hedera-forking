@@ -10,6 +10,7 @@ import {KeyHelper} from '@hedera/system-contracts/hedera-token-service/KeyHelper
 import {NoDelegateCall} from '@hedera/base/NoDelegateCall.sol';
 import {Constants} from '@hedera/libraries/Constants.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {IERC20Metadata} from '@openzeppelin/contracts/token/ERC20/extensions/ERC20Metadata.sol';
 
 import {HederaTokenValidation} from './HederaTokenValidation.sol';
 import {TokenProxy} from './TokenProxy.sol';
@@ -18,11 +19,6 @@ contract HtsSystemContract is NoDelegateCall, KeyHelper {
 
     error HtsPrecompileError(int64 responseCode);
 
-    uint private _slot0;
-    uint private _slot1;
-    uint private _slot2;
-    uint private _slot3;
-    uint private _slot4;
     uint private _slot5;
 
     /// @dev only for Fungible tokens
@@ -52,6 +48,11 @@ contract HtsSystemContract is NoDelegateCall, KeyHelper {
     mapping(address => bool) internal _tokenDeleted;
     // HTS token -> paused
     mapping(address => HederaTokenValidation.TokenConfig) internal _tokenPaused;
+
+    // State Simulation
+    uint256 private total_supply;
+
+    uint256 private decimals;
 
     // - - - - - - EVENTS - - - - - -
 
@@ -1879,11 +1880,23 @@ contract HtsSystemContract is NoDelegateCall, KeyHelper {
         }
     }
 
+    function __name() private returns (string) {
+        return _name;
+    }
+
     function __redirectForToken(address token, bytes memory encodedFunctionSelector) internal returns (bytes memory) {
+        // HtsSystemContract.wi
         address VM_ADDRESS = address(uint160(uint256(keccak256("hevm cheat code"))));
         Vm vm = Vm(VM_ADDRESS);
 
         uint selector = uint32(bytes4(msg.data[24:28]));
+
+        if (selector == IERC20Metadata.name.selector) {
+            return __name();
+            //...
+        } else if (selecton == IERC20Metadata.decimals.selector) {
+            //...
+        }
 
         // console.logBytes(msg.data[24:28]);
         console.log("HTS fallback redirectForToken, Token %s, encodedFunctionSelector %s", token, selector);
@@ -1900,6 +1913,7 @@ contract HtsSystemContract is NoDelegateCall, KeyHelper {
     fallback(bytes calldata) external returns (bytes memory) {
         uint selector = uint32(bytes4(msg.data[0:4]));
         address token = address(bytes20(msg.data[4:24]));
+        console.log("%s this", address(this));
         bytes memory args = msg.data[24:];
         // console.logBytes(args);
         if (selector == 0x618dc65e) {

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.17;
 
 import {Test, Vm, console} from "forge-std/Test.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 /**
  * Test using USDC, an already existing HTS Token.
@@ -15,6 +15,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  * https://mainnet.mirrornode.hedera.com/api/v1/tokens/0.0.456858/balances?account.id=0.0.38047
  */
 contract USDCTest is Test {
+
     /**
      * https://hashscan.io/mainnet/token/0.0.456858
      */
@@ -36,21 +37,35 @@ contract USDCTest is Test {
         vm.allowCheatcodes(USDC);
     }
 
+    function test_ERC20_totalSupply() view external {
+        assertEq(IERC20Metadata(USDC).totalSupply(), 49300000);
+    }
+
+    function test_ERC20_decimals() view external {
+        assertEq(IERC20Metadata(USDC).decimals(), 6);
+    }
+
     function test_ERC20_balanceOf_dealt() external {
         address alice = makeAddr("alice");
+        address bob = makeAddr("bob");
+
+        // assertEq(IERC20(USDC).balanceOf(bob), 0);
 
         deal(alice, 100 * 10e8);
         deal(USDC, alice, 1000 * 10e8);
 
-        uint256 balance = IERC20(USDC).balanceOf(alice);
+        uint256 balance = IERC20Metadata(USDC).balanceOf(alice);
         console.log("alice's balance %s", balance);
         assertEq(balance, 1000 * 10e8);
+
+        // Bob's balance should remain unchanged
+        // assertEq(IERC20(USDC).balanceOf(bob), 0);
     }
 
     function test_ERC20_balanceOf_call() view external {
         address alice = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
 
-        uint256 balance = IERC20(USDC).balanceOf(alice);
+        uint256 balance = IERC20Metadata(USDC).balanceOf(alice);
         console.log("alice's balance %s", balance);
         assertEq(balance, 49300000);
     }
