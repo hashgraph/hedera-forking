@@ -30,7 +30,6 @@ contract USDCTest is Test {
         if (address(0x167).code.length <= 1) {
             console.log("HTS code empty or `0xfe`, deploying HTS locally to `0x167`");
             deployCodeTo("HtsSystemContract.sol", address(0x167));
-            deployCodeTo("TokenProxy.sol", USDC);
         } else
             console.log("HTS code coming from fork (%d bytes), skip local deployment", address(0x167).code.length);
 
