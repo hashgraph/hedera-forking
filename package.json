@@ -2,12 +2,18 @@
   "name": "@hashgraph/hedera-forking",
   "version": "0.0.1",
   "description": "Hedera HTS Forking Support",
-  "main": "index.js",
+  "main": "./index.js",
   "types": "index.d.ts",
+  "exports": "./index.js",
   "scripts": {
-    "format": "npx prettier out/HtsSystemContract.sol/HtsSystemContract.json --write",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "format": "prettier out/HtsSystemContract.sol/HtsSystemContract.json --write",
+    "test": "mocha"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "chai": "^4.0.0",
+    "mocha": "^10.7.3",
+    "prettier": "^3.3.3"
+  }
 }
