@@ -6,6 +6,7 @@ export function getHtsCode(): string;
 
 /**
  * 
+ * @param address 
  * @param slot 
  */
-export function getFieldAt(slot: any): string;
+export function getHtsStorageAt(address: string, slot: string): string;
