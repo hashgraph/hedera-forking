@@ -27,13 +27,7 @@ contract USDCTest is Test {
     address USDC = USDC_testnet;
 
     function setUp() external {
-        if (address(0x167).code.length <= 1) {
-            console.log("HTS code empty or `0xfe`, deploying HTS locally to `0x167`");
-            deployCodeTo("HtsSystemContract.sol", address(0x167));
-        } else
-            console.log("HTS code coming from fork (%d bytes), skip local deployment", address(0x167).code.length);
-
-        vm.allowCheatcodes(USDC);
+        console.log("HTS code has %d bytes", address(0x167).code.length);
     }
 
     function test_ERC20_totalSupply() view external {
