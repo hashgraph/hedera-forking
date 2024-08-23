@@ -1,4 +1,12 @@
-const hts = require("./out/HtsSystemContract.sol/HtsSystemContract.json");
+const { keccak256 } = require('ethers');
+
+const hts = require('./out/HtsSystemContract.sol/HtsSystemContract.json');
+
+/**
+ * Represents a slot entry in `storageLayout.storage`.
+ * 
+ * @typedef {{ slot: string, offset: number, type: string, label: string }} StorageSlot 
+ */
 
 let slotMap = undefined;
 
@@ -12,11 +20,25 @@ const ZERO_HEX_32_BYTE = '0x0000000000000000000000000000000000000000000000000000
  */
 const LONG_ZERO_PREFIX = '0x000000000000';
 
+
 /**
  * @param {string} value 
  * @returns {string}
  */
 const toIntHex256 = value => parseInt(value).toString(16).padStart(64, '0');
+
+/**
+ * 
+ * @param {string} camelCase 
+ * @returns {string}
+ */
+const toSnakeCase = camelCase => camelCase.replace(/([A-Z])/g, '_$1').toLowerCase();
+
+/**
+ * @param {import('pino').Logger} logger 
+ * @param {string} msg 
+ */
+const trace = (logger, msg) => logger.trace('(hedera-forking) ' + msg);
 
 /**
  * 
@@ -30,7 +52,7 @@ function initSlotMap(logger, requestIdPrefix) {
             slotMap.set(BigInt(field.slot), field);
         }
 
-        logger.trace(`${requestIdPrefix} Storage Layout Slot map initialized`);
+        trace(logger, `${requestIdPrefix} Storage Layout Slot map initialized`);
     }
 };
 
@@ -42,24 +64,33 @@ module.exports = {
     /**
      * 
      * @param {string} address 
-     * @param {string} slot 
+     * @param {string} requestedSlot 
      * @param {import(".").IMirrorNodeClient} mirrorNodeClient 
      * @param {import("pino").Logger=} logger 
      * @param {string=} requestIdPrefix
      * @returns {Promise<string | null>}
      */
-    async getHtsStorageAt(address, slot, mirrorNodeClient, logger = { trace: () => undefined }, requestIdPrefix) {
+    async getHtsStorageAt(address, requestedSlot, mirrorNodeClient, logger = { trace: () => undefined }, requestIdPrefix) {
         initSlotMap(logger, requestIdPrefix);
 
         if (!address.startsWith(LONG_ZERO_PREFIX)) {
-            logger.trace(`${address} does not start with ${LONG_ZERO_PREFIX}, bail`);
+            trace(logger, `${address} does not start with ${LONG_ZERO_PREFIX}, bail`);
             return null;
         }
 
-        logger.trace(`convert ddress ${address} to tokenId`);
         const tokenId = `0.0.${parseInt(address, 16)}`;
+        trace(logger, `Getting storage for ${address} (tokenId=${tokenId}) at slot=${requestedSlot}`);
 
-        const field = slotMap.get(BigInt(slot));
+        const nrequestedSlot = BigInt(requestedSlot);
+
+        const keccakedSlot = inferSlotAndOffset(nrequestedSlot, hts.storageLayout.storage);
+        if (keccakedSlot !== null) {
+            const kecRes = `0x${(await getComplexElement(keccakedSlot.slot, tokenId, keccakedSlot.offset)).padStart(64, '0')}`;
+            trace(logger, `Get storage ${address} slot: ${requestedSlot}, result: ${kecRes}`);
+            return kecRes;
+        }
+
+        const field = slotMap.get(nrequestedSlot);
 
         const tokenResult = await mirrorNodeClient.getTokenById(tokenId);
         const value = tokenResult[toSnakeCase(field.label)];
@@ -68,48 +99,31 @@ module.exports = {
         }
 
         return '0x' + converter(field.type)(value);
+
+        async function getComplexElement(slot, tokenId, offset) {
+            // if (EthGetStorageAtService.BALANCES_ARRAY.includes(slot.label)) {
+            //     const result: { balances: { account: string; balance: number }[] } =
+            //         await this.mirrorNodeClient.getTokenBalances(address);
+            //     const balances = result.balances;
+            //     if (slot.label === 'balances') {
+            //         return stringToIntHex256(`${balances[offset]?.balance ?? 0}`);
+            //     }
+            //     if (!balances[offset]?.account) {
+            //         return HashZero.slice(2);
+            //     }
+            //     const account: { evm_address: string } = await this.mirrorNodeClient.getAccount(balances[offset].account);
+            //     return account.evm_address.slice(2);
+            // }
+            const tokenData = await mirrorNodeClient.getTokenById(tokenId);
+            return converter(slot.type, offset)(tokenData[toSnakeCase(slot.label)]);
+        }
     },
 
 };
 
-
-
-// import { MirrorNodeClient } from '../../../clients';
-// import { calculateOffset, converter, hexToDecimal, stringToIntHex256, toSnakeCase } from './utils/converter';
-// import { keccak256 } from 'ethers';
-// import { getStorageLayout, StorageSlot } from './utils/artifactParser';
-// import { Logger } from 'pino';
-// import { HashZero } from '@ethersproject/constants';
-// import constants from '../../../constants';
-// import { EthImpl } from '../../../eth';
-
-// export class EthGetStorageAtService {
-//   private static readonly MAX_ELEMENTS = 1000;
-//   private static readonly BALANCES_ARRAY = ['holders', 'balances'];
-//   constructor(
-//     private mirrorNodeClient: MirrorNodeClient,
-//     private logger: Logger,
-//   ) {}
-
-//   public async execute(address: string, slotNumber: string) {
-//     try {
-//       if (!(await this.isSupported(address))) {
-//         return '';
-//       }
-
-//       const type = (await this.mirrorNodeClient.isTokenFungible(address)) ? 'fungible' : 'nonFungible';
-//       const allSlots = getStorageLayout(type);
+//   BALANCES_ARRAY = ['holders', 'balances'];
 
 //       // Slot === keccaked value (long strings, maps, arrays)
-//       const keccakedSlot = await this.guessSlotAndOffsetFromKeccakedNumber(slotNumber, allSlots);
-//       if (keccakedSlot) {
-//         const kecRes = `0x${(await this.getComplexElement(keccakedSlot.slot, address, keccakedSlot.offset)).padStart(
-//           64,
-//           '0',
-//         )}`;
-//         this.logger.error(`Get storage ${address} slot: ${slotNumber}, result: ${kecRes}`);
-//         return kecRes;
-//       }
 
 //       // Slot === decimal number (primitives)
 //       const decimalSlotNumber = hexToDecimal(slotNumber);
@@ -128,48 +142,28 @@ module.exports = {
 //     }
 //   }
 
-//   private async isSupported(address: string) {
-//     const resolved = await this.mirrorNodeClient.resolveEntityType(
-//       address,
-//       [constants.TYPE_TOKEN],
-//       EthImpl.ethGetStorageAt,
-//     );
-//     return resolved !== null && resolved.type === constants.TYPE_TOKEN;
-//   }
+/**
+ * 
+ * @param {bigint} nrequestedSlot 
+ * @param {StorageSlot[]} slots 
+ * @param {bigint} MAX_ELEMENTS How many slots ahead to infer that `nrequestedSlot` is part of a given slot.
+ * @returns {{slot: StorageSlot, offset: bigint}|null}
+ */
+function inferSlotAndOffset(nrequestedSlot, slots, MAX_ELEMENTS = 100) {
+    for (const slot of slots) {
+        //   if (slot.type !== 't_string_storage' && !EthGetStorageAtService.BALANCES_ARRAY.includes(slot.label)) {
+        //     continue;
+        //   }
+        const baseKeccak = BigInt(keccak256(`0x${toIntHex256(slot.slot)}`));
+        const offset = nrequestedSlot - baseKeccak;
+        if (offset < 0 || offset > MAX_ELEMENTS) {
+            continue;
+        }
+        return { slot, offset: Number(offset) };
+    }
 
-//   private async guessSlotAndOffsetFromKeccakedNumber(input: string, slots: StorageSlot[]) {
-//     for (const slot of slots) {
-//       if (slot.type !== 't_string_storage' && !EthGetStorageAtService.BALANCES_ARRAY.includes(slot.label)) {
-//         continue;
-//       }
-//       const baseKeccak = keccak256(`0x${stringToIntHex256(slot.slot)}`);
-//       const offset = calculateOffset(baseKeccak, input);
-//       if (offset === null || offset > EthGetStorageAtService.MAX_ELEMENTS) {
-//         continue;
-//       }
-//       return { slot, offset };
-//     }
-
-//     return null;
-//   }
-
-//   private async getComplexElement(slot: any, address: string, offset: number): Promise<string> {
-//     if (EthGetStorageAtService.BALANCES_ARRAY.includes(slot.label)) {
-//       const result: { balances: { account: string; balance: number }[] } =
-//         await this.mirrorNodeClient.getTokenBalances(address);
-//       const balances = result.balances;
-//       if (slot.label === 'balances') {
-//         return stringToIntHex256(`${balances[offset]?.balance ?? 0}`);
-//       }
-//       if (!balances[offset]?.account) {
-//         return HashZero.slice(2);
-//       }
-//       const account: { evm_address: string } = await this.mirrorNodeClient.getAccount(balances[offset].account);
-//       return account.evm_address.slice(2);
-//     }
-//     const tokenData = await this.mirrorNodeClient.getToken(address);
-//     return converter(slot.type, offset)(tokenData[toSnakeCase(slot.label)]);
-//   }
+    return null;
+}
 
 //   private async get(slot: StorageSlot, address: string): Promise<string> {
 //     if (EthGetStorageAtService.BALANCES_ARRAY.includes(slot.label)) {
@@ -180,47 +174,34 @@ module.exports = {
 //   }
 // }
 
-// export const stringToStringStorageHex = (input: string) => {
-//   let binaryString = Buffer.from(input).toString('hex');
-//   const stringLength = input.length;
-//   let lengthByte = (stringLength * 2 + 1).toString(16);
+const stringToStringStorageHex = input => {
+    let binaryString = Buffer.from(input).toString('hex');
+    const stringLength = input.length;
+    let lengthByte = (stringLength * 2 + 1).toString(16);
 
-//   if (stringLength > 31) {
-//     binaryString = '0';
-//   } else {
-//     lengthByte = (stringLength * 2).toString(16);
-//   }
+    if (stringLength > 31) {
+        binaryString = '0';
+    } else {
+        lengthByte = (stringLength * 2).toString(16);
+    }
 
-//   const paddedString = binaryString.padEnd(64 - 2, '0');
+    const paddedString = binaryString.padEnd(64 - 2, '0');
 
-//   return `${paddedString}${lengthByte.padStart(2, '0')}`;
-// };
-
-// export const stringToStringNextBytesHex = (input: string, offset: number) => {
-//   const binaryString = Buffer.from(input).toString('hex');
-//   const substring = binaryString.substring(offset * 64, (offset + 1) * 64);
-
-//   return substring.padEnd(64, '0');
-// };
-
-
-
-// export const hexToDecimal = (hex: string) => new BigNumber(hex.startsWith('0x') ? hex.slice(2) : hex, 16).toString(10);
-
-// export const calculateOffset = (z: string, y: string) => {
-//   const zDec = new BigNumber(hexToDecimal(z));
-//   const yDec = new BigNumber(hexToDecimal(y));
-//   return yDec.isLessThan(zDec) ? null : yDec.minus(zDec).toNumber();
-// };
+    return `${paddedString}${lengthByte.padStart(2, '0')}`;
+};
 
 /**
  * 
- * @param {string} camelCase 
- * @returns {string}
+ * @param {*} input 
+ * @param {*} offset 
+ * @returns 
  */
-function toSnakeCase(camelCase) {
-    return camelCase.replace(/([A-Z])/g, '_$1').toLowerCase();
-}
+const stringToStringNextBytesHex = (input, offset) => {
+    const binaryString = Buffer.from(input).toString('hex');
+    const substring = binaryString.substring(offset * 64, (offset + 1) * 64);
+
+    return substring.padEnd(64, '0');
+};
 
 /**
  * ((input: string) => string)
@@ -233,7 +214,7 @@ function converter(type, offset) {
         return (input) => stringToStringNextBytesHex(input, offset);
     }
     const map = {
-        // t_string_storage: stringToStringStorageHex,
+        t_string_storage: stringToStringStorageHex,
         t_uint8: toIntHex256,
         t_uint256: toIntHex256,
     };

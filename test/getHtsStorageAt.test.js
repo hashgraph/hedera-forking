@@ -33,7 +33,8 @@ describe(`getHtsStorageAt`, function () {
     });
 
     [
-        { token: 'USDC', address: '0x0000000000000000000000000000000000068cDa' }
+        { token: 'USDC', address: '0x0000000000000000000000000000000000068cDa' },
+        { token: 'MFCT', address: '0x0000000000000000000000000000000000483077' },
     ].forEach(({ token, address }) => {
 
         describe(`\`${token}\` token`, function () {
@@ -44,10 +45,33 @@ describe(`getHtsStorageAt`, function () {
             const mirrorNodeClient = {
                 getTokenById(tokenId) {
                     // https://testnet.mirrornode.hedera.com/api/v1/tokens/0.0.429274
-                    expect(tokenId).to.be.equal(tokenResult.token_id, 'asfdasdf');
+                    expect(tokenId).to.be.equal(tokenResult.token_id, 'Invalid usage, provide the right address for token');
                     return tokenResult;
                 }
             };
+
+            [
+                'name',
+                'symbol'
+            ].forEach(name => {
+                const slot = slotsByLabel[name];
+
+                it(`should get storage for string field \`${name}\` at slot \`${slot}\``, async function () {
+                    const result = await getHtsStorageAt(address, slot, mirrorNodeClient);
+
+                    const str = tokenResult[name];
+                    if (str.length > 31) {
+                        this.test.title += ' (large string)';
+                        const value = '0'.repeat(62);
+                        const len = ((str.length * 2) + 1).toString(16).padStart(2, '0');
+                        expect(result.slice(2)).to.be.equal(value + len);
+                    } else {
+                        const value = Buffer.from(str).toString('hex').padEnd(62, '0');
+                        const len = (str.length * 2).toString(16).padStart(2, '0');
+                        expect(result.slice(2)).to.be.equal(value + len);
+                    }
+                });
+            });
 
             [
                 'decimals',
@@ -55,14 +79,13 @@ describe(`getHtsStorageAt`, function () {
             ].forEach(name => {
                 const slot = slotsByLabel[name];
 
-                it(`should get storage for field \`${name}\` at slot \`${slot}\``, async function () {
+                it(`should get storage for primitive field \`${name}\` at slot \`${slot}\``, async function () {
                     const result = await getHtsStorageAt(address, slot, mirrorNodeClient);
 
                     const snakeCase = name.replace(/([A-Z])/g, '_$1').toLowerCase();
                     expect(result.slice(2)).to.be.equal(toIntHex256(tokenResult[snakeCase]));
                 });
             });
-
         });
     });
 });
