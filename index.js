@@ -12,23 +12,53 @@ const hts = require('./out/HtsSystemContract.sol/HtsSystemContract.json');
 /**
  * @type {Map<bigint, StorageSlot>}
  */
-let slotMap = undefined;
+const slotMap = function (slotMap) {
+    for (const slot of hts.storageLayout.storage) {
+        slotMap.set(BigInt(slot.slot), slot);
+    }
+    return slotMap;
+}(new Map());
+
+/**
+ * @type {{[t_name: string]: (value: string) => string}}
+ */
+const typeConverter = {
+    t_string_storage: str => {
+        const [hexStr, lenByte] = str.length > 31
+            ? ['0', str.length * 2 + 1]
+            : [Buffer.from(str).toString('hex'), str.length * 2];
+
+        return `${hexStr.padEnd(64 - 2, '0')}${lenByte.toString(16).padStart(2, '0')}`;
+    },
+    t_uint8: utils.toIntHex256,
+    t_uint256: utils.toIntHex256,
+};
 
 /**
  * 
  * @param {import("pino").Logger} logger 
  * @param {string=} requestIdPrefix
  */
-function initSlotMap(logger, requestIdPrefix) {
-    if (slotMap === undefined) {
-        slotMap = new Map();
-        for (const field of hts.storageLayout.storage) {
-            slotMap.set(BigInt(field.slot), field);
-        }
 
-        trace(logger, requestIdPrefix, `Storage Layout Slot map initialized`);
+/**
+ * @param {bigint} nrequestedSlot 
+ * @param {bigint} MAX_ELEMENTS How many slots ahead to infer that `nrequestedSlot` is part of a given slot.
+ * @returns {{slot: StorageSlot, offset: bigint}|null}
+ */
+function inferSlotAndOffset(nrequestedSlot, MAX_ELEMENTS = 100) {
+    for (const slot of hts.storageLayout.storage) {
+        //   if (slot.type !== 't_string_storage' && !EthGetStorageAtService.BALANCES_ARRAY.includes(slot.label)) {
+        //     continue;
+        //   }
+        const baseKeccak = BigInt(keccak256(`0x${utils.toIntHex256(slot.slot)}`));
+        const offset = nrequestedSlot - baseKeccak;
+        if (offset < 0 || offset > MAX_ELEMENTS) continue;
+
+        return { slot, offset: Number(offset) };
     }
-};
+
+    return null;
+}
 
 /**
  * @param {import('pino').Logger} logger 
@@ -52,10 +82,8 @@ module.exports = {
      * @returns {Promise<string | null>}
      */
     async getHtsStorageAt(address, requestedSlot, mirrorNodeClient, logger = { trace: () => undefined }, requestIdPrefix) {
-        initSlotMap(logger, requestIdPrefix);
-
         if (!address.startsWith(utils.LONG_ZERO_PREFIX)) {
-            trace(logger, requestIdPrefix, `${address} does not start with ${utils.LONG_ZERO_PREFIX}, bail`);
+            trace(logger, requestIdPrefix, `${address} does not start with ${utils.LONG_ZERO_PREFIX}, returning null`);
             return null;
         }
 
@@ -64,7 +92,7 @@ module.exports = {
 
         const nrequestedSlot = BigInt(requestedSlot);
 
-        const keccakedSlot = inferSlotAndOffset(nrequestedSlot, hts.storageLayout.storage);
+        const keccakedSlot = inferSlotAndOffset(nrequestedSlot);
         if (keccakedSlot !== null) {
             const getComplexElement = async (slot, tokenId, offset) => {
                 // if (EthGetStorageAtService.BALANCES_ARRAY.includes(slot.label)) {
@@ -81,7 +109,9 @@ module.exports = {
                 //     return account.evm_address.slice(2);
                 // }
                 const tokenData = await mirrorNodeClient.getTokenById(tokenId);
-                return converter(slot.type, offset)(tokenData[utils.toSnakeCase(slot.label)]);
+                const hexStr = Buffer.from(tokenData[utils.toSnakeCase(slot.label)]).toString('hex');
+                const substr = hexStr.substring(offset * 64, (offset + 1) * 64);
+                return substr.padEnd(64, '0');
             }
             const kecRes = `0x${(await getComplexElement(keccakedSlot.slot, tokenId, keccakedSlot.offset)).padStart(64, '0')}`;
             trace(logger, requestIdPrefix, `Get storage ${address} slot: ${requestedSlot}, result: ${kecRes}`);
@@ -89,13 +119,19 @@ module.exports = {
         }
 
         const field = slotMap.get(nrequestedSlot);
-        if (field === undefined) return utils.ZERO_HEX_32_BYTE;
+        if (field === undefined) {
+            trace(logger, requestIdPrefix, `Requested slot does not match any field slots, returning ${utils.ZERO_HEX_32_BYTE}`);
+            return utils.ZERO_HEX_32_BYTE;
+        }
 
         const tokenResult = await mirrorNodeClient.getTokenById(tokenId);
         const value = tokenResult[utils.toSnakeCase(field.label)];
-        if (!converter(field.type) || !value) return utils.ZERO_HEX_32_BYTE;
+        if (typeConverter[field.type] === undefined || !value) {
+            trace(logger, requestIdPrefix, `Requested slot matches ${field.label} field, but it is not supported, returning ${utils.ZERO_HEX_32_BYTE}`);
+            return utils.ZERO_HEX_32_BYTE;
+        }
 
-        return '0x' + converter(field.type)(value);
+        return '0x' + typeConverter[field.type](value);
     },
 };
 
@@ -120,29 +156,6 @@ module.exports = {
 //     }
 //   }
 
-/**
- * 
- * @param {bigint} nrequestedSlot 
- * @param {StorageSlot[]} slots 
- * @param {bigint} MAX_ELEMENTS How many slots ahead to infer that `nrequestedSlot` is part of a given slot.
- * @returns {{slot: StorageSlot, offset: bigint}|null}
- */
-function inferSlotAndOffset(nrequestedSlot, slots, MAX_ELEMENTS = 100) {
-    for (const slot of slots) {
-        //   if (slot.type !== 't_string_storage' && !EthGetStorageAtService.BALANCES_ARRAY.includes(slot.label)) {
-        //     continue;
-        //   }
-        const baseKeccak = BigInt(keccak256(`0x${utils.toIntHex256(slot.slot)}`));
-        const offset = nrequestedSlot - baseKeccak;
-        if (offset < 0 || offset > MAX_ELEMENTS) {
-            continue;
-        }
-        return { slot, offset: Number(offset) };
-    }
-
-    return null;
-}
-
 //   private async get(slot: StorageSlot, address: string): Promise<string> {
 //     if (EthGetStorageAtService.BALANCES_ARRAY.includes(slot.label)) {
 //       const result: { balances: { account: string; balance: number }[] } =
@@ -151,50 +164,3 @@ function inferSlotAndOffset(nrequestedSlot, slots, MAX_ELEMENTS = 100) {
 //     }
 //   }
 // }
-
-const stringToStringStorageHex = input => {
-    let binaryString = Buffer.from(input).toString('hex');
-    const stringLength = input.length;
-    let lengthByte = (stringLength * 2 + 1).toString(16);
-
-    if (stringLength > 31) {
-        binaryString = '0';
-    } else {
-        lengthByte = (stringLength * 2).toString(16);
-    }
-
-    const paddedString = binaryString.padEnd(64 - 2, '0');
-
-    return `${paddedString}${lengthByte.padStart(2, '0')}`;
-};
-
-/**
- * 
- * @param {*} input 
- * @param {*} offset 
- * @returns 
- */
-const stringToStringNextBytesHex = (input, offset) => {
-    const binaryString = Buffer.from(input).toString('hex');
-    const substring = binaryString.substring(offset * 64, (offset + 1) * 64);
-
-    return substring.padEnd(64, '0');
-};
-
-/**
- * ((input: string) => string)
- * @param {string} type 
- * @param {number?} offset 
- * @returns 
- */
-function converter(type, offset) {
-    if (typeof offset !== 'undefined') {
-        return (input) => stringToStringNextBytesHex(input, offset);
-    }
-    const map = {
-        t_string_storage: stringToStringStorageHex,
-        t_uint8: utils.toIntHex256,
-        t_uint256: utils.toIntHex256,
-    };
-    return typeof map[type] === 'function' ? map[type] : null;
-};
