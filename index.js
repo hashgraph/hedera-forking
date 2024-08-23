@@ -5,9 +5,18 @@ let slotMap = undefined;
 /**
  * 
  */
-const HashZero = '0x0000000000000000000000000000000000000000000000000000000000000000';
+const ZERO_HEX_32_BYTE = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
-    // LONG_ZERO_PREFIX: '0x000000000000',
+/**
+ * 
+ */
+const LONG_ZERO_PREFIX = '0x000000000000';
+
+/**
+ * @param {string} value 
+ * @returns {string}
+ */
+const toIntHex256 = value => parseInt(value).toString(16).padStart(64, '0');
 
 /**
  * 
@@ -37,23 +46,28 @@ module.exports = {
      * @param {import(".").IMirrorNodeClient} mirrorNodeClient 
      * @param {import("pino").Logger=} logger 
      * @param {string=} requestIdPrefix
-     * @returns 
+     * @returns {Promise<string | null>}
      */
     async getHtsStorageAt(address, slot, mirrorNodeClient, logger = { trace: () => undefined }, requestIdPrefix) {
         initSlotMap(logger, requestIdPrefix);
 
+        if (!address.startsWith(LONG_ZERO_PREFIX)) {
+            logger.trace(`${address} does not start with ${LONG_ZERO_PREFIX}, bail`);
+            return null;
+        }
+
+        logger.trace(`convert ddress ${address} to tokenId`);
         const tokenId = `0.0.${parseInt(address, 16)}`;
 
         const field = slotMap.get(BigInt(slot));
 
-        const tokenData = await mirrorNodeClient.getTokenById(tokenId);
-        // const value = tokenData[toSnakeCase(slot.label)];
-        const value = tokenData[field.label];
+        const tokenResult = await mirrorNodeClient.getTokenById(tokenId);
+        const value = tokenResult[toSnakeCase(field.label)];
         if (!converter(field.type) || !value) {
-            return HashZero;
+            return ZERO_HEX_32_BYTE;
         }
 
-        return converter(field.type)(value);
+        return '0x' + converter(field.type)(value);
     },
 
 };
@@ -166,8 +180,6 @@ module.exports = {
 //   }
 // }
 
-// import { BigNumber } from 'bignumber.js';
-
 // export const stringToStringStorageHex = (input: string) => {
 //   let binaryString = Buffer.from(input).toString('hex');
 //   const stringLength = input.length;
@@ -191,15 +203,7 @@ module.exports = {
 //   return substring.padEnd(64, '0');
 // };
 
-// export const stringToIntHex8 = (input: string) => parseInt(input, 10).toString(16).padStart(2, '0');
 
-/**
- * @param {string} input 
- * @returns {string}
- */
-function stringToIntHex256(input) {
-    return parseInt(input, 10).toString(16).padStart(64, '0');
-}
 
 // export const hexToDecimal = (hex: string) => new BigNumber(hex.startsWith('0x') ? hex.slice(2) : hex, 16).toString(10);
 
@@ -209,7 +213,14 @@ function stringToIntHex256(input) {
 //   return yDec.isLessThan(zDec) ? null : yDec.minus(zDec).toNumber();
 // };
 
-// export const toSnakeCase = (camelCase: string) => camelCase.replace(/([A-Z])/g, '_$1').toLowerCase();
+/**
+ * 
+ * @param {string} camelCase 
+ * @returns {string}
+ */
+function toSnakeCase(camelCase) {
+    return camelCase.replace(/([A-Z])/g, '_$1').toLowerCase();
+}
 
 /**
  * ((input: string) => string)
@@ -223,8 +234,8 @@ function converter(type, offset) {
     }
     const map = {
         // t_string_storage: stringToStringStorageHex,
-        // t_uint8: stringToIntHex8,
-        t_uint256: stringToIntHex256,
+        t_uint8: toIntHex256,
+        t_uint256: toIntHex256,
     };
     return typeof map[type] === 'function' ? map[type] : null;
 };

@@ -4,9 +4,9 @@ pragma solidity ^0.8.0;
 import {IERC20} from "./IERC20.sol";
 
 contract HtsSystemContract is IERC20 {
-    string public name = "ArrayToken";
-    string public symbol = "ART";
-    uint8 public decimals = 18;
+    string public name;
+    string public symbol;
+    uint8 public override decimals;
     uint256 public override totalSupply;
 
     address[] public holders;
@@ -20,11 +20,11 @@ contract HtsSystemContract is IERC20 {
     event Associated(address indexed account);
     event Dissociated(address indexed account);
 
-    constructor(uint256 _initialSupply) {
-        totalSupply = _initialSupply * (10 ** uint256(decimals));
-        holders.push(msg.sender);
-        balances.push(totalSupply);
-    }
+    // constructor(uint256 _initialSupply) {
+    //     totalSupply = _initialSupply * (10 ** uint256(decimals));
+    //     holders.push(msg.sender);
+    //     balances.push(totalSupply);
+    // }
 
     function balanceOf(address account) public view override returns (uint256) {
         for (uint256 i = 0; i < holders.length; i++) {
@@ -134,10 +134,14 @@ contract HtsSystemContract is IERC20 {
     }
 
     fallback (bytes calldata) external returns (bytes memory) {
-        uint selector = uint32(bytes4(msg.data[0:4]));
+        uint256 selector = uint32(bytes4(msg.data[0:4]));
         address token = address(bytes20(msg.data[4:24]));
         bytes memory args = msg.data[24:];
-        return __redirectForToken(token, args);
+        if (selector == 0x618dc65e) {
+            return __redirectForToken(token, args);
+        }
+
+        revert ("Not supported");
     }
 
     function __redirectForToken(address token, bytes memory encodedFunctionSelector) internal returns (bytes memory) {
@@ -147,6 +151,8 @@ contract HtsSystemContract is IERC20 {
             return abi.encode(name);
         } else if (selector == bytes4(keccak256("decimals()"))) {
             return abi.encode(decimals);
+        } else if (selector == IERC20.totalSupply.selector) {
+            return abi.encode(totalSupply);
         } else if (selector == bytes4(keccak256("symbol()"))) {
             return abi.encode(symbol);
         } else if (selector == bytes4(keccak256("balanceOf(address)"))) {
