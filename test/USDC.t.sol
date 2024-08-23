@@ -27,7 +27,16 @@ contract USDCTest is Test {
     }
 
     function test_ERC20_name() view external {
-        assertEq(IERC20(USDC).name(), "USDC asdf");
+        assertEq(IERC20(USDC).name(), "USD Coin");
+    }
+
+    function test_ERC20_large_name() view external {
+        address customToken = 0x0000000000000000000000000000000000483077;
+        assertEq(IERC20(customToken).name(), "My Crypto Token is the name which the string length is greater than 31");
+    }
+
+    function test_ERC20_symbol() view external {
+        assertEq(IERC20(USDC).symbol(), "USDC");
     }
 
     function test_ERC20_decimals() view external {
