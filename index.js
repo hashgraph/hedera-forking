@@ -84,11 +84,13 @@ const dataFetcher = (mirrorNodeClient, tokenId) => {
 };
 
 /**
+ * Wrapper trace logger to include origin `(hedera-forking)` in the log entry.
+ * 
  * @param {import('pino').Logger} logger
- * @param {string} requestIdPrefix
+ * @param {string} reqId
  * @param {string} msg
  */
-const trace = (logger, requestIdPrefix, msg) => logger.trace(`${requestIdPrefix} (hedera-forking) ${msg}`);
+const trace = (logger, reqId, msg) => logger.trace(`${reqId} (hedera-forking) ${msg}`);
 
 module.exports = {
     getHtsCode() {
@@ -100,19 +102,19 @@ module.exports = {
      * @param {string} requestedSlot
      * @param {import(".").IMirrorNodeClient} mirrorNodeClient
      * @param {import("pino").Logger=} logger
-     * @param {string=} requestIdPrefix
+     * @param {string=} reqId
      * @returns {Promise<string | null>}
      */
-    async getHtsStorageAt(address, requestedSlot, mirrorNodeClient, logger = { trace: () => undefined }, requestIdPrefix) {
+    async getHtsStorageAt(address, requestedSlot, mirrorNodeClient, logger = { trace: () => undefined }, reqId) {
         if (!address.startsWith(utils.LONG_ZERO_PREFIX)) {
-            trace(logger, requestIdPrefix, `${address} does not start with ${utils.LONG_ZERO_PREFIX}, returning null`);
+            trace(logger, reqId, `${address} does not start with ${utils.LONG_ZERO_PREFIX}, returning null`);
             return null;
         }
 
         const tokenId = `0.0.${parseInt(address, 16)}`;
         const fetcher = dataFetcher(mirrorNodeClient, tokenId);
 
-        trace(logger, requestIdPrefix, `Getting storage for ${address} (tokenId=${tokenId}) at slot=${requestedSlot}`);
+        trace(logger, reqId, `Getting storage for ${address} (tokenId=${tokenId}) at slot=${requestedSlot}`);
 
         const nrequestedSlot = BigInt(requestedSlot);
 
@@ -128,13 +130,13 @@ module.exports = {
                 return substr.padEnd(64, '0');
             }
             const kecRes = await getComplexElement(keccakedSlot.slot, tokenId, keccakedSlot.offset);
-            trace(logger, requestIdPrefix, `Get storage ${address} slot: ${requestedSlot}, result: ${kecRes}`);
+            trace(logger, reqId, `Get storage ${address} slot: ${requestedSlot}, result: ${kecRes}`);
             return `0x${kecRes}`;
         }
 
         const slot = slotMap.get(nrequestedSlot);
         if (slot === undefined) {
-            trace(logger, requestIdPrefix, `Requested slot does not match any field slots, returning ${utils.ZERO_HEX_32_BYTE}`);
+            trace(logger, reqId, `Requested slot does not match any field slots, returning \`ZERO_HEX_32_BYTE\``);
             return utils.ZERO_HEX_32_BYTE;
         }
 
@@ -143,9 +145,14 @@ module.exports = {
         }
 
         const tokenResult = await mirrorNodeClient.getTokenById(tokenId);
+        if (tokenResult === null) {
+            trace(logger, reqId, `Requested slot matches ${slot.label} field, but token was not found, returning \`ZERO_HEX_32_BYTE\``);
+            return utils.ZERO_HEX_32_BYTE;
+        }
+
         const value = tokenResult[utils.toSnakeCase(slot.label)];
         if (typeConverter[slot.type] === undefined || !value) {
-            trace(logger, requestIdPrefix, `Requested slot matches ${slot.label} field, but it is not supported, returning ${utils.ZERO_HEX_32_BYTE}`);
+            trace(logger, reqId, `Requested slot matches ${slot.label} field, but it is not supported, returning \`ZERO_HEX_32_BYTE\``);
             return utils.ZERO_HEX_32_BYTE;
         }
 
