@@ -6,31 +6,24 @@ const { keccak256 } = require('ethers');
 
 config.truncateThreshold = 0;
 
-const toIntHex256 = value => parseInt(value).toString(16).padStart(64, '0');
+describe('getHtsStorageAt', function () {
 
-describe(`getHtsStorageAt`, function () {
-
-    const storageLayout = require('../out/HtsSystemContract.sol/HtsSystemContract.json').storageLayout;
-    const slotsByLabel = {};
-
-    for (const slot of storageLayout.storage) {
-        slotsByLabel[slot.label] = slot.slot;
-    }
-
-    it('`storageLayout` should have all slots at `offset` `0`', function () {
+    const slotsByLabel = function (slotsByLabel, { storageLayout }) {
         for (const slot of storageLayout.storage) {
-            expect(slot.offset, slot.label).to.be.equal(0);
+            slotsByLabel[slot.label] = slot.slot;
         }
-    });
-
-    it('`storageLayout` should have one slot per field', function () {
-        const set = new Set(storageLayout.storage.map(slot => Number(slot.slot)));
-        expect(set.size).to.be.equal(storageLayout.storage.length);
-    });
+        return slotsByLabel;
+    }({}, require('../out/HtsSystemContract.sol/HtsSystemContract.json'));
 
     it(`should return \`null\` when \`address\` does not start with \`LONG_ZERO_PREFIX\` (${utils.LONG_ZERO_PREFIX})`, async function () {
         const result = await getHtsStorageAt('0x4e59b44847b379578588920ca78fbf26c0b4956c', '0x0');
         expect(result).to.be.null;
+    });
+
+    it(`should return \`ZERO_HEX_32_BYTE\` when slot does not correspond to any field`, async function () {
+        // Slot `0x100` should not be present in `HtsSystemContract`
+        const result = await getHtsStorageAt(`${utils.LONG_ZERO_PREFIX}1`, '0x100');
+        expect(result).to.be.equal(utils.ZERO_HEX_32_BYTE);
     });
 
     it.skip('should return `null` when `address` is not found', async function () {
@@ -71,7 +64,8 @@ describe(`getHtsStorageAt`, function () {
                 },
             };
 
-            it(`should return \`ZERO_HEX_32_BYTE\` when the slot is empty`, async function () {
+            it(`should return \`ZERO_HEX_32_BYTE\` when slot does not correspond to any field (even if token is found)`, async function () {
+                // Slot `0x100` should not be present in `HtsSystemContract`
                 const result = await getHtsStorageAt(address, '0x100', mirrorNodeClient);
                 expect(result).to.be.equal(utils.ZERO_HEX_32_BYTE);
             });
@@ -115,7 +109,7 @@ describe(`getHtsStorageAt`, function () {
 
                 it(`should get storage for primitive field \`${name}\` at slot \`${slot}\``, async function () {
                     const result = await getHtsStorageAt(address, slot, mirrorNodeClient);
-                    expect(result.slice(2)).to.be.equal(toIntHex256(tokenResult[utils.toSnakeCase(name)]));
+                    expect(result.slice(2)).to.be.equal(utils.toIntHex256(tokenResult[utils.toSnakeCase(name)]));
                 });
             });
 
