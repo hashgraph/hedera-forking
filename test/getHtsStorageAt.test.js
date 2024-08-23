@@ -23,6 +23,11 @@ describe(`getHtsStorageAt`, function () {
         }
     });
 
+    it('`storageLayout` should have one slot per field', function () {
+        const set = new Set(storageLayout.storage.map(slot => Number(slot.slot)));
+        expect(set.size).to.be.equal(storageLayout.storage.length);
+    });
+
     it(`should return \`null\` when \`address\` does not start with \`LONG_ZERO_PREFIX\` (${utils.LONG_ZERO_PREFIX})`, async function () {
         const result = await getHtsStorageAt('0x4e59b44847b379578588920ca78fbf26c0b4956c', '0x0');
         expect(result).to.be.null;
