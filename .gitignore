@@ -4,3 +4,6 @@
 
 # HTS compiler output needed for `npm` package
 !/out/HtsSystemContract.sol/
+
+#
+/node_modules/
