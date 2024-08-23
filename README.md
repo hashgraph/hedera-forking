@@ -23,13 +23,14 @@ forge test --match-contract USDCTest -vvvv
 
 create token using launch-token
 
-# Token bytecode
+## Token bytecode
 
-https://hips.hedera.com/hip/hip-719#specification
+<https://hips.hedera.com/hip/hip-719#specification>
 
 https://github.com/hashgraph/hedera-services/blob/fbac99e75c27bf9c70ebc78c5de94a9109ab1851/hedera-node/hedera-smart-contract-service-impl/src/main/java/com/hedera/node/app/service/contract/impl/state/DispatchingEvmFrameState.java#L96
 
-another alternative could be something like
+Another alternative could be something like
+
 https://book.getfoundry.sh/cheatcodes/etch
 https://book.getfoundry.sh/reference/forge-std/deployCodeTo
 

@@ -1,0 +1,12 @@
+{
+  "balances": [
+    {
+      "account": "0.0.10",
+      "balance": 16
+    },
+    {
+      "account": "0.0.13",
+      "balance": 8
+    }
+  ]
+}
