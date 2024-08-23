@@ -47,14 +47,28 @@ describe(`getHtsStorageAt`, function () {
         describe(`\`${token}\` token`, function () {
 
             const tokenResult = require(`./tokens/${token}/getToken.json`);
-
+            const tokenBalancesResult = require(`./tokens/${token}/getTokenBalances.json`);
+            const accountIdToEVMAddressSampleMap = {
+                '0.0.10': '0x000000000000000000000000000000000000000a',
+                '0.0.13': '0x85e9a8c94f874f317aa793026103e73ec82a759f'
+            };
             /** @type {import('@hashgraph/hedera-forking').IMirrorNodeClient} */
             const mirrorNodeClient = {
                 getTokenById(tokenId) {
                     // https://testnet.mirrornode.hedera.com/api/v1/tokens/0.0.429274
                     expect(tokenId).to.be.equal(tokenResult.token_id, 'Invalid usage, provide the right address for token');
                     return tokenResult;
-                }
+                },
+                getTokenBalancesById(tokenId) {
+                    // https://testnet.mirrornode.hedera.com/api/v1/tokens/0.0.429274/balances
+                    return require(`./tokens/${token}/getTokenBalances.json`);
+                },
+                getAccount(accountId) {
+                    // https://testnet.mirrornode.hedera.com/api/v1/accounts/0.0.10
+                    return {
+                        evm_address: accountIdToEVMAddressSampleMap[accountId],
+                    };
+                },
             };
 
             it(`should return \`ZERO_HEX_32_BYTE\` when the slot is empty`, async function () {
@@ -104,6 +118,29 @@ describe(`getHtsStorageAt`, function () {
                     expect(result.slice(2)).to.be.equal(toIntHex256(tokenResult[utils.toSnakeCase(name)]));
                 });
             });
+
+            [
+                'balances',
+                'holders',
+            ].forEach(name => {
+                const slot = slotsByLabel[name];
+                it(`should get storage for array \`${name}\` size at slot ${slot}`, async function () {
+                    const result = await getHtsStorageAt(address, slot, mirrorNodeClient);
+                    expect(parseInt(result, 16)).to.be.equal(tokenBalancesResult.balances.length);
+                });
+            });
+            for (let i = 0; i < tokenBalancesResult.balances.length; i++) {
+                it(`should get storage values for array \`holders\` at index ${i}`, async function () {
+                    const baseSlot = BigInt(keccak256('0x' + utils.toIntHex256(slotsByLabel['holders'])));
+                    const result = await getHtsStorageAt(address, baseSlot + BigInt(i), mirrorNodeClient);
+                    expect(parseInt(result, 16)).to.be.equal(parseInt(accountIdToEVMAddressSampleMap[tokenBalancesResult.balances[i].account], 16));
+                });
+                it(`should get storage values for array \`balances\` at index ${i}`, async function () {
+                    const baseSlot = BigInt(keccak256('0x' + utils.toIntHex256(slotsByLabel['balances'])));
+                    const result = await getHtsStorageAt(address, baseSlot + BigInt(i), mirrorNodeClient);
+                    expect(parseInt(result, 16)).to.be.equal(tokenBalancesResult.balances[i].balance);
+                });
+            }
         });
     });
 });
