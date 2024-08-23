@@ -14,7 +14,7 @@ import {IERC20} from "../src/IERC20.sol";
  * To get USDC balances for a given account using the Mirror Node you can use
  * https://mainnet.mirrornode.hedera.com/api/v1/tokens/0.0.456858/balances?account.id=0.0.38047
  */
-contract USDCTest is Test {
+contract TokenTest is Test {
 
     /**
      * https://hashscan.io/testnet/token/0.0.429274
