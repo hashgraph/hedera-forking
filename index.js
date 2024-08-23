@@ -125,6 +125,10 @@ module.exports = {
                     return await fetcher[slot.label](offset);
                 }
                 const tokenData = await mirrorNodeClient.getTokenById(tokenId);
+                if (tokenData === null) {
+                    trace(logger, reqId, `Requested slot matches keccaked slot but token was not found, returning \`ZERO_HEX_32_BYTE\``);
+                    return utils.ZERO_HEX_32_BYTE.slice(2);
+                }
                 const hexStr = Buffer.from(tokenData[utils.toSnakeCase(slot.label)]).toString('hex');
                 const substr = hexStr.substring(offset * 64, (offset + 1) * 64);
                 return substr.padEnd(64, '0');

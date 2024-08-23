@@ -26,17 +26,26 @@ describe('getHtsStorageAt', function () {
         expect(result).to.be.equal(utils.ZERO_HEX_32_BYTE);
     });
 
-    it.skip('should return `null` when `address` is not found', async function () {
-        const mirrorNodeClient = { getTokenById() { throw new Error('Token not found'); } };
+    it(`should return \`ZERO_HEX_32_BYTE\` when \`address\` is not found for a non-keccaked slot`, async function () {
+        const mirrorNodeClient = { getTokenById(_tokenId) { return null; } };
         const result = await getHtsStorageAt('0x0000000000000000000000000000000000000001', '0x0', mirrorNodeClient);
-        expect(result).to.be.null;
+        expect(result).to.be.equal(utils.ZERO_HEX_32_BYTE);
+    });
+
+    ['name', 'symbol'].forEach(name => {
+        const slot = slotsByLabel[name];
+        it(`should return \`ZERO_HEX_32_BYTE\` when \`address\` is not found for the keccaked slot of \`${slot}\` for field \`${name}\``, async function () {
+            const keccakedSlot = keccak256('0x' + utils.toIntHex256(slot));
+            const mirrorNodeClient = { getTokenById(_tokenId) { return null; } };
+            const result = await getHtsStorageAt('0x0000000000000000000000000000000000000001', keccakedSlot, mirrorNodeClient);
+            expect(result).to.be.equal(utils.ZERO_HEX_32_BYTE);
+        });
     });
 
     [
         { token: 'USDC', address: '0x0000000000000000000000000000000000068cDa' },
         { token: 'MFCT', address: '0x0000000000000000000000000000000000483077' },
     ].forEach(({ token, address }) => {
-
         describe(`\`${token}\` token`, function () {
 
             const tokenResult = require(`./tokens/${token}/getToken.json`);
