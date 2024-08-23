@@ -16,6 +16,8 @@ import {IERC20} from "../src/IERC20.sol";
  */
 contract TokenTest is Test {
 
+    address HTS = 0x0000000000000000000000000000000000000167;
+
     /**
      * https://hashscan.io/testnet/token/0.0.429274
      * https://testnet.mirrornode.hedera.com/api/v1/tokens/0.0.429274
@@ -24,6 +26,24 @@ contract TokenTest is Test {
 
     function setUp() external view {
         console.log("HTS code has %d bytes", address(0x167).code.length);
+    }
+
+    function test_HTS_should_revert_when_not_enough_calldata() external {
+        vm.expectRevert(bytes("Not enough calldata"));
+        (bool revertsAsExpected, ) = HTS.call(bytes("1234"));
+        assertTrue(revertsAsExpected, "expectRevert: call did not revert");
+    }
+
+    function test_HTS_should_revert_when_fallback_selector_is_not_supported() external {
+        vm.expectRevert(bytes("Fallback selector not supported"));
+        (bool revertsAsExpected, ) = HTS.call(bytes("123456789012345678901234567890"));
+        assertTrue(revertsAsExpected, "expectRevert: call did not revert");
+    }
+
+    function test_HTS_should_revert_when_calldata_token_is_not_caller() external {
+        vm.expectRevert(bytes("Calldata token is not caller"));
+        (bool revertsAsExpected, ) = HTS.call(bytes(hex"618dc65e9012345678901234567890123456789012345678901234567890"));
+        assertTrue(revertsAsExpected, "expectRevert: call did not revert");
     }
 
     function test_ERC20_name() view external {
