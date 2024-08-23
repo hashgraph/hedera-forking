@@ -29,7 +29,7 @@
     "pause_status": "NOT_APPLICABLE",
     "supply_key": null,
     "supply_type": "INFINITE",
-    "symbol": "MFCT",
+    "symbol": "Token symbol must be exactly 32!",
     "token_id": "0.0.4730999",
     "total_supply": "5000",
     "treasury_account_id": "0.0.2669675",

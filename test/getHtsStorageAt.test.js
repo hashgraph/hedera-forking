@@ -1,6 +1,8 @@
 const { expect, config } = require('chai');
 
 const { getHtsStorageAt } = require('@hashgraph/hedera-forking');
+const utils = require('../utils');
+const { keccak256 } = require('ethers');
 
 config.truncateThreshold = 0;
 
@@ -21,7 +23,7 @@ describe(`getHtsStorageAt`, function () {
         }
     });
 
-    it('should return `null` when `address` does not start with `LONG_ZERO_PREFIX`', async function () {
+    it(`should return \`null\` when \`address\` does not start with \`LONG_ZERO_PREFIX\` (${utils.LONG_ZERO_PREFIX})`, async function () {
         const result = await getHtsStorageAt('0x4e59b44847b379578588920ca78fbf26c0b4956c', '0x0');
         expect(result).to.be.null;
     });
@@ -50,6 +52,11 @@ describe(`getHtsStorageAt`, function () {
                 }
             };
 
+            it(`should return \`ZERO_HEX_32_BYTE\` when the slot is empty`, async function () {
+                const result = await getHtsStorageAt(address, '0x100', mirrorNodeClient);
+                expect(result).to.be.equal(utils.ZERO_HEX_32_BYTE);
+            });
+
             [
                 'name',
                 'symbol'
@@ -62,9 +69,17 @@ describe(`getHtsStorageAt`, function () {
                     const str = tokenResult[name];
                     if (str.length > 31) {
                         this.test.title += ' (large string)';
-                        const value = '0'.repeat(62);
                         const len = ((str.length * 2) + 1).toString(16).padStart(2, '0');
-                        expect(result.slice(2)).to.be.equal(value + len);
+                        expect(result.slice(2)).to.be.equal('0'.repeat(62) + len);
+
+                        const baseSlot = BigInt(keccak256('0x' + utils.toIntHex256(slot)));
+                        let value = '';
+                        for (let i = 0; i < (str.length >> 5) + 1; i++) {
+                            const result = await getHtsStorageAt(address, baseSlot + BigInt(i), mirrorNodeClient);
+                            value += result.slice(2);
+                        }
+                        const decoded = Buffer.from(value, 'hex').subarray(0, str.length).toString('utf8');
+                        expect(decoded).to.be.equal(str);
                     } else {
                         const value = Buffer.from(str).toString('hex').padEnd(62, '0');
                         const len = (str.length * 2).toString(16).padStart(2, '0');
@@ -81,9 +96,7 @@ describe(`getHtsStorageAt`, function () {
 
                 it(`should get storage for primitive field \`${name}\` at slot \`${slot}\``, async function () {
                     const result = await getHtsStorageAt(address, slot, mirrorNodeClient);
-
-                    const snakeCase = name.replace(/([A-Z])/g, '_$1').toLowerCase();
-                    expect(result.slice(2)).to.be.equal(toIntHex256(tokenResult[snakeCase]));
+                    expect(result.slice(2)).to.be.equal(toIntHex256(tokenResult[utils.toSnakeCase(name)]));
                 });
             });
         });
