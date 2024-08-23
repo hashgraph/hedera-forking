@@ -14,9 +14,18 @@ interface IMirrorNodeClient {
 export function getHtsCode(): string;
 
 /**
- *
- * @param address
- * @param slot
+ * This function should not throw, provided the `mirrorNodeClient` does not throw either.
+ * If the `mirrorNodeClient` throws, _e.g._, due to connection issues,
+ * error should be handled by the caller.
+ * 
+ * When the token ID corresponding to `address` does not exist,
+ * the respective calls on `mirrorNodeClient` should return `null`.
+ * 
+ * @param address 
+ * @param slot 
+ * @param mirrorNodeClient 
+ * @param logger 
+ * @param requestIdPrefix 
  */
 export function getHtsStorageAt(
     address: string,
