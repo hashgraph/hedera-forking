@@ -1,6 +1,5 @@
 const { keccak256 } = require('ethers');
 const utils = require('./utils');
-
 const hts = require('./out/HtsSystemContract.sol/HtsSystemContract.json');
 /**
  * Represents a slot entry in `storageLayout.storage`.
@@ -19,15 +18,19 @@ const slotMap = function (slotMap) {
 }(new Map());
 
 /**
- * @type {{[t_name: string]: (value: string) => string}}
+ * @type {{[t_name: string]: (value: string, offset: string|undefined|null) => string}}
  */
 const typeConverter = {
-    t_string_storage: str => {
-        const [hexStr, lenByte] = str.length > 31
-            ? ['0', str.length * 2 + 1]
-            : [Buffer.from(str).toString('hex'), str.length * 2];
-
-        return `${hexStr.padEnd(64 - 2, '0')}${lenByte.toString(16).padStart(2, '0')}`;
+    t_string_storage: (str, offset) => {
+        if (typeof offset === 'undefined' || offset === null) {
+            const [hexStr, lenByte] = str.length > 31
+              ? ['0', str.length * 2 + 1]
+              : [Buffer.from(str).toString('hex'), str.length * 2];
+            return `${hexStr.padEnd(64 - 2, '0')}${lenByte.toString(16).padStart(2, '0')}`;
+        }
+        const hexStr = Buffer.from(str).toString('hex');
+        const substr = hexStr.substring(offset * 64, (offset + 1) * 64);
+        return substr.padEnd(64, '0');
     },
     t_uint8: utils.toIntHex256,
     t_uint256: utils.toIntHex256,
@@ -80,6 +83,10 @@ const dataFetcher = (mirrorNodeClient, tokenId) => {
             const account = await mirrorNodeClient.getAccount(balances[offset].account);
             return account.evm_address.slice(2).padStart(64, '0');
         },
+        tokenType: async (offset) => {
+            const result = await mirrorNodeClient.getTokenById(tokenId);
+            return typeConverter.t_string_storage(result.type, offset);
+        },
     };
 };
 
@@ -123,9 +130,7 @@ module.exports = {
                     return await fetcher[slot.label](offset);
                 }
                 const tokenData = await mirrorNodeClient.getTokenById(tokenId);
-                const hexStr = Buffer.from(tokenData[utils.toSnakeCase(slot.label)]).toString('hex');
-                const substr = hexStr.substring(offset * 64, (offset + 1) * 64);
-                return substr.padEnd(64, '0');
+                return typeConverter.t_string_storage(tokenData[utils.toSnakeCase(slot.label)], offset);
             }
             const kecRes = await getComplexElement(keccakedSlot.slot, tokenId, keccakedSlot.offset);
             trace(logger, requestIdPrefix, `Get storage ${address} slot: ${requestedSlot}, result: ${kecRes}`);

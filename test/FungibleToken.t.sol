@@ -14,7 +14,7 @@ import {IERC20} from "../src/IERC20.sol";
  * To get USDC balances for a given account using the Mirror Node you can use
  * https://mainnet.mirrornode.hedera.com/api/v1/tokens/0.0.456858/balances?account.id=0.0.38047
  */
-contract TokenTest is Test {
+contract FungibleTokenTest is Test {
 
     /**
      * https://hashscan.io/testnet/token/0.0.429274
@@ -51,7 +51,7 @@ contract TokenTest is Test {
         address alice = makeAddr("alice");
         address bob = makeAddr("bob");
 
-        // assertEq(IERC20(USDC).balanceOf(bob), 0);
+        assertEq(IERC20(USDC).balanceOf(bob), 0);
 
         deal(alice, 100 * 10e8);
         deal(USDC, alice, 1000 * 10e8);
@@ -61,7 +61,7 @@ contract TokenTest is Test {
         assertEq(balance, 1000 * 10e8);
 
         // Bob's balance should remain unchanged
-        // assertEq(IERC20(USDC).balanceOf(bob), 0);
+        assertEq(IERC20(USDC).balanceOf(bob), 0);
     }
 
     function test_ERC20_balanceOf_call() view private {
