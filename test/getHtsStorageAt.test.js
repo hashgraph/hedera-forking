@@ -11,6 +11,8 @@ describe('getHtsStorageAt', function () {
     /**
      * Enable test `logger` for `getHtsStorageAt` by setting the `TRACE` environment variable.
      * 
+     * When `TRACE` is set, `trace` logger will be enabled using a sequential `requestId`.
+     * 
      * @type {(address: string, slot: string, mirrorNodeClient: import('@hashgraph/hedera-forking').IMirrorNodeClient) => Promise<string>}
      */
     const getHtsStorageAt = function () {
@@ -20,15 +22,6 @@ describe('getHtsStorageAt', function () {
         let reqId = 1;
         return (address, slot, mirrorNodeClient) => _getHtsStorageAt(address, slot, mirrorNodeClient, logger, `[Req ID: ${reqId++}]`);
     }();
-
-    /**
-     * https://testnet.mirrornode.hedera.com/api/v1/accounts/0x4d1c823b5f15be83fdf5adaf137c2a9e0e78fe15?transactions=false
-     * @param {string} idOrAliasOrEvmAddress 
-     * @returns 
-     */
-    const getAccount = (idOrAliasOrEvmAddress) => {
-        return require(`./accounts/0x${idOrAliasOrEvmAddress.toLowerCase()}.json`);
-    };
 
     const slotsByLabel = function (slotsByLabel, { storageLayout }) {
         for (const slot of storageLayout.storage) {
@@ -54,28 +47,6 @@ describe('getHtsStorageAt', function () {
         expect(result).to.be.equal(utils.ZERO_HEX_32_BYTE);
     });
 
-    it(`should return \`ZERO_HEX_32_BYTE\` on \`0x167\` when slot does not match \`getAccountId\``, async function () {
-        const slot = '0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15';
-        const result = await getHtsStorageAt('0x0000000000000000000000000000000000000167', slot, { getAccount });
-        expect(result).to.be.equal(utils.ZERO_HEX_32_BYTE);
-    });
-
-    ['1.0.1421', '0.1.1421'].forEach(accountId => {
-        it(`should return \`ZERO_HEX_32_BYTE\` on \`0x167\` when slot matches \`getAccountId\` but \`${accountId}\`'s shard|realm is not zero`, async function () {
-            const slot = '0xe0b490f700000000000000004D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15';
-            const result = await getHtsStorageAt('0x0000000000000000000000000000000000000167', slot, {
-                getAccount: _address => ({ account: accountId })
-            });
-            expect(result).to.be.equal(utils.ZERO_HEX_32_BYTE);
-        });
-    });
-
-    it(`should return accountId on \`0x167\` when slot matches \`getAccountId\``, async function () {
-        const slot = '0xe0b490f700000000000000004D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15';
-        const result = await getHtsStorageAt('0x0000000000000000000000000000000000000167', slot, { getAccount });
-        expect(result).to.be.equal(`0x${'58d'.padStart(64, '0')}`);
-    });
-
     ['name', 'symbol'].forEach(name => {
         const slot = slotsByLabel[name];
         it(`should return \`ZERO_HEX_32_BYTE\` when \`address\` is not found for the keccaked slot of \`${slot}\` for field \`${name}\``, async function () {
@@ -83,6 +54,41 @@ describe('getHtsStorageAt', function () {
             const mirrorNodeClient = { getTokenById(_tokenId) { return null; } };
             const result = await getHtsStorageAt('0x0000000000000000000000000000000000000001', keccakedSlot, mirrorNodeClient);
             expect(result).to.be.equal(utils.ZERO_HEX_32_BYTE);
+        });
+    });
+
+    describe('`getAccountId` map on `0x167`', function () {
+        const HTS = '0x0000000000000000000000000000000000000167';
+
+        it(`should return \`ZERO_HEX_32_BYTE\` on \`0x167\` when slot does not match \`getAccountId\``, async function () {
+            const slot = '0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15';
+            const result = await getHtsStorageAt(HTS, slot);
+            expect(result).to.be.equal(utils.ZERO_HEX_32_BYTE);
+        });
+
+        ['1.0.1421', '0.1.1421'].forEach(accountId => {
+            it(`should return \`ZERO_HEX_32_BYTE\` on \`0x167\` when slot matches \`getAccountId\` but \`${accountId}\`'s shard|realm is not zero`, async function () {
+                const slot = '0xe0b490f700000000000000004D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15';
+                const result = await getHtsStorageAt(HTS, slot, {
+                    getAccount: _address => ({ account: accountId })
+                });
+                expect(result).to.be.equal(utils.ZERO_HEX_32_BYTE);
+            });
+        });
+
+        it(`should return accountId on \`0x167\` when slot matches \`getAccountId\``, async function () {
+            /**
+             * https://testnet.mirrornode.hedera.com/api/v1/accounts/0x4d1c823b5f15be83fdf5adaf137c2a9e0e78fe15?transactions=false
+             * @param {string} idOrAliasOrEvmAddress 
+             * @returns 
+             */
+            const getAccount = (idOrAliasOrEvmAddress) => {
+                return require(`./accounts/getAccount_0x${idOrAliasOrEvmAddress.toLowerCase()}.json`);
+            };
+
+            const slot = '0xe0b490f700000000000000004D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15';
+            const result = await getHtsStorageAt(HTS, slot, { getAccount });
+            expect(result).to.be.equal(`0x${'58d'.padStart(64, '0')}`);
         });
     });
 
