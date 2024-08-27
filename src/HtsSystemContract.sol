@@ -40,16 +40,6 @@ contract HtsSystemContract {
         }
     }
 
-    function balanceOf(address account) private view returns (uint256 amount) {
-        uint32 accountId = HtsSystemContract(address(0x167)).getAccountId(account);
-        uint192 padding = 0x0000_0000_0000_0000;
-        // slot(256) = selector(32)+padding(192)+accountId(32)
-        uint256 slot = uint256(bytes32(abi.encodePacked(IERC20.balanceOf.selector, padding, accountId)));
-        assembly {
-            amount := sload(slot)
-        }
-    }
-
     function transfer(address recipient, uint256 amount) public returns (bool) {
         uint256 senderIndex = findIndex(msg.sender, holders);
         require(senderIndex != type(uint256).max, "Sender not found");
@@ -133,7 +123,7 @@ contract HtsSystemContract {
 
     function dissociate() public {
         require(isAssociated(msg.sender), "Not associated");
-        require(balanceOf(msg.sender) == 0, "Cannot dissociate with non-zero balance");
+        require(__balanceOf(msg.sender) == 0, "Cannot dissociate with non-zero balance");
 
         uint256 index = findIndex(msg.sender, associatedAccounts);
         if (index != type(uint256).max) {
@@ -178,7 +168,7 @@ contract HtsSystemContract {
             return abi.encode(symbol);
         } else if (selector == IERC20.balanceOf.selector) {
             address account = address(bytes20(msg.data[40:60]));
-            return abi.encode(balanceOf(account));
+            return abi.encode(__balanceOf(account));
         } else if (selector == IERC20.transfer.selector) {
             address account = address(bytes20(msg.data[40:60]));
             uint256 amount = abi.decode(msg.data[60:92], (uint256));
@@ -205,5 +195,15 @@ contract HtsSystemContract {
         //     return abi.encode(transferFrom(from, to));
         }
         return "";
+    }
+
+    function __balanceOf(address account) private view returns (uint256 amount) {
+        uint32 accountId = HtsSystemContract(address(0x167)).getAccountId(account);
+        uint192 padding = 0x0000_0000_0000_0000;
+        // slot(256) = selector(32)+padding(192)+accountId(32)
+        uint256 slot = uint256(bytes32(abi.encodePacked(IERC20.balanceOf.selector, padding, accountId)));
+        assembly {
+            amount := sload(slot)
+        }
     }
 }
