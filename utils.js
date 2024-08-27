@@ -15,6 +15,11 @@ module.exports = {
      * When a slot is empty, zero must be returned.
      */
     ZERO_HEX_32_BYTE: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    
+    /**
+     * 
+     */
+    HTSAddress: '0x0000000000000000000000000000000000000167',
 
     /**
      * Converts a _camelCase_ string to a _snake_case_ string.
@@ -24,7 +29,7 @@ module.exports = {
     toSnakeCase: camelCase => camelCase.replace(/([A-Z])/g, '_$1').toLowerCase(),
 
     /**
-     * @param {string} value 
+     * @param {string} value Decimal `value` as string.
      * @returns {string}
      */
     toIntHex256: value => parseInt(value).toString(16).padStart(64, '0'),

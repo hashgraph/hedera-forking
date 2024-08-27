@@ -106,9 +106,39 @@ module.exports = {
      * @returns {Promise<string | null>}
      */
     async getHtsStorageAt(address, requestedSlot, mirrorNodeClient, logger = { trace: () => undefined }, reqId) {
+        /**
+         * Logs `msg` and `return`s the provided `value`.
+         * 
+         * @param {string|null} value 
+         * @param {string} msg 
+         * @returns {string|null} The `value` provided
+         */
+        const rtrace = (value, msg) => (trace(logger, reqId, `${msg}, returning \`${value}\``),
+            value === null ?
+                null :
+                `0x${utils.toIntHex256(value)}`
+        );
+
         if (!address.startsWith(utils.LONG_ZERO_PREFIX)) {
             trace(logger, reqId, `${address} does not start with ${utils.LONG_ZERO_PREFIX}, returning null`);
             return null;
+        }
+
+        const nrequestedSlot = BigInt(requestedSlot);
+
+        if (address === utils.HTSAddress) {
+            trace(logger, reqId, 'nreqid' + (nrequestedSlot >> 224n).toString(16));
+            if (nrequestedSlot >> 160n === 0xe0b490f7_0000000000000000n) {
+                const encodedAddress = requestedSlot.slice(-40);
+                const account = await mirrorNodeClient.getAccount(encodedAddress);
+                const [shardNum, realmNum, accountId] = account.account.split('.');
+                if (shardNum !== '0') return rtrace(utils.ZERO_HEX_32_BYTE, 'shardNum is not zero');
+                if (realmNum !== '0') return rtrace(utils.ZERO_HEX_32_BYTE, 'realNum is not zero');
+                return rtrace(accountId, `Requested address is 0x167 and slot matches \`getAccountId\``);
+            }
+
+            trace(logger, reqId, `Requested slot for 0x167 matches field, not found returning \`ZERO_HEX_32_BYTE\``);
+            return utils.ZERO_HEX_32_BYTE;
         }
 
         const tokenId = `0.0.${parseInt(address, 16)}`;
@@ -116,7 +146,18 @@ module.exports = {
 
         trace(logger, reqId, `Getting storage for ${address} (tokenId=${tokenId}) at slot=${requestedSlot}`);
 
-        const nrequestedSlot = BigInt(requestedSlot);
+        // 28 * 8 = 224
+        // 00 00 00 00 
+        // Encoded `balanceOf` slot
+        if (nrequestedSlot >> 32n === 0x70a08231_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000n) {
+            const accountId = `0.0.${parseInt(requestedSlot.slice(-8), 16)}`;
+            const { balances } = await mirrorNodeClient.getBalanceOfToken(tokenId, accountId, reqId);
+            if (balances.length === 0) return rtrace(utils.ZERO_HEX_32_BYTE, 'Balances not found');
+
+            const balance = balances[0].balance;
+            trace(logger, reqId, `Requested slot matches \`balanceOf\` slot`);
+            return `0x${balance.toString(16).padStart(64, '0')}`;
+        }
 
         const keccakedSlot = inferSlotAndOffset(nrequestedSlot);
         if (keccakedSlot !== null) {
