@@ -161,7 +161,7 @@ describe('getHtsStorageAt', function () {
             const balanceOfSelector = '0x70a08231';
             const padding = '0'.repeat(24 * 2);
 
-            it(`should get \`balanceOf\` tokenId`, async function () {
+            it(`should get \`balanceOf\` tokenId for account`, async function () {
                 /** @type {import('@hashgraph/hedera-forking').IMirrorNodeClient} */
                 const mirrorNodeClient = {
                     getBalanceOfToken(_tokenId, accountId) {
