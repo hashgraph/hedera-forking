@@ -66,12 +66,18 @@ describe('getHtsStorageAt', function () {
             expect(result).to.be.equal(utils.ZERO_HEX_32_BYTE);
         });
 
+        it(`should return address' suffix on \`0x167\` when accountId does not exist`, async function () {
+            const mirrorNodeClient = { getAccount: _address => null };
+            const slot = '0xe0b490f700000000000000004D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15';
+            const result = await getHtsStorageAt(HTS, slot, mirrorNodeClient);
+            expect(result).to.be.equal(`0x${slot.slice(-8).padStart(64, '0')}`);
+        });
+
         ['1.0.1421', '0.1.1421'].forEach(accountId => {
             it(`should return \`ZERO_HEX_32_BYTE\` on \`0x167\` when slot matches \`getAccountId\` but \`${accountId}\`'s shard|realm is not zero`, async function () {
+                const mirrorNodeClient = { getAccount: _address => ({ account: accountId }) };
                 const slot = '0xe0b490f700000000000000004D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15';
-                const result = await getHtsStorageAt(HTS, slot, {
-                    getAccount: _address => ({ account: accountId })
-                });
+                const result = await getHtsStorageAt(HTS, slot, mirrorNodeClient);
                 expect(result).to.be.equal(utils.ZERO_HEX_32_BYTE);
             });
         });
