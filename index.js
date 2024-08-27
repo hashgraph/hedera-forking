@@ -80,7 +80,25 @@ const dataFetcher = (mirrorNodeClient, tokenId) => {
             const result = await mirrorNodeClient.getTokenBalancesById(tokenId);
             if (offset === null) return utils.toIntHex256(`${result.balances.length}`);
             const balances = result.balances;
-            const account = await mirrorNodeClient.getAccount(balances[offset].account);
+            if (!balances[offset]?.account) {
+                return '0'.padStart(64, '0');
+            }
+            const account = await mirrorNodeClient.getAccount(balances[offset]?.account);
+            return account.evm_address.slice(2).padStart(64, '0');
+        },
+        tokenIds: async (offset) => {
+            const result = await mirrorNodeClient.getTokenNftsById(tokenId);
+            if (offset === null) return utils.toIntHex256(`${result.nfts.length}`);
+            return utils.toIntHex256(`${result.nfts[offset]?.serial_number}`);
+        },
+        owners: async (offset) => {
+            const result = await mirrorNodeClient.getTokenNftsById(tokenId);
+            if (offset === null) return utils.toIntHex256(`${result.nfts.length}`);
+            const nfts = result.nfts;
+            if (!nfts[offset]?.account_id) {
+                return '0'.padStart(64, '0');
+            }
+            const account = await mirrorNodeClient.getAccount(nfts[offset]?.account_id);
             return account.evm_address.slice(2).padStart(64, '0');
         },
         tokenType: async (offset) => {

@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import {IERC20} from "./IERC20.sol";
 import {IERC721} from "./IERC721.sol";
+import "forge-std/console.sol";
 
 contract HtsSystemContract {
     string public tokenType; // IERC20 | IERC721
@@ -56,7 +57,7 @@ contract HtsSystemContract {
                     count++;
                 }
             }
-            return 0;
+            return count;
         }
         revert("Token type is not supported");
     }
@@ -81,11 +82,10 @@ contract HtsSystemContract {
         if (_isERC721()) {
             uint256 tokenIndex = findTokenIndex(amountOrTokenId);
             require(tokenIndex != type(uint256).max, "Token not found");
-            require(owners[tokenIndex] == msg.sender, "Not token owner");
-            require(msg.sender == approvals[tokenIndex] || isApprovedForAll(msg.sender, msg.sender), "Not approved");
+            require(owners[tokenIndex] == msg.sender || msg.sender == approvals[tokenIndex] || isApprovedForAll(msg.sender, msg.sender), "Not token owner");
 
             owners[tokenIndex] = recipient;
-            approvals[tokenIndex] = address(0);
+        //    approvals[tokenIndex] = address(0);
 
             emit Transfer(msg.sender, recipient, amountOrTokenId);
 
@@ -213,9 +213,14 @@ contract HtsSystemContract {
         revert ("Not supported");
     }
 
+    function ownerOf(uint256 tokenId) public view returns (address owner) {
+        uint256 tokenIndex = findTokenIndex(tokenId);
+        require(tokenIndex != type(uint256).max, "Token not found");
+        return owners[tokenIndex];
+    }
+
     function __redirectForToken(address token, bytes memory encodedFunctionSelector) internal returns (bytes memory) {
         bytes4 selector = bytes4(msg.data[24:28]);
-
         if (selector == bytes4(keccak256("name()"))) {
             return abi.encode(name);
         } else if (selector == bytes4(keccak256("decimals()"))) {
@@ -248,19 +253,16 @@ contract HtsSystemContract {
         } else if (selector == bytes4(keccak256("isAssociated(address)"))) {
             address account = address(bytes20(msg.data[40:60]));
             return abi.encode(isAssociated(account));
-            // } else if (selector == bytes4(keccak256("transferFrom(address,address,uint256)"))) {
-            //     address from = address(bytes20(msg.data[40:60]));
-            //     uint256 to = address(bytes20(msg.data[60:80]));
-            //     uint256 amount = abi.decode(msg.data[80:112], (uint256));
-            //     return abi.encode(transferFrom(from, to));
+     //   } else if (selector == bytes4(keccak256("transferFrom(address,address,uint256)"))) {
+     //       address from = address(bytes20(msg.data[40:60]));
+     //       address to = address(bytes20(msg.data[60:80]));
+     //       uint256 amount = abi.decode(msg.data[80:112], (uint256));
+     //       return abi.encode(transferFrom(from, to, amount));
+        } else if (selector == bytes4(keccak256("ownerOf(uint256)"))) {
+            uint256 tokenId = abi.decode(msg.data[28:60], (uint256));
+            return abi.encode(ownerOf(tokenId));
         }
         return "";
-    }
-
-    function ownerOf(uint256 tokenId) external view returns (address owner) {
-        uint256 tokenIndex = findTokenIndex(tokenId);
-        require(tokenIndex != type(uint256).max, "Token not found");
-        return owners[tokenIndex];
     }
 
     function safeTransferFrom(address from, address to, uint256 tokenId) external {

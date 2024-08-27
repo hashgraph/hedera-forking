@@ -11,6 +11,7 @@ interface IERC721 {
     function balanceOf(address owner) external view returns (uint256 balance);
     function ownerOf(uint256 tokenId) external view returns (address owner);
     function safeTransferFrom(address from, address to, uint256 tokenId) external;
+    function transfer(address to, uint256 tokenId) external returns (bool);
     function transferFrom(address from, address to, uint256 tokenId) external returns (bool);
     function approve(address to, uint256 tokenId) external;
     function getApproved(uint256 tokenId) external view returns (address operator);

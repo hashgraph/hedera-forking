@@ -21,6 +21,7 @@ contract FungibleTokenTest is Test {
      * https://testnet.mirrornode.hedera.com/api/v1/tokens/0.0.429274
      */
     address USDC = 0x0000000000000000000000000000000000068cDa;
+    address FT = 0x000000000000000000000000000000000047b52A;
 
     function setUp() external view {
         console.log("HTS code has %d bytes", address(0x167).code.length);
@@ -47,28 +48,23 @@ contract FungibleTokenTest is Test {
         assertEq(IERC20(USDC).totalSupply(), 10000000000000000);
     }
 
-    function test_ERC20_balanceOf_dealt() private {
-        address alice = makeAddr("alice");
-        address bob = makeAddr("bob");
-
-        assertEq(IERC20(USDC).balanceOf(bob), 0);
-
-        deal(alice, 100 * 10e8);
-        deal(USDC, alice, 1000 * 10e8);
-
-        uint256 balance = IERC20(USDC).balanceOf(alice);
+    function test_ERC20_balanceOf_call() external {
+        address alice = 0x292c4acf9ec49aF888D4051Eb4A4dc53694D1380;
+        uint256 balance = IERC20(FT).balanceOf(alice);
         console.log("alice's balance %s", balance);
-        assertEq(balance, 1000 * 10e8);
-
-        // Bob's balance should remain unchanged
-        assertEq(IERC20(USDC).balanceOf(bob), 0);
+        assertEq(balance, 9995);
     }
 
-    function test_ERC20_balanceOf_call() view private {
-        address alice = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
-
-        uint256 balance = IERC20(USDC).balanceOf(alice);
+    function test_ERC20_transfer_call() external {
+        address alice = 0x292c4acf9ec49aF888D4051Eb4A4dc53694D1380;
+        address bob = makeAddr("bob");
+        uint256 balance = IERC20(FT).balanceOf(alice);
         console.log("alice's balance %s", balance);
-        assertEq(balance, 49300000);
+        assertEq(balance, 9995);
+        vm.startPrank(alice);
+        IERC20(FT).transfer(bob, 9992);
+        vm.stopPrank();
+        assertEq(IERC20(FT).balanceOf(bob), 9992);
+        assertEq(IERC20(FT).balanceOf(alice), 3);
     }
 }
