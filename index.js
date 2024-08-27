@@ -2,6 +2,7 @@ const { keccak256 } = require('ethers');
 const utils = require('./utils');
 
 const hts = require('./out/HtsSystemContract.sol/HtsSystemContract.json');
+
 /**
  * Represents a slot entry in `storageLayout.storage`.
  *
@@ -34,12 +35,6 @@ const typeConverter = {
 };
 
 /**
- *
- * @param {import("pino").Logger} logger
- * @param {string=} requestIdPrefix
- */
-
-/**
  * @param {bigint} nrequestedSlot
  * @param {bigint} MAX_ELEMENTS How many slots ahead to infer that `nrequestedSlot` is part of a given slot.
  * @returns {{slot: StorageSlot, offset: bigint}|null}
@@ -55,41 +50,6 @@ function inferSlotAndOffset(nrequestedSlot, MAX_ELEMENTS = 100) {
     return null;
 }
 
-/**
- * Primitives with the same name in the tokenData structure from both the MirrorNode and the Smart Contract
- * are supported by default. Use this fetcher to override the default behavior, especially when dealing with arrays.
- * When offset is null, the fetcher should retrieve data for the slot.
- * If offset is not null, it should return values for the array at the specified index (offset).
- *
- * @param {import(".").IMirrorNodeClient} mirrorNodeClient
- * @param {string} tokenId
- * @returns {{[slot_label: string]: (value: string) => Promise<string>}}
- */
-const dataFetcher = (mirrorNodeClient, tokenId) => {
-    return {
-        balances: async (offset) => {
-            const result = await mirrorNodeClient.getTokenBalancesById(tokenId);
-            if (offset === null) return utils.toIntHex256(`${result.balances.length}`);
-            const balances = result.balances;
-            return utils.toIntHex256(`${balances[offset]?.balance ?? 0}`);
-        },
-        holders: async (offset) => {
-            const result = await mirrorNodeClient.getTokenBalancesById(tokenId);
-            if (offset === null) return utils.toIntHex256(`${result.balances.length}`);
-            const balances = result.balances;
-            const account = await mirrorNodeClient.getAccount(balances[offset].account);
-            return account.evm_address.slice(2).padStart(64, '0');
-        },
-    };
-};
-
-/**
- * @param {import('pino').Logger} logger
- * @param {string} requestIdPrefix
- * @param {string} msg
- */
-const trace = (logger, requestIdPrefix, msg) => logger.trace(`${requestIdPrefix} (hedera-forking) ${msg}`);
-
 module.exports = {
     getHtsCode() {
         return hts.deployedBytecode.object;
@@ -100,55 +60,79 @@ module.exports = {
      * @param {string} requestedSlot
      * @param {import(".").IMirrorNodeClient} mirrorNodeClient
      * @param {import("pino").Logger=} logger
-     * @param {string=} requestIdPrefix
+     * @param {string=} reqId
      * @returns {Promise<string | null>}
      */
-    async getHtsStorageAt(address, requestedSlot, mirrorNodeClient, logger = { trace: () => undefined }, requestIdPrefix) {
-        if (!address.startsWith(utils.LONG_ZERO_PREFIX)) {
-            trace(logger, requestIdPrefix, `${address} does not start with ${utils.LONG_ZERO_PREFIX}, returning null`);
-            return null;
-        }
+    async getHtsStorageAt(address, requestedSlot, mirrorNodeClient, logger = { trace: () => undefined }, reqId) {
+        /** Wrapper trace logger to include origin `(hedera-forking)` in the log entry. */
+        const trace = msg => logger.trace(`${reqId} (hedera-forking) ${msg}`);
+        /** Logs `msg` and `return`s the provided `value`. */
+        const rtrace = (value, msg) => (trace(`${msg}, returning \`${value}\``), value);
 
-        const tokenId = `0.0.${parseInt(address, 16)}`;
-        const fetcher = dataFetcher(mirrorNodeClient, tokenId);
-
-        trace(logger, requestIdPrefix, `Getting storage for ${address} (tokenId=${tokenId}) at slot=${requestedSlot}`);
+        if (!address.startsWith(utils.LONG_ZERO_PREFIX))
+            return rtrace(null, `${address} does not start with \`${utils.LONG_ZERO_PREFIX}\``);
 
         const nrequestedSlot = BigInt(requestedSlot);
 
+        if (address === utils.HTSAddress) {
+            // Encoded `address(0x167).getAccountId(address)` slot
+            // slot(256) = `getAccountId`selector(32) + padding(64) + address(160)
+            if (nrequestedSlot >> 160n === 0xe0b490f7_0000_0000_0000_0000n) {
+                const encodedAddress = requestedSlot.slice(-40);
+                const account = await mirrorNodeClient.getAccount(encodedAddress);
+                if (account === null)
+                    return rtrace(`0x${requestedSlot.slice(-8).padStart(64, '0')}`, `Requested address to account id, but address \`${encodedAddress}\` not found, use suffix as slot`);
+
+                const [shardNum, realmNum, accountId] = account.account.split('.');
+                if (shardNum !== '0')
+                    return rtrace(utils.ZERO_HEX_32_BYTE, `Requested address to account id, but shardNum in \`${account.account}\` is not zero`);
+                if (realmNum !== '0')
+                    return rtrace(utils.ZERO_HEX_32_BYTE, `Requested address to account id, but realmNum in \`${account.account}\` is not zero`);
+
+                return rtrace(`0x${utils.toIntHex256(accountId)}`, `Requested address to account id, and slot matches \`getAccountId\``);
+            }
+
+            return rtrace(utils.ZERO_HEX_32_BYTE, `Requested slot for 0x167 matches field, not found`);
+        }
+
+        const tokenId = `0.0.${parseInt(address, 16)}`;
+        trace(`Getting storage for \`${address}\` (tokenId=${tokenId}) at slot=${requestedSlot}`);
+
+        // Encoded `address(tokenId).balanceOf(address)` slot
+        // slot(256) = `balanceOf`selector(32) + padding(192) + accountId(32)
+        if (nrequestedSlot >> 32n === 0x70a08231_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000n) {
+            const accountId = `0.0.${parseInt(requestedSlot.slice(-8), 16)}`;
+            const { balances } = await mirrorNodeClient.getBalanceOfToken(tokenId, accountId, reqId);
+            if (balances.length === 0) return rtrace(utils.ZERO_HEX_32_BYTE, 'Balance not found');
+
+            const balance = balances[0].balance;
+            return rtrace(`0x${balance.toString(16).padStart(64, '0')}`, `Requested slot matches \`balanceOf\` slot`);
+        }
+
         const keccakedSlot = inferSlotAndOffset(nrequestedSlot);
         if (keccakedSlot !== null) {
-            const getComplexElement = async (slot, tokenId, offset) => {
-                if (fetcher[slot.label] !== undefined) {
-                    return await fetcher[slot.label](offset);
-                }
-                const tokenData = await mirrorNodeClient.getTokenById(tokenId);
-                const hexStr = Buffer.from(tokenData[utils.toSnakeCase(slot.label)]).toString('hex');
-                const substr = hexStr.substring(offset * 64, (offset + 1) * 64);
-                return substr.padEnd(64, '0');
-            }
-            const kecRes = await getComplexElement(keccakedSlot.slot, tokenId, keccakedSlot.offset);
-            trace(logger, requestIdPrefix, `Get storage ${address} slot: ${requestedSlot}, result: ${kecRes}`);
-            return `0x${kecRes}`;
+            const tokenData = await mirrorNodeClient.getTokenById(tokenId);
+            if (tokenData === null)
+                return rtrace(utils.ZERO_HEX_32_BYTE, `Requested slot matches keccaked slot but token was not found`);
+
+            const offset = keccakedSlot.offset;
+            const hexStr = Buffer.from(tokenData[utils.toSnakeCase(keccakedSlot.slot.label)]).toString('hex');
+            const kecRes = hexStr.substring(offset * 64, (offset + 1) * 64).padEnd(64, '0');
+            return rtrace(`0x${kecRes}`, `Get storage ${address} slot: ${requestedSlot}, result: ${kecRes}`);
         }
 
         const slot = slotMap.get(nrequestedSlot);
-        if (slot === undefined) {
-            trace(logger, requestIdPrefix, `Requested slot does not match any field slots, returning ${utils.ZERO_HEX_32_BYTE}`);
-            return utils.ZERO_HEX_32_BYTE;
-        }
-
-        if (fetcher[slot.label] !== undefined) {
-            return `0x${await fetcher[slot.label](null)}`;
-        }
+        if (slot === undefined)
+            return rtrace(utils.ZERO_HEX_32_BYTE, `Requested slot does not match any field slots`);
 
         const tokenResult = await mirrorNodeClient.getTokenById(tokenId);
-        const value = tokenResult[utils.toSnakeCase(slot.label)];
-        if (typeConverter[slot.type] === undefined || !value) {
-            trace(logger, requestIdPrefix, `Requested slot matches ${slot.label} field, but it is not supported, returning ${utils.ZERO_HEX_32_BYTE}`);
-            return utils.ZERO_HEX_32_BYTE;
-        }
+        if (tokenResult === null)
+            return rtrace(utils.ZERO_HEX_32_BYTE, `Requested slot matches ${slot.label} field, but token was not found`);
 
-        return `0x${typeConverter[slot.type](value)}`;
+        const value = tokenResult[utils.toSnakeCase(slot.label)];
+        if (typeConverter[slot.type] === undefined || !value)
+            return rtrace(utils.ZERO_HEX_32_BYTE, `Requested slot matches ${slot.label} field, but it is not supported`);
+
+        return rtrace(`0x${typeConverter[slot.type](value)}`, `Requested slot matches \`${slot.label}\` field (type=\`${slot.type}\`)`);
     },
 };

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: unlicensed
 pragma solidity ^0.8.17;
 
-import {Test, Vm, console} from "forge-std/Test.sol";
+import {Test, console} from "forge-std/Test.sol";
 import {IERC20} from "../src/IERC20.sol";
 
 /**
@@ -44,16 +44,16 @@ contract TokenTest is Test {
     }
 
     function test_ERC20_totalSupply() view external {
-        assertEq(IERC20(USDC).totalSupply(), 10000000000000000);
+        assertEq(IERC20(USDC).totalSupply(), 10000000004000000);
     }
 
-    function test_ERC20_balanceOf_dealt() private {
+    function test_ERC20_balanceOf_deal() external {
         address alice = makeAddr("alice");
         address bob = makeAddr("bob");
 
-        // assertEq(IERC20(USDC).balanceOf(bob), 0);
+        assertEq(IERC20(USDC).balanceOf(bob), 0);
 
-        deal(alice, 100 * 10e8);
+        // deal(alice, 100 * 10e8);
         deal(USDC, alice, 1000 * 10e8);
 
         uint256 balance = IERC20(USDC).balanceOf(alice);
@@ -61,14 +61,26 @@ contract TokenTest is Test {
         assertEq(balance, 1000 * 10e8);
 
         // Bob's balance should remain unchanged
-        // assertEq(IERC20(USDC).balanceOf(bob), 0);
+        assertEq(IERC20(USDC).balanceOf(bob), 0);
     }
 
-    function test_ERC20_balanceOf_call() view private {
-        address alice = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
+    function test_ERC20_balanceOf_should_return_zero_for_non_existent_account() external {
+        address alice = makeAddr("alice");
+        uint256 balance = IERC20(USDC).balanceOf(alice);
+        assertEq(balance, 0);
+    }
 
+    function test_ERC20_balanceOf_call() view external {
+        // https://hashscan.io/testnet/account/0.0.1421
+        address alice = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
         uint256 balance = IERC20(USDC).balanceOf(alice);
         console.log("alice's balance %s", balance);
-        assertEq(balance, 49300000);
+        assertEq(balance, 49_300000);
+
+        // https://hashscan.io/testnet/account/0.0.2183
+        address bob = 0x0000000000000000000000000000000000000887;
+        balance = IERC20(USDC).balanceOf(bob);
+        console.log("bob's balance %s", balance);
+        assertEq(balance, 341_000000);
     }
 }
