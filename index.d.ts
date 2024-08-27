@@ -3,9 +3,47 @@
  *
  */
 interface IMirrorNodeClient {
-    getTokenById(tokenId: string, requestIdPrefix?: string): Promise<any>
-    getTokenBalancesById(tokenId: string, requestIdPrefix?: string): Promise<any>
-    getAccount(account: string, requestIdPrefix?: string): Promise<any>
+
+    /**
+     * Get token by id.
+     * 
+     * Returns token entity information given the id.
+     * 
+     * This method should call the Mirror Node API endpoint `GET /api/v1/tokens/{tokenId}`.
+     * 
+     * @param tokenId 
+     * @param requestIdPrefix The formatted `requestId` as a prefix for logging purposes.
+     */
+    getTokenById(tokenId: string, requestIdPrefix?: string): Promise<any>;
+
+    /**
+     * 
+     * @param tokenId 
+     * @param accountId 
+     * @param requestIdPrefix 
+     */
+    getBalanceOfToken(tokenId: string, accountId: string, requestIdPrefix?: string): Promise<{
+        balances: { balance: any }[]
+    }>;
+
+    /**
+     * Get account by alias, id, or evm address.
+     * 
+     * Return the account transactions and balance information given an account alias, an account id, or an evm address.
+     * The information will be limited to at most 1000 token balances for the account as outlined in HIP-367.
+     * When the timestamp parameter is supplied, we will return transactions and account state for the relevant timestamp query.
+     * Balance information will be accurate to within 15 minutes of the provided timestamp query.
+     * Historical ethereum nonce information is currently not available and may not be the exact value at a provided timestamp.
+     * 
+     * This method should call the Mirror Node API endpoint `GET /api/v1/accounts/{idOrAliasOrEvmAddress}`.
+     * 
+     * @param idOrAliasOrEvmAddress 
+     * @param requestIdPrefix 
+     */
+    getAccount(idOrAliasOrEvmAddress: string, requestIdPrefix?: string): Promise<{
+        account: string,
+        evm_address: string,
+    }>;
 }
 
 /**
