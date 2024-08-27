@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
-import {OnlyHtsCall} from "./OnlyHtsCall.sol";
 import {IERC20} from "./IERC20.sol";
 
-contract HtsSystemContract is OnlyHtsCall {
+contract HtsSystemContract {
+
+    address private constant HTS_PRECOMPILE = address(0x167);
+
     string private name;
     string private symbol;
     uint8 private decimals;
@@ -24,13 +26,13 @@ contract HtsSystemContract is OnlyHtsCall {
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
 
-    // constructor(uint256 _initialSupply) {
-    //     totalSupply = _initialSupply * (10 ** uint256(decimals));
-    //     holders.push(msg.sender);
-    //     balances.push(totalSupply);
-    // }
+    /// @notice Prevents delegatecall into the modified method.
+    modifier htsCall() {
+        require(address(this) == HTS_PRECOMPILE, "htsCall: delegated call");
+        _;
+    }
 
-    function getAccountId(address account) onlyHtsCall external view returns (uint32 accountId) {
+    function getAccountId(address account) htsCall external view returns (uint32 accountId) {
         uint64 padding = 0x0000_0000_0000_0000;
         uint256 slot = uint256(bytes32(abi.encodePacked(HtsSystemContract.getAccountId.selector, padding, account)));
         assembly {
@@ -39,21 +41,13 @@ contract HtsSystemContract is OnlyHtsCall {
     }
 
     function balanceOf(address account) private view returns (uint256 amount) {
-        // 
         uint32 accountId = HtsSystemContract(address(0x167)).getAccountId(account);
         uint192 padding = 0x0000_0000_0000_0000;
-        // slot(256)=selector(32)+padding(192)+accountId(32)
+        // slot(256) = selector(32)+padding(192)+accountId(32)
         uint256 slot = uint256(bytes32(abi.encodePacked(IERC20.balanceOf.selector, padding, accountId)));
         assembly {
             amount := sload(slot)
         }
-
-        // for (uint256 i = 0; i < holders.length; i++) {
-        //     if (holders[i] == account) {
-        //         return balances[i];
-        //     }
-        // }
-        // return 0;
     }
 
     function transfer(address recipient, uint256 amount) public returns (bool) {
