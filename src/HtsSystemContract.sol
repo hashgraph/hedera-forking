@@ -1,16 +1,17 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
+import {OnlyHtsCall} from "./OnlyHtsCall.sol";
 import {IERC20} from "./IERC20.sol";
 
-contract HtsSystemContract {
+contract HtsSystemContract is OnlyHtsCall {
     string private name;
     string private symbol;
     uint8 private decimals;
     uint256 private totalSupply;
 
     address[] public holders;
-    uint256[] public balances;
+    uint256[] public balances; /// account id
     address[] public allowancesOwners;
     address[] public allowancesSpenders;
     uint256[] public allowancesAmounts;
@@ -29,13 +30,30 @@ contract HtsSystemContract {
     //     balances.push(totalSupply);
     // }
 
-    function balanceOf(address account) public view returns (uint256) {
-        for (uint256 i = 0; i < holders.length; i++) {
-            if (holders[i] == account) {
-                return balances[i];
-            }
+    function getAccountId(address account) onlyHtsCall external view returns (uint32 accountId) {
+        uint64 padding = 0x0000_0000_0000_0000;
+        uint256 slot = uint256(bytes32(abi.encodePacked(HtsSystemContract.getAccountId.selector, padding, account)));
+        assembly {
+            accountId := sload(slot)
         }
-        return 0;
+    }
+
+    function balanceOf(address account) private view returns (uint256 amount) {
+        // 
+        uint32 accountId = HtsSystemContract(address(0x167)).getAccountId(account);
+        uint192 padding = 0x0000_0000_0000_0000;
+        // slot(256)=selector(32)+padding(192)+accountId(32)
+        uint256 slot = uint256(bytes32(abi.encodePacked(IERC20.balanceOf.selector, padding, accountId)));
+        assembly {
+            amount := sload(slot)
+        }
+
+        // for (uint256 i = 0; i < holders.length; i++) {
+        //     if (holders[i] == account) {
+        //         return balances[i];
+        //     }
+        // }
+        // return 0;
     }
 
     function transfer(address recipient, uint256 amount) public returns (bool) {
