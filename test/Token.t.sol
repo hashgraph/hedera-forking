@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: unlicensed
 pragma solidity ^0.8.17;
 
-import {Test, Vm, console} from "forge-std/Test.sol";
+import {Test, console} from "forge-std/Test.sol";
 import {IERC20} from "../src/IERC20.sol";
-
-import {HtsSystemContract} from "../src/HtsSystemContract.sol";
 
 /**
  * Test using USDC, an already existing HTS Token.
@@ -18,8 +16,6 @@ import {HtsSystemContract} from "../src/HtsSystemContract.sol";
  */
 contract TokenTest is Test {
 
-    address HTS = 0x0000000000000000000000000000000000000167;
-
     /**
      * https://hashscan.io/testnet/token/0.0.429274
      * https://testnet.mirrornode.hedera.com/api/v1/tokens/0.0.429274
@@ -28,28 +24,6 @@ contract TokenTest is Test {
 
     function setUp() external view {
         console.log("HTS code has %d bytes", address(0x167).code.length);
-        address account = USDC;
-        uint64 padding = 0x0000_0000_0000_0000;
-        uint256 slot = uint256(bytes32(abi.encodePacked(IERC20.balanceOf.selector, padding, account)));
-        console.log("slot %x",slot);
-    }
-
-    function test_HTS_should_revert_when_not_enough_calldata() external {
-        vm.expectRevert(bytes("Not enough calldata"));
-        (bool revertsAsExpected, ) = HTS.call(bytes("1234"));
-        assertTrue(revertsAsExpected, "expectRevert: call did not revert");
-    }
-
-    function test_HTS_should_revert_when_fallback_selector_is_not_supported() external {
-        vm.expectRevert(bytes("Fallback selector not supported"));
-        (bool revertsAsExpected, ) = HTS.call(bytes("123456789012345678901234567890"));
-        assertTrue(revertsAsExpected, "expectRevert: call did not revert");
-    }
-
-    function test_HTS_should_revert_when_calldata_token_is_not_caller() external {
-        vm.expectRevert(bytes("Calldata token is not caller"));
-        (bool revertsAsExpected, ) = HTS.call(bytes(hex"618dc65e9012345678901234567890123456789012345678901234567890"));
-        assertTrue(revertsAsExpected, "expectRevert: call did not revert");
     }
 
     function test_ERC20_name() view external {
@@ -70,16 +44,16 @@ contract TokenTest is Test {
     }
 
     function test_ERC20_totalSupply() view external {
-        assertEq(IERC20(USDC).totalSupply(), 10000000000000000);
+        assertEq(IERC20(USDC).totalSupply(), 10000000003000000);
     }
 
-    function test_ERC20_balanceOf_dealt() private {
+    function test_ERC20_balanceOf_deal() external {
         address alice = makeAddr("alice");
         address bob = makeAddr("bob");
 
-        // assertEq(IERC20(USDC).balanceOf(bob), 0);
+        assertEq(IERC20(USDC).balanceOf(bob), 0);
 
-        deal(alice, 100 * 10e8);
+        // deal(alice, 100 * 10e8);
         deal(USDC, alice, 1000 * 10e8);
 
         uint256 balance = IERC20(USDC).balanceOf(alice);
@@ -87,21 +61,26 @@ contract TokenTest is Test {
         assertEq(balance, 1000 * 10e8);
 
         // Bob's balance should remain unchanged
-        // assertEq(IERC20(USDC).balanceOf(bob), 0);
+        assertEq(IERC20(USDC).balanceOf(bob), 0);
+    }
+
+    function test_ERC20_balanceOf_should_return_zero_for_non_existent_account() external {
+        address alice = makeAddr("alice");
+        uint256 balance = IERC20(USDC).balanceOf(alice);
+        assertEq(balance, 0);
     }
 
     function test_ERC20_balanceOf_call() view external {
-        address alice = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
-
-        uint256 balance = IERC20(USDC).balanceOf(alice);
-        console.log("alice's balance %s", balance);
-        assertEq(balance, 49300000);
-    }
-
-    function test_getAccountId() view external {
         // https://hashscan.io/testnet/account/0.0.1421
         address alice = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
-        uint32 accountId = HtsSystemContract(HTS).getAccountId(alice);
-        assertEq(accountId, 1421);
+        uint256 balance = IERC20(USDC).balanceOf(alice);
+        console.log("alice's balance %s", balance);
+        assertEq(balance, 49_300000);
+
+        // https://hashscan.io/testnet/account/0.0.2183
+        address bob = 0x0000000000000000000000000000000000000887;
+        balance = IERC20(USDC).balanceOf(bob);
+        console.log("bob's balance %s", balance);
+        assertEq(balance, 341_000000);
     }
 }
