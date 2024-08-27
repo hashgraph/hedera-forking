@@ -4,6 +4,8 @@ pragma solidity ^0.8.17;
 import {Test, Vm, console} from "forge-std/Test.sol";
 import {IERC20} from "../src/IERC20.sol";
 
+import {HtsSystemContract} from "../src/HtsSystemContract.sol";
+
 /**
  * Test using USDC, an already existing HTS Token.
  *
@@ -26,6 +28,10 @@ contract TokenTest is Test {
 
     function setUp() external view {
         console.log("HTS code has %d bytes", address(0x167).code.length);
+        address account = USDC;
+        uint64 padding = 0x0000_0000_0000_0000;
+        uint256 slot = uint256(bytes32(abi.encodePacked(IERC20.balanceOf.selector, padding, account)));
+        console.log("slot %x",slot);
     }
 
     function test_HTS_should_revert_when_not_enough_calldata() external {
@@ -84,11 +90,18 @@ contract TokenTest is Test {
         // assertEq(IERC20(USDC).balanceOf(bob), 0);
     }
 
-    function test_ERC20_balanceOf_call() view private {
+    function test_ERC20_balanceOf_call() view external {
         address alice = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
 
         uint256 balance = IERC20(USDC).balanceOf(alice);
         console.log("alice's balance %s", balance);
         assertEq(balance, 49300000);
+    }
+
+    function test_getAccountId() view external {
+        // https://hashscan.io/testnet/account/0.0.1421
+        address alice = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
+        uint32 accountId = HtsSystemContract(HTS).getAccountId(alice);
+        assertEq(accountId, 1421);
     }
 }
