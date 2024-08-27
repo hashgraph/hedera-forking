@@ -37,4 +37,10 @@ contract HTSTest is Test {
         uint32 accountId = HtsSystemContract(HTS).getAccountId(alice);
         assertEq(accountId, 1421);
     }
+
+    function test_HTS_should_revert_when_delegatecall_getAccountId() external {
+        vm.expectRevert(bytes("htsCall: delegated call"));
+        (bool revertsAsExpected, ) = HTS.delegatecall(abi.encodeWithSelector(HtsSystemContract.getAccountId.selector, address(this)));
+        assertTrue(revertsAsExpected, "expectRevert: call did not revert");
+    }
 }

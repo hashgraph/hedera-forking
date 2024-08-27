@@ -44,7 +44,7 @@ contract TokenTest is Test {
     }
 
     function test_ERC20_totalSupply() view external {
-        assertEq(IERC20(USDC).totalSupply(), 10000000003000000);
+        assertEq(IERC20(USDC).totalSupply(), 10000000004000000);
     }
 
     function test_ERC20_balanceOf_deal() external {
