@@ -14,7 +14,7 @@ interface IMirrorNodeClient {
      * @param tokenId 
      * @param requestIdPrefix The formatted `requestId` as a prefix for logging purposes.
      */
-    getTokenById(tokenId: string, requestIdPrefix?: string): Promise<any>;
+    getTokenById(tokenId: string, requestIdPrefix?: string): Promise<Record<string, unknown> | null>;
 
     /**
      * 
@@ -23,7 +23,9 @@ interface IMirrorNodeClient {
      * @param requestIdPrefix 
      */
     getBalanceOfToken(tokenId: string, accountId: string, requestIdPrefix?: string): Promise<{
-        balances: { balance: any }[]
+        balances: {
+            balance: number
+        }[]
     }>;
 
     /**
@@ -42,8 +44,7 @@ interface IMirrorNodeClient {
      */
     getAccount(idOrAliasOrEvmAddress: string, requestIdPrefix?: string): Promise<{
         account: string,
-        evm_address: string,
-    }>;
+    } | null>;
 }
 
 /**
