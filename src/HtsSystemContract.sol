@@ -82,28 +82,6 @@ contract HtsSystemContract {
         return true;
     }
 
-    function transferFrom(address sender, address recipient, uint256 amount) public returns (bool) {
-        uint256 senderIndex = findIndex(sender, holders);
-        uint256 spenderIndex = findIndex(msg.sender, allowancesSpenders);
-        require(senderIndex != type(uint256).max, "Sender not found");
-        require(allowancesOwners[spenderIndex] == sender, "Sender not authorized");
-        require(balances[senderIndex] >= amount, "Insufficient balance");
-        require(allowancesAmounts[spenderIndex] >= amount, "Allowance exceeded");
-
-        balances[senderIndex] -= amount;
-        allowancesAmounts[spenderIndex] -= amount;
-
-        uint256 recipientIndex = findIndex(recipient, holders);
-        if (recipientIndex == type(uint256).max) {
-            holders.push(recipient);
-            balances.push(amount);
-        } else {
-            balances[recipientIndex] += amount;
-        }
-
-        emit Transfer(sender, recipient, amount);
-        return true;
-    }
 
     function findIndex(address account, address[] storage list) internal view returns (uint256) {
         for (uint256 i = 0; i < list.length; i++) {
@@ -138,6 +116,7 @@ contract HtsSystemContract {
         return findIndex(account, associatedAccounts) != type(uint256).max;
     }
 
+    /// `__redirectForToken` dispatcher.
     fallback (bytes calldata) external returns (bytes memory) {
         // Calldata for a successful `redirectForToken(address,bytes)` call must contain
         // 00: 0x618dc65e (selector for `redirectForToken(address,bytes)`)
@@ -205,5 +184,28 @@ contract HtsSystemContract {
         assembly {
             amount := sload(slot)
         }
+    }
+
+    function __transferFrom(address sender, address recipient, uint256 amount) private returns (bool) {
+        uint256 senderIndex = findIndex(sender, holders);
+        uint256 spenderIndex = findIndex(msg.sender, allowancesSpenders);
+        require(senderIndex != type(uint256).max, "Sender not found");
+        require(allowancesOwners[spenderIndex] == sender, "Sender not authorized");
+        require(balances[senderIndex] >= amount, "Insufficient balance");
+        require(allowancesAmounts[spenderIndex] >= amount, "Allowance exceeded");
+
+        balances[senderIndex] -= amount;
+        allowancesAmounts[spenderIndex] -= amount;
+
+        uint256 recipientIndex = findIndex(recipient, holders);
+        if (recipientIndex == type(uint256).max) {
+            holders.push(recipient);
+            balances.push(amount);
+        } else {
+            balances[recipientIndex] += amount;
+        }
+
+        emit Transfer(sender, recipient, amount);
+        return true;
     }
 }

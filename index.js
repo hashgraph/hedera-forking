@@ -103,7 +103,8 @@ module.exports = {
         if (nrequestedSlot >> 32n === 0x70a08231_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000n) {
             const accountId = `0.0.${parseInt(requestedSlot.slice(-8), 16)}`;
             const { balances } = await mirrorNodeClient.getBalanceOfToken(tokenId, accountId, reqId);
-            if (balances.length === 0) return rtrace(utils.ZERO_HEX_32_BYTE, 'Balance not found');
+            if (balances.length === 0)
+                return rtrace(utils.ZERO_HEX_32_BYTE, 'Balance not found');
 
             const balance = balances[0].balance;
             return rtrace(`0x${balance.toString(16).padStart(64, '0')}`, `Requested slot matches \`balanceOf\` slot`);

@@ -53,7 +53,6 @@ contract TokenTest is Test {
 
         assertEq(IERC20(USDC).balanceOf(bob), 0);
 
-        // deal(alice, 100 * 10e8);
         deal(USDC, alice, 1000 * 10e8);
 
         uint256 balance = IERC20(USDC).balanceOf(alice);
