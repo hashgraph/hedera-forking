@@ -1,4 +1,4 @@
-const { keccak256 } = require('ethers');
+const { keccak256, toUtf8Bytes } = require('ethers');
 const utils = require('./utils');
 const hts = require('./out/HtsSystemContract.sol/HtsSystemContract.json');
 /**
@@ -57,6 +57,36 @@ function inferSlotAndOffset(nrequestedSlot, MAX_ELEMENTS = 100) {
 
     return null;
 }
+
+// New approach - access storage slot directly! Looks like a simpler idea.
+const fetchGetters = (mirrorNodeClient, logger, tokenId) => {
+    return {
+        'balanceOf(address)': async (address) => {
+            const accountData = await mirrorNodeClient.getAccount(address);
+            if (!accountData) {
+                return utils.toIntHex256('0');
+            }
+            const tokenData = await mirrorNodeClient.getTokenById(tokenId);
+            if (tokenData.type === 'NON_FUNGIBLE_COMMON') {
+                const nfts = await mirrorNodeClient.getTokenNftsById(tokenId);
+                return utils.toIntHex256(`${nfts.filter(nft => nft.account_id === accountData.account).length}`);
+            }
+
+            const { balances } = await mirrorNodeClient.getBalanceOfToken(tokenId, accountData.account);
+            return utils.toIntHex256(`${balances[0]?.balance || 0}`);
+        },
+    }
+};
+const get = async (requestedSlot, getters) => {
+    for (const [key, value] of Object.entries(getters)) {
+        if (requestedSlot.startsWith(keccak256(toUtf8Bytes(key)).substring(0, 10))) {
+            return await value(`0x${requestedSlot.slice(-40)}`);
+        }
+    }
+
+    return null;
+};
+// End new approach. WIP
 
 /**
  * Primitives with the same name in the tokenData structure from both the MirrorNode and the Smart Contract
@@ -135,6 +165,12 @@ module.exports = {
         }
 
         const tokenId = `0.0.${parseInt(address, 16)}`;
+        logger.error(requestedSlot);
+        const result = await get(requestedSlot, fetchGetters(mirrorNodeClient, logger, tokenId));
+        if (result !== null) {
+            return `0x${result}`;
+        }
+
         const fetcher = dataFetcher(mirrorNodeClient, tokenId);
 
         trace(logger, requestIdPrefix, `Getting storage for ${address} (tokenId=${tokenId}) at slot=${requestedSlot}`);

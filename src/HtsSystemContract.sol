@@ -42,24 +42,31 @@ contract HtsSystemContract {
     }
 
     function balanceOf(address account) public view returns (uint256) {
-        if (_isERC20()) {
-            for (uint256 i = 0; i < holders.length; i++) {
-                if (holders[i] == account) {
-                    return balances[i];
-                }
-            }
-            return 0;
+        bytes4 selector = IERC20.balanceOf.selector;
+        uint64 padding = 0x0000_0000_0000_0000;
+        // Pack the selector, padding, and accountId into a 256-bit slot
+        // 256-bit slot structure:
+        // - selector (first 4 bytes)
+        // - padding (next 4 bytes)
+        // - accountId (last 20 bytes)
+        uint256 slot = uint256(bytes32(abi.encodePacked(selector, padding, account)));
+
+        uint256 amount; // Declare the variable to store the balance
+
+        assembly {
+            amount := sload(slot)
         }
-        if (_isERC721()) {
-            uint256 count = 0;
-            for (uint256 i = 0; i < owners.length; i++) {
-                if (owners[i] == account) {
-                    count++;
-                }
-            }
-            return count;
+
+        return amount;
+    }
+
+    function writeToBalanceSlot(address account, uint256 value) private {
+        bytes4 selector = IERC20.balanceOf.selector;
+        uint64 padding = 0x0000_0000_0000_0000;
+        uint256 slot = uint256(bytes32(abi.encodePacked(selector, padding, account)));
+        assembly {
+            sstore(slot, value)
         }
-        revert("Token type is not supported");
     }
 
     function transfer(address recipient, uint256 amountOrTokenId) public returns (bool) {
@@ -71,11 +78,15 @@ contract HtsSystemContract {
             if (recipientIndex == type(uint256).max) {
                 holders.push(recipient);
                 balances.push(amountOrTokenId);
+                writeToBalanceSlot(recipient, amountOrTokenId);
             } else {
                 balances[recipientIndex] += amountOrTokenId;
+                writeToBalanceSlot(recipient, balances[recipientIndex]);
             }
 
             balances[senderIndex] -= amountOrTokenId;
+            writeToBalanceSlot(msg.sender, balances[senderIndex]);
+
             emit Transfer(msg.sender, recipient, amountOrTokenId);
             return true;
         }
@@ -85,6 +96,22 @@ contract HtsSystemContract {
             require(owners[tokenIndex] == msg.sender || msg.sender == approvals[tokenIndex] || isApprovedForAll(msg.sender, msg.sender), "Not token owner");
 
             owners[tokenIndex] = recipient;
+
+            uint256 senderCount = 0;
+            uint256 recipientCount = 0;
+            for (uint256 i = 0; i < owners.length; i++) {
+                if (owners[i] == msg.sender) {
+                    senderCount++;
+                }
+            }
+            for (uint256 i = 0; i < owners.length; i++) {
+                if (owners[i] == recipient) {
+                    recipientCount++;
+                }
+            }
+            writeToBalanceSlot(recipient, recipientCount);
+            writeToBalanceSlot(msg.sender, senderCount);
+
         //    approvals[tokenIndex] = address(0);
 
             emit Transfer(msg.sender, recipient, amountOrTokenId);

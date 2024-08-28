@@ -45,7 +45,7 @@ contract FungibleTokenTest is Test {
     }
 
     function test_ERC20_totalSupply() view external {
-        assertEq(IERC20(USDC).totalSupply(), 10000000000000000);
+        assertEq(IERC20(USDC).totalSupply(), 10000000005000000);
     }
 
     function test_ERC20_balanceOf_call() external {
@@ -66,5 +66,11 @@ contract FungibleTokenTest is Test {
         vm.stopPrank();
         assertEq(IERC20(FT).balanceOf(bob), 9992);
         assertEq(IERC20(FT).balanceOf(alice), 3);
+    }
+
+    function test_ERC20_deal() external {
+        address alice = 0x292c4acf9ec49aF888D4051Eb4A4dc53694D1380;
+        deal(USDC, alice, 1000 * 10e8);
+        assertEq(IERC20(USDC).balanceOf(alice), 1000 * 10e8);
     }
 }
