@@ -74,6 +74,11 @@ export function getHtsCode(): string;
  * When the token ID corresponding to `address` does not exist,
  * the respective calls on `mirrorNodeClient` should return `null`.
  * 
+ * The storage mechanism for `balanceOf` and `allowance` use a map between addresses and account IDs.
+ * This allow the contract to reduce the space to marshal an account:
+ * `32 bits` (or even `64 bits` if longer IDs are needed) using `accountid` (omitting the `shardId` and `realmId`) against `160 bits` using `address`.
+ * This mechanism in turn allow us to marshal more than one account used in storage slots, _e.g._, `allowance`.
+ * 
  * @param address 
  * @param slot 
  * @param mirrorNodeClient 
