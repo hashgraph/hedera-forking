@@ -131,6 +131,18 @@ const eth = {
                         return noBalance;
                     throw err;
                 }
+            },
+            async getAllowanceForToken(tokenId, accountId, spenderId) {
+                const noAllowance = { allowances: [] };
+                if (tokens[tokenId] === undefined)
+                    return noAllowance;
+                try {
+                    return require(`../test/tokens/${tokens[tokenId].symbol}/getAllowanceForToken_${accountId}_${spenderId}.json`);
+                } catch (err) {
+                    if (err.code === 'MODULE_NOT_FOUND')
+                        return noAllowance;
+                    throw err;
+                }
             }
         };
 
@@ -148,7 +160,6 @@ console.info(c.yellow('[HINT]'), c.dim('>'), 'https://book.getfoundry.sh/referen
 
 http.createServer(function (req, res) {
     /**
-     * 
      * @param {string} str 
      * @param {number} max 
      * @returns {string}
