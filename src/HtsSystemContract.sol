@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 
 import {IERC20} from "./IERC20.sol";
 
+import {console} from "forge-std/Console.sol";
+
 contract HtsSystemContract {
 
     address private constant HTS_ADDRESS = address(0x167);
@@ -12,16 +14,15 @@ contract HtsSystemContract {
     uint8 private decimals;
     uint256 private totalSupply;
 
-    address[] public holders;
-    uint256[] public balances; /// account id
-    address[] public allowancesOwners;
-    address[] public allowancesSpenders;
-    uint256[] public allowancesAmounts;
+    // address[] public holders;
+    // uint256[] public balances; /// account id
+    // address[] public allowancesOwners;
+    // address[] public allowancesSpenders;
+    // uint256[] public allowancesAmounts;
+    // address[] public associatedAccounts;
 
-    address[] public associatedAccounts;
-
-    event Transfer(address indexed from, address indexed to, uint256 value);
-    event Approval(address indexed owner, address indexed spender, uint256 value);
+    event Transfer(address indexed from, address indexed to, uint256 amount);
+    event Approval(address indexed owner, address indexed spender, uint256 amount);
     event Associated(address indexed account);
     event Dissociated(address indexed account);
 
@@ -41,81 +42,70 @@ contract HtsSystemContract {
         }
     }
 
-    function transfer(address recipient, uint256 amount) public returns (bool) {
-        uint256 senderIndex = findIndex(msg.sender, holders);
-        require(senderIndex != type(uint256).max, "Sender not found");
-        require(balances[senderIndex] >= amount, "Insufficient balance");
-        uint256 recipientIndex = findIndex(recipient, allowancesOwners);
-        if (recipientIndex == type(uint256).max) {
-            holders.push(recipient);
-            balances.push(amount);
-        } else {
-            balances[recipientIndex] += amount;
-        }
+    // function transfer(address recipient, uint256 amount) public returns (bool) {
+    //     uint256 senderIndex = findIndex(msg.sender, holders);
+    //     require(senderIndex != type(uint256).max, "Sender not found");
+    //     require(balances[senderIndex] >= amount, "Insufficient balance");
+    //     uint256 recipientIndex = findIndex(recipient, allowancesOwners);
+    //     if (recipientIndex == type(uint256).max) {
+    //         holders.push(recipient);
+    //         balances.push(amount);
+    //     } else {
+    //         balances[recipientIndex] += amount;
+    //     }
 
-        balances[senderIndex] -= amount;
-        emit Transfer(msg.sender, recipient, amount);
-        return true;
-    }
+    //     balances[senderIndex] -= amount;
+    //     emit Transfer(msg.sender, recipient, amount);
+    //     return true;
+    // }
 
-    function allowance(address owner, address spender) public view returns (uint256) {
-        for (uint256 i = 0; i < allowancesOwners.length; i++) {
-            if (allowancesOwners[i] == owner && allowancesSpenders[i] == spender) {
-                return allowancesAmounts[i];
-            }
-        }
-        return 0;
-    }
+    // function approve(address spender, uint256 amount) public returns (bool) {
+    //     uint256 ownerIndex = findIndex(msg.sender, allowancesOwners);
+    //     uint256 spenderIndex = findIndex(spender, allowancesSpenders);
 
-    function approve(address spender, uint256 amount) public returns (bool) {
-        uint256 ownerIndex = findIndex(msg.sender, allowancesOwners);
-        uint256 spenderIndex = findIndex(spender, allowancesSpenders);
+    //     if (ownerIndex != type(uint256).max && spenderIndex != type(uint256).max) {
+    //         allowancesAmounts[ownerIndex] = amount;
+    //     } else {
+    //         allowancesOwners.push(msg.sender);
+    //         allowancesSpenders.push(spender);
+    //         allowancesAmounts.push(amount);
+    //     }
 
-        if (ownerIndex != type(uint256).max && spenderIndex != type(uint256).max) {
-            allowancesAmounts[ownerIndex] = amount;
-        } else {
-            allowancesOwners.push(msg.sender);
-            allowancesSpenders.push(spender);
-            allowancesAmounts.push(amount);
-        }
+    //     emit Approval(msg.sender, spender, amount);
+    //     return true;
+    // }
 
-        emit Approval(msg.sender, spender, amount);
-        return true;
-    }
+    // function findIndex(address account, address[] storage list) internal view returns (uint256) {
+    //     for (uint256 i = 0; i < list.length; i++) {
+    //         if (list[i] == account) {
+    //             return i;
+    //         }
+    //     }
+    //     return type(uint256).max;  // Max uint256 value as not found flag
+    // }
 
+    // function associate() public {
+    //     require(!isAssociated(msg.sender), "Already associated");
+    //     associatedAccounts.push(msg.sender);
+    //     emit Associated(msg.sender);
+    // }
 
-    function findIndex(address account, address[] storage list) internal view returns (uint256) {
-        for (uint256 i = 0; i < list.length; i++) {
-            if (list[i] == account) {
-                return i;
-            }
-        }
-        return type(uint256).max;  // Max uint256 value as not found flag
-    }
+    // function dissociate() public {
+    //     require(isAssociated(msg.sender), "Not associated");
+    //     require(__balanceOf(msg.sender) == 0, "Cannot dissociate with non-zero balance");
 
+    //     uint256 index = findIndex(msg.sender, associatedAccounts);
+    //     if (index != type(uint256).max) {
+    //         associatedAccounts[index] = associatedAccounts[associatedAccounts.length - 1];
+    //         associatedAccounts.pop();
+    //     }
 
-    function associate() public {
-        require(!isAssociated(msg.sender), "Already associated");
-        associatedAccounts.push(msg.sender);
-        emit Associated(msg.sender);
-    }
+    //     emit Dissociated(msg.sender);
+    // }
 
-    function dissociate() public {
-        require(isAssociated(msg.sender), "Not associated");
-        require(__balanceOf(msg.sender) == 0, "Cannot dissociate with non-zero balance");
-
-        uint256 index = findIndex(msg.sender, associatedAccounts);
-        if (index != type(uint256).max) {
-            associatedAccounts[index] = associatedAccounts[associatedAccounts.length - 1];
-            associatedAccounts.pop();
-        }
-
-        emit Dissociated(msg.sender);
-    }
-
-    function isAssociated(address account) public view returns (bool) {
-        return findIndex(account, associatedAccounts) != type(uint256).max;
-    }
+    // function isAssociated(address account) public view returns (bool) {
+    //     return findIndex(account, associatedAccounts) != type(uint256).max;
+    // }
 
     /// `__redirectForToken` dispatcher.
     fallback (bytes calldata) external returns (bytes memory) {
@@ -147,16 +137,32 @@ contract HtsSystemContract {
         } else if (selector == IERC20.symbol.selector) {
             return abi.encode(symbol);
         } else if (selector == IERC20.balanceOf.selector) {
+            require(msg.data.length >= 60, "balanceOf: Not enough calldata");
+
             address account = address(bytes20(msg.data[40:60]));
             return abi.encode(__balanceOf(account));
         } else if (selector == IERC20.transfer.selector) {
-            address account = address(bytes20(msg.data[40:60]));
-            uint256 amount = abi.decode(msg.data[60:92], (uint256));
-            return abi.encode(transfer(account, amount));
-        } else if (selector == IERC20.approve.selector) {
-            address account = address(bytes20(msg.data[40:60]));
-            uint256 amount = abi.decode(msg.data[60:92], (uint256));
-            return abi.encode(approve(account, amount));
+            require(msg.data.length >= 92, "transfer: Not enough calldata");
+
+            // addresses are word padded 
+            address to = address(bytes20(msg.data[40:60]));
+            uint256 amount = uint256(bytes32(msg.data[60:92]));
+            address owner = msg.sender;
+            _transfer(owner, to, amount);
+            return abi.encode(true);
+        } else if (selector == IERC20.transferFrom.selector) {
+            require(msg.data.length >= 124, "transferF: Not enough calldata");
+
+            // addresses are word padded 
+            address from = address(bytes20(msg.data[40:60]));
+            address to = address(bytes20(msg.data[72:92]));
+            uint256 amount = uint256(bytes32(msg.data[92:124]));
+            _transfer(from, to, amount);
+            return abi.encode(true);
+        // } else if (selector == IERC20.approve.selector) {
+        //     address account = address(bytes20(msg.data[40:60]));
+        //     uint256 amount = abi.decode(msg.data[60:92], (uint256));
+        //     return abi.encode(approve(account, amount));
         } else if (selector == IERC20.allowance.selector) {
             // addresses are word padded 
             address owner = address(bytes20(msg.data[40:60]));
@@ -166,23 +172,22 @@ contract HtsSystemContract {
         //     return abi.encode(associate());
         // } else if (selector == bytes4(keccak256("dissociate()"))) {
         //     return abi.encode(dissociate());
-        } else if (selector == bytes4(keccak256("isAssociated(address)"))) {
-            address account = address(bytes20(msg.data[40:60]));
-            return abi.encode(isAssociated(account));
-        // } else if (selector == bytes4(keccak256("transferFrom(address,address,uint256)"))) {
-        //     address from = address(bytes20(msg.data[40:60]));
-        //     uint256 to = address(bytes20(msg.data[60:80]));
-        //     uint256 amount = abi.decode(msg.data[80:112], (uint256));
-        //     return abi.encode(transferFrom(from, to));
+        // } else if (selector == bytes4(keccak256("isAssociated(address)"))) {
+        //     address account = address(bytes20(msg.data[40:60]));
+        //     return abi.encode(isAssociated(account));
         }
         revert ("redirectForToken: not supported");
     }
 
-    function __balanceOf(address account) private view returns (uint256 amount) {
+    function _balanceOfSlot(address account) private view returns (uint256 slot) {
         bytes4 selector = IERC20.balanceOf.selector;
         uint192 pad = 0x0;
         uint32 accountId = HtsSystemContract(HTS_ADDRESS).getAccountId(account);
-        uint256 slot = uint256(bytes32(abi.encodePacked(selector, pad, accountId)));
+        slot = uint256(bytes32(abi.encodePacked(selector, pad, accountId)));
+    }
+
+    function __balanceOf(address account) private view returns (uint256 amount) {
+        uint256 slot = _balanceOfSlot(account);
         assembly {
             amount := sload(slot)
         }
@@ -199,26 +204,40 @@ contract HtsSystemContract {
         }
     }
 
-    function __transferFrom(address sender, address recipient, uint256 amount) private returns (bool) {
-        uint256 senderIndex = findIndex(sender, holders);
-        uint256 spenderIndex = findIndex(msg.sender, allowancesSpenders);
-        require(senderIndex != type(uint256).max, "Sender not found");
-        require(allowancesOwners[spenderIndex] == sender, "Sender not authorized");
-        require(balances[senderIndex] >= amount, "Insufficient balance");
-        require(allowancesAmounts[spenderIndex] >= amount, "Allowance exceeded");
+    // function __transferFrom(address from, address to, uint256 amount) private returns (bool) {
+    //     uint256 senderIndex = findIndex(from, holders);
+    //     uint256 spenderIndex = findIndex(msg.sender, allowancesSpenders);
+    //     require(senderIndex != type(uint256).max, "Sender not found");
+    //     require(allowancesOwners[spenderIndex] == from, "Sender not authorized");
+    //     require(balances[senderIndex] >= amount, "Insufficient balance");
+    //     require(allowancesAmounts[spenderIndex] >= amount, "Allowance exceeded");
 
-        balances[senderIndex] -= amount;
-        allowancesAmounts[spenderIndex] -= amount;
+    //     balances[senderIndex] -= amount;
+    //     allowancesAmounts[spenderIndex] -= amount;
 
-        uint256 recipientIndex = findIndex(recipient, holders);
-        if (recipientIndex == type(uint256).max) {
-            holders.push(recipient);
-            balances.push(amount);
-        } else {
-            balances[recipientIndex] += amount;
-        }
+    //     uint256 recipientIndex = findIndex(to, holders);
+    //     if (recipientIndex == type(uint256).max) {
+    //         holders.push(to);
+    //         balances.push(amount);
+    //     } else {
+    //         balances[recipientIndex] += amount;
+    //     }
 
-        emit Transfer(sender, recipient, amount);
-        return true;
+    //     emit Transfer(from, to, amount);
+    //     return true;
+    // }
+
+    function _transfer(address from, address to, uint256 amount) private {
+        uint256 fromSlot = _balanceOfSlot(from);
+        uint256 fromBalance;
+        assembly { fromBalance := sload(fromSlot) }
+        require(fromBalance >= amount, "hts: insufficient balance");
+        assembly { sstore(fromSlot, sub(fromBalance, amount)) }
+
+        uint256 toSlot = _balanceOfSlot(to);
+        uint256 toBalance;
+        assembly { toBalance := sload(toSlot) }
+        // TODO: review overflow
+        assembly { sstore(toSlot, add(toBalance, amount)) }
     }
 }

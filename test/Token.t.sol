@@ -106,4 +106,27 @@ contract TokenTest is Test {
         address spender = makeAddr("alice");
         assertEq(IERC20(USDC).allowance(owner, spender), 0);
     }
+
+    // cheatCodes.prank(address(1337));
+
+    function test_ERC20_transferFrom() external {
+        // https://hashscan.io/testnet/account/0.0.1421
+        address from = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
+        address to = makeAddr("bob");
+        uint256 amount = 4_000000;
+
+        assertEq(IERC20(USDC).balanceOf(to), 0);
+        IERC20(USDC).transferFrom(from, to, amount);
+        assertEq(IERC20(USDC).balanceOf(to), amount);
+    }
+
+    function test_ERC20_transferFrom_insufficient_balance() external {
+        vm.expectRevert(bytes("hts: insufficient balance"));
+
+        address from = makeAddr("alice");
+        address to = makeAddr("bob");
+        uint256 amount = 4_000000;
+
+        IERC20(USDC).transferFrom(from, to, amount);
+    }
 }
