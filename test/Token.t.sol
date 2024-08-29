@@ -4,6 +4,10 @@ pragma solidity ^0.8.17;
 import {Test, console} from "forge-std/Test.sol";
 import {IERC20} from "../src/IERC20.sol";
 
+interface MethodNotSupported {
+    function methodNotSupported() external view returns (uint256);
+}
+
 /**
  * Test using USDC, an already existing HTS Token.
  *
@@ -45,6 +49,11 @@ contract TokenTest is Test {
 
     function test_ERC20_totalSupply() view external {
         assertEq(IERC20(USDC).totalSupply(), 10000000005000000);
+    }
+
+    function test_ERC20_should_revert_for_method_not_supported() external {
+        vm.expectRevert(bytes("redirectForToken: not supported"));
+        MethodNotSupported(USDC).methodNotSupported();
     }
 
     function test_ERC20_balanceOf_deal() external {

@@ -33,8 +33,9 @@ contract HtsSystemContract {
 
     /// @dev
     function getAccountId(address account) htsCall external view returns (uint32 accountId) {
-        uint64 padding = 0x0000_0000_0000_0000;
-        uint256 slot = uint256(bytes32(abi.encodePacked(HtsSystemContract.getAccountId.selector, padding, account)));
+        bytes4 selector = HtsSystemContract.getAccountId.selector;
+        uint64 pad = 0x0;
+        uint256 slot = uint256(bytes32(abi.encodePacked(selector, pad, account)));
         assembly {
             accountId := sload(slot)
         }
@@ -173,7 +174,7 @@ contract HtsSystemContract {
         //     uint256 amount = abi.decode(msg.data[80:112], (uint256));
         //     return abi.encode(transferFrom(from, to));
         }
-        return "";
+        revert ("redirectForToken: not supported");
     }
 
     function __balanceOf(address account) private view returns (uint256 amount) {
