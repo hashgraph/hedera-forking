@@ -2,7 +2,7 @@ const { expect, config } = require('chai');
 
 const { getHtsStorageAt: _getHtsStorageAt } = require('@hashgraph/hedera-forking');
 const utils = require('../utils');
-const { keccak256 } = require('ethers');
+const { keccak256, id } = require('ethers');
 
 config.truncateThreshold = 0;
 
@@ -164,22 +164,51 @@ describe('getHtsStorageAt', function () {
                 });
             });
 
+            /**
+             * Pads `accountId` to be encoded within a storage slot.
+             * 
+             * @param {number} accountId The `accountId` to pad.
+             * @returns {string}
+             */
+            const padAccountId = accountId => accountId.toString(16).padStart(8, '0');
+
             [
                 { name: 'balance is found', fn: (_tid, accountId) => require(`./tokens/${token}/getBalanceOfToken_${accountId}`) },
                 { name: 'balance is empty', fn: (_tid, _accountId) => ({ balances: [] }) },
             ].forEach(({ name, fn: getBalanceOfToken }) => {
-                it(`should get \`balanceOf\` tokenId for encoded account when '${name}'`, async function () {
-                    const balanceOfSelector = '0x70a08231';
-                    const padding = '0'.repeat(24 * 2);
+                const selector = id('balanceOf(address)').slice(0, 10);
+                const padding = '0'.repeat(24 * 2);
 
+                it(`should get \`balanceOf(${selector})\` tokenId for encoded account when '${name}'`, async function () {
                     const accountId = 1421;
-                    const slot = `${balanceOfSelector}${padding}${accountId.toString(16).padStart(8, '0')}`;
+                    const slot = `${selector}${padding}${padAccountId(accountId)}`;
                     const result = await getHtsStorageAt(address, slot, { getBalanceOfToken });
 
                     const { balances } = getBalanceOfToken(undefined, `0.0.${accountId}`);
                     expect(result).to.be.equal(balances.length === 0
                         ? utils.ZERO_HEX_32_BYTE
                         : `0x${utils.toIntHex256(balances[0].balance)}`
+                    );
+                });
+            });
+
+            [
+                { name: 'allowance is found', fn: (_tid, accountId, spenderId) => require(`./tokens/${token}/getAllowanceForToken_${accountId}_${spenderId}`) },
+                { name: 'allowance is empty', fn: (_tid, _accountId, _spenderId) => ({ allowances: [] }) },
+            ].forEach(({ name, fn: getAllowanceForToken }) => {
+                const selector = id('allowance(address,address)').slice(0, 10);
+                const padding = '0'.repeat(20 * 2);
+
+                it(`should get \`allowance(${selector})\` of tokenId for encoded owner/spender when '${name}'`, async function () {
+                    const accountId = 4233295;
+                    const spenderId = 1335;
+                    const slot = `${selector}${padding}${padAccountId(spenderId)}${padAccountId(accountId)}`;
+                    const result = await getHtsStorageAt(address, slot, { getAllowanceForToken });
+
+                    const { allowances } = getAllowanceForToken(undefined, `0.0.${accountId}`, `0.0.${spenderId}`);
+                    expect(result).to.be.equal(allowances.length === 0
+                        ? utils.ZERO_HEX_32_BYTE
+                        : `0x${utils.toIntHex256(allowances[0].amount)}`
                     );
                 });
             });
