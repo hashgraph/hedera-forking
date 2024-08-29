@@ -27,8 +27,10 @@ const c = {
  * Tokens mock configuration.
  */
 const tokens = function (tokens) {
-    const tokensMockPath = './test/tokens';
+    const tokensMockPath = './test/data';
     for (const symbol of readdirSync(tokensMockPath)) {
+        if (symbol.endsWith('.json'))
+            continue;
         const { token_id } = JSON.parse(readFileSync(`${tokensMockPath}/${symbol}/getToken.json`));
         const [_shardNum, _realmNum, accountId] = token_id.split('.');
         const address = '0x' + parseInt(accountId).toString(16).padStart(40, '0');
@@ -109,11 +111,11 @@ const eth = {
             async getTokenById(tokenId) {
                 if (tokens[tokenId] === undefined)
                     return null;
-                return require(`../test/tokens/${tokens[tokenId].symbol}/getToken.json`);
+                return require(`../test/data/${tokens[tokenId].symbol}/getToken.json`);
             },
             async getAccount(idOrAliasOrEvmAddress) {
                 try {
-                    return require(`../test/accounts/getAccount_0x${idOrAliasOrEvmAddress.toLowerCase()}.json`);
+                    return require(`../test/data/getAccount_0x${idOrAliasOrEvmAddress.toLowerCase()}.json`);
                 } catch (err) {
                     if (err.code === 'MODULE_NOT_FOUND')
                         return null;
@@ -125,7 +127,7 @@ const eth = {
                 if (tokens[tokenId] === undefined)
                     return noBalance;
                 try {
-                    return require(`../test/tokens/${tokens[tokenId].symbol}/getBalanceOfToken_${accountId}.json`);
+                    return require(`../test/data/${tokens[tokenId].symbol}/getBalanceOfToken_${accountId}.json`);
                 } catch (err) {
                     if (err.code === 'MODULE_NOT_FOUND')
                         return noBalance;
@@ -137,7 +139,7 @@ const eth = {
                 if (tokens[tokenId] === undefined)
                     return noAllowance;
                 try {
-                    return require(`../test/tokens/${tokens[tokenId].symbol}/getAllowanceForToken_${accountId}_${spenderId}.json`);
+                    return require(`../test/data/${tokens[tokenId].symbol}/getAllowanceForToken_${accountId}_${spenderId}.json`);
                 } catch (err) {
                     if (err.code === 'MODULE_NOT_FOUND')
                         return noAllowance;

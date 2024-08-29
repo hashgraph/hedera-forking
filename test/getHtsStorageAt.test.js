@@ -89,7 +89,7 @@ describe('getHtsStorageAt', function () {
              * @returns 
              */
             const getAccount = (idOrAliasOrEvmAddress) => {
-                return require(`./accounts/getAccount_0x${idOrAliasOrEvmAddress.toLowerCase()}.json`);
+                return require(`./data/getAccount_0x${idOrAliasOrEvmAddress.toLowerCase()}.json`);
             };
 
             const slot = '0xe0b490f700000000000000004D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15';
@@ -104,7 +104,7 @@ describe('getHtsStorageAt', function () {
     ].forEach(({ token, address }) => {
         describe(`\`${token}\` token`, function () {
 
-            const tokenResult = require(`./tokens/${token}/getToken.json`);
+            const tokenResult = require(`./data/${token}/getToken.json`);
 
             /** @type {import('@hashgraph/hedera-forking').IMirrorNodeClient} */
             const mirrorNodeClient = {
@@ -173,7 +173,7 @@ describe('getHtsStorageAt', function () {
             const padAccountId = accountId => accountId.toString(16).padStart(8, '0');
 
             [
-                { name: 'balance is found', fn: (_tid, accountId) => require(`./tokens/${token}/getBalanceOfToken_${accountId}`) },
+                { name: 'balance is found', fn: (_tid, accountId) => require(`./data/${token}/getBalanceOfToken_${accountId}`) },
                 { name: 'balance is empty', fn: (_tid, _accountId) => ({ balances: [] }) },
             ].forEach(({ name, fn: getBalanceOfToken }) => {
                 const selector = id('balanceOf(address)').slice(0, 10);
@@ -193,7 +193,7 @@ describe('getHtsStorageAt', function () {
             });
 
             [
-                { name: 'allowance is found', fn: (_tid, accountId, spenderId) => require(`./tokens/${token}/getAllowanceForToken_${accountId}_${spenderId}`) },
+                { name: 'allowance is found', fn: (_tid, accountId, spenderId) => require(`./data/${token}/getAllowanceForToken_${accountId}_${spenderId}`) },
                 { name: 'allowance is empty', fn: (_tid, _accountId, _spenderId) => ({ allowances: [] }) },
             ].forEach(({ name, fn: getAllowanceForToken }) => {
                 const selector = id('allowance(address,address)').slice(0, 10);
