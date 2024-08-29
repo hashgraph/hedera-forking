@@ -29,6 +29,20 @@ interface IMirrorNodeClient {
     }>;
 
     /**
+     * Returns information for fungible token allowances for an account.
+     * 
+     * @param tokenId The ID of the token to return information for.
+     * @param accountId Account alias or account id or evm address.
+     * @param spenderId The ID of the spender to return information for.
+     * @param requestIdPrefix 
+     */
+    getAllowanceForToken(tokenId: string, accountId: string, spenderId: string, requestIdPrefix?: string): Promise<{
+        allowances: {
+            amount: number,
+        }[]
+    }>;
+
+    /**
      * Get account by alias, id, or evm address.
      * 
      * Return the account transactions and balance information given an account alias, an account id, or an evm address.

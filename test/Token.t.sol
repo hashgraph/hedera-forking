@@ -91,4 +91,12 @@ contract TokenTest is Test {
         console.log("bob's balance %s", balance);
         assertEq(balance, 366_000000);
     }
+
+    function test_ERC20_allowance() view external {
+        // https://hashscan.io/testnet/account/0.0.4233295
+        address owner = address(0x100000000000000000000000000000000040984f);
+        // https://hashscan.io/testnet/account/0.0.1335
+        address spender = 0x0000000000000000000000000000000000000537;
+        assertEq(IERC20(USDC).allowance(owner, spender), 5_000000);
+    }
 }

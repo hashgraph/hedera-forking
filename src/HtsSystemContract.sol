@@ -135,7 +135,7 @@ contract HtsSystemContract {
         return __redirectForToken();
     }
 
-    function __redirectForToken() internal returns (bytes memory) {
+    function __redirectForToken() private returns (bytes memory) {
         bytes4 selector = bytes4(msg.data[24:28]);
 
         if (selector == IERC20.name.selector) {
@@ -158,8 +158,9 @@ contract HtsSystemContract {
             uint256 amount = abi.decode(msg.data[60:92], (uint256));
             return abi.encode(approve(account, amount));
         } else if (selector == IERC20.allowance.selector) {
+            // addresses are word padded 
             address owner = address(bytes20(msg.data[40:60]));
-            address spender = address(bytes20(msg.data[60:80]));
+            address spender = address(bytes20(msg.data[72:92]));
             return abi.encode(__allowance(owner, spender));
         // } else if (selector == bytes4(keccak256("associate()"))) {
         //     return abi.encode(associate());
