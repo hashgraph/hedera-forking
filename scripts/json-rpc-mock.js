@@ -39,15 +39,23 @@ const tokens = function (tokens) {
 }({});
 
 /**
- * https://hips.hedera.com/hip/hip-719
+ * Returns the token proxy contract bytecode for the given `address`.
+ * Based on the proxy contract defined by https://hips.hedera.com/hip/hip-719.
  * 
- * @param {string} address 
- * @returns {string}
+ * The **template** bytecode was obtained using the `eth_getCode` JSON-RPC method with an HTS token.
+ * For example, for `USDC` https://hashscan.io/testnet/token/0.0.429274
+ * 
+ * ```sh
+ * cast code --rpc-url https://testnet.hashio.io/api 0x0000000000000000000000000000000000068cDa
+ * ```
+ * 
+ * @param {string} address The token contract `address` to replace.
+ * @returns {string} The bytecode for token proxy contract with the replaced `address`.
  */
 function getHIP719Code(address) {
     assert(address.startsWith('0x'), `address must start with \`0x\` prefix: ${address}`);
     assert(address.length === 2 + 40, `address must be a valid Ethereum address: ${address}`);
-    return `6080604052348015600f57600080fd5b506000610167905077618dc65e${address.slice(2)}600052366000602037600080366018016008845af43d806000803e8160008114605857816000f35b816000fdfea2646970667358221220d8378feed472ba49a0005514ef7087017f707b45fb9bf56bb81bb93ff19a238b64736f6c634300080b0033`;
+    return `0x6080604052348015600f57600080fd5b506000610167905077618dc65e${address.slice(2)}600052366000602037600080366018016008845af43d806000803e8160008114605857816000f35b816000fdfea2646970667358221220d8378feed472ba49a0005514ef7087017f707b45fb9bf56bb81bb93ff19a238b64736f6c634300080b0033`;
 }
 
 /**
