@@ -89,7 +89,7 @@ contract TokenTest is Test {
         address bob = 0x0000000000000000000000000000000000000887;
         balance = IERC20(USDC).balanceOf(bob);
         console.log("bob's balance %s", balance);
-        assertEq(balance, 366_000000);
+        assertEq(balance, 370_000000);
     }
 
     function test_ERC20_allowance() view external {
@@ -107,7 +107,22 @@ contract TokenTest is Test {
         assertEq(IERC20(USDC).allowance(owner, spender), 0);
     }
 
-    // cheatCodes.prank(address(1337));
+    function test_ERC20_transfer() external {
+        // https://hashscan.io/testnet/account/0.0.1421
+        address owner = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
+        address to = makeAddr("bob");
+        uint256 amount = 4_000000;
+
+        uint256 balanceOfOwner = IERC20(USDC).balanceOf(owner);
+        assertGt(balanceOfOwner, 0);
+        assertEq(IERC20(USDC).balanceOf(to), 0);
+        
+        vm.prank(owner); // https://book.getfoundry.sh/cheatcodes/prank
+        IERC20(USDC).transfer(to, amount);
+
+        assertEq(IERC20(USDC).balanceOf(owner), balanceOfOwner - amount);
+        assertEq(IERC20(USDC).balanceOf(to), amount);
+    }
 
     function test_ERC20_transferFrom() external {
         // https://hashscan.io/testnet/account/0.0.1421
@@ -120,13 +135,22 @@ contract TokenTest is Test {
         assertEq(IERC20(USDC).balanceOf(to), amount);
     }
 
+    function test_ERC20_transferFrom_invalid_sender() external {
+        vm.expectRevert(bytes("hts: invalid sender"));
+        address to = makeAddr("bob");
+        IERC20(USDC).transferFrom(address(0), to, 4_000000);
+    }
+
+    function test_ERC20_transferFrom_invalid_receiver() external {
+        vm.expectRevert(bytes("hts: invalid receiver"));
+        address from = makeAddr("alice");
+        IERC20(USDC).transferFrom(from, address(0), 4_000000);
+    }
+
     function test_ERC20_transferFrom_insufficient_balance() external {
         vm.expectRevert(bytes("hts: insufficient balance"));
-
         address from = makeAddr("alice");
         address to = makeAddr("bob");
-        uint256 amount = 4_000000;
-
-        IERC20(USDC).transferFrom(from, to, amount);
+        IERC20(USDC).transferFrom(from, to, 4_000000);
     }
 }

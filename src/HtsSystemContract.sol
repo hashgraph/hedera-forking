@@ -204,30 +204,10 @@ contract HtsSystemContract {
         }
     }
 
-    // function __transferFrom(address from, address to, uint256 amount) private returns (bool) {
-    //     uint256 senderIndex = findIndex(from, holders);
-    //     uint256 spenderIndex = findIndex(msg.sender, allowancesSpenders);
-    //     require(senderIndex != type(uint256).max, "Sender not found");
-    //     require(allowancesOwners[spenderIndex] == from, "Sender not authorized");
-    //     require(balances[senderIndex] >= amount, "Insufficient balance");
-    //     require(allowancesAmounts[spenderIndex] >= amount, "Allowance exceeded");
-
-    //     balances[senderIndex] -= amount;
-    //     allowancesAmounts[spenderIndex] -= amount;
-
-    //     uint256 recipientIndex = findIndex(to, holders);
-    //     if (recipientIndex == type(uint256).max) {
-    //         holders.push(to);
-    //         balances.push(amount);
-    //     } else {
-    //         balances[recipientIndex] += amount;
-    //     }
-
-    //     emit Transfer(from, to, amount);
-    //     return true;
-    // }
-
     function _transfer(address from, address to, uint256 amount) private {
+        require(from != address(0), "hts: invalid sender");
+        require(to != address(0), "hts: invalid receiver");
+
         uint256 fromSlot = _balanceOfSlot(from);
         uint256 fromBalance;
         assembly { fromBalance := sload(fromSlot) }
@@ -237,7 +217,8 @@ contract HtsSystemContract {
         uint256 toSlot = _balanceOfSlot(to);
         uint256 toBalance;
         assembly { toBalance := sload(toSlot) }
-        // TODO: review overflow
-        assembly { sstore(toSlot, add(toBalance, amount)) }
+        // Overflow check required
+        uint256 newToBalance = toBalance + amount;
+        assembly { sstore(toSlot, newToBalance) }
     }
 }
