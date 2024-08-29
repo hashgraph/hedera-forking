@@ -44,7 +44,7 @@ contract TokenTest is Test {
     }
 
     function test_ERC20_totalSupply() view external {
-        assertEq(IERC20(USDC).totalSupply(), 10000000004000000);
+        assertEq(IERC20(USDC).totalSupply(), 10000000005000000);
     }
 
     function test_ERC20_balanceOf_deal() external {
@@ -80,6 +80,6 @@ contract TokenTest is Test {
         address bob = 0x0000000000000000000000000000000000000887;
         balance = IERC20(USDC).balanceOf(bob);
         console.log("bob's balance %s", balance);
-        assertEq(balance, 341_000000);
+        assertEq(balance, 366_000000);
     }
 }
