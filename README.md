@@ -19,13 +19,6 @@ It is useful to filter to a specific test file, for example
 forge test --match-contract USDCTest -vvvv
 ```
 
-f test --fork-url $RPC_URL --no-storage-caching
-
-> When forking from a specific block, the chain data is cached to `~/.foundry/cache`.
-> If you do not want to cache the chain data, pass `--no-storage-caching`.
-
-https://book.getfoundry.sh/reference/forge/forge-test#description
-
 ## Use Cases
 
 create token using launch-token

@@ -142,6 +142,9 @@ const eth = {
 
 const port = process.env['PORT'] ?? 7546;
 console.info(c.cyan('[INFO]'), '\u{1F680}', c.magenta('JSON-RPC Mock Server'), `running on http://localhost:${c.yellow(port)}`);
+console.info(c.yellow('[HINT]'), `Remember to disable Foundry's storage cache using the \`${c.yellow('--no-storage-caching')}\` flag`);
+console.info(c.yellow('[HINT]'), c.dim('>'), `foundry test --fork-url http://localhost:${port} --no-storage-caching`);
+console.info(c.yellow('[HINT]'), c.dim('>'), 'https://book.getfoundry.sh/reference/forge/forge-test#description');
 
 http.createServer(function (req, res) {
     /**
