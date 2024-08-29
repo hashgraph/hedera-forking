@@ -5,7 +5,7 @@ import {IERC20} from "./IERC20.sol";
 
 contract HtsSystemContract {
 
-    address private constant HTS_PRECOMPILE = address(0x167);
+    address private constant HTS_ADDRESS = address(0x167);
 
     string private name;
     string private symbol;
@@ -20,18 +20,18 @@ contract HtsSystemContract {
 
     address[] public associatedAccounts;
 
+    event Transfer(address indexed from, address indexed to, uint256 value);
+    event Approval(address indexed owner, address indexed spender, uint256 value);
     event Associated(address indexed account);
     event Dissociated(address indexed account);
 
-    event Transfer(address indexed from, address indexed to, uint256 value);
-    event Approval(address indexed owner, address indexed spender, uint256 value);
-
     /// @notice Prevents delegatecall into the modified method.
     modifier htsCall() {
-        require(address(this) == HTS_PRECOMPILE, "htsCall: delegated call");
+        require(address(this) == HTS_ADDRESS, "htsCall: delegated call");
         _;
     }
 
+    /// @dev
     function getAccountId(address account) htsCall external view returns (uint32 accountId) {
         uint64 padding = 0x0000_0000_0000_0000;
         uint256 slot = uint256(bytes32(abi.encodePacked(HtsSystemContract.getAccountId.selector, padding, account)));
@@ -157,9 +157,9 @@ contract HtsSystemContract {
             uint256 amount = abi.decode(msg.data[60:92], (uint256));
             return abi.encode(approve(account, amount));
         } else if (selector == IERC20.allowance.selector) {
-            address from = address(bytes20(msg.data[40:60]));
-            uint256 to = uint160(address(bytes20(msg.data[60:80])));
-            return abi.encode(approve(from, to));
+            address owner = address(bytes20(msg.data[40:60]));
+            address spender = address(bytes20(msg.data[60:80]));
+            return abi.encode(__allowance(owner, spender));
         // } else if (selector == bytes4(keccak256("associate()"))) {
         //     return abi.encode(associate());
         // } else if (selector == bytes4(keccak256("dissociate()"))) {
@@ -177,10 +177,21 @@ contract HtsSystemContract {
     }
 
     function __balanceOf(address account) private view returns (uint256 amount) {
-        uint32 accountId = HtsSystemContract(address(0x167)).getAccountId(account);
-        uint192 padding = 0x0000_0000_0000_0000;
-        // slot(256) = selector(32)+padding(192)+accountId(32)
-        uint256 slot = uint256(bytes32(abi.encodePacked(IERC20.balanceOf.selector, padding, accountId)));
+        bytes4 selector = IERC20.balanceOf.selector;
+        uint192 pad = 0x0;
+        uint32 accountId = HtsSystemContract(HTS_ADDRESS).getAccountId(account);
+        uint256 slot = uint256(bytes32(abi.encodePacked(selector, pad, accountId)));
+        assembly {
+            amount := sload(slot)
+        }
+    }
+
+    function __allowance(address owner, address spender) private view returns (uint256 amount) {
+        bytes4 selector = IERC20.allowance.selector;
+        uint160 pad = 0x0;
+        uint32 ownerId = HtsSystemContract(HTS_ADDRESS).getAccountId(owner);
+        uint32 spenderId = HtsSystemContract(HTS_ADDRESS).getAccountId(spender);
+        uint256 slot = uint256(bytes32(abi.encodePacked(selector, pad, spenderId, ownerId)));
         assembly {
             amount := sload(slot)
         }
