@@ -164,26 +164,24 @@ describe('getHtsStorageAt', function () {
                 });
             });
 
-            const balanceOfSelector = '0x70a08231';
-            const padding = '0'.repeat(24 * 2);
+            [
+                { name: 'balance is found', fn: (_tid, accountId) => require(`./tokens/${token}/getBalanceOfToken_${accountId}`) },
+                { name: 'balance is empty', fn: (_tid, _accountId) => ({ balances: [] }) },
+            ].forEach(({ name, fn: getBalanceOfToken }) => {
+                it(`should get \`balanceOf\` tokenId for encoded account when '${name}'`, async function () {
+                    const balanceOfSelector = '0x70a08231';
+                    const padding = '0'.repeat(24 * 2);
 
-            it(`should get \`balanceOf\` tokenId for account`, async function () {
-                /** @type {import('@hashgraph/hedera-forking').IMirrorNodeClient} */
-                const mirrorNodeClient = {
-                    getBalanceOfToken(_tokenId, accountId) {
-                        return require(`./tokens/${token}/getBalanceOfToken_${accountId}`);
-                    }
-                };
+                    const accountId = 1421;
+                    const slot = `${balanceOfSelector}${padding}${accountId.toString(16).padStart(8, '0')}`;
+                    const result = await getHtsStorageAt(address, slot, { getBalanceOfToken });
 
-                const accountId = 1421;
-                const slot = `${balanceOfSelector}${padding}${accountId.toString(16).padStart(8, '0')}`;
-                const result = await getHtsStorageAt(address, slot, mirrorNodeClient);
-
-                const { balances } = mirrorNodeClient.getBalanceOfToken(undefined, `0.0.${accountId}`);
-                expect(result).to.be.equal(balances.length === 0
-                    ? utils.ZERO_HEX_32_BYTE
-                    : `0x${utils.toIntHex256(balances[0].balance)}`
-                );
+                    const { balances } = getBalanceOfToken(undefined, `0.0.${accountId}`);
+                    expect(result).to.be.equal(balances.length === 0
+                        ? utils.ZERO_HEX_32_BYTE
+                        : `0x${utils.toIntHex256(balances[0].balance)}`
+                    );
+                });
             });
 
         });
