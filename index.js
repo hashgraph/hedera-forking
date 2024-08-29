@@ -115,7 +115,7 @@ module.exports = {
         if (nrequestedSlot >> 64n === 0xdd62ed3e_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000n) {
             const ownerId = `0.0.${parseInt(requestedSlot.slice(-8), 16)}`;
             const spenderId = `0.0.${parseInt(requestedSlot.slice(-16, -8), 16)}`;
-            const { allowances } = await mirrorNodeClient.getAllowanceForToken(tokenId, ownerId, spenderId, reqId);
+            const { allowances } = await mirrorNodeClient.getAllowanceForToken(ownerId, tokenId, spenderId, reqId);
 
             if (allowances.length === 0)
                 return rtrace(utils.ZERO_HEX_32_BYTE, `Allowance of token ${tokenId} from ${ownerId} assigned to ${spenderId} not found`);

@@ -115,7 +115,7 @@ const eth = {
                     throw err;
                 }
             },
-            async getAllowanceForToken(tokenId, accountId, spenderId) {
+            async getAllowanceForToken(accountId, tokenId, spenderId) {
                 const noAllowance = { allowances: [] };
                 if (tokens[tokenId] === undefined)
                     return noAllowance;

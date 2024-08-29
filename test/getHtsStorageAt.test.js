@@ -190,8 +190,8 @@ describe('getHtsStorageAt', function () {
             });
 
             [
-                { name: 'allowance is found', fn: (_tid, accountId, spenderId) => require(`./data/${symbol}/getAllowanceForToken_${accountId}_${spenderId}`) },
-                { name: 'allowance is empty', fn: (_tid, _accountId, _spenderId) => ({ allowances: [] }) },
+                { name: 'allowance is found', fn: (accountId, _tid, spenderId) => require(`./data/${symbol}/getAllowanceForToken_${accountId}_${spenderId}`) },
+                { name: 'allowance is empty', fn: (_accountId, _tid, _spenderId) => ({ allowances: [] }) },
             ].forEach(({ name, fn: getAllowanceForToken }) => {
                 const selector = id('allowance(address,address)').slice(0, 10);
                 const padding = '0'.repeat(20 * 2);
@@ -202,7 +202,7 @@ describe('getHtsStorageAt', function () {
                     const slot = `${selector}${padding}${padAccountId(spenderId)}${padAccountId(accountId)}`;
                     const result = await getHtsStorageAt(address, slot, { getAllowanceForToken });
 
-                    const { allowances } = getAllowanceForToken(undefined, `0.0.${accountId}`, `0.0.${spenderId}`);
+                    const { allowances } = getAllowanceForToken(`0.0.${accountId}`, undefined, `0.0.${spenderId}`);
                     expect(result).to.be.equal(allowances.length === 0
                         ? utils.ZERO_HEX_32_BYTE
                         : `0x${utils.toIntHex256(allowances[0].amount)}`

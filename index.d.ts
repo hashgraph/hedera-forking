@@ -31,12 +31,12 @@ interface IMirrorNodeClient {
     /**
      * Returns information for fungible token allowances for an account.
      * 
-     * @param tokenId The ID of the token to return information for.
      * @param accountId Account alias or account id or evm address.
+     * @param tokenId The ID of the token to return information for.
      * @param spenderId The ID of the spender to return information for.
      * @param requestIdPrefix 
      */
-    getAllowanceForToken(tokenId: string, accountId: string, spenderId: string, requestIdPrefix?: string): Promise<{
+    getAllowanceForToken(accountId: string, tokenId: string, spenderId: string, requestIdPrefix?: string): Promise<{
         allowances: {
             amount: number,
         }[]
@@ -62,7 +62,7 @@ interface IMirrorNodeClient {
 }
 
 /**
- *
+ * Gets the bytecode for the Solidity implementation of the HTS System Contract.
  */
 export function getHtsCode(): string;
 
