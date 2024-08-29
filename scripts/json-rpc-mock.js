@@ -5,15 +5,13 @@
 // See https://nodejs.org/docs/v20.17.0/api/cli.html#--watch for more information.
 
 const { strict: assert } = require('assert');
-const { readdirSync, readFileSync } = require('fs');
 const http = require('http');
 
 const { getHtsCode, getHtsStorageAt } = require('@hashgraph/hedera-forking');
 const { HTSAddress, ZERO_HEX_32_BYTE } = require('../utils');
+const { tokens } = require('../test/data');
 
-/**
- * ANSI colors functions to avoid any external dependency.
- */
+/** ANSI colors functions to avoid any external dependency. */
 const c = {
     dim: text => `\x1b[2m${text}\x1b[0m`,
     green: text => `\x1b[32m${text}\x1b[0m`,
@@ -22,23 +20,6 @@ const c = {
     magenta: text => `\x1b[35m${text}\x1b[0m`,
     cyan: text => `\x1b[36m${text}\x1b[0m`,
 };
-
-/**
- * Tokens mock configuration.
- */
-const tokens = function (tokens) {
-    const tokensMockPath = './test/data';
-    for (const symbol of readdirSync(tokensMockPath)) {
-        if (symbol.endsWith('.json'))
-            continue;
-        const { token_id } = JSON.parse(readFileSync(`${tokensMockPath}/${symbol}/getToken.json`));
-        const [_shardNum, _realmNum, accountId] = token_id.split('.');
-        const address = '0x' + parseInt(accountId).toString(16).padStart(40, '0');
-        tokens[token_id] = { symbol, address };
-    }
-    console.log(c.cyan('[INFO]'), `Tokens mock configuration from \`${tokensMockPath}\``, tokens);
-    return tokens;
-}({});
 
 /**
  * Returns the token proxy contract bytecode for the given `address`.
@@ -154,11 +135,13 @@ const eth = {
     },
 };
 
+console.log(c.cyan('[INFO]'), 'Tokens mock configuration', tokens);
+
 const port = process.env['PORT'] ?? 7546;
-console.info(c.cyan('[INFO]'), '\u{1F680}', c.magenta('JSON-RPC Mock Server'), `running on http://localhost:${c.yellow(port)}`);
 console.info(c.yellow('[HINT]'), `Remember to disable Foundry's storage cache using the \`${c.yellow('--no-storage-caching')}\` flag`);
 console.info(c.yellow('[HINT]'), c.dim('>'), `foundry test --fork-url http://localhost:${port} --no-storage-caching`);
 console.info(c.yellow('[HINT]'), c.dim('>'), 'https://book.getfoundry.sh/reference/forge/forge-test#description');
+console.info(c.cyan('[INFO]'), '\u{1F680}', c.magenta('JSON-RPC Mock Server'), `running on http://localhost:${c.yellow(port)}`);
 
 http.createServer(function (req, res) {
     /**
