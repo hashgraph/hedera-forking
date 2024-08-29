@@ -99,4 +99,11 @@ contract TokenTest is Test {
         address spender = 0x0000000000000000000000000000000000000537;
         assertEq(IERC20(USDC).allowance(owner, spender), 5_000000);
     }
+
+    function test_ERC20_allowance_empty() external {
+        // https://hashscan.io/testnet/account/0.0.4233295
+        address owner = address(0x100000000000000000000000000000000040984f);
+        address spender = makeAddr("alice");
+        assertEq(IERC20(USDC).allowance(owner, spender), 0);
+    }
 }
