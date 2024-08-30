@@ -107,6 +107,11 @@ contract TokenTest is Test {
         assertEq(IERC20(USDC).allowance(owner, spender), 0);
     }
 
+    function test_ERC20_transfer_invalid_receiver() external {
+        vm.expectRevert(bytes("hts: invalid receiver"));
+        IERC20(USDC).transfer(address(0), 4_000000);
+    }
+
     function test_ERC20_transfer() external {
         // https://hashscan.io/testnet/account/0.0.1421
         address owner = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
