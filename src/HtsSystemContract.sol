@@ -3,8 +3,6 @@ pragma solidity ^0.8.0;
 
 import {IERC20} from "./IERC20.sol";
 
-import {console} from "forge-std/Console.sol";
-
 contract HtsSystemContract {
 
     address private constant HTS_ADDRESS = address(0x167);
@@ -217,7 +215,8 @@ contract HtsSystemContract {
         uint256 toSlot = _balanceOfSlot(to);
         uint256 toBalance;
         assembly { toBalance := sload(toSlot) }
-        // Overflow check required
+        // Solidity's checked arithmetic will revert if this overflows
+        // https://soliditylang.org/blog/2020/12/16/solidity-v0.8.0-release-announcement
         uint256 newToBalance = toBalance + amount;
         assembly { sstore(toSlot, newToBalance) }
     }
