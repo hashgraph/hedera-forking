@@ -1,2 +1,2 @@
-forge build
+# Formats `HtsSystemContract.sol`
 npm run format
