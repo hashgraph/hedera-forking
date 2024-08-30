@@ -103,10 +103,24 @@ module.exports = {
         if (nrequestedSlot >> 32n === 0x70a08231_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000n) {
             const accountId = `0.0.${parseInt(requestedSlot.slice(-8), 16)}`;
             const { balances } = await mirrorNodeClient.getBalanceOfToken(tokenId, accountId, reqId);
-            if (balances.length === 0) return rtrace(utils.ZERO_HEX_32_BYTE, 'Balance not found');
+            if (balances.length === 0)
+                return rtrace(utils.ZERO_HEX_32_BYTE, 'Balance not found');
 
-            const balance = balances[0].balance;
-            return rtrace(`0x${balance.toString(16).padStart(64, '0')}`, `Requested slot matches \`balanceOf\` slot`);
+            const value = balances[0].balance;
+            return rtrace(`0x${value.toString(16).padStart(64, '0')}`, `Requested slot matches \`${tokenId}.balanceOf(${accountId})\``);
+        }
+
+        // Encoded `address(tokenId).allowance(owner, spender)` slot
+        // slot(256) = `allowance`selector(32) + padding(160) + spenderId(32) + ownerId(32)
+        if (nrequestedSlot >> 64n === 0xdd62ed3e_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000n) {
+            const ownerId = `0.0.${parseInt(requestedSlot.slice(-8), 16)}`;
+            const spenderId = `0.0.${parseInt(requestedSlot.slice(-16, -8), 16)}`;
+            const { allowances } = await mirrorNodeClient.getAllowanceForToken(ownerId, tokenId, spenderId, reqId);
+
+            if (allowances.length === 0)
+                return rtrace(utils.ZERO_HEX_32_BYTE, `Allowance of token ${tokenId} from ${ownerId} assigned to ${spenderId} not found`);
+            const value = allowances[0].amount;
+            return rtrace(`0x${value.toString(16).padStart(64, '0')}`, `Requested slot matches \`${tokenId}.allowance(${ownerId, spenderId})\``);
         }
 
         const keccakedSlot = inferSlotAndOffset(nrequestedSlot);

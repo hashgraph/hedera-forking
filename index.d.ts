@@ -14,7 +14,7 @@ interface IMirrorNodeClient {
      * @param tokenId 
      * @param requestIdPrefix The formatted `requestId` as a prefix for logging purposes.
      */
-    getTokenById(tokenId: string, requestIdPrefix?: string): Promise<any>;
+    getTokenById(tokenId: string, requestIdPrefix?: string): Promise<Record<string, unknown> | null>;
 
     /**
      * 
@@ -23,7 +23,23 @@ interface IMirrorNodeClient {
      * @param requestIdPrefix 
      */
     getBalanceOfToken(tokenId: string, accountId: string, requestIdPrefix?: string): Promise<{
-        balances: { balance: any }[]
+        balances: {
+            balance: number
+        }[]
+    }>;
+
+    /**
+     * Returns information for fungible token allowances for an account.
+     * 
+     * @param accountId Account alias or account id or evm address.
+     * @param tokenId The ID of the token to return information for.
+     * @param spenderId The ID of the spender to return information for.
+     * @param requestIdPrefix 
+     */
+    getAllowanceForToken(accountId: string, tokenId: string, spenderId: string, requestIdPrefix?: string): Promise<{
+        allowances: {
+            amount: number,
+        }[]
     }>;
 
     /**
@@ -42,12 +58,11 @@ interface IMirrorNodeClient {
      */
     getAccount(idOrAliasOrEvmAddress: string, requestIdPrefix?: string): Promise<{
         account: string,
-        evm_address: string,
-    }>;
+    } | null>;
 }
 
 /**
- *
+ * Gets the bytecode for the Solidity implementation of the HTS System Contract.
  */
 export function getHtsCode(): string;
 
@@ -58,6 +73,11 @@ export function getHtsCode(): string;
  * 
  * When the token ID corresponding to `address` does not exist,
  * the respective calls on `mirrorNodeClient` should return `null`.
+ * 
+ * The storage mechanism for `balanceOf` and `allowance` use a map between addresses and account IDs.
+ * This allow the contract to reduce the space to marshal an account:
+ * `32 bits` (or even `64 bits` if longer IDs are needed) using `accountid` (omitting the `shardId` and `realmId`) against `160 bits` using `address`.
+ * This mechanism in turn allow us to marshal more than one account used in storage slots, _e.g._, `allowance`.
  * 
  * @param address 
  * @param slot 

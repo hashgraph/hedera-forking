@@ -37,7 +37,7 @@
     "supply_type": "INFINITE",
     "symbol": "USDC",
     "token_id": "0.0.429274",
-    "total_supply": "10000000000000000",
+    "total_supply": "10000000005000000",
     "treasury_account_id": "0.0.5176",
     "type": "FUNGIBLE_COMMON",
     "wipe_key": null
