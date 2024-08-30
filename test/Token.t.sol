@@ -2,7 +2,7 @@
 pragma solidity ^0.8.17;
 
 import {Test, console} from "forge-std/Test.sol";
-import {IERC20} from "../src/IERC20.sol";
+import {IERC20Events, IERC20} from "../src/IERC20.sol";
 
 interface MethodNotSupported {
     function methodNotSupported() external view returns (uint256);
@@ -18,7 +18,7 @@ interface MethodNotSupported {
  * To get USDC balances for a given account using the Mirror Node you can use
  * https://mainnet.mirrornode.hedera.com/api/v1/tokens/0.0.456858/balances?account.id=0.0.38047
  */
-contract TokenTest is Test {
+contract TokenTest is Test, IERC20Events {
 
     /**
      * https://hashscan.io/testnet/token/0.0.429274
@@ -107,6 +107,26 @@ contract TokenTest is Test {
         assertEq(IERC20(USDC).allowance(owner, spender), 0);
     }
 
+    function test_ERC20_approve() external {
+        address owner = makeAddr("alice");
+        address spender = makeAddr("bob");
+        uint256 amount = 4_000000;
+
+        assertEq(IERC20(USDC).allowance(owner, spender), 0);
+
+        vm.prank(owner);
+        vm.expectEmit(USDC);
+        emit Approval(owner, spender, amount);
+        IERC20(USDC).approve(spender, amount);
+
+        assertEq(IERC20(USDC).allowance(owner, spender), amount);
+    }
+
+    function test_ERC20_approve_should_revert_when_invalid_spender() external {
+        vm.expectRevert(bytes("_approve: invalid spender"));
+        IERC20(USDC).approve(address(0), 4_000000);
+    }
+
     function test_ERC20_transfer_invalid_receiver() external {
         vm.expectRevert(bytes("hts: invalid receiver"));
         IERC20(USDC).transfer(address(0), 4_000000);
@@ -123,6 +143,8 @@ contract TokenTest is Test {
         assertEq(IERC20(USDC).balanceOf(to), 0);
         
         vm.prank(owner); // https://book.getfoundry.sh/cheatcodes/prank
+        vm.expectEmit(USDC);
+        emit Transfer(owner, to, amount);
         IERC20(USDC).transfer(to, amount);
 
         assertEq(IERC20(USDC).balanceOf(owner), balanceOfOwner - amount);
@@ -136,7 +158,11 @@ contract TokenTest is Test {
         uint256 amount = 4_000000;
 
         assertEq(IERC20(USDC).balanceOf(to), 0);
+
+        vm.expectEmit(USDC);
+        emit Transfer(from, to, amount);
         IERC20(USDC).transferFrom(from, to, amount);
+
         assertEq(IERC20(USDC).balanceOf(to), amount);
     }
 

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
-import {IERC20} from "./IERC20.sol";
+import {IERC20Events, IERC20} from "./IERC20.sol";
 
-contract HtsSystemContract {
+contract HtsSystemContract is IERC20Events {
 
     address private constant HTS_ADDRESS = address(0x167);
 
@@ -12,8 +12,6 @@ contract HtsSystemContract {
     uint8 private decimals;
     uint256 private totalSupply;
 
-    event Transfer(address indexed from, address indexed to, uint256 amount);
-    event Approval(address indexed owner, address indexed spender, uint256 amount);
     event Associated(address indexed account);
     event Dissociated(address indexed account);
 
@@ -51,6 +49,9 @@ contract HtsSystemContract {
         return __redirectForToken();
     }
 
+    /**
+     * @dev Addresses are word right-padded starting from memory position `28`.
+     */
     function __redirectForToken() private returns (bytes memory) {
         bytes4 selector = bytes4(msg.data[24:28]);
 
@@ -70,7 +71,6 @@ contract HtsSystemContract {
         } else if (selector == IERC20.transfer.selector) {
             require(msg.data.length >= 92, "transfer: Not enough calldata");
 
-            // addresses are word padded 
             address to = address(bytes20(msg.data[40:60]));
             uint256 amount = uint256(bytes32(msg.data[60:92]));
             address owner = msg.sender;
@@ -79,21 +79,26 @@ contract HtsSystemContract {
         } else if (selector == IERC20.transferFrom.selector) {
             require(msg.data.length >= 124, "transferF: Not enough calldata");
 
-            // addresses are word padded 
             address from = address(bytes20(msg.data[40:60]));
             address to = address(bytes20(msg.data[72:92]));
             uint256 amount = uint256(bytes32(msg.data[92:124]));
             _transfer(from, to, amount);
             return abi.encode(true);
         } else if (selector == IERC20.allowance.selector) {
-            // addresses are word padded 
+            require(msg.data.length >= 92, "allowance: Not enough calldata");
+
             address owner = address(bytes20(msg.data[40:60]));
             address spender = address(bytes20(msg.data[72:92]));
             return abi.encode(__allowance(owner, spender));
-        // } else if (selector == IERC20.approve.selector) {
-        //     address account = address(bytes20(msg.data[40:60]));
-        //     uint256 amount = abi.decode(msg.data[60:92], (uint256));
-        //     return abi.encode(approve(account, amount));
+        } else if (selector == IERC20.approve.selector) {
+            require(msg.data.length >= 92, "approve: Not enough calldata");
+
+            address spender = address(bytes20(msg.data[40:60]));
+            uint256 amount = uint256(bytes32(msg.data[60:92]));
+            address owner = msg.sender;
+            _approve(owner, spender, amount);
+            emit Approval(owner, spender, amount);
+            return abi.encode(true);
         }
         revert ("redirectForToken: not supported");
     }
@@ -105,6 +110,14 @@ contract HtsSystemContract {
         slot = uint256(bytes32(abi.encodePacked(selector, pad, accountId)));
     }
 
+    function _allowanceSlot(address owner, address spender) private view returns (uint256 slot) {
+        bytes4 selector = IERC20.allowance.selector;
+        uint160 pad = 0x0;
+        uint32 ownerId = HtsSystemContract(HTS_ADDRESS).getAccountId(owner);
+        uint32 spenderId = HtsSystemContract(HTS_ADDRESS).getAccountId(spender);
+        slot = uint256(bytes32(abi.encodePacked(selector, pad, spenderId, ownerId)));
+    }
+
     function __balanceOf(address account) private view returns (uint256 amount) {
         uint256 slot = _balanceOfSlot(account);
         assembly {
@@ -113,11 +126,7 @@ contract HtsSystemContract {
     }
 
     function __allowance(address owner, address spender) private view returns (uint256 amount) {
-        bytes4 selector = IERC20.allowance.selector;
-        uint160 pad = 0x0;
-        uint32 ownerId = HtsSystemContract(HTS_ADDRESS).getAccountId(owner);
-        uint32 spenderId = HtsSystemContract(HTS_ADDRESS).getAccountId(spender);
-        uint256 slot = uint256(bytes32(abi.encodePacked(selector, pad, spenderId, ownerId)));
+        uint256 slot = _allowanceSlot(owner, spender);
         assembly {
             amount := sload(slot)
         }
@@ -140,5 +149,16 @@ contract HtsSystemContract {
         // https://soliditylang.org/blog/2020/12/16/solidity-v0.8.0-release-announcement
         uint256 newToBalance = toBalance + amount;
         assembly { sstore(toSlot, newToBalance) }
+
+        emit Transfer(from, to, amount);
+    }
+
+    function _approve(address owner, address spender, uint256 amount) private {
+        require(owner != address(0), "_approve: invalid owner");
+        require(spender != address(0), "_approve: invalid spender");
+        uint256 allowanceSlot = _allowanceSlot(owner, spender);
+        assembly {
+            sstore(allowanceSlot, amount)
+        }
     }
 }
