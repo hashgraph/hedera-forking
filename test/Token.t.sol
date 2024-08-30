@@ -9,7 +9,10 @@ interface MethodNotSupported {
 }
 
 /**
- * Test using USDC, an already existing HTS Token.
+ * HTS for Fungible Token methods test.
+ * Fungible Token must implement the ERC20 standard.
+ *
+ * These tests use USDC, an already existing HTS Token.
  *
  * Test based on issue https://github.com/hashgraph/hedera-smart-contracts/issues/863.
  *
@@ -151,37 +154,48 @@ contract TokenTest is Test, IERC20Events {
         assertEq(IERC20(USDC).balanceOf(to), amount);
     }
 
-    function test_ERC20_transferFrom() external {
-        // https://hashscan.io/testnet/account/0.0.1421
-        address from = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
-        address to = makeAddr("bob");
-        uint256 amount = 4_000000;
-
-        assertEq(IERC20(USDC).balanceOf(to), 0);
-
-        vm.expectEmit(USDC);
-        emit Transfer(from, to, amount);
-        IERC20(USDC).transferFrom(from, to, amount);
-
-        assertEq(IERC20(USDC).balanceOf(to), amount);
-    }
-
-    function test_ERC20_transferFrom_invalid_sender() external {
-        vm.expectRevert(bytes("_approve: invalid owner"));
-        address to = makeAddr("bob");
-        IERC20(USDC).transferFrom(address(0), to, 4_000000);
-    }
-
-    function test_ERC20_transferFrom_invalid_receiver() external {
-        vm.expectRevert(bytes("hts: invalid receiver"));
-        address from = makeAddr("alice");
-        IERC20(USDC).transferFrom(from, address(0), 4_000000);
-    }
-
-    function test_ERC20_transferFrom_insufficient_balance() external {
-        vm.expectRevert(bytes("hts: insufficient balance"));
-        address from = makeAddr("alice");
+    function test_ERC20_transferFrom_should_revert_when_insufficient_allowance() external {
+        vm.expectRevert(bytes("_spendAllowance: insufficient"));
+        address from = makeAddr("bob");
         address to = makeAddr("bob");
         IERC20(USDC).transferFrom(from, to, 4_000000);
+    }
+
+    function test_ERC20_transferFrom_should_revert_when_insufficient_balance() external {
+        address owner = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
+        address from = makeAddr("alice");
+        address to = makeAddr("bob");
+        vm.prank(owner);
+        IERC20(USDC).approve(from, 70_000000);
+
+        vm.expectRevert(bytes("hts: insufficient balance"));
+        vm.prank(from);
+        IERC20(USDC).transferFrom(owner, to, 50_000000);
+    }
+
+    function test_ERC20_transferFrom_should_transfer_and_spend_allowance() external {
+        // https://hashscan.io/testnet/account/0.0.1421
+        address alice = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
+        address bob = makeAddr("bob");
+        address charlie = makeAddr("charlie");
+        uint256 allowanceAmount = 10_000000;
+        uint256 transferAmount = 4_000000;
+
+        vm.prank(alice);
+        IERC20(USDC).approve(bob, allowanceAmount);
+
+        assertEq(IERC20(USDC).balanceOf(alice), 49_300000);
+        assertEq(IERC20(USDC).balanceOf(bob), 0);
+        assertEq(IERC20(USDC).balanceOf(charlie), 0);
+
+        vm.prank(bob);
+        vm.expectEmit(USDC);
+        emit Transfer(alice, charlie, transferAmount);
+        IERC20(USDC).transferFrom(alice, charlie, transferAmount);
+
+        assertEq(IERC20(USDC).balanceOf(alice), 49_300000 - 4_000000);
+        assertEq(IERC20(USDC).balanceOf(bob), 0);
+        assertEq(IERC20(USDC).balanceOf(charlie), transferAmount);
+        assertEq(IERC20(USDC).allowance(alice, bob), allowanceAmount - transferAmount);
     }
 }

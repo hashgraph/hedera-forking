@@ -178,7 +178,7 @@ contract HtsSystemContract is IERC20Events {
     function _spendAllowance(address owner, address spender, uint256 amount) private {
         uint256 currentAllowance = __allowance(owner, spender);
         if (currentAllowance != type(uint256).max) {
-            require(currentAllowance < amount, "_spendAllowance: insufficient");
+            require(currentAllowance >= amount, "_spendAllowance: insufficient");
             unchecked {
                 _approve(owner, spender, currentAllowance - amount);
             }
