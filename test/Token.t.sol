@@ -167,7 +167,7 @@ contract TokenTest is Test, IERC20Events {
     }
 
     function test_ERC20_transferFrom_invalid_sender() external {
-        vm.expectRevert(bytes("hts: invalid sender"));
+        vm.expectRevert(bytes("_approve: invalid owner"));
         address to = makeAddr("bob");
         IERC20(USDC).transferFrom(address(0), to, 4_000000);
     }

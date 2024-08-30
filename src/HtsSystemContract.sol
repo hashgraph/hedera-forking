@@ -15,13 +15,17 @@ contract HtsSystemContract is IERC20Events {
     event Associated(address indexed account);
     event Dissociated(address indexed account);
 
-    /// @notice Prevents delegatecall into the modified method.
+    /**
+     * @dev Prevents delegatecall into the modified method.
+     */
     modifier htsCall() {
         require(address(this) == HTS_ADDRESS, "htsCall: delegated call");
         _;
     }
 
-    /// @dev
+    /**
+     * @dev
+     */
     function getAccountId(address account) htsCall external view returns (uint32 accountId) {
         bytes4 selector = HtsSystemContract.getAccountId.selector;
         uint64 pad = 0x0;
@@ -31,20 +35,22 @@ contract HtsSystemContract is IERC20Events {
         }
     }
 
-    /// `__redirectForToken` dispatcher.
+    /**
+     * @dev `__redirectForToken` dispatcher.
+     */
     fallback (bytes calldata) external returns (bytes memory) {
         // Calldata for a successful `redirectForToken(address,bytes)` call must contain
         // 00: 0x618dc65e (selector for `redirectForToken(address,bytes)`)
         // 04: 0xffffffffffffffffffffffffffffffffffffffff (token address which issue the `delegatecall`)
         // 24: 0xffffffff (selector for HTS method call)
         // 28: (bytes args for HTS method call, is any)
-        require(msg.data.length >= 28, "Not enough calldata");
+        require(msg.data.length >= 28, "fallback: not enough calldata");
 
         uint256 fallbackSelector = uint32(bytes4(msg.data[0:4]));
-        require(fallbackSelector == 0x618dc65e, "Fallback selector not supported");
+        require(fallbackSelector == 0x618dc65e, "fallback: unsupported selector");
 
         address token = address(bytes20(msg.data[4:24]));
-        require(token == address(this), "Calldata token is not caller");
+        require(token == address(this), "fallback: token is not caller");
 
         return __redirectForToken();
     }
@@ -82,6 +88,9 @@ contract HtsSystemContract is IERC20Events {
             address from = address(bytes20(msg.data[40:60]));
             address to = address(bytes20(msg.data[72:92]));
             uint256 amount = uint256(bytes32(msg.data[92:124]));
+            address spender = msg.sender;
+
+            _spendAllowance(from, spender, amount);
             _transfer(from, to, amount);
             return abi.encode(true);
         } else if (selector == IERC20.allowance.selector) {
@@ -159,6 +168,20 @@ contract HtsSystemContract is IERC20Events {
         uint256 allowanceSlot = _allowanceSlot(owner, spender);
         assembly {
             sstore(allowanceSlot, amount)
+        }
+    }
+
+    /**
+     * TODO: We might need to optimize the double owner+spender calls to get
+     * their account IDs.
+     */
+    function _spendAllowance(address owner, address spender, uint256 amount) private {
+        uint256 currentAllowance = __allowance(owner, spender);
+        if (currentAllowance != type(uint256).max) {
+            require(currentAllowance < amount, "_spendAllowance: insufficient");
+            unchecked {
+                _approve(owner, spender, currentAllowance - amount);
+            }
         }
     }
 }
