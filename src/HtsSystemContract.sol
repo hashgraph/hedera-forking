@@ -148,7 +148,7 @@ contract HtsSystemContract is IERC20Events {
         uint256 fromSlot = _balanceOfSlot(from);
         uint256 fromBalance;
         assembly { fromBalance := sload(fromSlot) }
-        require(fromBalance >= amount, "hts: insufficient balance");
+        require(fromBalance >= amount, "_transfer: insufficient balance");
         assembly { sstore(fromSlot, sub(fromBalance, amount)) }
 
         uint256 toSlot = _balanceOfSlot(to);

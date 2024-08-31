@@ -168,7 +168,7 @@ contract TokenTest is Test, IERC20Events {
         vm.prank(owner);
         IERC20(USDC).approve(from, 70_000000);
 
-        vm.expectRevert(bytes("hts: insufficient balance"));
+        vm.expectRevert(bytes("_transfer: insufficient balance"));
         vm.prank(from);
         IERC20(USDC).transferFrom(owner, to, 50_000000);
     }
