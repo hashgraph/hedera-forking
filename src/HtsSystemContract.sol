@@ -7,6 +7,8 @@ contract HtsSystemContract is IERC20Events {
 
     address private constant HTS_ADDRESS = address(0x167);
 
+    // All ERC20 properties are accessed with a `delegatecall` from the Token Proxy.
+    // See `__redirectForToken` for more details.
     string private name;
     string private symbol;
     uint8 private decimals;
@@ -36,7 +38,47 @@ contract HtsSystemContract is IERC20Events {
     }
 
     /**
-     * @dev `__redirectForToken` dispatcher.
+     * @dev Validates `redirectForToken(address,bytes)` dispatcher arguments.
+     *
+     * The interaction between tokens and HTS System Contract is specified in 
+     * https://hips.hedera.com/hip/hip-218 and
+     * https://hips.hedera.com/hip/hip-719.
+     *
+     * NOTE: The dispatcher **must** be implemented in the `fallback` function.
+     * That is, it cannot be implemented as a regular `function`, _i.e._,
+     * `function redirectForToken(address token, bytes encodedFunctionSelector) { ... }`.
+     * The reason is that the arguments encoding of the Token Proxy, as defined in HIP-719,
+     * is different from the Contract ABI Specification[1] arguments encoding.
+     * In particular, the Contract ABI Specification states that `address`(`uint160`) is
+     * **"padded on the higher-order (left) side with zero-bytes such that the length is 32 bytes"**.
+     * Whereas HIP-719 encodes the `address` argument in the `redirectForToken` delegate call with no padding.
+     *
+     * To see that, we can analyze the HIP-719 Token Proxy fragment that encodes the arguments.
+     * Please notice the `redirectForToken(address,bytes)` selector was replaced for clarity.
+     *
+     * ```yul
+     * // (on the caller contract)
+     * // calldata [ 0:..]: (bytes for encoded function call)
+     * // Before execution
+     * // memory   [ 0:32): 0x0
+     *
+     * mstore(0, 0x618dc65eFEFEFEFEFEFEFEFEFEFEFEFEFEFEFEFEFEFEFEFE)
+     * // memory   [ 0:32): 0x0000000000000000618dc65eFEFEFEFEFEFEFEFEFEFEFEFEFEFEFEFEFEFEFEFE
+     *
+     * calldatacopy(32, 0, calldatasize())
+     * // memory   [ 0:32): 0x0000000000000000618dc65eFEFEFEFEFEFEFEFEFEFEFEFEFEFEFEFEFEFEFEFE
+     * // memory   [32:..): [bytes for encoded function call]
+     *
+     * let result := delegatecall(gas(), precompileAddress, 8, add(24, calldatasize()), 0, 0)
+     * // (on the callee contract)
+     * // calldata [ 0:24): 0x618dc65eFEFEFEFEFEFEFEFEFEFEFEFEFEFEFEFEFEFEFEFE
+     * // calldata [24:..): [bytes for encoded function call]
+     * ```
+     *
+     * Given the `address` is not left-padded, this encoding is incompatible with the
+     * Contract ABI Specification, and hence a regular function cannot be used.
+     * 
+     * [1] https://docs.soliditylang.org/en/v0.8.23/abi-spec.html#function-selector-and-argument-encoding
      */
     fallback (bytes calldata) external returns (bytes memory) {
         // Calldata for a successful `redirectForToken(address,bytes)` call must contain
@@ -52,6 +94,8 @@ contract HtsSystemContract is IERC20Events {
         address token = address(bytes20(msg.data[4:24]));
         require(token == address(this), "fallback: token is not caller");
 
+        // Even if the `__redirectForToken` method does not have any formal parameters,
+        // it accesses the calldata arguments directly using `msg.data`.
         return __redirectForToken();
     }
 
