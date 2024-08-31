@@ -2,7 +2,7 @@ const { expect } = require('chai');
 
 const { storageLayout } = require('../out/HtsSystemContract.sol/HtsSystemContract.json');
 
-describe('storageLayout', function () {
+describe('::storageLayout', function () {
     it('should have all slots at `offset` `0` (to avoid packing, thus making many requests per slot)', function () {
         for (const slot of storageLayout.storage) {
             expect(slot.offset, slot.label).to.be.equal(0);

@@ -7,7 +7,7 @@ const { tokens } = require('./data');
 
 config.truncateThreshold = 0;
 
-describe('getHtsStorageAt', function () {
+describe('::getHtsStorageAt', function () {
 
     /**
      * Enable test `logger` for `getHtsStorageAt` by setting the `TRACE` environment variable.
