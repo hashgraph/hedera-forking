@@ -7,10 +7,10 @@ contract HtsSystemContract {
 
     address private constant HTS_ADDRESS = address(0x167);
 
-    string private name;
-    string private symbol;
-    uint8 private decimals;
-    uint256 private totalSupply;
+    string public name;
+    string public symbol;
+    uint8 public decimals;
+    uint256 public totalSupply;
 
     // address[] public holders;
     // uint256[] public balances; /// account id
@@ -39,6 +39,7 @@ contract HtsSystemContract {
             accountId := sload(slot)
         }
     }
+
 
     // function transfer(address recipient, uint256 amount) public returns (bool) {
     //     uint256 senderIndex = findIndex(msg.sender, holders);
