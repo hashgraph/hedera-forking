@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: unlicensed
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.17;
 
 import {Test, console} from "forge-std/Test.sol";
@@ -14,19 +14,19 @@ contract HTSTest is Test {
     }
 
     function test_HTS_should_revert_when_not_enough_calldata() external {
-        vm.expectRevert(bytes("Not enough calldata"));
+        vm.expectRevert(bytes("fallback: not enough calldata"));
         (bool revertsAsExpected, ) = HTS.call(bytes("1234"));
         assertTrue(revertsAsExpected, "expectRevert: call did not revert");
     }
 
     function test_HTS_should_revert_when_fallback_selector_is_not_supported() external {
-        vm.expectRevert(bytes("Fallback selector not supported"));
+        vm.expectRevert(bytes("fallback: unsupported selector"));
         (bool revertsAsExpected, ) = HTS.call(bytes("123456789012345678901234567890"));
         assertTrue(revertsAsExpected, "expectRevert: call did not revert");
     }
 
     function test_HTS_should_revert_when_calldata_token_is_not_caller() external {
-        vm.expectRevert(bytes("Calldata token is not caller"));
+        vm.expectRevert(bytes("fallback: token is not caller"));
         (bool revertsAsExpected, ) = HTS.call(bytes(hex"618dc65e9012345678901234567890123456789012345678901234567890"));
         assertTrue(revertsAsExpected, "expectRevert: call did not revert");
     }
