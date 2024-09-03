@@ -9,6 +9,7 @@ contract HTSTest is Test {
     address HTS = 0x0000000000000000000000000000000000000167;
 
     function setUp() external {
+        console.log("HTS code has %d bytes", address(0x167).code.length);
         if (HTS.code.length == 0) new MocksToStorageLoader().loadHts();
     }
 

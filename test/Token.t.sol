@@ -26,6 +26,7 @@ interface MethodNotSupported {
  * https://mainnet.mirrornode.hedera.com/api/v1/tokens/0.0.456858/balances?account.id=0.0.38047
  */
 contract TokenTest is Test {
+
     /**
      * https://hashscan.io/testnet/token/0.0.429274
      * https://testnet.mirrornode.hedera.com/api/v1/tokens/0.0.429274
@@ -35,6 +36,7 @@ contract TokenTest is Test {
 
     MocksToStorageLoader loader;
     function setUp() external {
+        console.log("HTS code has %d bytes", address(0x167).code.length);
         if (USDC.code.length == 0) {
             loader = new MocksToStorageLoader();
             loader.loadHts();
@@ -83,7 +85,6 @@ contract TokenTest is Test {
 
         uint256 balance = IERC20(USDC).balanceOf(alice);
         console.log("alice's balance %s", balance);
-
         assertEq(balance, 1000 * 10e8);
 
         // Bob's balance should remain unchanged
@@ -96,7 +97,7 @@ contract TokenTest is Test {
         assertEq(balance, 0);
     }
 
-    function test_ERC20_balanceOf_call() external view {
+    function test_ERC20_balanceOf_call() view external {
         // https://hashscan.io/testnet/account/0.0.1421
         address alice = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
         uint256 balance = IERC20(USDC).balanceOf(alice);

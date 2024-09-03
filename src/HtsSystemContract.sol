@@ -40,7 +40,6 @@ contract HtsSystemContract {
         }
     }
 
-
     // function transfer(address recipient, uint256 amount) public returns (bool) {
     //     uint256 senderIndex = findIndex(msg.sender, holders);
     //     require(senderIndex != type(uint256).max, "Sender not found");
