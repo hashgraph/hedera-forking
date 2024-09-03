@@ -1,5 +1,39 @@
 # Hedera Fork Testing Support
 
+## Background
+
+**Fork Testing** (or **WaffleJS Fixtures**) is an Ethereum Development Environment feature that optimizes test execution for Smart Contracts.
+It enables snapshotting of blockchain state, saving developement time by avoiding the recreation of the entire blockchain state for each test.
+Instead, tests can revert to a pre-defined snapshot, streamlining the testing process.
+Most populars Ethereum Development Environments provide this feature, such as
+[Foundry](https://book.getfoundry.sh/forge/fork-testing) and
+[Hardhat](https://hardhat.org/hardhat-network/docs/overview#mainnet-forking).
+
+This feature is enabled by their underlaying Development network, for example
+
+- Hardhat's [EJS (EthereumJS VM)](https://github.com/nomicfoundation/ethereumjs-vm) and [EDR (Ethereum Development Runtime)](https://github.com/NomicFoundation/edr)
+- Foundry's [Anvil](https://github.com/foundry-rs/foundry/tree/master/crates/anvil)
+- [Ganache _(deprecated)_](https://github.com/trufflesuite/ganache)
+
+Please note that WaffleJS, when used directly as a library, _i.e._, not inside a Hardhat project,
+[uses Ganache internally](https://github.com/TrueFiEng/Waffle/blob/238c11ccf9bcaf4b83c73eca16d25243c53f2210/waffle-provider/package.json#L47).
+
+On the other hand, Geth support some sort of snapshotting with <https://geth.ethereum.org/docs/interacting-with-geth/rpc/ns-debug#debugsethead>,
+but it’s not commonly used for development and testing of Smart Contracts.
+
+Moreover, given that Fork testing runs on a local development network, users can use `console.log` in tests to ease the debugging process.
+With `console.log`, you can print logging messages and contract variables calling `console.log` from your Solidity code.
+Both [Foundry](https://book.getfoundry.sh/reference/forge-std/console-log) and [Hardhat](https://hardhat.org/tutorial/debugging-with-hardhat-network) support `console.log`.
+Not being able to use Forking (see below) implies also not being able to use `console.log` in tests,
+which cause frustration among Hedera users.
+
+## Overview
+
+This project has two main components
+
+- **[`HtsSystemContract.sol`](./src/HtsSystemContract.sol) Solidity Contract**. This contract provides an emulator for the Hedera Token Service written in Solidity. It is specially design to work with This contract should be loaded only on a forked network.
+- **[`@hashgraph/hedera-forking`](./index.js) CommonJS Package**. Provides functions that can be hooked into the Relay to fetch the appropiate data when HTS System Contract (at address `0x167`) or Hedera Tokens are invoked.
+
 ## Usage
 
 ### Build
@@ -35,6 +69,10 @@ https://book.getfoundry.sh/cheatcodes/etch
 https://book.getfoundry.sh/reference/forge-std/deployCodeTo
 
 The `launch-token` is used to deploy new Tokens using HTS to `testnet`.
+
+
+<https://github.com/hashgraph/hedera-services/blob/b40f81234acceeac302ea2de14135f4c4185c37d/hedera-node/hedera-smart-contract-service-impl/src/main/java/com/hedera/node/app/service/contract/impl/exec/systemcontracts/common/AbstractCallAttempt.java#L91-L104>
+
 
 ## Storage Layout Analysis
 
