@@ -26,7 +26,12 @@ contract HtsSystemContract is IERC20Events {
     }
 
     /**
-     * @dev
+     * @dev Returns the account id (omitting both shard and realm numbers) of the given `address`.
+     * The storage adapter, _i.e._, `getHtsStorageAt`, assumes that both shard and realm numbers are zero.
+     * Thus, they can be omitted from the account id.
+     * 
+     * See https://docs.hedera.com/hedera/core-concepts/accounts/account-properties
+     * for more info on account properties.
      */
     function getAccountId(address account) htsCall external view returns (uint32 accountId) {
         bytes4 selector = HtsSystemContract.getAccountId.selector;
@@ -90,7 +95,7 @@ contract HtsSystemContract is IERC20Events {
         // 00: 0x618dc65e (selector for `redirectForToken(address,bytes)`)
         // 04: 0xffffffffffffffffffffffffffffffffffffffff (token address which issue the `delegatecall`)
         // 24: 0xffffffff (selector for HTS method call)
-        // 28: (bytes args for HTS method call, is any)
+        // 28: (bytes args for HTS method call, if any)
         require(msg.data.length >= 28, "fallback: not enough calldata");
 
         uint256 fallbackSelector = uint32(bytes4(msg.data[0:4]));
