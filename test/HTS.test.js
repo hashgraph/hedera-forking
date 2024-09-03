@@ -46,7 +46,7 @@ const RedirectForToken = {
 
 const RPC_URL = process.env['RPC_URL'];
 
-describe(`::HTS <RPC_URL=${RPC_URL ?? '<not set> skipping'}>`, function () {
+describe(`::HTS <RPC_URL=${RPC_URL ?? 'not set, skipping'}>`, function () {
 
     /** @type {JsonRpcProvider} */
     let provider;
