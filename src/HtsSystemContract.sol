@@ -44,7 +44,7 @@ contract HtsSystemContract is IERC20Events {
      * https://hips.hedera.com/hip/hip-218 and
      * https://hips.hedera.com/hip/hip-719.
      *
-     * NOTE: The dispatcher **must** be implemented in the `fallback` function.
+     * NOTE: The dispatcher **needs** to be implemented in the `fallback` function.
      * That is, it cannot be implemented as a regular `function`, _i.e._,
      * `function redirectForToken(address token, bytes encodedFunctionSelector) { ... }`.
      * The reason is that the arguments encoding of the Token Proxy, as defined in HIP-719,
@@ -77,6 +77,11 @@ contract HtsSystemContract is IERC20Events {
      *
      * Given the `address` is not left-padded, this encoding is incompatible with the
      * Contract ABI Specification, and hence a regular function cannot be used.
+     *
+     * Also notice that _currently_ we do not support direct calls to `redirectForToken`, _i.e._,
+     * `address(0x167).redirectForToken(tokenAddr, bytesData)`.
+     * The reason being direct calls read storage from `0x167` address.
+     * But delegate calls on the other hand read storage from the token address.
      * 
      * [1] https://docs.soliditylang.org/en/v0.8.23/abi-spec.html#function-selector-and-argument-encoding
      */
