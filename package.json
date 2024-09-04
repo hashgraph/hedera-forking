@@ -9,7 +9,7 @@
     "prepare": "husky",
     "format": "prettier out/HtsSystemContract.sol/HtsSystemContract.json --write",
     "test": "mocha",
-    "type-check": "tsc --noEmit --resolveJsonModule"
+    "type-check": "tsc"
   },
   "author": "",
   "license": "ISC",

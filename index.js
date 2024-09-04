@@ -37,14 +37,14 @@ const typeConverter = {
 /**
  * @param {bigint} nrequestedSlot
  * @param {number=} MAX_ELEMENTS How many slots ahead to infer that `nrequestedSlot` is part of a given slot.
- * @returns {{slot: StorageSlot, offset: bigint}|null}
+ * @returns {{slot: StorageSlot, offset: number}|null}
  */
 function inferSlotAndOffset(nrequestedSlot, MAX_ELEMENTS = 100) {
     for (const slot of hts.storageLayout.storage) {
         const baseKeccak = BigInt(keccak256(`0x${utils.toIntHex256(slot.slot)}`));
         const offset = nrequestedSlot - baseKeccak;
         if (offset < 0 || offset > MAX_ELEMENTS) continue;
-        return { slot, offset: BigInt(offset) };
+        return { slot, offset: Number(offset) };
     }
 
     return null;
