@@ -29,27 +29,55 @@ which cause frustration among Hedera users.
 
 ### Can Hedera developers use Fork Testing?
 
-**Yes**, `Fixture` works well when the smart contracts are standard EVM smart contracts that don't involve Hedera-specific services. This is because fixtures are targeted at the local test network provided by the framework. These networks are somewhat replicas of the Ethereum network and do not support Hedera-specific services. Therefore, `Fixture` will work perfectly fine for basic contracts like the [PiggyBank contract](https://github.com/hashgraph/hedera-json-rpc-relay/blob/POC-for-waffle-fixtures/tools/waffle-example/contracts/PiggyBank.sol) mentioned in the above PoC.
+**Yes**, Fork Testing works well when the Smart Contracts are standard EVM Smart Contracts that do not involve Hedera-specific services.
+This is because fork testing is targeted at the local test network provided by the Ethereum Development Environment.
+These networks are somewhat replicas of the Ethereum network and do not support Hedera-specific services.
 
-**No**, `Fixtures` will not work on Hedera for contracts that are specific to Hedera. Consider, for example, this [test suite](https://github.com/hashgraph/hedera-json-rpc-relay/blob/POC-for-waffle-fixtures/tools/waffle-example/test/HTS/TokenCreate.spec.ts) in the mentioned PoC.
+**No**, Fork Testing will not work on Hedera for contracts that are specific to Hedera.
 
-This test suite tests the TokenCreate contract, which calls the createFungibleToken function on the precompiled HTS contract at 0x167. The Testing Without Fixture suite works as expected as the tests are targeted at Hedera networks. However, the fixture in the Testing With Fixture test suite works until we invoke a call to the precompiled HTS contract. This is because the internal local test network provided by the framework (chainId: 1337) does not have the precompiled HTS contract deployed at address 0x167.
+This test suite tests the TokenCreate contract, which calls the `createFungibleToken` function on the HTS System Contract at `address(0x167)`.
+
+The Testing Without Fixture suite works as expected as the tests are targeted at Hedera networks.
+
+However, the fixture in the Testing With Fixture test suite works until we invoke a call to the precompiled HTS contract.
+
+This is because the internal local test network provided by the framework (`chainId: 1337`) does not have the precompiled HTS contract deployed at `address(0x167)`.
 
 ## Overview
 
-This project has two main components
+This project has two main parts
 
-- **[`HtsSystemContract.sol`](./src/HtsSystemContract.sol) Solidity Contract**. This contract provides an emulator for the Hedera Token Service written in Solidity. It is specially design to work with This contract should be loaded only on a forked network.
-- **[`@hashgraph/hedera-forking`](./index.js) CommonJS Package**. Provides functions that can be hooked into the Relay to fetch the appropiate data when HTS System Contract (at address `0x167`) or Hedera Tokens are invoked.
+- **[`HtsSystemContract.sol`](./src/HtsSystemContract.sol) Solidity Contract**.
+This contract provides an emulator for the Hedera Token Service written in Solidity.
+It is specially designed to work in a forked network.
+Its storage reads and writes are crafted to be reversible in a way the `hedera-forking` package can fetch the appropriate data.
+- **[`@hashgraph/hedera-forking`](./index.js) CommonJS Package**.
+Provides functions that can be hooked into the Relay to fetch the appropiate data when HTS System Contract (at address `0x167`) or Hedera Tokens are invoked.
+This package uses the compilation output of the `HtsSystemContract` contract to return its bytecode and to map storage slots to field names.
 
-## Usage
+> [!IMPORTANT]
+> The compilation output of `HtsSystemContract` is version controlled.
+> The benefit of including a generated file is that it allows the Relay to consume the JS package directly [from GitHub](https://docs.npmjs.com/cli/v10/configuring-npm/package-json#git-urls-as-dependencies).
+> This is also the reason we use [_JSDoc_](https://www.typescriptlang.org/docs/handbook/jsdoc-supported-types.html) instead of TypeScript, to avoid the compilation step.
+> This, in turn, avoids publishing an `npm` package.
 
-### Build
+## Build
 
-To compile the contracts
+To compile the `HtsSystemContract` and test contracts
 
 ```console
 forge build
+```
+
+> [!TIP]
+> Keep in mind the compilation output of `HtsSystemContract` is versioned.
+> So it will appear as modified after `forge build` when `HtsSystemContract` has been changed.
+
+There is no compilation step to build the `@hashgraph/hedera-forking` package.
+However, you can type-checked it running
+
+```console
+npm run typecheck
 ```
 
 ### Test
