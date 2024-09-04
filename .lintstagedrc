@@ -1,3 +1,0 @@
-{
-    "out/**/*.json": ["npm run format"]
-}

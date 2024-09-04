@@ -1,0 +1,3 @@
+{
+    "out/*.sol/*.json": ["npm run format"]
+}
