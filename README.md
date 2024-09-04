@@ -34,14 +34,12 @@ This is because fork testing is targeted at the local test network provided by t
 These networks are somewhat replicas of the Ethereum network and do not support Hedera-specific services.
 
 **No**, Fork Testing will not work on Hedera for contracts that are specific to Hedera.
-
-This test suite tests the TokenCreate contract, which calls the `createFungibleToken` function on the HTS System Contract at `address(0x167)`.
-
-The Testing Without Fixture suite works as expected as the tests are targeted at Hedera networks.
-
-However, the fixture in the Testing With Fixture test suite works until we invoke a call to the precompiled HTS contract.
-
+For example, if a contract includes calls to the `createFungibleToken` method on the HTS System Contract at `address(0x167)`.
 This is because the internal local test network provided by the framework (`chainId: 1337`) does not have the precompiled HTS contract deployed at `address(0x167)`.
+
+This project is an attempt to solve this problem.
+It does so by providing an emulation layer for HTS written in Solidity.
+Given it is written in Solidity, it can executed in a development network environment, such as Foundry or Hardhat.
 
 ## Overview
 
