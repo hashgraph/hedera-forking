@@ -27,6 +27,14 @@ Both [Foundry](https://book.getfoundry.sh/reference/forge-std/console-log) and [
 Not being able to use Forking (see below) implies also not being able to use `console.log` in tests,
 which cause frustration among Hedera users.
 
+### Can Hedera developers use Fork Testing?
+
+**Yes**, `Fixture` works well when the smart contracts are standard EVM smart contracts that don't involve Hedera-specific services. This is because fixtures are targeted at the local test network provided by the framework. These networks are somewhat replicas of the Ethereum network and do not support Hedera-specific services. Therefore, `Fixture` will work perfectly fine for basic contracts like the [PiggyBank contract](https://github.com/hashgraph/hedera-json-rpc-relay/blob/POC-for-waffle-fixtures/tools/waffle-example/contracts/PiggyBank.sol) mentioned in the above PoC.
+
+**No**, `Fixtures` will not work on Hedera for contracts that are specific to Hedera. Consider, for example, this [test suite](https://github.com/hashgraph/hedera-json-rpc-relay/blob/POC-for-waffle-fixtures/tools/waffle-example/test/HTS/TokenCreate.spec.ts) in the mentioned PoC.
+
+This test suite tests the TokenCreate contract, which calls the createFungibleToken function on the precompiled HTS contract at 0x167. The Testing Without Fixture suite works as expected as the tests are targeted at Hedera networks. However, the fixture in the Testing With Fixture test suite works until we invoke a call to the precompiled HTS contract. This is because the internal local test network provided by the framework (chainId: 1337) does not have the precompiled HTS contract deployed at address 0x167.
+
 ## Overview
 
 This project has two main components
@@ -51,6 +59,38 @@ It is useful to filter to a specific test file, for example
 
 ```console
 forge test --match-contract USDCTest -vvvv
+```
+
+## Diagram
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor user as User
+    participant client as Forked Network<br/>Anvil, Hardhat
+    box JSON-RPC Relay
+    participant relay as eth
+    participant hedera-forking
+    end
+    participant mirror as Mirror Node
+
+    user->>+client: address(Token).totalSupply()
+    client->>+relay: eth_getCode(Token)
+    relay-->>-client: HIP-719 Token Proxy<br/>(delegates call to 0x167)
+
+    client->>+relay: eth_getCode(0x167)
+    relay ->> + hedera-forking: getHtsCode
+    hedera-forking -->> - relay: HtsSystemContract bytecode
+    relay-->>-client: HtsSystemContract bytecode
+
+    client->>+relay: eth_getStorageAt(Token, slot<totalSupply>)
+    relay ->> + hedera-forking: getHtsStorageAt(Token, slot)
+    hedera-forking -) + mirror: API tokens/<tokenId>
+    mirror --) - hedera-forking: Token{}
+    hedera-forking -->> - relay: Token{}.totalSupply
+    relay-->>-client: Token{}.totalSupply
+
+    client->>-user: Token{}.totalSupply
 ```
 
 ## Use Cases
