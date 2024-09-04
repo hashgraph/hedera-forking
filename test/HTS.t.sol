@@ -4,13 +4,12 @@ pragma solidity ^0.8.17;
 import {Test, console} from "forge-std/Test.sol";
 import {HtsSystemContract} from "../src/HtsSystemContract.sol";
 import {MocksToStorageLoader} from "./MocksToStorageLoader.sol";
+import {SharedTestSetup} from "./SharedTestSetup.sol";
 
-contract HTSTest is Test {
-    address HTS = 0x0000000000000000000000000000000000000167;
-
+contract HTSTest is Test, SharedTestSetup {
     function setUp() external {
         console.log("HTS code has %d bytes", address(0x167).code.length);
-        if (HTS.code.length == 0) new MocksToStorageLoader().loadHts();
+        if (HTS.code.length == 0) new MocksToStorageLoader(HTS).loadHts();
     }
 
     function test_HTS_should_revert_when_not_enough_calldata() external {

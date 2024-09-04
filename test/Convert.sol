@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: unlicensed
 pragma solidity ^0.8.17;
 
-contract Convert {
+library Convert {
     function addressToString(address _addr) public pure returns (string memory) {
         bytes20 value = bytes20(_addr);
         bytes memory alphabet = "0123456789abcdef";

@@ -5,6 +5,7 @@ import {Test, console} from "forge-std/Test.sol";
 import {IERC20} from "../src/IERC20.sol";
 import {MocksToStorageLoader} from "./MocksToStorageLoader.sol";
 import {HtsSystemContract} from "./HTS.t.sol";
+import {SharedTestSetup} from "./SharedTestSetup.sol";
 
 import {stdStorage, StdStorage} from "forge-std/Test.sol";
 
@@ -25,7 +26,7 @@ interface MethodNotSupported {
  * To get USDC balances for a given account using the Mirror Node you can use
  * https://mainnet.mirrornode.hedera.com/api/v1/tokens/0.0.456858/balances?account.id=0.0.38047
  */
-contract TokenTest is Test {
+contract TokenTest is Test, SharedTestSetup {
 
     /**
      * https://hashscan.io/testnet/token/0.0.429274
@@ -38,7 +39,7 @@ contract TokenTest is Test {
     function setUp() external {
         console.log("HTS code has %d bytes", address(0x167).code.length);
         if (USDC.code.length == 0) {
-            loader = new MocksToStorageLoader();
+            loader = new MocksToStorageLoader(HTS);
             loader.loadHts();
             loader.loadToken(USDC, "USDC");
             loader.loadToken(MFCT, "MFCT");

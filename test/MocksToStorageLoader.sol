@@ -11,14 +11,12 @@ import {HtsSystemContract} from "../src/HtsSystemContract.sol";
 using stdStorage for StdStorage;
 
 contract MocksToStorageLoader is Test {
-    address HTS = 0x0000000000000000000000000000000000000167;
-
-    Convert convert;
-    constructor() {
-        convert = new Convert();
+    address HTS;
+    constructor(address _HTS) {
+        HTS = _HTS;
     }
 
-    function assignStringToSlot(address target, uint256 startingSlot, string memory value) internal
+    function _assignStringToSlot(address target, uint256 startingSlot, string memory value) internal
     {
         if (bytes(value).length <= 31) {
             bytes32 rightPaddedSymbol;
@@ -57,21 +55,21 @@ contract MocksToStorageLoader is Test {
             .checked_write(accountId);
     }
 
-    function loadAccountData(address account) internal {
-        string memory path = string.concat(vm.projectRoot(), "/test/data/getAccount_", convert.addressToString(account), ".json");
+    function _loadAccountData(address account) internal {
+        string memory path = string.concat(vm.projectRoot(), "/test/data/getAccount_", Convert.addressToString(account), ".json");
         string memory json = vm.readFile(path);
-        uint256 accountId = convert.accountIdToUint256(string(vm.parseJson(json, ".account")));
+        uint256 accountId = Convert.accountIdToUint256(string(vm.parseJson(json, ".account")));
         assignEvmAccountAddress(account, accountId);
     }
 
-    function loadTokenData(address tokenAddress, string memory configName) internal {
+    function _loadTokenData(address tokenAddress, string memory configName) internal {
         deployCodeTo(string.concat(configName, "TokenProxy.sol"), tokenAddress);
         string memory path = string.concat(vm.projectRoot(), "/test/data/", configName,"/getToken.json");
         string memory json = vm.readFile(path);
         string memory name = abi.decode(vm.parseJson(json, ".name"), (string));
-        uint256 decimals = uint8(convert.stringToUint256(string(vm.parseJson(json, ".decimals"))));
+        uint256 decimals = uint8(Convert.stringToUint256(string(vm.parseJson(json, ".decimals"))));
         string memory symbol = abi.decode(vm.parseJson(json, ".symbol"), (string));
-        uint256 totalSupply = convert.stringToUint256(string(vm.parseJson(json, ".total_supply")));
+        uint256 totalSupply = Convert.stringToUint256(string(vm.parseJson(json, ".total_supply")));
         stdstore
             .target(tokenAddress)
             .sig(IERC20.decimals.selector)
@@ -82,18 +80,18 @@ contract MocksToStorageLoader is Test {
             .checked_write(totalSupply);
 
         // 0 - hardcoded name slot number; stdstore.find(...) fails for strings...
-        assignStringToSlot(tokenAddress, 0, name);
+        _assignStringToSlot(tokenAddress, 0, name);
 
         // 1 - hardcoded symbol slot number; stdstore.find(...) fails for strings...
-        assignStringToSlot(tokenAddress, 1, symbol);
+        _assignStringToSlot(tokenAddress, 1, symbol);
     }
 
 
-    function loadAllowancesOfAnAccount(address tokenAddress, string memory configName, address ownerEVMAddress, address spenderEVMAddress) private {
+    function _loadAllowancesOfAnAccount(address tokenAddress, string memory configName, address ownerEVMAddress, address spenderEVMAddress) internal {
         uint256 ownerId = HtsSystemContract(HTS).getAccountId(ownerEVMAddress);
-        string memory ownerIdString = convert.uintToString(ownerId);
+        string memory ownerIdString = Convert.uintToString(ownerId);
         uint256 spenderId = HtsSystemContract(HTS).getAccountId(spenderEVMAddress);
-        string memory spenderIdString = convert.uintToString(spenderId);
+        string memory spenderIdString = Convert.uintToString(spenderId);
         string memory path = string.concat(vm.projectRoot(), "/test/data/", configName, "/getAllowanceForToken_0.0.", ownerIdString, "_0.0.", spenderIdString, ".json");
         uint256 allowance = 0;
         try vm.readFile(path) returns (string memory json) {
@@ -111,9 +109,9 @@ contract MocksToStorageLoader is Test {
             .checked_write(allowance);
     }
 
-    function loadBalanceOfAnAccount(address tokenAddress, string memory configName, address accountEVMAddress) private {
+    function _loadBalanceOfAnAccount(address tokenAddress, string memory configName, address accountEVMAddress) internal {
         uint256 accountId = HtsSystemContract(HTS).getAccountId(accountEVMAddress);
-        string memory accountIdString = convert.uintToString(accountId);
+        string memory accountIdString = Convert.uintToString(accountId);
         string memory path = string.concat(vm.projectRoot(), "/test/data/", configName, "/getBalanceOfToken_0.0.", accountIdString, ".json");
         uint256 balance = 0;
         try vm.readFile(path) returns (string memory json) {
@@ -132,16 +130,16 @@ contract MocksToStorageLoader is Test {
 
     function loadHts() external {
         deployCodeTo("HtsSystemContract.sol", HTS);
-        loadAccountData(0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15);
-        loadAccountData(0x0000000000000000000000000000000000000887);
-        loadAccountData(0x0000000000000000000000000000000000000537);
-        loadAccountData(0x100000000000000000000000000000000040984f);
+        _loadAccountData(0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15);
+        _loadAccountData(0x0000000000000000000000000000000000000887);
+        _loadAccountData(0x0000000000000000000000000000000000000537);
+        _loadAccountData(0x100000000000000000000000000000000040984f);
     }
 
     function loadToken(address tokenAddress, string memory tokenConfigName) external {
-        loadTokenData(tokenAddress, tokenConfigName);
-        loadBalanceOfAnAccount(tokenAddress, tokenConfigName, 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15);
-        loadBalanceOfAnAccount(tokenAddress, tokenConfigName, 0x0000000000000000000000000000000000000887);
-        loadAllowancesOfAnAccount(tokenAddress, tokenConfigName, 0x100000000000000000000000000000000040984f, 0x0000000000000000000000000000000000000537);
+        _loadTokenData(tokenAddress, tokenConfigName);
+        _loadBalanceOfAnAccount(tokenAddress, tokenConfigName, 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15);
+        _loadBalanceOfAnAccount(tokenAddress, tokenConfigName, 0x0000000000000000000000000000000000000887);
+        _loadAllowancesOfAnAccount(tokenAddress, tokenConfigName, 0x100000000000000000000000000000000040984f, 0x0000000000000000000000000000000000000537);
     }
 }

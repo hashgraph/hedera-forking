@@ -7,10 +7,10 @@ contract HtsSystemContract {
 
     address private constant HTS_ADDRESS = address(0x167);
 
-    string public name;
-    string public symbol;
-    uint8 public decimals;
-    uint256 public totalSupply;
+    string private name;
+    string private symbol;
+    uint8 private decimals;
+    uint256 private totalSupply;
 
     // address[] public holders;
     // uint256[] public balances; /// account id
