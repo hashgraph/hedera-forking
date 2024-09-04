@@ -32,3 +32,21 @@ jobs:
         run: |
           forge test -vvv
         id: test
+  type-check:
+    name: TypeScript Type-Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run TypeScript Type-Check
+        run: npm run type-check

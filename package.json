@@ -8,7 +8,8 @@
   "scripts": {
     "prepare": "husky",
     "format": "prettier out/HtsSystemContract.sol/HtsSystemContract.json --write",
-    "test": "mocha"
+    "test": "mocha",
+    "type-check": "tsc --noEmit --resolveJsonModule"
   },
   "author": "",
   "license": "ISC",
@@ -16,11 +17,14 @@
     "ethers": "^6.7.0"
   },
   "devDependencies": {
+    "@types/chai": "^4.3.19",
+    "@types/mocha": "^10.0.7",
     "chai": "^4.0.0",
     "husky": "^9.1.5",
     "lint-staged": "^15.2.10",
     "mocha": "^10.7.3",
     "pino": "^7.11.0",
-    "prettier": "^3.3.3"
+    "prettier": "^3.3.3",
+    "typescript": "^5.5.4"
   }
 }

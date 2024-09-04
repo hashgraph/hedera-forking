@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "checkJs": true,
+    "allowJs": true,
+    "noEmit": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "target": "ESNext",
+    "moduleResolution": "node"
+  },
+  "include": [
+    "*.js"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}
