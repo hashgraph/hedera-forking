@@ -137,7 +137,7 @@ module.exports = {
             if (tokenData === null)
                 return rtrace(utils.ZERO_HEX_32_BYTE, `Requested slot matches keccaked slot but token was not found`);
 
-            const offset = Number(keccakedSlot.offset);
+            const offset = keccakedSlot.offset;
             const hexStr = Buffer.from(`${tokenData[utils.toSnakeCase(keccakedSlot.slot.label)]}`).toString('hex');
             const kecRes = hexStr.substring(offset * 64, (offset + 1) * 64).padEnd(64, '0');
             return rtrace(`0x${kecRes}`, `Get storage ${address} slot: ${requestedSlot}, result: ${kecRes}`);
@@ -152,9 +152,9 @@ module.exports = {
             return rtrace(utils.ZERO_HEX_32_BYTE, `Requested slot matches ${slot.label} field, but token was not found`);
 
         const value = tokenResult[utils.toSnakeCase(slot.label)];
-        if (typeConverter[slot.type] === undefined || !value)
+        if (typeConverter[slot.type] === undefined || !value || typeof value !== 'string')
             return rtrace(utils.ZERO_HEX_32_BYTE, `Requested slot matches ${slot.label} field, but it is not supported`);
 
-        return rtrace(`0x${typeConverter[slot.type](`${value}`)}`, `Requested slot matches \`${slot.label}\` field (type=\`${slot.type}\`)`);
+        return rtrace(`0x${typeConverter[slot.type](value)}`, `Requested slot matches \`${slot.label}\` field (type=\`${slot.type}\`)`);
     },
 };

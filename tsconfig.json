@@ -13,6 +13,6 @@
     "*.js"
   ],
   "exclude": [
-    "node_modules"
+    "./launch-token/"
   ]
 }
