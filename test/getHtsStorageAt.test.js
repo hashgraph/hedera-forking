@@ -7,7 +7,7 @@ const { tokens } = require('./data');
 
 config.truncateThreshold = 0;
 
-describe('getHtsStorageAt', function () {
+describe('::getHtsStorageAt', function () {
 
     /**
      * Enable test `logger` for `getHtsStorageAt` by setting the `TRACE` environment variable.
@@ -58,7 +58,7 @@ describe('getHtsStorageAt', function () {
         });
     });
 
-    describe('`getAccountId` map on `0x167`', function () {
+    describe('`getAccountId` mapping on `0x167`', function () {
         const HTS = '0x0000000000000000000000000000000000000167';
 
         it(`should return \`ZERO_HEX_32_BYTE\` on \`0x167\` when slot does not match \`getAccountId\``, async function () {
