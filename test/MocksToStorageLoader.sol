@@ -1,16 +1,19 @@
 // SPDX-License-Identifier: unlicensed
 pragma solidity ^0.8.17;
 
-import {Test, console} from "forge-std/Test.sol";
-import {stdStorage, StdStorage} from "forge-std/Test.sol";
+import {console} from "forge-std/console.sol";
+import {StdStorage, stdStorage} from "forge-std/StdStorage.sol";
+import {CommonBase} from "forge-std/Base.sol";
+import {StdCheats} from "forge-std/StdCheats.sol";
 
 import {IERC20} from "../src/IERC20.sol";
 import {Convert} from "./Convert.sol";
 
 import {HtsSystemContract} from "../src/HtsSystemContract.sol";
+
 using stdStorage for StdStorage;
 
-contract MocksToStorageLoader is Test {
+contract MocksToStorageLoader is CommonBase, StdCheats {
     address HTS;
     constructor(address _HTS) {
         HTS = _HTS;
