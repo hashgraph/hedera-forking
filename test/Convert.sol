@@ -68,4 +68,68 @@ library Convert {
 
         return result;
     }
+
+    function replaceSubstring(
+        string memory original,
+        string memory target,
+        string memory replacement
+    ) public pure returns (string memory) {
+        bytes memory originalBytes = bytes(original);
+        bytes memory targetBytes = bytes(target);
+        bytes memory replacementBytes = bytes(replacement);
+        bytes memory resultBytes = new bytes(originalBytes.length);
+        uint256 resultIndex = 0;
+
+        for (uint256 i = 0; i < originalBytes.length; i++) {
+            bool isMatching = true;
+            if (i + targetBytes.length <= originalBytes.length) {
+                for (uint256 j = 0; j < targetBytes.length; j++) {
+                    if (originalBytes[i + j] != targetBytes[j]) {
+                        isMatching = false;
+                        break;
+                    }
+                }
+                if (isMatching) {
+                    for (uint256 k = 0; k < replacementBytes.length; k++) {
+                        resultBytes[resultIndex++] = replacementBytes[k];
+                    }
+                    i += targetBytes.length - 1;
+                } else {
+                    resultBytes[resultIndex++] = originalBytes[i];
+                }
+            } else {
+                resultBytes[resultIndex++] = originalBytes[i];
+            }
+        }
+        bytes memory finalResult = new bytes(resultIndex);
+        for (uint256 i = 0; i < resultIndex; i++) {
+            finalResult[i] = resultBytes[i];
+        }
+
+        return string(finalResult);
+    }
+
+    function stringToBytes(string memory s) internal pure returns (bytes memory) {
+        bytes memory ss = bytes(s);
+        require(ss.length >= 2 && ss[0] == '0' && ss[1] == 'x', "Hex string must start with 0x");
+        uint256 len = (ss.length - 2) / 2;
+        bytes memory result = new bytes(len);
+        for (uint256 i = 0; i < len; ++i) {
+            result[i] = bytes1(Convert.charToBytes(uint8(ss[2 + i * 2])) * 16 + Convert.charToBytes(uint8(ss[3 + i * 2])));
+        }
+        return result;
+    }
+
+    function charToBytes(uint8 c) internal pure returns (uint8) {
+        if (bytes1(c) >= '0' && bytes1(c) <= '9') {
+            return c - uint8(bytes1('0'));
+        }
+        if (bytes1(c) >= 'a' && bytes1(c) <= 'f') {
+            return 10 + c - uint8(bytes1('a'));
+        }
+        if (bytes1(c) >= 'A' && bytes1(c) <= 'F') {
+            return 10 + c - uint8(bytes1('A'));
+        }
+        revert("Invalid hex character");
+    }
 }

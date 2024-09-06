@@ -62,14 +62,84 @@ contract MocksToStorageLoader is Test {
         assignEvmAccountAddress(account, accountId);
     }
 
+    function calculateSalt(address desiredAddress, bytes memory bytecode) internal view returns (bytes32) {
+        bytes32 hash = keccak256(
+            abi.encodePacked(bytes1(0xff), address(this), bytes32(0), keccak256(bytecode))
+        );
+        require(address(uint160(uint256(hash))) == desiredAddress, "Desired address cannot be achieved");
+        return bytes32(0);
+    }
+
+    function deployCodeWithCreate2(bytes memory bytecode, bytes32 salt) internal returns (address) {
+        address addr;
+        assembly {
+            addr := create2(0, add(bytecode, 0x20), mload(bytecode), salt)
+        }
+        require(addr != address(0), "Deployment failed");
+        return addr;
+    }
+
+    function replacePlaceholder(
+        bytes memory bytecode,
+        bytes memory placeholder,
+        bytes32 newAddress
+    ) internal pure returns (bytes memory) {
+        bytes memory updatedBytecode;
+        uint256 startIndex = findPlaceholderIndex(bytecode, placeholder);
+
+        if (startIndex == type(uint256).max) {
+            revert("Placeholder not found");
+        }
+        updatedBytecode = new bytes(startIndex + 32); // Assuming address is 32 bytes
+        uint256 index;
+        for (index = 0; index < startIndex; index++) {
+            updatedBytecode[index] = bytecode[index];
+        }
+        for (uint256 i = 0; i < 32; i++) {
+            updatedBytecode[startIndex + i] = newAddress[i];
+        }
+        uint256 placeholderLength = placeholder.length;
+        uint256 remainingLength = bytecode.length - (startIndex + placeholderLength);
+        for (uint256 j = 0; j < remainingLength; j++) {
+            updatedBytecode[startIndex + 32 + j] = bytecode[startIndex + placeholderLength + j];
+        }
+
+        return updatedBytecode;
+    }
+
+    function findPlaceholderIndex(bytes memory bytecode, bytes memory placeholder) internal pure returns (uint256) {
+        for (uint256 i = 0; i <= bytecode.length - placeholder.length; i++) {
+            bool isMatching = true;
+            for (uint256 j = 0; j < placeholder.length; j++) {
+                if (bytecode[i + j] != placeholder[j]) {
+                    isMatching = false;
+                    break;
+                }
+            }
+            if (isMatching) {
+                return i;
+            }
+        }
+        return type(uint256).max;
+    }
+
+    function deployTokenProxyBytecode(address tokenAddress) internal {
+        string memory placeholder = "6666666666666666666666666666666666666666";
+        string memory bytecodePath = string.concat(vm.projectRoot(), "/src/TokenProxyBytecode.hex");
+        string memory addressString = Convert.replaceSubstring(Convert.addressToString(tokenAddress), "0x", "");
+        string memory updatedBytecode = Convert.replaceSubstring(vm.readFile(bytecodePath), placeholder, addressString);
+        vm.etch(tokenAddress, Convert.stringToBytes(updatedBytecode));
+    }
+
     function _loadTokenData(address tokenAddress, string memory configName) internal {
-        deployCodeTo(string.concat(configName, "TokenProxy.sol"), tokenAddress);
+        deployTokenProxyBytecode(tokenAddress);
         string memory path = string.concat(vm.projectRoot(), "/test/data/", configName,"/getToken.json");
         string memory json = vm.readFile(path);
         string memory name = abi.decode(vm.parseJson(json, ".name"), (string));
         uint256 decimals = uint8(Convert.stringToUint256(string(vm.parseJson(json, ".decimals"))));
         string memory symbol = abi.decode(vm.parseJson(json, ".symbol"), (string));
         uint256 totalSupply = Convert.stringToUint256(string(vm.parseJson(json, ".total_supply")));
+
         stdstore
             .target(tokenAddress)
             .sig(IERC20.decimals.selector)
