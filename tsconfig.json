@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "checkJs": true,
+    "allowJs": true,
+    "noEmit": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "target": "ESNext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+  },
+  "include": [
+    "*.js"
+  ],
+  "exclude": [
+    "./launch-token/"
+  ]
+}

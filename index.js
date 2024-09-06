@@ -36,8 +36,8 @@ const typeConverter = {
 
 /**
  * @param {bigint} nrequestedSlot
- * @param {bigint} MAX_ELEMENTS How many slots ahead to infer that `nrequestedSlot` is part of a given slot.
- * @returns {{slot: StorageSlot, offset: bigint}|null}
+ * @param {number=} MAX_ELEMENTS How many slots ahead to infer that `nrequestedSlot` is part of a given slot.
+ * @returns {{slot: StorageSlot, offset: number}|null}
  */
 function inferSlotAndOffset(nrequestedSlot, MAX_ELEMENTS = 100) {
     for (const slot of hts.storageLayout.storage) {
@@ -59,14 +59,22 @@ module.exports = {
      * @param {string} address
      * @param {string} requestedSlot
      * @param {import(".").IMirrorNodeClient} mirrorNodeClient
-     * @param {import("pino").Logger=} logger
+     * @param {import("pino").Logger} logger
      * @param {string=} reqId
      * @returns {Promise<string | null>}
      */
-    async getHtsStorageAt(address, requestedSlot, mirrorNodeClient, logger = { trace: () => undefined }, reqId) {
-        /** Wrapper trace logger to include origin `(hedera-forking)` in the log entry. */
+    async getHtsStorageAt(address, requestedSlot, mirrorNodeClient, logger, reqId) {
+        /** Wrapper trace logger to include origin `(hedera-forking)` in the log entry.
+         *
+         * @param {string} msg
+         */
         const trace = msg => logger.trace(`${reqId} (hedera-forking) ${msg}`);
-        /** Logs `msg` and `return`s the provided `value`. */
+        /** Logs `msg` and `return`s the provided `value`.
+         *
+         * @param {string|null} value
+         * @param {string} msg
+         * @returns {string|null}
+         */
         const rtrace = (value, msg) => (trace(`${msg}, returning \`${value}\``), value);
 
         if (!address.startsWith(utils.LONG_ZERO_PREFIX))
@@ -120,7 +128,7 @@ module.exports = {
             if (allowances.length === 0)
                 return rtrace(utils.ZERO_HEX_32_BYTE, `Allowance of token ${tokenId} from ${ownerId} assigned to ${spenderId} not found`);
             const value = allowances[0].amount;
-            return rtrace(`0x${value.toString(16).padStart(64, '0')}`, `Requested slot matches \`${tokenId}.allowance(${ownerId, spenderId})\``);
+            return rtrace(`0x${value.toString(16).padStart(64, '0')}`, `Requested slot matches \`${tokenId}.allowance(${ownerId}, ${spenderId})\``);
         }
 
         const keccakedSlot = inferSlotAndOffset(nrequestedSlot);
@@ -130,11 +138,14 @@ module.exports = {
                 return rtrace(utils.ZERO_HEX_32_BYTE, `Requested slot matches keccaked slot but token was not found`);
 
             const offset = keccakedSlot.offset;
-            const hexStr = Buffer.from(tokenData[utils.toSnakeCase(keccakedSlot.slot.label)]).toString('hex');
+            const label = keccakedSlot.slot.label;
+            const value = tokenData[utils.toSnakeCase(label)];
+            if (typeof value !== 'string')
+                return rtrace(utils.ZERO_HEX_32_BYTE, `Requested slot matches keccaked slot but its field \`${label}\` was not found in token or it is not a string`);
+            const hexStr = Buffer.from(value).toString('hex');
             const kecRes = hexStr.substring(offset * 64, (offset + 1) * 64).padEnd(64, '0');
             return rtrace(`0x${kecRes}`, `Get storage ${address} slot: ${requestedSlot}, result: ${kecRes}`);
         }
-
         const slot = slotMap.get(nrequestedSlot);
         if (slot === undefined)
             return rtrace(utils.ZERO_HEX_32_BYTE, `Requested slot does not match any field slots`);
@@ -144,7 +155,7 @@ module.exports = {
             return rtrace(utils.ZERO_HEX_32_BYTE, `Requested slot matches ${slot.label} field, but token was not found`);
 
         const value = tokenResult[utils.toSnakeCase(slot.label)];
-        if (typeConverter[slot.type] === undefined || !value)
+        if (typeConverter[slot.type] === undefined || !value || typeof value !== 'string')
             return rtrace(utils.ZERO_HEX_32_BYTE, `Requested slot matches ${slot.label} field, but it is not supported`);
 
         return rtrace(`0x${typeConverter[slot.type](value)}`, `Requested slot matches \`${slot.label}\` field (type=\`${slot.type}\`)`);
