@@ -201,6 +201,10 @@ contract TokenTest is Test, SharedTestSetup, IERC20Events {
         address alice = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
         address bob = makeAddr("bob");
         address charlie = makeAddr("charlie");
+        if (address(loader) != address(0)) {
+            loader.assignEvmAccountAddress(bob, 1);
+            loader.assignEvmAccountAddress(charlie, 2);
+        }
         uint256 allowanceAmount = 10_000000;
         uint256 transferAmount = 4_000000;
 
