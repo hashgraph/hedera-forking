@@ -73,7 +73,7 @@ module.exports = {
          *
          * @param {string|null} value
          * @param {string} msg
-         * @returns {*}
+         * @returns {string|null}
          */
         const rtrace = (value, msg) => (trace(`${msg}, returning \`${value}\``), value);
 
@@ -138,11 +138,14 @@ module.exports = {
                 return rtrace(utils.ZERO_HEX_32_BYTE, `Requested slot matches keccaked slot but token was not found`);
 
             const offset = keccakedSlot.offset;
-            const hexStr = Buffer.from(`${tokenData[utils.toSnakeCase(keccakedSlot.slot.label)]}`).toString('hex');
+            const label = keccakedSlot.slot.label;
+            const value = tokenData[utils.toSnakeCase(label)];
+            if (typeof value !== 'string')
+                return rtrace(utils.ZERO_HEX_32_BYTE, `Requested slot matches keccaked slot but its field \`${label}\` was not found in token or it is not a string`);
+            const hexStr = Buffer.from(value).toString('hex');
             const kecRes = hexStr.substring(offset * 64, (offset + 1) * 64).padEnd(64, '0');
             return rtrace(`0x${kecRes}`, `Get storage ${address} slot: ${requestedSlot}, result: ${kecRes}`);
         }
-
         const slot = slotMap.get(nrequestedSlot);
         if (slot === undefined)
             return rtrace(utils.ZERO_HEX_32_BYTE, `Requested slot does not match any field slots`);
