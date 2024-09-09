@@ -89,6 +89,6 @@ export function getHtsStorageAt(
     address: string,
     slot: string,
     mirrorNodeClient: IMirrorNodeClient,
-    logger?: import('pino').Logger,
+    logger?: Pick<import('pino').Logger, 'trace'>,
     requestIdPrefix?: string,
 ): Promise<string | null>;
