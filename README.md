@@ -233,12 +233,16 @@ The `storageLayout` object is included in the output file `out/<Contract name>.s
 
 The storage layout is represented in JSON format with the following fields
 
-- **`ast_id`**: The identifier in the Abstract Syntax Tree (AST).
-- **`contract`**: The name of the contract.
-- **`label`**: The name of the variable.
-- **`offset`**: The starting location of the variable in memory. For smaller values, multiple variables may be packed into a single memory slot. In such cases, the `offset` value for the second and subsequent variables will differ from 0.
-- **`slot`**: An integer representing the slot number in storage.
-- **`type`**: The type of the value stored in the slot.
+- **`astId`**. The identifier in the Abstract Syntax Tree (AST).
+- **`contract`**. The name of the contract.
+- **`label`**. The name of the instance variable.
+- **`offset`**. The starting location of the variable within a `uint256` storage word.
+Multiple variables may be packed into a single memory slot when their types are smaller than a 32 bytes word.
+In such cases, the `offset` value for the second and subsequent variables will differ from `0`.
+- **`slot`**. A integer representing the slot number in storage.
+- **`type`**. The type of the value stored in the slot.
+
+See <https://docs.soliditylang.org/en/latest/internals/layout_in_storage.html#json-output> for more information.
 
 ### Application to Token Smart Contract Emulation
 
