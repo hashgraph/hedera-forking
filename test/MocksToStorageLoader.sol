@@ -167,6 +167,6 @@ contract MocksToStorageLoader is CommonBase, StdCheats {
         _loadTokenData(tokenAddress);
         _loadBalanceOfAnAccount(tokenAddress, 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15);
         _loadBalanceOfAnAccount(tokenAddress, 0x0000000000000000000000000000000000000887);
-        _loadAllowancesOfAnAccount(tokenAddress , 0x100000000000000000000000000000000040984f, 0x0000000000000000000000000000000000000537);
+        _loadAllowancesOfAnAccount(tokenAddress, 0x100000000000000000000000000000000040984f, 0x0000000000000000000000000000000000000537);
     }
 }
