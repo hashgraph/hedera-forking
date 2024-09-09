@@ -24,6 +24,9 @@ const c = {
 /**
  * Returns the token proxy contract bytecode for the given `address`.
  * Based on the proxy contract defined by https://hips.hedera.com/hip/hip-719.
+ * For reference, you can see the
+ * [`hedera-services`](https://github.com/hashgraph/hedera-services/blob/fbac99e75c27bf9c70ebc78c5de94a9109ab1851/hedera-node/hedera-smart-contract-service-impl/src/main/java/com/hedera/node/app/service/contract/impl/state/DispatchingEvmFrameState.java#L96)
+ * implementation.
  * 
  * The **template** bytecode was obtained using the `eth_getCode` JSON-RPC method with an HTS token.
  * For example, for `USDC` https://hashscan.io/testnet/token/0.0.429274
