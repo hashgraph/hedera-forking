@@ -59,35 +59,12 @@ This package uses the compilation output of the `HtsSystemContract` contract to 
 > This is also the reason we use [_JSDoc_](https://www.typescriptlang.org/docs/handbook/jsdoc-supported-types.html) instead of TypeScript, to avoid the compilation step.
 > This, in turn, avoids publishing an `npm` package.
 
-## Build
+### How does it Work?
 
-To compile the `HtsSystemContract` and test contracts
+The following sequence diagram showcases the messages sent between components when fork testing is activated within an Ethereum Development Environment, _e.g._, Foundry or Hardhat.
 
-```console
-forge build
-```
-
-> [!TIP]
-> Keep in mind the compilation output of `HtsSystemContract` is versioned.
-> So it will appear as modified after `forge build` when `HtsSystemContract` has been changed.
-
-There is no compilation step to build the `@hashgraph/hedera-forking` package.
-However, you can type-checked it running
-
-```console
-npm run typecheck
-```
-
-### Test
-
-Given we are interested in analyze Solidity traces, we can use the `forge` flag `-vvvv` to display them.
-It is useful to filter to a specific test file, for example
-
-```console
-forge test --match-contract USDCTest -vvvv
-```
-
-## Diagram
+> [!NOTE]
+> For clarity, the JSON-RPC Relay process is split into its relevant modules, `eth` which handles the `eth_*` JSON-RPC method calls, and `hedera-forking`, the package mentioned above.
 
 ```mermaid
 sequenceDiagram
@@ -119,24 +96,56 @@ sequenceDiagram
     client->>-user: Token{}.totalSupply
 ```
 
+The relevant interactions are
+
+- **(3).** This is the code defined by [HIP-719](https://hips.hedera.com/hip/hip-719#specification).
+For reference, you can see the
+[`hedera-services`](https://github.com/hashgraph/hedera-services/blob/fbac99e75c27bf9c70ebc78c5de94a9109ab1851/hedera-node/hedera-smart-contract-service-impl/src/main/java/com/hedera/node/app/service/contract/impl/state/DispatchingEvmFrameState.java#L96)
+implementation.
+- **(5)**-**(6)**. This calls `getHtsCode` which in turn returns the bytecode compiled from `HtsSystemContract.sol`.
+- **(9)**-**(12)**. This calls `getHtsStorageAt` which uses the `HtsSystemContract`'s [Storage Layout](#storage-layout-analysis) to fetch the appropriate state from the Mirror Node.
+
+The **(8)** JSON-RPC call is triggered as part of the `redirectForToken(address,bytes)` method call defined in HIP-719.
+Even if the call from HIP-719 is custom encoded, this method call should support standard ABI encoding as well as defined in
+[`hedera-services`](https://github.com/hashgraph/hedera-services/blob/b40f81234acceeac302ea2de14135f4c4185c37d/hedera-node/hedera-smart-contract-service-impl/src/main/java/com/hedera/node/app/service/contract/impl/exec/systemcontracts/common/AbstractCallAttempt.java#L91-L104).
+
+## Build
+
+To compile the `HtsSystemContract` and test contracts
+
+```console
+forge build
+```
+
+> [!TIP]
+> Keep in mind the compilation output of `HtsSystemContract` is versioned.
+> So it will appear as modified after `forge build` when `HtsSystemContract` has been changed.
+
+There is no compilation step to build the `@hashgraph/hedera-forking` package.
+However, you can type-checked it running
+
+```console
+npm run typecheck
+```
+
+### Test
+
+Given we are interested in analyze Solidity traces, we can use the `forge` flag `-vvvv` to display them.
+It is useful to filter to a specific test file, for example
+
+```console
+forge test --match-contract USDCTest -vvvv
+```
+
 ## Use Cases
 
 create token using launch-token
 
 ## Token bytecode
 
-<https://hips.hedera.com/hip/hip-719#specification>
-
-https://github.com/hashgraph/hedera-services/blob/fbac99e75c27bf9c70ebc78c5de94a9109ab1851/hedera-node/hedera-smart-contract-service-impl/src/main/java/com/hedera/node/app/service/contract/impl/state/DispatchingEvmFrameState.java#L96
-
 Another alternative could be something like
 
-https://book.getfoundry.sh/cheatcodes/etch
-https://book.getfoundry.sh/reference/forge-std/deployCodeTo
-
 The `launch-token` is used to deploy new Tokens using HTS to `testnet`.
-
-<https://github.com/hashgraph/hedera-services/blob/b40f81234acceeac302ea2de14135f4c4185c37d/hedera-node/hedera-smart-contract-service-impl/src/main/java/com/hedera/node/app/service/contract/impl/exec/systemcontracts/common/AbstractCallAttempt.java#L91-L104>
 
 ## Storage Layout Analysis
 
