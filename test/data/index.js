@@ -14,6 +14,8 @@ module.exports = {
             assert(typeof token_id === 'string');
 
             const [_shardNum, _realmNum, accountId] = token_id.split('.');
+            assert(accountId !== undefined);
+
             const address = '0x' + parseInt(accountId).toString(16).padStart(40, '0');
             tokens[token_id] = { symbol, address };
         }
