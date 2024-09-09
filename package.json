@@ -3,8 +3,13 @@
   "version": "0.0.1",
   "description": "Hedera HTS Forking Support",
   "main": "./index.js",
-  "types": "index.d.ts",
-  "exports": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "default": "./index.js",
+      "types": "./index.d.ts"
+    }
+  },
   "scripts": {
     "prepare": "husky",
     "format": "prettier out/HtsSystemContract.sol/HtsSystemContract.json --write",
