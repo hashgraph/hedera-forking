@@ -103,7 +103,7 @@ For reference, you can see the
 [`hedera-services`](https://github.com/hashgraph/hedera-services/blob/fbac99e75c27bf9c70ebc78c5de94a9109ab1851/hedera-node/hedera-smart-contract-service-impl/src/main/java/com/hedera/node/app/service/contract/impl/state/DispatchingEvmFrameState.java#L96)
 implementation.
 - **(5)**-**(6)**. This calls `getHtsCode` which in turn returns the bytecode compiled from `HtsSystemContract.sol`.
-- **(9)**-**(12)**. This calls `getHtsStorageAt` which uses the `HtsSystemContract`'s [Storage Layout](#storage-layout-analysis) to fetch the appropriate state from the Mirror Node.
+- **(9)**-**(12)**. This calls `getHtsStorageAt` which uses the `HtsSystemContract`'s [Storage Layout](#storage-layout) to fetch the appropriate state from the Mirror Node.
 
 The **(8)** JSON-RPC call is triggered as part of the `redirectForToken(address,bytes)` method call defined in HIP-719.
 Even if the call from HIP-719 is custom encoded, this method call should support standard ABI encoding as well as defined in
@@ -122,10 +122,10 @@ forge build
 > So it will appear as modified after `forge build` when `HtsSystemContract` has been changed.
 
 There is no compilation step to build the `@hashgraph/hedera-forking` package.
-However, you can type-checked it running
+However, you can type-check it running
 
 ```console
-npm run typecheck
+npm run type-check
 ```
 
 ## Tests
@@ -178,7 +178,7 @@ forge test --match-contract TokenTest -vvvv
 
 These tests are the same of the section above, but instead of using the `json-rpc-mock.js` it uses the Relay with `hedera-forking` enabled pointing to `testnet`.
 
-## Storage Layout Analysis
+## Storage Layout
 
 The Solidity compiler `solc` provides an option to generate detailed storage layout information as part of the build output. This feature can be enabled by selecting the `storageLayout` option, which provides insights into how variables are stored in contract storage.
 
@@ -208,7 +208,7 @@ output -> contracts -> ContractName.sol -> ContractName -> storageLayout
 
 ### Enabling Storage Layout in Foundry
 
-add the following line to your `foundry.toml` file:
+Add the following line to your `foundry.toml` file
 
 ```toml
 extra_output = ["storageLayout"]
