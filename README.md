@@ -128,24 +128,55 @@ However, you can type-checked it running
 npm run typecheck
 ```
 
-### Test
+## Tests
 
-Given we are interested in analyze Solidity traces, we can use the `forge` flag `-vvvv` to display them.
-It is useful to filter to a specific test file, for example
+> [!TIP]
+> The [`launch-token`](./launch-token/) script was used to deploy Tokens using HTS to `testnet` for testing purposes.
+
+### `getHtsCode` and `getHtsStorageAt` Unit Tests
+
+These tests only involve testing both `getHtsCode` and `getHtsStorageAt` functions.
+In other words, they do not use the `HtsSystemContract` bytecode, only its `storageLayout` definition.
 
 ```console
-forge test --match-contract USDCTest -vvvv
+npm run test
 ```
 
-## Use Cases
+### `HtsSystemContract` Solidity tests + JSON-RPC mock server for storage emulation (with forking)
 
-create token using launch-token
+These Solidity tests are used to test both the `HtsSystemContract` and the `hedera-forking` package.
+Instead of starting a `local-node` or using a remote network,
+they use the [`json-rpc-mock.js`](./scripts/json-rpc-mock.js) script as a backend without the need for any additional service.
 
-## Token bytecode
+In a separate terminal run the JSON-RPC Mock Server
 
-Another alternative could be something like
+```console
+./scripts/json-rpc-mock.js
+```
 
-The `launch-token` is used to deploy new Tokens using HTS to `testnet`.
+Then run
+
+```console
+forge test --fork-url http://localhost:7546 --no-storage-caching
+```
+
+> [!IMPORTANT]
+> The `--no-storage-caching` flag disables the JSON-RPC calls cache,
+> which is important to make sure the `json-rpc-mock.js` is reached in each JSON-RPC call.
+> See <https://book.getfoundry.sh/reference/forge/forge-test#description> for more information.
+
+You can use the `--match-contract` flag to filter the tests to be executed if needed.
+In addition, usually when debugging the contract under test we are interested in getting the Solidity traces.
+We can use the `forge` flag `-vvvv` to display them.
+For example
+
+```console
+forge test --match-contract TokenTest -vvvv
+```
+
+### `HtsSystemContract` Solidity tests + Relay for storage emulation (with forking)
+
+These tests are the same of the section above, but instead of using the `json-rpc-mock.js` it uses the Relay with `hedera-forking` enabled pointing to `testnet`.
 
 ## Storage Layout Analysis
 
