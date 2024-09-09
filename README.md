@@ -111,6 +111,10 @@ Even if the call from HIP-719 is custom encoded, this method call should support
 
 ## Build
 
+This repo consists of two projects/packages.
+A Foundry project, to compile and test the `HtsSystemContract.sol` contract.
+And an `npm` package that implements the `eth_getCode` and `eth_getStorageAt` JSON-RPC calls when HTS emulation is involved.
+
 To compile the `HtsSystemContract` and test contracts
 
 ```console
@@ -122,7 +126,7 @@ forge build
 > So it will appear as modified after `forge build` when `HtsSystemContract` has been changed.
 
 There is no compilation step to build the `@hashgraph/hedera-forking` package.
-However, you can type-check it running
+However, you can type-check it by running
 
 ```console
 npm run type-check
@@ -180,11 +184,16 @@ These tests are the same of the section above, but instead of using the `json-rp
 
 ## Storage Layout
 
-The Solidity compiler `solc` provides an option to generate detailed storage layout information as part of the build output. This feature can be enabled by selecting the `storageLayout` option, which provides insights into how variables are stored in contract storage.
+The Solidity compiler `solc` provides an option to generate detailed storage layout information as part of the build output.
+This feature can be enabled by selecting the `storageLayout` option,
+which provides insights into how variables are stored in contract storage.
 
-### Enabling Storage Layout in Hardhat
+### Enabling Storage Layout
 
-To generate the storage layout using Hardhat, you need to modify the Hardhat configuration file (`hardhat.config.js`) as follows:
+**In Hardhat.**
+
+To generate the storage layout using Hardhat,
+you need to modify the Hardhat configuration file `hardhat.config.js` as follows
 
 ```javascript
 module.exports = {
@@ -200,13 +209,14 @@ module.exports = {
 };
 ```
 
-With this configuration, the storage layout information will be included in the build artifacts. You can find this information in the following path within the build output:
+With this configuration, the storage layout information will be included in the build artifacts.
+You can find this information in the following path within the build output
 
 ```txt
 output -> contracts -> ContractName.sol -> ContractName -> storageLayout
 ```
 
-### Enabling Storage Layout in Foundry
+**In Foundry.**
 
 Add the following line to your `foundry.toml` file
 
@@ -214,9 +224,14 @@ Add the following line to your `foundry.toml` file
 extra_output = ["storageLayout"]
 ```
 
+The `storageLayout` object is included in the output file `out/<Contract name>.sol/<Contract name>.json`.
+
+> [!IMPORTANT]
+> This is the one used in this project.
+
 ### Understanding the Storage Layout Format
 
-The storage layout is represented in JSON format with the following fields:
+The storage layout is represented in JSON format with the following fields
 
 - **`ast_id`**: The identifier in the Abstract Syntax Tree (AST).
 - **`contract`**: The name of the contract.
@@ -227,7 +242,8 @@ The storage layout is represented in JSON format with the following fields:
 
 ### Application to Token Smart Contract Emulation
 
-For the purpose of our implementation, understanding which variable names are stored in specific slots is sufficient to develop a functional emulator for the token smart contract.
+For the purpose of our implementation,
+understanding which variable names are stored in specific slots is sufficient to develop a functional emulator for the token smart contract.
 
 ### Issues with Storage for Mappings, Arrays, and Strings Longer than 31 Bytes
 
