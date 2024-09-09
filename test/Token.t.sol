@@ -44,8 +44,8 @@ contract TokenTest is Test, SharedTestSetup, IERC20Events {
         if (USDC.code.length == 0) {
             loader = new MocksToStorageLoader(HTS);
             loader.loadHts();
-            loader.loadToken(USDC, "USDC");
-            loader.loadToken(MFCT, "MFCT");
+            loader.loadToken(USDC);
+            loader.loadToken(MFCT);
         }
     }
 
@@ -112,7 +112,7 @@ contract TokenTest is Test, SharedTestSetup, IERC20Events {
         address bob = 0x0000000000000000000000000000000000000887;
         balance = IERC20(USDC).balanceOf(bob);
         console.log("bob's balance %s", balance);
-        assertEq(balance, 370_000000);
+        assertEq(balance, 516_000000);
     }
 
     function test_ERC20_allowance() view external {

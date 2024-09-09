@@ -132,4 +132,12 @@ library Convert {
         }
         revert("Invalid hex character");
     }
+
+    function addressToHederaString(address tokenAddress) public pure returns (string memory) {
+        uint256 rawAddress = uint256(uint160(tokenAddress));
+        uint256 shard = 0;
+        uint256 realm = 0;
+        uint256 token = rawAddress;
+        return string(abi.encodePacked(uintToString(shard), ".", uintToString(realm), ".", uintToString(token)));
+    }
 }

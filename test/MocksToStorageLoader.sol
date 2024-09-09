@@ -10,10 +10,16 @@ import {IERC20} from "../src/IERC20.sol";
 import {Convert} from "./Convert.sol";
 
 import {HtsSystemContract} from "../src/HtsSystemContract.sol";
+import {Surl} from "surl/src/Surl.sol";
 
 using stdStorage for StdStorage;
+using Surl for string;
 
 contract MocksToStorageLoader is CommonBase, StdCheats {
+    string MIRRORNODE_URL = "https://testnet.mirrornode.hedera.com/";
+    string RPC_URL = "https://testnet.hashio.io/api/";
+    uint256 HTTPS_STATUS_OK = 200;
+
     address HTS;
     constructor(address _HTS) {
         HTS = _HTS;
@@ -59,28 +65,32 @@ contract MocksToStorageLoader is CommonBase, StdCheats {
     }
 
     function _loadAccountData(address account) internal {
-        string memory path = string.concat(vm.projectRoot(), "/test/data/getAccount_", Convert.addressToString(account), ".json");
-        string memory json = vm.readFile(path);
-        uint256 accountId = Convert.accountIdToUint256(string(vm.parseJson(json, ".account")));
+        string memory accountIdString = Convert.replaceSubstring(Convert.addressToString(account), "0x1", "0x0");
+        (uint256 status, bytes memory json) = string.concat(MIRRORNODE_URL, "api/v1/accounts/", accountIdString).get();
+        require(status == HTTPS_STATUS_OK);
+        uint256 accountId = Convert.accountIdToUint256(string(vm.parseJson(string(json), ".account")));
         assignEvmAccountAddress(account, accountId);
     }
 
     function deployTokenProxyBytecode(address tokenAddress) internal {
-        string memory placeholder = "6666666666666666666666666666666666666666";
-        string memory bytecodePath = string.concat(vm.projectRoot(), "/src/TokenProxyBytecode.hex");
-        string memory addressString = Convert.replaceSubstring(Convert.addressToString(tokenAddress), "0x", "");
-        string memory updatedBytecode = Convert.replaceSubstring(vm.readFile(bytecodePath), placeholder, addressString);
-        vm.etch(tokenAddress, Convert.stringToBytes(updatedBytecode));
+        string[] memory headers = new string[](1);
+        headers[0] = "Content-Type: application/json";
+        (uint256 status, bytes memory json) = RPC_URL.post(headers, string.concat("{\"jsonrpc\":\"2.0\",\"method\":\"eth_getCode\",\"params\":[\"", Convert.addressToString(tokenAddress),"\", \"latest\"],\"id\":1}"));
+        require(status == HTTPS_STATUS_OK);
+        string memory updatedBytecode = abi.decode(vm.parseJson(string(json), ".result"), (string));
+        vm.etch(tokenAddress, Convert.stringToBytes(string.concat("0x", updatedBytecode)));
     }
 
-    function _loadTokenData(address tokenAddress, string memory configName) internal {
+    function _loadTokenData(address tokenAddress) internal {
+        string memory tokenId = Convert.addressToHederaString(tokenAddress);
+        (uint256 status, bytes memory json) = string.concat(MIRRORNODE_URL, "api/v1/tokens/", tokenId).get();
+        require(status == HTTPS_STATUS_OK);
+        string memory data = string(json);
         deployTokenProxyBytecode(tokenAddress);
-        string memory path = string.concat(vm.projectRoot(), "/test/data/", configName,"/getToken.json");
-        string memory json = vm.readFile(path);
-        string memory name = abi.decode(vm.parseJson(json, ".name"), (string));
-        uint256 decimals = uint8(Convert.stringToUint256(string(vm.parseJson(json, ".decimals"))));
-        string memory symbol = abi.decode(vm.parseJson(json, ".symbol"), (string));
-        uint256 totalSupply = Convert.stringToUint256(string(vm.parseJson(json, ".total_supply")));
+        string memory name = abi.decode(vm.parseJson(data, ".name"), (string));
+        uint256 decimals = uint8(Convert.stringToUint256(string(vm.parseJson(data, ".decimals"))));
+        string memory symbol = abi.decode(vm.parseJson(data, ".symbol"), (string));
+        uint256 totalSupply = Convert.stringToUint256(string(vm.parseJson(data, ".total_supply")));
 
         stdstore
             .target(tokenAddress)
@@ -99,19 +109,21 @@ contract MocksToStorageLoader is CommonBase, StdCheats {
     }
 
 
-    function _loadAllowancesOfAnAccount(address tokenAddress, string memory configName, address ownerEVMAddress, address spenderEVMAddress) internal {
+    function _loadAllowancesOfAnAccount(address tokenAddress, address ownerEVMAddress, address spenderEVMAddress) internal {
         uint256 ownerId = HtsSystemContract(HTS).getAccountId(ownerEVMAddress);
         string memory ownerIdString = Convert.uintToString(ownerId);
         uint256 spenderId = HtsSystemContract(HTS).getAccountId(spenderEVMAddress);
         string memory spenderIdString = Convert.uintToString(spenderId);
-        string memory path = string.concat(vm.projectRoot(), "/test/data/", configName, "/getAllowanceForToken_0.0.", ownerIdString, "_0.0.", spenderIdString, ".json");
+        string memory tokenId = Convert.addressToHederaString(tokenAddress);
+        (uint256 status, bytes memory json) = string.concat(MIRRORNODE_URL, "api/v1/accounts/", ownerIdString, "/allowances/tokens?token.id=", tokenId, "&spender.id=", spenderIdString).get();
+        string memory data = string(json);
         uint256 allowance = 0;
-        try vm.readFile(path) returns (string memory json) {
-            if (vm.keyExistsJson(json, ".allowances[0].amount")) {
-                allowance = abi.decode(vm.parseJson(json, ".allowances[0].amount"), (uint256));
+        if (status == HTTPS_STATUS_OK) {
+            if (vm.keyExistsJson(data, ".allowances[0].amount")) {
+                allowance = abi.decode(vm.parseJson(data, ".allowances[0].amount"), (uint256));
             }
-        } catch {
-            console.log(string.concat("Allowances are not configured for token ", configName, " in path", path ));
+        } else {
+            console.log(string.concat("Allowances are not configured for token ", tokenId));
         }
         stdstore
             .target(tokenAddress)
@@ -121,17 +133,21 @@ contract MocksToStorageLoader is CommonBase, StdCheats {
             .checked_write(allowance);
     }
 
-    function _loadBalanceOfAnAccount(address tokenAddress, string memory configName, address accountEVMAddress) internal {
+    function _loadBalanceOfAnAccount(address tokenAddress, address accountEVMAddress) internal {
         uint256 accountId = HtsSystemContract(HTS).getAccountId(accountEVMAddress);
         string memory accountIdString = Convert.uintToString(accountId);
-        string memory path = string.concat(vm.projectRoot(), "/test/data/", configName, "/getBalanceOfToken_0.0.", accountIdString, ".json");
+
+        string memory tokenId = Convert.addressToHederaString(tokenAddress);
+        (uint256 status, bytes memory json) = string.concat(MIRRORNODE_URL, "api/v1/tokens/", tokenId, "/balances?account.id=", accountIdString).get();
+        string memory data = string(json);
         uint256 balance = 0;
-        try vm.readFile(path) returns (string memory json) {
-            if (vm.keyExistsJson(json, ".balances[0].balance")) {
-                balance = abi.decode(vm.parseJson(json, ".balances[0].balance"), (uint256));
+        if (status == HTTPS_STATUS_OK) {
+            if (vm.keyExistsJson(data, ".balances[0].balance")) {
+                balance = abi.decode(vm.parseJson(data, ".balances[0].balance"), (uint256));
             }
-        } catch {
-            console.log(string.concat("Balances are not configured for token ", configName, " in path", path ));
+        } else {
+            console.log(status);
+            console.log(string.concat("Balances are not configured for token ", tokenId));
         }
         stdstore
             .target(tokenAddress)
@@ -148,10 +164,10 @@ contract MocksToStorageLoader is CommonBase, StdCheats {
         _loadAccountData(0x100000000000000000000000000000000040984f);
     }
 
-    function loadToken(address tokenAddress, string memory tokenConfigName) external {
-        _loadTokenData(tokenAddress, tokenConfigName);
-        _loadBalanceOfAnAccount(tokenAddress, tokenConfigName, 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15);
-        _loadBalanceOfAnAccount(tokenAddress, tokenConfigName, 0x0000000000000000000000000000000000000887);
-        _loadAllowancesOfAnAccount(tokenAddress, tokenConfigName, 0x100000000000000000000000000000000040984f, 0x0000000000000000000000000000000000000537);
+    function loadToken(address tokenAddress) external {
+        _loadTokenData(tokenAddress);
+        _loadBalanceOfAnAccount(tokenAddress, 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15);
+        _loadBalanceOfAnAccount(tokenAddress, 0x0000000000000000000000000000000000000887);
+        _loadAllowancesOfAnAccount(tokenAddress , 0x100000000000000000000000000000000040984f, 0x0000000000000000000000000000000000000537);
     }
 }
