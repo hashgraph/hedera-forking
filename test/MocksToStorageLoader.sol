@@ -146,7 +146,6 @@ contract MocksToStorageLoader is CommonBase, StdCheats {
                 balance = abi.decode(vm.parseJson(data, ".balances[0].balance"), (uint256));
             }
         } else {
-            console.log(status);
             console.log(string.concat("Balances are not configured for token ", tokenId));
         }
         stdstore
