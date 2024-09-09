@@ -2,6 +2,10 @@
   "compilerOptions": {
     "allowJs": true,
     "checkJs": true,
+
+    // It is used so that TypeScript is aware of self-referencing package.
+    // https://nodejs.org/docs/latest-v22.x/api/packages.html#self-referencing-a-package-using-its-name
+    // https://www.typescriptlang.org/tsconfig/#node16nodenext
     "module": "Node16",
     "moduleResolution": "Node16",
     "resolveJsonModule": true,

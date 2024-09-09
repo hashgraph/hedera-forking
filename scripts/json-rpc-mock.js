@@ -53,6 +53,11 @@ const isHIP719Contract = address => Object
     .includes(address.toLowerCase());
 
 /**
+ * Function signature for `eth_*` method handlers.
+ * The `params` argument comes from the JSON-RPC request,
+ * so it must to be declared as `unknown[]`.
+ * Therefore, each method handler should validate each element of `params` they use.
+ * 
  * @typedef {(params: unknown[], reqId: string) => Promise<string>} EthHandler
  */
 
@@ -124,16 +129,21 @@ const eth = {
      */
     eth_getStorageAt: async ([address, slot, _blockNumber], reqId) => {
         /**
+         * Loads and returns the module indicated by `path` if exists.
+         * The `path` is relative to `./test/data/`.
+         * In case the module does not exist, it returns `defaultValue`.
+         * 
          * @template T
-         * @param {string} path 
-         * @param {T} defaultValue 
-         * @returns {T}
+         * @param {string} path of the module relative to `./test/data/`.
+         * @param {T} defaultValue The value to return when `path`.
+         * @returns {T} The loaded module indicated by `path` if exists. Otherwise `defaultValue`.
          */
         const requireOrDefault = (path, defaultValue) => {
             try {
                 return require(`../test/data/${path}`);
             } catch (err) {
                 assert(err instanceof Error);
+                // https://nodejs.org/api/errors.html#module_not_found
                 if ((/**@type {{code?: string}}*/(err)).code === 'MODULE_NOT_FOUND')
                     return defaultValue;
                 throw err;
