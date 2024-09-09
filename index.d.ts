@@ -82,8 +82,8 @@ export function getHtsCode(): string;
  * @param address 
  * @param slot 
  * @param mirrorNodeClient 
- * @param logger 
- * @param requestIdPrefix 
+ * @param logger An object with a `trace: pino.LogFn` method.
+ * @param requestIdPrefix A prefix ID to identify the request in the logs.
  */
 export function getHtsStorageAt(
     address: string,
