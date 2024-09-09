@@ -196,7 +196,6 @@ describe('::getHtsStorageAt', function () {
              */
             const padAccountId = accountId => accountId.toString(16).padStart(8, '0');
 
-            // (/**@type{{name: string, fn: (tid: unknown, accountId: string) => Promise<{ balances: { balance: number; }[]; }> }[]} */([
             (/**@type{{name: string, fn: import('@hashgraph/hedera-forking').IMirrorNodeClient['getBalanceOfToken']}[]}*/([
                 { name: 'balance is found', fn: async (_tid, accountId) => require(`./data/${symbol}/getBalanceOfToken_${accountId}`) },
                 { name: 'balance is empty', fn: async (_tid, _accountId) => ({ balances: [] }) },
