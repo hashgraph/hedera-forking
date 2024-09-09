@@ -13,12 +13,12 @@ const { tokens } = require('../test/data');
 
 /** ANSI colors functions to avoid any external dependency. */
 const c = {
-    dim: text => `\x1b[2m${text}\x1b[0m`,
-    green: text => `\x1b[32m${text}\x1b[0m`,
-    yellow: text => `\x1b[33m${text}\x1b[0m`,
-    blue: text => `\x1b[34m${text}\x1b[0m`,
-    magenta: text => `\x1b[35m${text}\x1b[0m`,
-    cyan: text => `\x1b[36m${text}\x1b[0m`,
+    dim: (/**@type{unknown}*/ text) => `\x1b[2m${text}\x1b[0m`,
+    green: (/**@type{unknown}*/ text) => `\x1b[32m${text}\x1b[0m`,
+    yellow: (/**@type{unknown}*/ text) => `\x1b[33m${text}\x1b[0m`,
+    blue: (/**@type{unknown}*/ text) => `\x1b[34m${text}\x1b[0m`,
+    magenta: (/**@type{unknown}*/ text) => `\x1b[35m${text}\x1b[0m`,
+    cyan: (/**@type{unknown}*/ text) => `\x1b[36m${text}\x1b[0m`,
 };
 
 /**
@@ -53,40 +53,93 @@ const isHIP719Contract = address => Object
     .includes(address.toLowerCase());
 
 /**
+ * @typedef {(params: unknown[], reqId: string) => Promise<string>} EthHandler
+ */
+
+/**
  * Mock values taken from `testnet`.
  * 
  * https://docs.infura.io/api/networks/ethereum/json-rpc-methods
  * Official Ethereum JSON-RPC spec can be found at https://ethereum.github.io/execution-apis/api-documentation/.
  */
 const eth = {
-    /** https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_blocknumber */
-    eth_blockNumber: async _params => '0x811364',
+    /** 
+     * https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_blocknumber
+     * 
+     * @type {EthHandler}
+     */
+    eth_blockNumber: async () => '0x811364',
 
-    /** https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_gasprice */
-    eth_gasPrice: async _params => '0x1802ba9f400',
+    /**
+     * https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_gasprice 
+     * 
+     * @type {EthHandler}
+     */
+    eth_gasPrice: async () => '0x1802ba9f400',
 
-    /** https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_chainid */
-    eth_chainId: async _params => '0x12b',
+    /**
+     * https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_chainid
+     * 
+     * @type {EthHandler}
+     */
+    eth_chainId: async () => '0x12b',
 
-    /** https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_getblockbynumber */
+    /**
+     * https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_getblockbynumber
+     * 
+     * @type {EthHandler}
+     */
     eth_getBlockByNumber: async ([blockNumber, _transactionDetails]) => require(`./mock/eth_getBlockByNumber_${blockNumber}.json`),
 
-    /** https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_gettransactioncount */
-    eth_getTransactionCount: ([_address, _blockNumber]) => '0x0',
+    /**
+     * https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_gettransactioncount
+     * 
+     * @type {EthHandler}
+     */
+    eth_getTransactionCount: async ([_address, _blockNumber]) => '0x0',
 
-    /** https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_getcode */
+    /**
+     * https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_getcode
+     * 
+     * @type {EthHandler}
+     */
     eth_getCode: async ([address, _blockNumber]) =>
         address === HTSAddress
             ? getHtsCode()
-            : isHIP719Contract(address)
+            : typeof address === 'string' && isHIP719Contract(address)
                 ? getHIP719Code(address)
                 : '0x',
 
-    /** https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_getbalance */
+    /**
+     * https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_getbalance
+     * 
+     * @type {EthHandler}
+     */
     eth_getBalance: async ([_address, _blockNumber]) => '0x0',
 
-    /** https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_getstorageat */
+    /**
+     * https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_getstorageat
+     * 
+     * @type {EthHandler}
+     */
     eth_getStorageAt: async ([address, slot, _blockNumber], reqId) => {
+        /**
+         * @template T
+         * @param {string} path 
+         * @param {T} defaultValue 
+         * @returns {T}
+         */
+        const requireOrDefault = (path, defaultValue) => {
+            try {
+                return require(`../test/data/${path}`);
+            } catch (err) {
+                assert(err instanceof Error);
+                if ((/**@type {{code?: string}}*/(err)).code === 'MODULE_NOT_FOUND')
+                    return defaultValue;
+                throw err;
+            }
+        };
+
         /** @type {import('@hashgraph/hedera-forking').IMirrorNodeClient} */
         const mirrorNodeClient = {
             async getTokenById(tokenId) {
@@ -95,41 +148,25 @@ const eth = {
                 return require(`../test/data/${tokens[tokenId].symbol}/getToken.json`);
             },
             async getAccount(idOrAliasOrEvmAddress) {
-                try {
-                    return require(`../test/data/getAccount_0x${idOrAliasOrEvmAddress.toLowerCase()}.json`);
-                } catch (err) {
-                    if (err.code === 'MODULE_NOT_FOUND')
-                        return null;
-                    throw err;
-                }
+                return requireOrDefault(`getAccount_0x${idOrAliasOrEvmAddress.toLowerCase()}.json`, null);
             },
             async getBalanceOfToken(tokenId, accountId) {
                 const noBalance = { balances: [] };
                 if (tokens[tokenId] === undefined)
                     return noBalance;
-                try {
-                    return require(`../test/data/${tokens[tokenId].symbol}/getBalanceOfToken_${accountId}.json`);
-                } catch (err) {
-                    if (err.code === 'MODULE_NOT_FOUND')
-                        return noBalance;
-                    throw err;
-                }
+                return requireOrDefault(`${tokens[tokenId].symbol}/getBalanceOfToken_${accountId}.json`, noBalance);
             },
             async getAllowanceForToken(accountId, tokenId, spenderId) {
                 const noAllowance = { allowances: [] };
                 if (tokens[tokenId] === undefined)
                     return noAllowance;
-                try {
-                    return require(`../test/data/${tokens[tokenId].symbol}/getAllowanceForToken_${accountId}_${spenderId}.json`);
-                } catch (err) {
-                    if (err.code === 'MODULE_NOT_FOUND')
-                        return noAllowance;
-                    throw err;
-                }
+                return requireOrDefault(`${tokens[tokenId].symbol}/getAllowanceForToken_${accountId}_${spenderId}.json`, noAllowance);
             }
         };
 
-        const trace = msg => console.debug(c.cyan('[TRACE]'), c.dim(msg));
+        assert(typeof address === 'string');
+        assert(typeof slot === 'string');
+        const trace = (/**@type{unknown}*/ msg) => console.debug(c.cyan('[TRACE]'), c.dim(msg));
         const value = await getHtsStorageAt(address, slot, mirrorNodeClient, { trace }, reqId);
         return value ?? ZERO_HEX_32_BYTE;
     },
@@ -157,6 +194,7 @@ http.createServer(function (req, res) {
     assert(req.method === 'POST', 'Only POST allowed');
 
     // https://nodejs.org/en/learn/modules/anatomy-of-an-http-transaction
+    /** @type {Uint8Array[]} */
     let chunks = [];
     req.on('data', chunk => {
         chunks.push(chunk);
@@ -167,7 +205,7 @@ http.createServer(function (req, res) {
 
         assert(jsonrpc === '2.0', 'Only JSON-RPC 2.0');
 
-        const handler = eth[method];
+        const handler = eth[/**@type{keyof typeof eth}*/(method)];
         assert(handler !== undefined, `Method not supported: ${method}`);
         const reqId = `[Req ID: ${id}]`;
         const result = await handler(params, reqId);
