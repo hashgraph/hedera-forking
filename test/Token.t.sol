@@ -6,11 +6,9 @@ import {IERC20Events, IERC20} from "../src/IERC20.sol";
 import {MocksToStorageLoader} from "./MocksToStorageLoader.sol";
 import {HtsSystemContract} from "./HTS.t.sol";
 import {SharedTestSetup} from "./SharedTestSetup.sol";
-
 import {stdStorage, StdStorage} from "forge-std/Test.sol";
 
-
-using stdStorage for StdStorage;
+    using stdStorage for StdStorage;
 
 interface MethodNotSupported {
     function methodNotSupported() external view returns (uint256);
@@ -79,8 +77,10 @@ contract TokenTest is Test, SharedTestSetup, IERC20Events {
         address bob = makeAddr("bob");
 
         if (address(loader) != address(0)) {
-            loader.assignEvmAccountAddress(alice, 1);
-            loader.assignEvmAccountAddress(bob, 2);
+            address[] memory accounts = new address[](2);
+            accounts[0] = alice;
+            accounts[1] = bob;
+            loader.assignAccountIdsToEVMAddresses(accounts);
         }
 
         assertEq(IERC20(USDC).balanceOf(bob), 0);
@@ -128,7 +128,9 @@ contract TokenTest is Test, SharedTestSetup, IERC20Events {
         address owner = address(0x100000000000000000000000000000000040984f);
         address spender = makeAddr("alice");
         if (address(loader) != address(0)) {
-            loader.assignEvmAccountAddress(spender, 1);
+            address[] memory accounts = new address[](1);
+            accounts[0] = spender;
+            loader.assignAccountIdsToEVMAddresses(accounts);
         }
         assertEq(IERC20(USDC).allowance(owner, spender), 0);
     }
@@ -202,8 +204,10 @@ contract TokenTest is Test, SharedTestSetup, IERC20Events {
         address bob = makeAddr("bob");
         address charlie = makeAddr("charlie");
         if (address(loader) != address(0)) {
-            loader.assignEvmAccountAddress(bob, 1);
-            loader.assignEvmAccountAddress(charlie, 2);
+            address[] memory accounts = new address[](2);
+            accounts[0] = bob;
+            accounts[1] = charlie;
+            loader.assignAccountIdsToEVMAddresses(accounts);
         }
         uint256 allowanceAmount = 10_000000;
         uint256 transferAmount = 4_000000;
