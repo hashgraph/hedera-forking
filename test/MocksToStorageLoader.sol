@@ -52,7 +52,7 @@ contract MocksToStorageLoader is CommonBase, StdCheats {
         }
     }
 
-    function _assignEvmAccountAddress(address account, uint256 accountId) internal {
+    function assignEvmAccountAddress(address account, uint256 accountId) public {
         stdstore
             .target(HTS)
             .sig(HtsSystemContract.getAccountId.selector)
@@ -64,13 +64,7 @@ contract MocksToStorageLoader is CommonBase, StdCheats {
         string memory path = string.concat(vm.projectRoot(), "/test/data/getAccount_", vm.toLowercase(vm.toString(account)), ".json");
         string memory json = vm.readFile(path);
         uint256 accountId = vm.parseUint(vm.replace(abi.decode(vm.parseJson(json, ".account"), (string)), "0.0.", ""));
-        _assignEvmAccountAddress(account, accountId);
-    }
-
-    function assignAccountIdsToEVMAddresses(address[] memory accounts) public {
-        for (uint256 i = 0; i < accounts.length; i++) {
-            _assignEvmAccountAddress(accounts[i], i + 1);
-        }
+        assignEvmAccountAddress(account, accountId);
     }
 
     function deployTokenProxyBytecode(address tokenAddress) internal {

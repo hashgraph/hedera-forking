@@ -47,6 +47,15 @@ contract TokenTest is Test, SharedTestSetup, IERC20Events {
         }
     }
 
+    function _makeAddrWithAssignedAccountId(string memory addressAlias, uint256 accountId) internal returns (address) {
+        address account = makeAddr(addressAlias);
+        if (address(loader) != address(0)) {
+            loader.assignEvmAccountAddress(account, accountId);
+        }
+
+        return account;
+    }
+
     function test_ERC20_name() view external {
         assertEq(IERC20(USDC).name(), "USD Coin");
     }
@@ -73,15 +82,8 @@ contract TokenTest is Test, SharedTestSetup, IERC20Events {
     }
 
     function test_ERC20_balanceOf_deal() external {
-        address alice = makeAddr("alice");
-        address bob = makeAddr("bob");
-
-        if (address(loader) != address(0)) {
-            address[] memory accounts = new address[](2);
-            accounts[0] = alice;
-            accounts[1] = bob;
-            loader.assignAccountIdsToEVMAddresses(accounts);
-        }
+        address alice = _makeAddrWithAssignedAccountId("alice", 1);
+        address bob = _makeAddrWithAssignedAccountId("bob", 2);
 
         assertEq(IERC20(USDC).balanceOf(bob), 0);
 
@@ -126,12 +128,7 @@ contract TokenTest is Test, SharedTestSetup, IERC20Events {
     function test_ERC20_allowance_empty() external {
         // https://hashscan.io/testnet/account/0.0.4233295
         address owner = address(0x100000000000000000000000000000000040984f);
-        address spender = makeAddr("alice");
-        if (address(loader) != address(0)) {
-            address[] memory accounts = new address[](1);
-            accounts[0] = spender;
-            loader.assignAccountIdsToEVMAddresses(accounts);
-        }
+        address spender = _makeAddrWithAssignedAccountId("alice", 1);
         assertEq(IERC20(USDC).allowance(owner, spender), 0);
     }
 
@@ -201,14 +198,8 @@ contract TokenTest is Test, SharedTestSetup, IERC20Events {
     function test_ERC20_transferFrom_should_transfer_and_spend_allowance() external {
         // https://hashscan.io/testnet/account/0.0.1421
         address alice = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
-        address bob = makeAddr("bob");
-        address charlie = makeAddr("charlie");
-        if (address(loader) != address(0)) {
-            address[] memory accounts = new address[](2);
-            accounts[0] = bob;
-            accounts[1] = charlie;
-            loader.assignAccountIdsToEVMAddresses(accounts);
-        }
+        address bob = _makeAddrWithAssignedAccountId("bob", 1);
+        address charlie = _makeAddrWithAssignedAccountId("charlie", 2);
         uint256 allowanceAmount = 10_000000;
         uint256 transferAmount = 4_000000;
 
