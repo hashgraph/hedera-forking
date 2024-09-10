@@ -77,10 +77,7 @@ contract TokenTest is Test, SharedTestSetup, IERC20Events {
         address bob = makeAddr("bob");
 
         if (address(loader) != address(0)) {
-            address[] memory accounts = new address[](2);
-            accounts[0] = alice;
-            accounts[1] = bob;
-            loader.assignAccountIdsToEVMAddresses(accounts);
+            loader.assignAccountIdsToEVMAddresses(alice, bob);
         }
 
         assertEq(IERC20(USDC).balanceOf(bob), 0);
@@ -129,8 +126,7 @@ contract TokenTest is Test, SharedTestSetup, IERC20Events {
         address spender = makeAddr("alice");
         if (address(loader) != address(0)) {
             address[] memory accounts = new address[](1);
-            accounts[0] = spender;
-            loader.assignAccountIdsToEVMAddresses(accounts);
+            loader.assignAccountIdsToEVMAddresses(spender);
         }
         assertEq(IERC20(USDC).allowance(owner, spender), 0);
     }
@@ -169,7 +165,7 @@ contract TokenTest is Test, SharedTestSetup, IERC20Events {
         uint256 balanceOfOwner = IERC20(USDC).balanceOf(owner);
         assertGt(balanceOfOwner, 0);
         assertEq(IERC20(USDC).balanceOf(to), 0);
-        
+
         vm.prank(owner); // https://book.getfoundry.sh/cheatcodes/prank
         vm.expectEmit(USDC);
         emit Transfer(owner, to, amount);
@@ -205,9 +201,7 @@ contract TokenTest is Test, SharedTestSetup, IERC20Events {
         address charlie = makeAddr("charlie");
         if (address(loader) != address(0)) {
             address[] memory accounts = new address[](2);
-            accounts[0] = bob;
-            accounts[1] = charlie;
-            loader.assignAccountIdsToEVMAddresses(accounts);
+            loader.assignAccountIdsToEVMAddresses(bob, charlie);
         }
         uint256 allowanceAmount = 10_000000;
         uint256 transferAmount = 4_000000;

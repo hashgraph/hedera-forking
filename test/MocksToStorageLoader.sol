@@ -67,10 +67,13 @@ contract MocksToStorageLoader is CommonBase, StdCheats {
         _assignEvmAccountAddress(account, accountId);
     }
 
-    function assignAccountIdsToEVMAddresses(address[] memory accounts) public {
-        for (uint256 i = 0; i < accounts.length; i++) {
-            _assignEvmAccountAddress(accounts[i], i + 1);
-        }
+    function assignAccountIdsToEVMAddresses(address firstAddress) public {
+        _assignEvmAccountAddress(firstAddress, 1);
+    }
+
+    function assignAccountIdsToEVMAddresses(address firstAddress, address secondAddress) public {
+        _assignEvmAccountAddress(firstAddress, 1);
+        _assignEvmAccountAddress(secondAddress, 2);
     }
 
     function deployTokenProxyBytecode(address tokenAddress) internal {
