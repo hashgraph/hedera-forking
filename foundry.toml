@@ -5,4 +5,7 @@ libs = ["lib"]
 
 extra_output = ["storageLayout"]
 
+# Grant (test) contracts access to read files (`vm.readFile`) only inside the `./test` folder.
+fs_permissions = [{ access = "read", path = "./test"}]
+
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

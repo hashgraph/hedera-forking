@@ -3,6 +3,7 @@ pragma solidity ^0.8.17;
 
 import {Test, console} from "forge-std/Test.sol";
 import {IERC20Events, IERC20} from "../src/IERC20.sol";
+import {TestSetup} from "./lib/TestSetup.sol";
 
 interface MethodNotSupported {
     function methodNotSupported() external view returns (uint256);
@@ -21,16 +22,10 @@ interface MethodNotSupported {
  * To get USDC balances for a given account using the Mirror Node you can use
  * https://mainnet.mirrornode.hedera.com/api/v1/tokens/0.0.456858/balances?account.id=0.0.38047
  */
-contract TokenTest is Test, IERC20Events {
+contract TokenTest is Test, TestSetup, IERC20Events {
 
-    /**
-     * https://hashscan.io/testnet/token/0.0.429274
-     * https://testnet.mirrornode.hedera.com/api/v1/tokens/0.0.429274
-     */
-    address USDC = 0x0000000000000000000000000000000000068cDa;
-
-    function setUp() external view {
-        console.log("HTS code has %d bytes", address(0x167).code.length);
+    function setUp() external {
+        setUpMockStorageForNonFork();
     }
 
     function test_ERC20_name() view external {
@@ -38,8 +33,7 @@ contract TokenTest is Test, IERC20Events {
     }
 
     function test_ERC20_large_name() view external {
-        address customToken = 0x0000000000000000000000000000000000483077;
-        assertEq(IERC20(customToken).name(), "My Crypto Token is the name which the string length is greater than 31");
+        assertEq(IERC20(MFCT).name(), "My Crypto Token is the name which the string length is greater than 31");
     }
 
     function test_ERC20_symbol() view external {
@@ -62,6 +56,8 @@ contract TokenTest is Test, IERC20Events {
     function test_ERC20_balanceOf_deal() external {
         address alice = makeAddr("alice");
         address bob = makeAddr("bob");
+
+        assignAccountIdsToEVMAddressesForNonFork(alice, bob);
 
         assertEq(IERC20(USDC).balanceOf(bob), 0);
 
@@ -97,7 +93,7 @@ contract TokenTest is Test, IERC20Events {
 
     function test_ERC20_allowance() view external {
         // https://hashscan.io/testnet/account/0.0.4233295
-        address owner = address(0x100000000000000000000000000000000040984f);
+        address owner = address(0x000000000000000000000000000000000040984F);
         // https://hashscan.io/testnet/account/0.0.1335
         address spender = 0x0000000000000000000000000000000000000537;
         assertEq(IERC20(USDC).allowance(owner, spender), 5_000000);
@@ -105,8 +101,11 @@ contract TokenTest is Test, IERC20Events {
 
     function test_ERC20_allowance_empty() external {
         // https://hashscan.io/testnet/account/0.0.4233295
-        address owner = address(0x100000000000000000000000000000000040984f);
+        address owner = address(0x000000000000000000000000000000000040984F);
         address spender = makeAddr("alice");
+
+        assignAccountIdsToEVMAddressesForNonFork(spender);
+
         assertEq(IERC20(USDC).allowance(owner, spender), 0);
     }
 
@@ -144,7 +143,7 @@ contract TokenTest is Test, IERC20Events {
         uint256 balanceOfOwner = IERC20(USDC).balanceOf(owner);
         assertGt(balanceOfOwner, 0);
         assertEq(IERC20(USDC).balanceOf(to), 0);
-        
+
         vm.prank(owner); // https://book.getfoundry.sh/cheatcodes/prank
         vm.expectEmit(USDC);
         emit Transfer(owner, to, amount);
@@ -178,6 +177,9 @@ contract TokenTest is Test, IERC20Events {
         address alice = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
         address bob = makeAddr("bob");
         address charlie = makeAddr("charlie");
+
+        assignAccountIdsToEVMAddressesForNonFork(bob, charlie);
+
         uint256 allowanceAmount = 10_000000;
         uint256 transferAmount = 4_000000;
 
