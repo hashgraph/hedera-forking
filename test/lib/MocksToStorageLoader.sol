@@ -5,19 +5,19 @@ import {console} from "forge-std/console.sol";
 import {StdStorage, stdStorage} from "forge-std/StdStorage.sol";
 import {CommonBase} from "forge-std/Base.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
-import {IERC20} from "../src/IERC20.sol";
-import {HtsSystemContract} from "../src/HtsSystemContract.sol";
-
-    using stdStorage for StdStorage;
+import {IERC20} from "../../src/IERC20.sol";
+import {HtsSystemContract} from "../../src/HtsSystemContract.sol";
 
 contract MocksToStorageLoader is CommonBase, StdCheats {
+    using stdStorage for StdStorage;
+
     address HTS;
 
     constructor(address _HTS) {
         HTS = _HTS;
     }
 
-    function _assignStringToSlot(address target, uint256 startingSlot, string memory value) internal {
+    function _assignStringToSlot(address target, uint256 startingSlot, string memory value) private {
         if (bytes(value).length <= 31) {
             bytes32 rightPaddedSymbol;
             assembly {
@@ -52,41 +52,29 @@ contract MocksToStorageLoader is CommonBase, StdCheats {
         }
     }
 
-    function _assignEvmAccountAddress(address account, uint256 accountId) internal {
-        stdstore
-            .target(HTS)
-            .sig(HtsSystemContract.getAccountId.selector)
-            .with_key(account)
-            .checked_write(accountId);
+    function _loadAccountData(address account) private {
+        string memory path = string.concat("./test/data/getAccount_", vm.toLowercase(vm.toString(account)), ".json");
+        uint256 accountId;
+        if (vm.isFile(path)) {
+            string memory json = vm.readFile(path);
+            accountId = vm.parseUint(vm.replace(abi.decode(vm.parseJson(json, ".account"), (string)), "0.0.", ""));
+        } else {
+            accountId = uint160(account);
+        }
+        assignEvmAccountAddress(account, accountId);
     }
 
-    function _loadAccountData(address account) internal {
-        string memory path = string.concat(vm.projectRoot(), "/test/data/getAccount_", vm.toLowercase(vm.toString(account)), ".json");
-        string memory json = vm.readFile(path);
-        uint256 accountId = vm.parseUint(vm.replace(abi.decode(vm.parseJson(json, ".account"), (string)), "0.0.", ""));
-        _assignEvmAccountAddress(account, accountId);
-    }
-
-    function assignAccountIdsToEVMAddresses(address firstAddress) public {
-        _assignEvmAccountAddress(firstAddress, 1);
-    }
-
-    function assignAccountIdsToEVMAddresses(address firstAddress, address secondAddress) public {
-        _assignEvmAccountAddress(firstAddress, 1);
-        _assignEvmAccountAddress(secondAddress, 2);
-    }
-
-    function deployTokenProxyBytecode(address tokenAddress) internal {
+    function _deployTokenProxyBytecode(address tokenAddress) private {
         string memory placeholder = "fefefefefefefefefefefefefefefefefefefefe";
-        string memory bytecodePath = string.concat(vm.projectRoot(), "/test/lib/HIP719.bytecode");
+        string memory bytecodePath = string.concat("./test/lib/HIP719.bytecode");
         string memory addressString = vm.replace(vm.toLowercase(vm.toString(tokenAddress)), "0x", "");
         string memory updatedBytecode = vm.replace(vm.readFile(bytecodePath), placeholder, addressString);
         vm.etch(tokenAddress, vm.parseBytes(updatedBytecode));
     }
 
-    function _loadTokenData(address tokenAddress, string memory configName) internal {
-        deployTokenProxyBytecode(tokenAddress);
-        string memory path = string.concat(vm.projectRoot(), "/test/data/", configName, "/getToken.json");
+    function _loadTokenData(address tokenAddress, string memory tokenSymbol) private {
+        _deployTokenProxyBytecode(tokenAddress);
+        string memory path = string.concat("./test/data/", tokenSymbol, "/getToken.json");
         string memory json = vm.readFile(path);
         string memory name = abi.decode(vm.parseJson(json, ".name"), (string));
         uint256 decimals = uint8(vm.parseUint(abi.decode(vm.parseJson(json, ".decimals"), (string))));
@@ -106,12 +94,10 @@ contract MocksToStorageLoader is CommonBase, StdCheats {
         _assignStringToSlot(tokenAddress, 1, symbol);
     }
 
-    function _loadAllowancesOfAnAccount(address tokenAddress, string memory configName, address ownerEVMAddress, address spenderEVMAddress) internal {
+    function _loadAllowancesOfAnAccount(address tokenAddress, string memory tokenSymbol, address ownerEVMAddress, address spenderEVMAddress) private {
         uint256 ownerId = HtsSystemContract(HTS).getAccountId(ownerEVMAddress);
-        string memory ownerIdString = vm.toString(ownerId);
         uint256 spenderId = HtsSystemContract(HTS).getAccountId(spenderEVMAddress);
-        string memory spenderIdString = vm.toString(spenderId);
-        string memory path = string.concat(vm.projectRoot(), "/test/data/", configName, "/getAllowanceForToken_0.0.", ownerIdString, "_0.0.", spenderIdString, ".json");
+        string memory path = string.concat("./test/data/", tokenSymbol, "/getAllowanceForToken_0.0.", vm.toString(ownerId), "_0.0.", vm.toString(spenderId), ".json");
         uint256 allowance = 0;
 
         try vm.readFile(path) returns (string memory json) {
@@ -119,21 +105,28 @@ contract MocksToStorageLoader is CommonBase, StdCheats {
                 allowance = abi.decode(vm.parseJson(json, ".allowances[0].amount"), (uint256));
             }
         } catch {
-            console.log(string.concat("Allowances are not configured for token ", configName, " in path", path));
+            console.log(string.concat("Allowances are not configured for token ", tokenSymbol, " in path", path));
         }
 
-        stdstore
-            .target(tokenAddress)
-            .sig(IERC20.allowance.selector)
-            .with_key(ownerEVMAddress)
-            .with_key(spenderEVMAddress)
-            .checked_write(allowance);
+        // This bit is written using the `stdStorage` library explicitly
+        // instead of chaining methods to avoid `Stack too deep` error:
+        //
+        // ```
+        // CompilerError: Stack too deep.
+        // Try compiling with `--via-ir` (cli) or the equivalent `viaIR: true` (standard JSON) while enabling the optimizer.
+        // Otherwise, try removing local variables.
+        // ```
+        stdStorage.target(stdstore, tokenAddress);
+        stdStorage.sig(stdstore, IERC20.allowance.selector);
+        stdStorage.with_key(stdstore, ownerEVMAddress);
+        stdStorage.with_key(stdstore, spenderEVMAddress);
+        stdStorage.checked_write(stdstore, allowance);
     }
 
-    function _loadBalanceOfAnAccount(address tokenAddress, string memory configName, address accountEVMAddress) internal {
+    function _loadBalanceOfAnAccount(address tokenAddress, string memory tokenSymbol, address accountEVMAddress) private {
         uint256 accountId = HtsSystemContract(HTS).getAccountId(accountEVMAddress);
         string memory accountIdString = vm.toString(accountId);
-        string memory path = string.concat(vm.projectRoot(), "/test/data/", configName, "/getBalanceOfToken_0.0.", accountIdString, ".json");
+        string memory path = string.concat("./test/data/", tokenSymbol, "/getBalanceOfToken_0.0.", accountIdString, ".json");
         uint256 balance = 0;
 
         try vm.readFile(path) returns (string memory json) {
@@ -141,7 +134,7 @@ contract MocksToStorageLoader is CommonBase, StdCheats {
                 balance = abi.decode(vm.parseJson(json, ".balances[0].balance"), (uint256));
             }
         } catch {
-            console.log(string.concat("Balances are not configured for token ", configName, " in path", path));
+            console.log(string.concat("Balances are not configured for token ", tokenSymbol, " in path", path));
         }
 
         stdstore
@@ -151,18 +144,26 @@ contract MocksToStorageLoader is CommonBase, StdCheats {
             .checked_write(balance);
     }
 
+    function assignEvmAccountAddress(address account, uint256 accountId) public {
+        stdstore
+            .target(HTS)
+            .sig(HtsSystemContract.getAccountId.selector)
+            .with_key(account)
+            .checked_write(accountId);
+    }
+
     function loadHts() external {
         deployCodeTo("HtsSystemContract.sol", HTS);
         _loadAccountData(0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15);
         _loadAccountData(0x0000000000000000000000000000000000000887);
         _loadAccountData(0x0000000000000000000000000000000000000537);
-        _loadAccountData(0x100000000000000000000000000000000040984f);
+        _loadAccountData(0x000000000000000000000000000000000040984F);
     }
 
-    function loadToken(address tokenAddress, string memory tokenConfigName) external {
-        _loadTokenData(tokenAddress, tokenConfigName);
-        _loadBalanceOfAnAccount(tokenAddress, tokenConfigName, 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15);
-        _loadBalanceOfAnAccount(tokenAddress, tokenConfigName, 0x0000000000000000000000000000000000000887);
-        _loadAllowancesOfAnAccount(tokenAddress, tokenConfigName, 0x100000000000000000000000000000000040984f, 0x0000000000000000000000000000000000000537);
+    function loadToken(address tokenAddress, string memory tokenSymbol) external {
+        _loadTokenData(tokenAddress, tokenSymbol);
+        _loadBalanceOfAnAccount(tokenAddress, tokenSymbol, 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15);
+        _loadBalanceOfAnAccount(tokenAddress, tokenSymbol, 0x0000000000000000000000000000000000000887);
+        _loadAllowancesOfAnAccount(tokenAddress, tokenSymbol, 0x000000000000000000000000000000000040984F, 0x0000000000000000000000000000000000000537);
     }
 }

@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.17;
 
-import {Test, console} from "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 import {HtsSystemContract} from "../src/HtsSystemContract.sol";
-import {MocksToStorageLoader} from "./MocksToStorageLoader.sol";
-import {SharedTestSetup} from "./SharedTestSetup.sol";
+import {TestSetup} from "./lib/TestSetup.sol";
 
-contract HTSTest is Test, SharedTestSetup {
+contract HTSTest is Test, TestSetup {
+
     function setUp() external {
-        console.log("HTS code has %d bytes", address(0x167).code.length);
-        if (HTS.code.length == 0) new MocksToStorageLoader(HTS).loadHts();
+        setUpMockStorageForNonFork();
     }
 
     function test_HTS_should_revert_when_not_enough_calldata() external {
