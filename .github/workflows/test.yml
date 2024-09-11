@@ -14,6 +14,12 @@ on:
 env:
   FOUNDRY_PROFILE: ci
 
+  # This enables colored output for tests run by `mocha`.
+  # `FORCE_COLOR` is used by `chalk`, which is used internally by `mocha`.
+  # https://github.com/chalk/chalk#supportscolor
+  # https://github.com/orgs/community/discussions/26944#discussioncomment-3254075
+  FORCE_COLOR: 3
+
 jobs:
 
   type-check:
