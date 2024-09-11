@@ -6,6 +6,7 @@
 
 const { strict: assert } = require('assert');
 const http = require('http');
+const { readFileSync } = require('fs');
 
 const { getHtsCode, getHtsStorageAt } = require('@hashgraph/hedera-forking');
 const { HTSAddress, ZERO_HEX_32_BYTE } = require('../utils');
@@ -28,24 +29,35 @@ const c = {
  * [`hedera-services`](https://github.com/hashgraph/hedera-services/blob/fbac99e75c27bf9c70ebc78c5de94a9109ab1851/hedera-node/hedera-smart-contract-service-impl/src/main/java/com/hedera/node/app/service/contract/impl/state/DispatchingEvmFrameState.java#L96)
  * implementation.
  * 
- * The **template** bytecode was obtained using the `eth_getCode` JSON-RPC method with an HTS token.
+ * The **template** bytecode can also be obtained using the `eth_getCode` JSON-RPC method with an HTS token.
  * For example, for `USDC` https://hashscan.io/testnet/token/0.0.429274
  * 
  * ```sh
  * cast code --rpc-url https://testnet.hashio.io/api 0x0000000000000000000000000000000000068cDa
  * ```
  * 
+ * > The template bytecode is loaded from `test/lib/HIP719.bytecode`
+ * > so it can be shared with Solidity tests.
+ * 
  * @param {string} address The token contract `address` to replace.
  * @returns {string} The bytecode for token proxy contract with the replaced `address`.
  */
-function getHIP719Code(address) {
-    assert(address.startsWith('0x'), `address must start with \`0x\` prefix: ${address}`);
-    assert(address.length === 2 + 40, `address must be a valid Ethereum address: ${address}`);
-    return `0x6080604052348015600f57600080fd5b506000610167905077618dc65e${address.slice(2)}600052366000602037600080366018016008845af43d806000803e8160008114605857816000f35b816000fdfea2646970667358221220d8378feed472ba49a0005514ef7087017f707b45fb9bf56bb81bb93ff19a238b64736f6c634300080b0033`;
-}
+const getHIP719Code = function () {
+    const hip719BytecodePath = './test/lib/HIP719.bytecode';
+    console.info(c.cyan('[INFO]'), 'Load HIP719 template bytecode from', c.yellow(hip719BytecodePath));
+    const templateBytecode = readFileSync(hip719BytecodePath, 'utf8');
+    return (/**@type{string}*/address) => {
+        assert(address.startsWith('0x'), `address must start with \`0x\` prefix: ${address}`);
+        assert(address.length === 2 + 40, `address must be a valid Ethereum address: ${address}`);
+        return templateBytecode.replace('fefefefefefefefefefefefefefefefefefefefe', address.slice(2));
+    };
+}();
 
 /**
  * Determines whether `address` should be treated as a HIP-719 token proxy contract.
+ * 
+ * This is done by checking whether `address` is one of the Token addresses configured in the mock data.
+ * The mock data can be found under `test/data/`.
  * 
  * @param {string} address 
  * @returns {boolean}
@@ -133,11 +145,11 @@ const eth = {
     eth_getStorageAt: async ([address, slot, _blockNumber], reqId) => {
         /**
          * Loads and returns the module indicated by `path` if exists.
-         * The `path` is relative to `./test/data/`.
+         * The `path` is relative to `test/data/`.
          * In case the module does not exist, it returns `defaultValue`.
          * 
          * @template T
-         * @param {string} path of the module relative to `./test/data/`.
+         * @param {string} path of the module relative to `test/data/`.
          * @param {T} defaultValue The value to return when `path`.
          * @returns {T} The loaded module indicated by `path` if exists. Otherwise `defaultValue`.
          */
@@ -185,7 +197,7 @@ const eth = {
     },
 };
 
-console.log(c.cyan('[INFO]'), 'Tokens mock configuration', tokens);
+console.log(c.cyan('[INFO]'), 'Tokens mock configuration loaded from', c.yellow('./test/data/'), tokens);
 
 const port = process.env['PORT'] ?? 7546;
 console.info(c.yellow('[HINT]'), `Remember to disable Foundry's storage cache using the \`${c.yellow('--no-storage-caching')}\` flag`);

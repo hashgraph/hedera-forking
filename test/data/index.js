@@ -3,7 +3,14 @@ const { readdirSync, readFileSync } = require('fs');
 
 module.exports = {
     /**
-     * Tokens mock configuration.
+     * Tokens mock data loaded from `test/data/`.
+     * The keys of this object are the token account IDs, _i.e._, `shardNum.realmNum.accountId`,
+     * for example `0.0.429274`.
+     * The EVM `address` is then computed by converting the `accountId` to its hexadecimal representation
+     * (and padding accordingly).
+     * 
+     * Each folder under `test/data/` represents a token identified by its symbol.
+     * In turn, each token folder should contain a `getToken.json` that matches the response from `GET /api/v1/tokens/{tokenId}`.
      */
     tokens: function (/**@type {{[tokenId: string]: {symbol: string, address: string}}}*/ tokens) {
         const tokensMockPath = './test/data';
