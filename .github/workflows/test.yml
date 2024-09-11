@@ -45,7 +45,8 @@ jobs:
     name: '@hashgraph/hedera-forking Unit Tests'
     runs-on: smart-contracts-linux-medium
     steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+      - name: Checkout Code 
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
           submodules: recursive
 
@@ -64,7 +65,8 @@ jobs:
     name: 'Solidity tests + local storage emulation (without forking)'
     runs-on: smart-contracts-linux-medium
     steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+      - name: Checkout Code 
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
           submodules: recursive
 
@@ -86,7 +88,8 @@ jobs:
     name: 'Solidity tests + JSON-RPC mock server for storage emulation (with forking)'
     runs-on: smart-contracts-linux-medium
     steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+      - name: Checkout Code 
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
           submodules: recursive
 
