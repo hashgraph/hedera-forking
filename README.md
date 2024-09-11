@@ -146,11 +146,27 @@ In other words, they do not use the `HtsSystemContract` bytecode, only its `stor
 npm run test
 ```
 
-### `HtsSystemContract` Solidity tests + JSON-RPC mock server for storage emulation (with forking)
+### `HtsSystemContract` Solidity tests + local storage emulation (_without_ forking)
 
-These Solidity tests are used to test both the `HtsSystemContract` and the `hedera-forking` package.
+Foundry provides a Std Storage library, _"that makes manipulating storage easy"_.
+See <https://book.getfoundry.sh/reference/forge-std/std-storage> for more information.
+
+We use the Std Storage library to provide local storage emulation that allow us to run `HtsSystemContract` Solidity tests without starting out a separate JSON-RPC process.
+
+```console
+forge test
+```
+
+> [!NOTE]
+> When running these tests **without** forking from a remote network,
+> the package `@hashgraph/hedera-forking` is not under test.
+
+### `HtsSystemContract` Solidity tests + JSON-RPC mock server for storage emulation (_with_ forking)
+
+These Solidity tests are used to test both the `HtsSystemContract` and the `@hashgraph/hedera-forking` package.
 Instead of starting a `local-node` or using a remote network,
 they use the [`json-rpc-mock.js`](./scripts/json-rpc-mock.js) script as a backend without the need for any additional service.
+This is the network Foundry's Anvil is forking from.
 
 In a separate terminal run the JSON-RPC Mock Server
 
