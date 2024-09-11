@@ -45,6 +45,11 @@ jobs:
     name: '@hashgraph/hedera-forking Unit Tests'
     runs-on: smart-contracts-linux-medium
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@5c7944e73c4c2a096b17a9cb74d65b6c2bbafbde # v2.9.1
+        with:
+          egress-policy: audit
+
       - name: Checkout Code 
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
@@ -65,6 +70,11 @@ jobs:
     name: 'Solidity tests + local storage emulation (without forking)'
     runs-on: smart-contracts-linux-medium
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@5c7944e73c4c2a096b17a9cb74d65b6c2bbafbde # v2.9.1
+        with:
+          egress-policy: audit
+
       - name: Checkout Code 
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
@@ -88,6 +98,11 @@ jobs:
     name: 'Solidity tests + JSON-RPC mock server for storage emulation (with forking)'
     runs-on: smart-contracts-linux-medium
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@5c7944e73c4c2a096b17a9cb74d65b6c2bbafbde # v2.9.1
+        with:
+          egress-policy: audit
+
       - name: Checkout Code 
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
