@@ -20,9 +20,6 @@ env:
   # https://github.com/orgs/community/discussions/26944#discussioncomment-3254075
   FORCE_COLOR: 3
 
-  #
-  CLICOLOR: 1
-
 jobs:
 
   type-check:
