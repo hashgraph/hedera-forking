@@ -1,37 +1,13 @@
-name: test
+name: Test
 
 on:
-  push:
+  pull_request:
     branches: []
 
 env:
   FOUNDRY_PROFILE: ci
 
 jobs:
-  check:
-    strategy:
-      fail-fast: true
-
-    name: Foundry project
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
-        with:
-          submodules: recursive
-
-      - name: Install Foundry
-        uses: step-security/foundry-toolchain@01e2d127ea061e2ce8fa34340de71ca8518f093e # v1.2.1
-        with:
-          version: nightly
-
-      - name: Run Forge build
-        run: |
-          forge --version
-          forge build --sizes
-
-      - name: Run Forge tests
-        run: |
-          forge test -vvv
 
   type-check:
     name: TypeScript Type-Check
@@ -42,9 +18,9 @@ jobs:
           submodules: recursive
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
         with:
-          node-version: '16'
+          node-version: '20'
 
       - name: Install Dependencies
         run: npm install
@@ -61,12 +37,67 @@ jobs:
           submodules: recursive
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
         with:
-          node-version: '16'
+          node-version: '20'
 
       - name: Install Dependencies
         run: npm install
 
       - name: Run Unit Tests
         run: npm run test
+
+  sol-tests-local-storage:
+    name: 'Solidity tests + local storage emulation (without forking)'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: step-security/foundry-toolchain@01e2d127ea061e2ce8fa34340de71ca8518f093e # v1.2.1
+        with:
+          version: nightly
+
+      - name: Run Forge build
+        run: |
+          forge --version
+          forge build --sizes
+
+      - name: Run Forge tests using local storage emulation (without forking)
+        run: |
+          forge test -vvv
+
+  sol-tests-json-rpc-mock:
+    name: 'Solidity tests + JSON-RPC mock server for storage emulation (with forking)'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+        with:
+          submodules: recursive
+
+      - name: Set up Node.js
+        uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Install Foundry
+        uses: step-security/foundry-toolchain@01e2d127ea061e2ce8fa34340de71ca8518f093e # v1.2.1
+        with:
+          version: nightly
+
+      - name: Run Forge build
+        run: |
+          forge --version
+          forge build --sizes
+
+      - name: Start JSON-RPC mock server
+        run: node scripts/json-rpc-mock.js &
+
+      - name: Run Forge tests using JSON-RPC mock server for storage emulation (with forking)
+        run: |
+          forge test -vvv --fork-url http://localhost:7546 --no-storage-caching
