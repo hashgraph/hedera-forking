@@ -48,7 +48,7 @@ jobs:
         run: npm run type-check
 
   unit-test:
-    name: '@hashgraph/hedera-forking Unit Tests'
+    name: 'NPM hedera-forking Unit Tests'
     runs-on: smart-contracts-linux-medium
     steps:
       - name: Harden Runner
@@ -73,7 +73,7 @@ jobs:
         run: npm run test
 
   sol-tests-local-storage:
-    name: 'Solidity tests + local storage emulation (without forking)'
+    name: 'Forge tests w/storage emulation'
     runs-on: smart-contracts-linux-medium
     steps:
       - name: Harden Runner
@@ -101,7 +101,7 @@ jobs:
           forge test -vvv
 
   sol-tests-json-rpc-mock:
-    name: 'Solidity tests + JSON-RPC mock server for storage emulation (with forking)'
+    name: 'Forge tests w/JSON-RPC mock server'
     runs-on: smart-contracts-linux-medium
     steps:
       - name: Harden Runner
