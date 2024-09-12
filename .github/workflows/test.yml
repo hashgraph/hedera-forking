@@ -48,7 +48,7 @@ jobs:
         run: npm run type-check
 
   unit-test:
-    name: 'NPM hedera-forking Unit Tests'
+    name: 'NPM Unit Tests'
     runs-on: smart-contracts-linux-medium
     steps:
       - name: Harden Runner
@@ -101,7 +101,7 @@ jobs:
           forge test -vvv
 
   sol-tests-json-rpc-mock:
-    name: 'Forge tests w/JSON-RPC mock server'
+    name: 'Forge tests w/RPC mock server'
     runs-on: smart-contracts-linux-medium
     steps:
       - name: Harden Runner
