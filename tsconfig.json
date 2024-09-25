@@ -23,6 +23,7 @@
   },
   "exclude": [
     "./launch-token/",
-    "lib"
+    "lib",
+    "test-e2e/waffle"
   ]
 }
