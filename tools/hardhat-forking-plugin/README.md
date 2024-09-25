@@ -33,3 +33,13 @@ module.exports = {
 ```
 
 This configuration enables you to test your code against actual token data stored on the Hedera mainnet.
+
+## Publishing
+
+In order to publish updated version of the plugin run:
+
+```bash
+npm publish
+```
+
+and follow prompted instructions. Privilege to add projects to the @hashgraph namespace are required.

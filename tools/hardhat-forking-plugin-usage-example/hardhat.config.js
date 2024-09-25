@@ -37,7 +37,7 @@ task("show-allowance", async (taskArgs) => {
   return showAllowance(taskArgs.contractAddress, taskArgs.accountAddress, taskArgs.spenderAddress);
 });
 
-/** @type import('arianejasuwienas-hardhat-hedera').HeaderaHardhatConfig */
+/** @type import('@hashgraph/hardhat-forking-plugin').HeaderaHardhatConfig */
 module.exports = {
   hedera: {
     mirrornode: 'https://testnet.mirrornode.hedera.com/api/v1/'
