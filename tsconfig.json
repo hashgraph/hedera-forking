@@ -22,6 +22,8 @@
     "noUnusedParameters": true
   },
   "exclude": [
-    "./launch-token/"
+    "./launch-token/",
+    "lib",
+    "tools"
   ]
 }

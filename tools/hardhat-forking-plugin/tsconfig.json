@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "module": "commonjs",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "./dist",
+    "resolveJsonModule": true,
+    "strict": true,
+    "rootDirs": ["./src", "./test"],
+    "esModuleInterop": true,
+    "lib": ["ES2020"]
+  },
+  "exclude": ["dist", "node_modules", "example"],
+  "include": [
+    "./test",
+    "./src",
+    "./out"
+  ]
+}
