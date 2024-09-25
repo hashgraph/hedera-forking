@@ -1,5 +1,5 @@
 {
-  "name": "arianejasuwienas-hedera-forking",
+  "name": "@hashgraph/hedera-forking",
   "version": "0.0.1",
   "description": "Hedera HTS Forking Support",
   "main": "./index.js",
