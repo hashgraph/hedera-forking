@@ -1,6 +1,6 @@
 {
   "name": "@hashgraph/hardhat-forking-plugin",
-  "version": "1.0.0",
+  "version": "1.0.7",
   "description": "Hashgraph Hardhat TypeScript plugin",
   "repository": "github:hashgraph/hardhat-forking-plugin",
   "author": "2024 Hedera Hashgraph, LLC",
@@ -19,6 +19,7 @@
   },
   "files": [
     "src/",
+    "out/",
     "README.md"
   ],
   "peerDependencies": {

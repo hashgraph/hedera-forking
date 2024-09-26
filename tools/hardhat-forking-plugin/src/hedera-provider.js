@@ -22,6 +22,7 @@ const path = require('path');
 const HTS = require('../out/HtsSystemContract.sol/HtsSystemContract.json');
 const MirrornodeClient = require('./client').MirrornodeClient;
 const { accountIdToHex, getAccountStorageSlot } = require('./utils');
+const {ProviderWrapper} = require("hardhat/plugins");
 
 const HTS_ADDRESS = '0x0000000000000000000000000000000000000167';
 
@@ -29,15 +30,14 @@ const HTS_ADDRESS = '0x0000000000000000000000000000000000000167';
  * HederaProvider is a wrapper around a Hardhat provider, enabling Hedera-related logic.
  * @class
  */
-class HederaProvider {
+class HederaProvider extends ProviderWrapper {
   /**
    * Creates an instance of HederaProvider.
    * @param {object} wrappedProvider - The provider being wrapped.
    * @param {MirrornodeClient} mirrornode - The client used to query the Hedera network's mirrornode.
    */
   constructor(wrappedProvider, mirrornode) {
-    /** @type {any} */
-    this._wrappedProvider = wrappedProvider;
+    super(wrappedProvider);
     /** @private {MirrornodeClient} */
     this.mirrornode = mirrornode;
     /** @type {string[]} */
