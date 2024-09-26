@@ -2,9 +2,9 @@
   "name": "waffle-project",
   "scripts": {
     "build": "waffle",
-    "test": "NODE_ENV=test mocha --timeout 100000 --no-warnings"
+    "test": "NODE_ENV=test mocha"
   },
-  "type": "commonjs",
+  "type": "module",
   "devDependencies": {
     "chai": "^5.1.1",
     "dotenv": "^16.4.5",
