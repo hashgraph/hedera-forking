@@ -16,33 +16,55 @@
  * limitations under the License.
  */
 
-import { keccak256, toUtf8Bytes } from 'ethers';
-import fs from 'fs';
-import { ProviderWrapper } from 'hardhat/plugins';
-import * as path from 'path';
+const { keccak256, toUtf8Bytes } = require('ethers');
+const fs = require('fs');
+const path = require('path');
+const HTS = require('../out/HtsSystemContract.sol/HtsSystemContract.json');
+const MirrornodeClient = require('./client').MirrornodeClient;
+const { accountIdToHex, getAccountStorageSlot } = require('./utils');
 
-import HTS from '../out/HtsSystemContract.sol/HtsSystemContract.json';
+const HTS_ADDRESS = '0x0000000000000000000000000000000000000167';
 
-import { MirrornodeClient } from './client';
-import { accountIdToHex, getAccountStorageSlot } from './utils';
-
-export const HTS_ADDRESS = '0x0000000000000000000000000000000000000167';
-
-export class HederaProvider extends ProviderWrapper {
-  private actionDone: string[] = [];
-  private requestId = 0;
-
-  constructor(protected readonly _wrappedProvider: any, protected mirrornode: MirrornodeClient) {
-    super(_wrappedProvider);
+/**
+ * HederaProvider is a wrapper around a Hardhat provider, enabling Hedera-related logic.
+ * @class
+ */
+class HederaProvider {
+  /**
+   * Creates an instance of HederaProvider.
+   * @param {object} wrappedProvider - The provider being wrapped.
+   * @param {MirrornodeClient} mirrornode - The client used to query the Hedera network's mirrornode.
+   */
+  constructor(wrappedProvider, mirrornode) {
+    /** @type {any} */
+    this._wrappedProvider = wrappedProvider;
+    /** @private {MirrornodeClient} */
+    this.mirrornode = mirrornode;
+    /** @type {string[]} */
+    this.actionDone = [];
+    /** @private {number} */
+    this.requestId = 0;
   }
 
-  public async request(args: any) {
+  /**
+   * Processes a request and ensures HTS code and token data are loaded before passing it to the provider.
+   * @param {object} args - The request arguments. Contains:
+   *    @param {string} args.method - The method to be called (e.g., 'eth_call').
+   *    @param {Array<{to: string, data: string}>} args.params - Array of parameters
+   * @returns {Promise<any>} - The result of the request.
+   */
+  async request(args) {
     await this.loadHTS();
     await this.loadToken(args);
     return this._wrappedProvider.request(args);
   }
 
-  private async loadHTS() {
+  /**
+   * Loads HTS code if it hasn't already been loaded.
+   * @private
+   * @returns {Promise<void>}
+   */
+  async loadHTS() {
     if (this.actionDone.includes('hts_code')) {
       return;
     }
@@ -60,7 +82,15 @@ export class HederaProvider extends ProviderWrapper {
     this.actionDone.push('hts_code');
   }
 
-  private async loadToken(args: any) {
+  /**
+   * Loads token data into storage for calls related to tokens.
+   * @private
+   * @param {object} args - The request arguments. Contains:
+   *    @param {string} args.method - The method to be called (e.g., 'eth_call').
+   *    @param {Array<{to: string, data: string}>} args.params - Array of parameters
+   * @returns {Promise<void>}
+   */
+  async loadToken(args) {
     const { method, params } = args;
     if (method !== 'eth_call') {
       return;
@@ -81,7 +111,13 @@ export class HederaProvider extends ProviderWrapper {
     }
   }
 
-  private async loadBaseTokenData(target: string) {
+  /**
+   * Loads base token data into storage for the specified token.
+   * @private
+   * @param {string} target - The target address of the token contract.
+   * @returns {Promise<void>}
+   */
+  async loadBaseTokenData(target) {
     if (this.actionDone.includes(`token_${target}`)) {
       return;
     }
@@ -98,11 +134,7 @@ export class HederaProvider extends ProviderWrapper {
           .replace('fefefefefefefefefefefefefefefefefefefefe', target.replace('0x', '')),
       ],
     });
-    const storageLayout: Array<{
-      label: string;
-      slot: string;
-      type: string;
-    }> = HTS.storageLayout.storage;
+    const storageLayout = HTS.storageLayout.storage;
     for (const layout of storageLayout) {
       const value = `${token[layout.label.replace(/([A-Z])/g, '_$1').toLowerCase()]}`;
       if (layout.type === 't_string_storage') {
@@ -118,7 +150,14 @@ export class HederaProvider extends ProviderWrapper {
     this.actionDone.push(`token_${target}`);
   }
 
-  private async loadBalanceOfAnAccount(account: string, target: string) {
+  /**
+   * Loads the balance of a specific account for the specified token.
+   * @private
+   * @param {string} account - The account address to load balance for.
+   * @param {string} target - The target token contract address.
+   * @returns {Promise<void>}
+   */
+  async loadBalanceOfAnAccount(account, target) {
     if (this.actionDone.includes(`balance_${account}`)) {
       return;
     }
@@ -137,7 +176,15 @@ export class HederaProvider extends ProviderWrapper {
     this.actionDone.push(`balance_${account}`);
   }
 
-  private async loadAllowancesOfOfAnAccount(owner: string, spender: string, target: string) {
+  /**
+   * Loads the allowance for a specific owner-spender pair for the specified token.
+   * @private
+   * @param {string} owner - The owner address.
+   * @param {string} spender - The spender address.
+   * @param {string} target - The target token contract address.
+   * @returns {Promise<void>}
+   */
+  async loadAllowancesOfOfAnAccount(owner, spender, target) {
     if (this.actionDone.includes(`allowance_${owner}_${spender}`)) {
       return;
     }
@@ -163,7 +210,14 @@ export class HederaProvider extends ProviderWrapper {
     this.actionDone.push(`allowance_${owner}_${spender}`);
   }
 
-  private async assignEvmAccountAddress(accountId: string, evmAddress: string) {
+  /**
+   * Assigns an EVM account address to a corresponding Hedera account ID.
+   * @private
+   * @param {string} accountId - The Hedera account ID.
+   * @param {string} evmAddress - The corresponding EVM address.
+   * @returns {Promise<void>}
+   */
+  async assignEvmAccountAddress(accountId, evmAddress) {
     if (this.actionDone.includes(`account_${accountId}`)) {
       return;
     }
@@ -175,7 +229,15 @@ export class HederaProvider extends ProviderWrapper {
     this.actionDone.push(`account_${accountId}`);
   }
 
-  private async loadStringIntoStorage(target: string, initialSlot: number, value: string) {
+  /**
+   * Loads a string value into the storage of the target contract.
+   * @private
+   * @param {string} target - The target contract address.
+   * @param {number} initialSlot - The initial storage slot.
+   * @param {string} value - The string value to store.
+   * @returns {Promise<void>}
+   */
+  async loadStringIntoStorage(target, initialSlot, value) {
     const [hexStr, lenByte] =
       value.length > 31 ? ['0', value.length * 2 + 1] : [Buffer.from(value).toString('hex'), value.length * 2];
     const storageMemory = `${hexStr.padEnd(64 - 2, '0')}${lenByte.toString(16).padStart(2, '0')}`;
@@ -193,14 +255,32 @@ export class HederaProvider extends ProviderWrapper {
     }
   }
 
-  private async assignValueToSlot(target: string, slot: string, value: string) {
+  /**
+   * Assigns a value to a specific storage slot of the target contract.
+   * @private
+   * @param {string} target - The target contract address.
+   * @param {string} slot - The storage slot.
+   * @param {string} value - The value to store.
+   * @returns {Promise<void>}
+   */
+  async assignValueToSlot(target, slot, value) {
     await this._wrappedProvider.request({
       method: 'hardhat_setStorageAt',
       params: [target, slot, value],
     });
   }
 
-  private reqId() {
+  /**
+   * Generates a unique request ID for this plugin's operations.
+   * @private
+   * @returns {string} - The request ID.
+   */
+  reqId() {
     return `hardhat-hedera-plugin-${this.requestId++}`;
   }
 }
+
+module.exports = {
+  HederaProvider,
+  HTS_ADDRESS,
+};
