@@ -61,6 +61,13 @@ class HederaProvider extends ProviderWrapper {
 
   /**
    * Loads HTS code if it hasn't already been loaded.
+   *
+   * This operation ensures that Hedera Network forks can function correctly, even when they attempt to call
+   * a precompile. If the fork's EVM is unaware of the precompile code, it won't be able to query it, as JSON RPC does
+   * not return this information—precompiles are specific to Hedera. Communicating with the 0x167 address will return
+   * data from the actual Hedera Token Service. Since the EVM does not handle this by default, we need to emulate
+   * this behavior in the forks for proper functionality. To achieve this, we are setting the HTS code here,
+   * which will mimic the behavior of the real HTS.
    * @private
    * @returns {Promise<void>}
    */
@@ -84,6 +91,18 @@ class HederaProvider extends ProviderWrapper {
 
   /**
    * Loads token data into storage for calls related to tokens.
+   *
+   * The primary purpose of using network forks is to test your own code against an existing infrastructure.
+   * In the context of Hedera, this means you can use tokens present on the forked network and execute operations
+   * with or against them. While we've already set the Hedera Token Service code in the previous step, each time
+   * we detect a call to a token's address, we will attempt to set that token's storage data, which is retrieved from
+   * the MirrorNode API. We are also setting its code (each token forwards requests to the HTS, but the data is
+   * queried from the specific token's storage).
+   *
+   * However, we don't load the entire token's memory at once. Instead, we always set the basic token information
+   * (such as name, balance, decimals, etc.). The relationships between tokens and users are dynamically loaded based
+   * on the incoming call request. We infer the required information, determine where it should be stored in the smart
+   * contract's memory, and set it before making the actual request.
    * @private
    * @param {object} args - The request arguments. Contains:
    *    @param {string} args.method - The method to be called (e.g., 'eth_call').
@@ -113,6 +132,13 @@ class HederaProvider extends ProviderWrapper {
 
   /**
    * Loads base token data into storage for the specified token.
+   *
+   * Sets the token proxy code and basic data into storage. When a request is directed to the address reserved
+   * for a Hedera token, we:
+   *  - Load the bytecode that emulates its behavior on the actual Hedera EVM into memory.
+   *  - Load its basic data, such as name and decimals, into the appropriate storage slots in
+   *    the smart contract's memory.
+   *
    * @private
    * @param {string} target - The target address of the token contract.
    * @returns {Promise<void>}

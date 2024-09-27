@@ -1,3 +1,23 @@
+/*-
+ *
+ * Hedera Hardhat Plugin Example Project
+ *
+ * Copyright (C) 2024 Hedera Hashgraph, LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
 require("@nomicfoundation/hardhat-toolbox-viem");
 require("@nomicfoundation/hardhat-chai-matchers");
 require("@hashgraph/hardhat-forking-plugin");
@@ -40,7 +60,7 @@ task("show-allowance", async (taskArgs) => {
 /** @type import('@hashgraph/hardhat-forking-plugin').HeaderaHardhatConfig */
 module.exports = {
   hedera: {
-    mirrornode: 'https://testnet.mirrornode.hedera.com/api/v1/'
+    mirrornode: process.env.HEDERA_MIRRORNODE_URL ? process.env.HEDERA_MIRRORNODE_URL: 'https://testnet.mirrornode.hedera.com/api/v1/'
   },
   mocha: {
     timeout: 3600000
@@ -59,7 +79,7 @@ module.exports = {
   networks: {
     local: {
       // Your Hedera Local Node address pulled from the .env file
-      url: process.env.LOCAL_NODE_ENDPOINT,
+      url: process.env.LOCAL_RPC_URL,
       // Conditionally assign accounts when private key value is present
       accounts: process.env.LOCAL_NODE_OPERATOR_PRIVATE_KEY ? [process.env.LOCAL_NODE_OPERATOR_PRIVATE_KEY] : []
     },
