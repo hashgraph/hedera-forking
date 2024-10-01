@@ -21,7 +21,6 @@
 require("@nomicfoundation/hardhat-toolbox-viem");
 require("@nomicfoundation/hardhat-chai-matchers");
 require("@hashgraph/hardhat-forking-plugin");
-const { task } = require("hardhat/config");
 
 // Import dotenv module to access variables stored in the .env file
 require("dotenv").config();
