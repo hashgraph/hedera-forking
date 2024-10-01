@@ -22,12 +22,19 @@ This will automatically replace the default HardHat provider with the one dedica
 
 ## Configuration
 
-By default, the plugin uses the Hedera testnet Mirrornode. To use a different endpoint, such as for mainnet, update your HardHat configuration as follows:
+By default, the plugin uses the Hedera Mirror Node based on the guessed chain ID from the current network.
+Only chain IDs 295 (Mainnet), 296 (Testnet), and 297 (Previewnet) are supported.
+
+If you want to mock our precompile for forked networks with different chain IDs or use a custom endpoint,
+update your Hardhat configuration as follows:
 
 ```javascript
 module.exports = {
   hedera: {
-    mirrornode: "https://mainnet-public.mirrornode.hedera.com/api/v1/",
+    chanis: {
+        chainId: 31337, // Default chain id for hardhat forks
+        mirrornode: "https://mainnet-public.mirrornode.hedera.com/api/v1/",
+    }
   }
 };
 ```

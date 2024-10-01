@@ -67,7 +67,7 @@ extendConfig((config, userConfig) => {
   config.hedera.chains = [
     {
       chainId: 295,
-      mirrornode: 'https://mainnet.mirrornode.hedera.com/api/v1/',
+      mirrornode: 'https://mainnet-public.mirrornode.hedera.com/api/v1/',
     },
     {
       chainId: 296,
