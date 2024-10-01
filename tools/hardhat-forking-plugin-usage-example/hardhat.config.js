@@ -59,9 +59,6 @@ task("show-allowance", async (taskArgs) => {
 
 /** @type import('@hashgraph/hardhat-forking-plugin').HeaderaHardhatConfig */
 module.exports = {
-  hedera: {
-    mirrornode: process.env.HEDERA_MIRRORNODE_URL ? process.env.HEDERA_MIRRORNODE_URL: 'https://testnet.mirrornode.hedera.com/api/v1/'
-  },
   mocha: {
     timeout: 3600000
   },
