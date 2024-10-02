@@ -25,6 +25,7 @@ describe('::projects', function () {
 
     [
         'hedera-fork-project',
+        'hedera-mainnet-project',
         'non-hedera-project',
     ].forEach(project => {
         describe(`entering project \`${project}\`...`, function () {
