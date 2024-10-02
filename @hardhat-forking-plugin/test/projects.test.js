@@ -20,14 +20,14 @@ const { expect } = require('chai');
 const { resetHardhatContext } = require('hardhat/plugins-testing');
 const path = require('path');
 
-describe('Hardhat Runtime Environment extension', function () {
+describe('::projects', function () {
     this.timeout(30000);
 
     [
-        'hardhat-project',
+        'hedera-fork-project',
         'non-hedera-project',
     ].forEach(project => {
-        describe(`project \`${project}\``, function () {
+        describe(`entering project \`${project}\`...`, function () {
 
             /**@type {import('hardhat/types').HardhatRuntimeEnvironment} */
             let hre;
@@ -40,7 +40,7 @@ describe('Hardhat Runtime Environment extension', function () {
                 resetHardhatContext();
             });
 
-            it('hardhat test', async function () {
+            it(`hardhat test for \`${project}\``, async function () {
                 const exitCode = await hre.run('test');
                 expect(exitCode).to.be.equal(0, 'hardhat test failed');
             });
