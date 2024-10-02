@@ -1,5 +1,5 @@
 /*-
- * Hedera Hardhat Plugin Project
+ * Hedera Hardhat Forking Plugin
  *
  * Copyright (C) 2024 Hedera Hashgraph, LLC
  *
