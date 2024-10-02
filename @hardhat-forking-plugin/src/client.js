@@ -22,7 +22,7 @@
 class MirrorNodeClient {
 
   /**
-   * Creates a new instance of the MirrornodeClient.
+   * Creates a new instance of the `MirrorNodeClient`.
    * 
    * @param {string} url The base URL of the Hedera Mirror Node API.
    */
@@ -33,8 +33,8 @@ class MirrorNodeClient {
   /**
    * Fetches information about a token by its token ID.
    * 
-   * @param {string} tokenId - The token ID to fetch.
-   * @returns {Promise<Record<string, unknown> | null>} - A Promise resolving to the token information or null if not found.
+   * @param {string} tokenId the token ID to fetch.
+   * @returns {Promise<Record<string, unknown> | null>} a Promise resolving to the token information or null if not found.
    */
   async getTokenById(tokenId) {
     return this.get(`tokens/${tokenId}`);
@@ -43,8 +43,8 @@ class MirrorNodeClient {
   /**
    * Fetches the balance of a token for a specific account.
    * 
-   * @param {string} tokenId The token ID to fetch the balance for.
-   * @param {string} accountId The account ID to fetch the balance for.
+   * @param {string} tokenId the token ID to fetch the balance for.
+   * @param {string} accountId the account ID to fetch the balance for.
    * @returns {Promise<{ balances: Array<{ balance: number }> }>} A Promise resolving to the account's token balance.
    */
   async getBalanceOfToken(tokenId, accountId) {
@@ -77,8 +77,8 @@ class MirrorNodeClient {
    * Sends a GET request to the specified URL and returns the response data.
    * 
    * @private
-   * @param {string} url - The URL to send the GET request to.
-   * @returns {Promise<any>} - A Promise resolving to the response data.
+   * @param {string} url The URL to send the GET request to.
+   * @returns {Promise<any>} A Promise resolving to the response data.
    */
   async get(url) {
     try {
