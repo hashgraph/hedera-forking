@@ -20,10 +20,7 @@ const sinon = require('sinon');
 const { MirrorNodeClient } = require('../src/client');
 const { HederaProvider, HTS_ADDRESS } = require('../src/hedera-provider');
 
-/**
- * Test suite for the `HederaProvider` class.
- */
-describe('HederaProvider', function () {
+describe('::HederaProvider', function () {
   /** @type {sinon.SinonSandbox} */
   let sandbox;
   /** @type {any} */
@@ -33,9 +30,6 @@ describe('HederaProvider', function () {
   /** @type {HederaProvider} */
   let provider;
 
-  /**
-   * Set up the sandbox and mock objects before each test case.
-   */
   beforeEach(function () {
     sandbox = sinon.createSandbox();
     mockWrappedProvider = {
@@ -45,17 +39,11 @@ describe('HederaProvider', function () {
     provider = new HederaProvider(mockWrappedProvider, mockMirrornode);
   });
 
-  /**
-   * Restore the sandbox after each test case.
-   */
   afterEach(function () {
     sandbox.restore();
   });
 
-  /**
-   * Test that `eth_getCode` is called for HTS and the result is returned from the wrapped provider.
-   */
-  it('should call eth_getCode for HTS and return result from wrapped provider', async function () {
+  it('should call `eth_getCode` for HTS and return result from wrapped provider', async function () {
     mockWrappedProvider.request
       .withArgs({
         method: 'eth_getCode',
@@ -72,10 +60,7 @@ describe('HederaProvider', function () {
     });
   });
 
-  /**
-   * Test that HTS code is set when not present and the request is delegated to the wrapped provider.
-   */
-  it('should set HTS code when not present and delegate to wrapped provider', async function () {
+  it('should set HTS code when not present and delegate request to wrapped provider', async function () {
     mockWrappedProvider.request
       .withArgs({
         method: 'eth_getCode',
@@ -101,9 +86,6 @@ describe('HederaProvider', function () {
     });
   });
 
-  /**
-   * Test that setting HTS code is skipped if it is already present.
-   */
   it('should skip setting HTS code if it is already present', async function () {
     mockWrappedProvider.request
       .withArgs({
@@ -119,10 +101,7 @@ describe('HederaProvider', function () {
     });
   });
 
-  /**
-   * Test handling of balanceOf(address) call.
-   */
-  it('should handle balanceOf(address) call', async function () {
+  it('should handle `balanceOf(address)` call', async function () {
     const mockAccount = '0x0000000000000000000000000000000000000001';
     const targetTokenAddress = '0x0000000000000000000000000000000000000100';
     const balanceOfCall = `${mockAccount.slice(2).padStart(64, '0')}`;
@@ -146,10 +125,7 @@ describe('HederaProvider', function () {
     sinon.assert.calledWith(mockMirrornode.getBalanceOfToken, sinon.match.string, sinon.match.string,);
   });
 
-  /**
-   * Test handling of allowance(address,address) call.
-   */
-  it('should handle allowance(address,address) call', async function () {
+  it('should handle `allowance(address,address)` call', async function () {
     const mockOwner = '0x0000000000000000000000000000000000000001';
     const mockSpender = '0x0000000000000000000000000000000000000002';
     const targetTokenAddress = '0x0000000000000000000000000000000000000100';
