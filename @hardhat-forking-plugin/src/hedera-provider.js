@@ -19,7 +19,7 @@
 const { keccak256, toUtf8Bytes } = require('ethers');
 const fs = require('fs');
 const path = require('path');
-const HTS = require('../out/HtsSystemContract.sol/HtsSystemContract.json');
+const HTS = require('../out/HtsSystemContract.json');
 const { ProviderWrapper } = require('hardhat/plugins');
 
 const HTS_ADDRESS = '0x0000000000000000000000000000000000000167';
