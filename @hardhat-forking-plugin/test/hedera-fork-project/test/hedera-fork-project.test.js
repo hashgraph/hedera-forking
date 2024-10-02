@@ -36,6 +36,13 @@ describe('hedera-fork-project', function () {
         expect(extensions).to.include('HederaProvider');
     });
 
+    it('should have `HederaProvider` set to fetch token data from testnet Mirror Node', async function () {
+        const [provider] = getProviderExtensions(hre.network.provider)
+            .filter(p => p.constructor.name === 'HederaProvider');
+        expect(/**@type{import('../../../src/hedera-provider').HederaProvider}*/(provider).mirrorNode.url)
+            .to.be.equal('https://testnet.mirrornode.hedera.com/api/v1/');
+    });
+
     it('add sample transaction to the forked network', async function () {
         expect(await hre.network.provider.send('hardhat_mine', ['0x001'])).to.be.true;
     });

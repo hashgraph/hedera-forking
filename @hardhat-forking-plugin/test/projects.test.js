@@ -40,7 +40,7 @@ describe('::projects', function () {
                 resetHardhatContext();
             });
 
-            it(`hardhat test for \`${project}\``, async function () {
+            it(`hardhat project test for \`${project}\``, async function () {
                 const exitCode = await hre.run('test');
                 expect(exitCode).to.be.equal(0, 'hardhat test failed');
             });
