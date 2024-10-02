@@ -1,10 +1,10 @@
 {
   "name": "@hashgraph/hardhat-forking-plugin",
-  "version": "1.0.7",
-  "description": "Hashgraph Hardhat TypeScript plugin",
+  "version": "0.0.1",
+  "description": "Hashgraph Hardhat Plugin to support forking flows",
   "repository": "github:hashgraph/hardhat-forking-plugin",
   "author": "2024 Hedera Hashgraph, LLC",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "main": "src/index.js",
   "keywords": [
     "ethereum",
@@ -13,7 +13,7 @@
     "hardhat-plugin"
   ],
   "scripts": {
-    "test": "mocha --exit --recursive",
+    "test": "mocha",
     "build": "rm -rf out/* && cp -R ../../out/HtsSystemContract.sol out && cp ../../test/lib/HIP719.bytecode out",
     "prepublishOnly": "npm run build"
   },
@@ -27,6 +27,7 @@
     "hardhat": "^2.0.0"
   },
   "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^3.0.8",
     "@types/sinon": "^17.0.3",
     "prettier": "^3.3.3",
     "sinon": "^19.0.2"
