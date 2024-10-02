@@ -17,8 +17,8 @@
  */
 
 const sinon = require('sinon');
-const { MirrornodeClient } = require('../../src/client');
-const { HederaProvider, HTS_ADDRESS } = require('../../src/hedera-provider');
+const { MirrorNodeClient } = require('../src/client');
+const { HederaProvider, HTS_ADDRESS } = require('../src/hedera-provider');
 
 /**
  * Test suite for the `HederaProvider` class.
@@ -28,7 +28,7 @@ describe('HederaProvider', function () {
   let sandbox;
   /** @type {any} */
   let mockWrappedProvider;
-  /** @type {sinon.SinonStubbedInstance<MirrornodeClient>} */
+  /** @type {sinon.SinonStubbedInstance<MirrorNodeClient>} */
   let mockMirrornode;
   /** @type {HederaProvider} */
   let provider;
@@ -41,7 +41,7 @@ describe('HederaProvider', function () {
     mockWrappedProvider = {
       request: sandbox.stub(),
     };
-    mockMirrornode = sandbox.createStubInstance(MirrornodeClient);
+    mockMirrornode = sandbox.createStubInstance(MirrorNodeClient);
     provider = new HederaProvider(mockWrappedProvider, mockMirrornode);
   });
 
@@ -142,13 +142,8 @@ describe('HederaProvider', function () {
       params: [{ to: targetTokenAddress, data: `0x70a08231${balanceOfCall}` }],
     });
 
-    sinon.assert.calledWith(mockMirrornode.getAccount, sinon.match.string, sinon.match.string);
-    sinon.assert.calledWith(
-      mockMirrornode.getBalanceOfToken,
-      sinon.match.string,
-      sinon.match.string,
-      sinon.match.string
-    );
+    sinon.assert.calledWith(mockMirrornode.getAccount, sinon.match.string);
+    sinon.assert.calledWith(mockMirrornode.getBalanceOfToken, sinon.match.string, sinon.match.string,);
   });
 
   /**
@@ -182,7 +177,6 @@ describe('HederaProvider', function () {
       sinon.match.string,
       sinon.match.string,
       sinon.match.string,
-      sinon.match.string
     );
   });
 });

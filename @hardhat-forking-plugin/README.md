@@ -1,24 +1,30 @@
 # Hashgraph Plugin for HardHat
 
-This plugin replaces the default HardHat provider with one specifically designed for testing on the Hedera network. It enables the following features:
-- **Hedera Precompile Support**: Assigns the Hedera precompile code to the `0x167` address. During tests, you'll be able to query Hedera token data as though they are stored on standard blockchains. Currently, only fungible tokens are supported to a limited degree.
-- **Token Proxy Address Storage**: Sets up token proxy addresses by directly querying data from the Hedera Mirrornode, giving you access to real-time account balances, allowances, and token information (such as name, symbol, and decimals) in the IERC20 format for fungible tokens. Please note that only fungible tokens are supported at this time.
+This plugin replaces the default HardHat provider with one specifically designed for testing on the Hedera network.
+It enables the following features
+
+- **Hedera Precompile Support** Assigns the Hedera precompile code to the `0x167` address.
+During tests, you'll be able to query Hedera token data as though they are stored on standard blockchains.
+Currently, only fungible tokens are supported to a limited degree.
+- **Token Proxy Address Storage** Sets up token proxy addresses by directly querying data from the Hedera MirrorNode, giving you access to real-time account balances, allowances, and token information (such as name, symbol, and decimals) in the IERC20 format for fungible tokens.
+Please note that only fungible tokens are supported at this time.
 
 ## Installation
 
-To use this plugin, install it via npm:
+To use this plugin, install it via `npm`
 
-```bash
+```console
 npm install @hashgraph/hardhat-forking-plugin
 ```
 
-Next, add the following line to the top of your HardHat config file (`hardhat.config.js`):
+Next, add the following line to the top of your HardHat config file `hardhat.config.js`
 
 ```javascript
-require("@hashgraph/hardhat-forking-plugin");
+require('@hashgraph/hardhat-forking-plugin');
 ```
 
-This will automatically replace the default HardHat provider with the one dedicated to the Hedera network. You can then proceed with writing your tests, and the plugin will allow you to query Hedera token data seamlessly.
+This will automatically replace the default HardHat provider with the one dedicated to the Hedera network.
+You can then proceed with writing your tests, and the plugin will allow you to query Hedera token data seamlessly.
 
 ## Configuration
 
@@ -64,7 +70,7 @@ Additionally, by loading the HTS and token code into the EVM, the following meth
 | `symbol()`                              | Returns the token's symbol.                                                                   |
 | `decimals()`                            | Returns the token's decimals.                                                                 |
 | `totalSupply()`                         | Returns the token's total supply.                                                             |
-| `balanceOf(address)`                    | Returns the balance of the specified address.                                                 | 
+| `balanceOf(address)`                    | Returns the balance of the specified address.                                                 |
 | `allowance(address,address)`            | Returns the allowance for the specified address to spend tokens on behalf of another address. |
 | `transfer(address,uint256)`             | Transfers a specified amount of tokens from the caller to the provided address.               |
 | `transferFrom(address,address,uint256)` | Transfers a specified amount of tokens from one address to another.                           |
@@ -72,13 +78,13 @@ Additionally, by loading the HTS and token code into the EVM, the following meth
 
 **Note:** Currently, only **fungible tokens** are supported.
 
-
 ## Publishing
 
-In order to publish updated version of the plugin run:
+In order to publish updated version of the plugin run
 
 ```bash
 npm publish
 ```
 
-and follow prompted instructions. Privilege to add projects to the @hashgraph namespace are required.
+and follow prompted instructions.
+Privilege to add projects to the `@hashgraph` namespace are required.

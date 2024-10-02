@@ -17,8 +17,8 @@
  */
 
 const { extendConfig, extendProvider } = require('hardhat/config');
-const MirrornodeClient = require('./client').MirrornodeClient;
-const HederaProvider = require('./hedera-provider').HederaProvider;
+const { MirrorNodeClient } = require('./client');
+const { HederaProvider } = require('./hedera-provider');
 
 /**
  * Represents a chain configuration for Hedera networks.
@@ -51,7 +51,7 @@ extendProvider(async (provider, config, network) => {
   const chainId = await provider.request({ method: 'eth_chainId' });
   const networkData = config.hedera.chains.find(chain => chain.chainId === chainId)
   if (networkData && networkData.mirrornode) {
-    return new HederaProvider(provider, new MirrornodeClient(networkData.mirrornode));
+    return new HederaProvider(provider, new MirrorNodeClient(networkData.mirrornode));
   }
   return provider;
 });

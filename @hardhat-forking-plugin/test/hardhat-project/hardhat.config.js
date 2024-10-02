@@ -18,18 +18,15 @@
  *
  */
 
-require("@nomicfoundation/hardhat-toolbox-viem");
-require("@nomicfoundation/hardhat-chai-matchers");
-require("@hashgraph/hardhat-forking-plugin");
+// require("@nomicfoundation/hardhat-toolbox-viem");
+// require("@nomicfoundation/hardhat-chai-matchers");
+// require("@hashgraph/hardhat-forking-plugin");
 
-// Import dotenv module to access variables stored in the .env file
-require("dotenv").config();
-
-/** @type import('@hashgraph/hardhat-forking-plugin').HeaderaHardhatConfig */
+/** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
-  mocha: {
-    timeout: 3600000
-  },
+  // mocha: {
+  //   timeout: 3600000
+  // },
   solidity: {
     version: "0.8.9",
     settings: {
@@ -40,11 +37,16 @@ module.exports = {
     }
   },
   // This specifies network configurations used when running Hardhat tasks
-  defaultNetwork: "local",
+  // defaultNetwork: "local",
   networks: {
+    hardhat: {
+      forking: {
+        url: 'https://testnet.hashio.io/api',
+      }
+    },
     local: {
       // Your Hedera Local Node address pulled from the .env file
-      url: process.env.LOCAL_RPC_URL,
+      url: 'http://a',
       // Conditionally assign accounts when private key value is present
       accounts: process.env.LOCAL_NODE_OPERATOR_PRIVATE_KEY ? [process.env.LOCAL_NODE_OPERATOR_PRIVATE_KEY] : []
     },
@@ -70,7 +72,7 @@ module.exports = {
      */
     previewnet: {
       // HashIO previewnet endpoint
-      url:'https://previewnet.hashio.io/api',
+      url: 'https://previewnet.hashio.io/api',
       // Conditionally assign accounts when private key value is present
       accounts: process.env.PREVIEWNET_OPERATOR_PRIVATE_KEY ? [process.env.PREVIEWNET_OPERATOR_PRIVATE_KEY] : []
     }

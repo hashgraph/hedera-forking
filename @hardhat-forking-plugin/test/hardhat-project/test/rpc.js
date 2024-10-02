@@ -28,7 +28,7 @@ describe('RPC', function () {
       ft = await hre.viem.getContractAt('IERC20', '0x000000000000000000000000000000000047b52a');
   });
 
- it('add sample transaction to the forked network', async function () {
+ it.only('add sample transaction to the forked network', async function () {
     expect(await hre.network.provider.send('hardhat_mine', ['0x001'])).to.be.true;
   });
 

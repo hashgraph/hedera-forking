@@ -20,8 +20,7 @@ const { keccak256, toUtf8Bytes } = require('ethers');
 const fs = require('fs');
 const path = require('path');
 const HTS = require('../out/HtsSystemContract.sol/HtsSystemContract.json');
-const MirrornodeClient = require('./client').MirrornodeClient;
-const { ProviderWrapper } = require("hardhat/plugins");
+const { ProviderWrapper } = require('hardhat/plugins');
 
 const HTS_ADDRESS = '0x0000000000000000000000000000000000000167';
 
@@ -48,27 +47,28 @@ const getAccountStorageSlot = (selector, accountIds) =>
 
 /**
  * HederaProvider is a wrapper around a Hardhat provider, enabling Hedera-related logic.
- * @class
  */
 class HederaProvider extends ProviderWrapper {
+
   /**
    * Creates an instance of HederaProvider.
-   * @param {object} wrappedProvider - The provider being wrapped.
-   * @param {MirrornodeClient} mirrornode - The client used to query the Hedera network's mirrornode.
+   * 
+   * @param {import('hardhat/types').EIP1193Provider} wrappedProvider The provider being wrapped.
+   * @param {import('./client').MirrorNodeClient} mirrorNode The client used to query the Hedera network's mirrornode.
    */
-  constructor(wrappedProvider, mirrornode) {
+  constructor(wrappedProvider, mirrorNode) {
     super(wrappedProvider);
-    /** @private {MirrornodeClient} */
-    this.mirrornode = mirrornode;
+    this.mirrorNode = mirrorNode;
     /** @type {string[]} */
     this.actionDone = [];
   }
 
   /**
    * Processes a request and ensures HTS code and token data are loaded before passing it to the provider.
+   * 
    * @param {object} args - The request arguments. Contains:
-   *    @param {string} args.method - The method to be called (e.g., 'eth_call').
-   *    @param {Array<{to: string, data: string}>} args.params - Array of parameters
+   * @param {string} args.method - The method to be called (e.g., 'eth_call').
+   * @param {Array<{to: string, data: string}>} args.params - Array of parameters
    * @returns {Promise<any>} - The result of the request.
    */
   async request(args) {
@@ -86,6 +86,7 @@ class HederaProvider extends ProviderWrapper {
    * data from the actual Hedera Token Service. Since the EVM does not handle this by default, we need to emulate
    * this behavior in the forks for proper functionality. To achieve this, we are setting the HTS code here,
    * which will mimic the behavior of the real HTS.
+   * 
    * @private
    * @returns {Promise<void>}
    */
@@ -139,7 +140,7 @@ class HederaProvider extends ProviderWrapper {
     }
     await this.loadBaseTokenData(target);
     const selector = data.slice(0, 10);
-    if (selector === `${keccak256(toUtf8Bytes('balanceOf(address)'))}`.slice(0, 10)) {
+    if (selector === keccak256(toUtf8Bytes('balanceOf(address)')).slice(0, 10)) {
       await this.loadBalanceOfAnAccount(`0x${data.slice(-40)}`, target);
       return;
     }
@@ -165,7 +166,7 @@ class HederaProvider extends ProviderWrapper {
     if (this.actionDone.includes(`token_${target}`)) {
       return;
     }
-    const token = await this.mirrornode.getTokenById(`0.0.${Number(target)}`);
+    const token = await this.mirrorNode.getTokenById(`0.0.${Number(target)}`);
     if (!token) {
       return;
     }
@@ -205,12 +206,12 @@ class HederaProvider extends ProviderWrapper {
     if (this.actionDone.includes(`balance_${account}`)) {
       return;
     }
-    const accountId = (await this.mirrornode.getAccount(account))?.account;
+    const accountId = (await this.mirrorNode.getAccount(account))?.account;
     if (!accountId) {
       return;
     }
     await this.assignEvmAccountAddress(accountId, account);
-    const result = await this.mirrornode.getBalanceOfToken(`0.0.${Number(target)}`, accountId);
+    const result = await this.mirrorNode.getBalanceOfToken(`0.0.${Number(target)}`, accountId);
     const balance = result.balances.length > 0 ? result.balances[0].balance : 0;
     await this.assignValueToSlot(
       target,
@@ -232,14 +233,14 @@ class HederaProvider extends ProviderWrapper {
     if (this.actionDone.includes(`allowance_${owner}_${spender}`)) {
       return;
     }
-    const ownerId = (await this.mirrornode.getAccount(owner))?.account;
-    const spenderId = (await this.mirrornode.getAccount(spender))?.account;
+    const ownerId = (await this.mirrorNode.getAccount(owner))?.account;
+    const spenderId = (await this.mirrorNode.getAccount(spender))?.account;
     if (!ownerId || !spenderId) {
       return;
     }
     await this.assignEvmAccountAddress(ownerId, owner);
     await this.assignEvmAccountAddress(spenderId, spender);
-    const result = await this.mirrornode.getAllowanceForToken(
+    const result = await this.mirrorNode.getAllowanceForToken(
       ownerId,
       `0.0.${Number(target)}`,
       spenderId,

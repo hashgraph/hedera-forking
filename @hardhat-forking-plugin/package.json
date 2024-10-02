@@ -13,7 +13,7 @@
     "hardhat-plugin"
   ],
   "scripts": {
-    "test": "mocha --exit --recursive 'test/**/*.test.js'",
+    "test": "mocha --exit --recursive",
     "build": "rm -rf out/* && cp -R ../../out/HtsSystemContract.sol out && cp ../../test/lib/HIP719.bytecode out",
     "prepublishOnly": "npm run build"
   },
