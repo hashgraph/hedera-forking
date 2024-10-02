@@ -21,20 +21,11 @@ const { JsonRpcProvider } = require('ethers');
 const { MirrorNodeClient } = require('./client');
 const { HederaProvider } = require('./hedera-provider');
 
-const chains = [
-    {
-        chainId: 295,
-        mirrornode: 'https://mainnet-public.mirrornode.hedera.com/api/v1/',
-    },
-    {
-        chainId: 296,
-        mirrornode: 'https://testnet.mirrornode.hedera.com/api/v1/',
-    },
-    {
-        chainId: 297,
-        mirrornode: 'https://previewnet.mirrornode.hedera.com/api/v1/',
-    },
-];
+const chains = {
+    295: 'https://mainnet-public.mirrornode.hedera.com/api/v1/',
+    296: 'https://testnet.mirrornode.hedera.com/api/v1/',
+    297: 'https://previewnet.mirrornode.hedera.com/api/v1/',
+};
 
 /**
  * Extends the provider with `HederaProvider` only when the forked network is a Hedera network.
@@ -45,9 +36,9 @@ extendProvider(async (provider, config, network) => {
         const { forking } = networkConfig;
         if (forking.url) {
             const net = await (new JsonRpcProvider(forking.url)).getNetwork();
-            const chain = chains[Number(net.chainId)];
-            if (chain !== undefined) {
-                return new HederaProvider(provider, new MirrorNodeClient(chain.mirrornode));
+            const mirrorNodeUrl = chains[/**@type{keyof typeof chains}*/(Number(net.chainId))];
+            if (mirrorNodeUrl !== undefined) {
+                return new HederaProvider(provider, new MirrorNodeClient(mirrorNodeUrl));
             }
         }
     }
