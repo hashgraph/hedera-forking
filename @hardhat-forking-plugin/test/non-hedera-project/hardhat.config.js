@@ -25,12 +25,4 @@ module.exports = {
     mocha: {
         timeout: 30000
     },
-    solidity: '0.8.9',
-    networks: {
-        hardhat: {
-            forking: {
-                url: 'https://testnet.hashio.io/api',
-            }
-        }
-    }
 };
