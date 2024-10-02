@@ -14,13 +14,12 @@
     ],
     "scripts": {
         "test": "mocha",
-        "build": "rm -rf out/* && cp -R ../../out/HtsSystemContract.sol out && cp ../../test/lib/HIP719.bytecode out",
+        "build": "cp ../out/HtsSystemContract.sol/HtsSystemContract.json ../test/lib/HIP719.bytecode out",
         "prepublishOnly": "npm run build"
     },
     "files": [
         "src/",
-        "out/",
-        "README.md"
+        "out/"
     ],
     "peerDependencies": {
         "ethers": "^6.11.2",
