@@ -1,5 +1,5 @@
 /*-
- * Hedera Hardhat Plugin Project
+ * Hedera Hardhat Forking Plugin
  *
  * Copyright (C) 2024 Hedera Hashgraph, LLC
  *
@@ -16,66 +16,41 @@
  * limitations under the License.
  */
 
-const { extendConfig, extendProvider } = require('hardhat/config');
+const { extendProvider } = require('hardhat/config');
+const { JsonRpcProvider } = require('ethers');
 const { MirrorNodeClient } = require('./client');
 const { HederaProvider } = require('./hedera-provider');
 
-/**
- * Represents a chain configuration for Hedera networks.
- * @typedef {Object} Chain
- * @property {number} chainId - The unique identifier for the chain (e.g., 295 for Mainnet).
- * @property {string} mirrornode - The URL of the mirror node for accessing historical data.
- */
+const chains = [
+    {
+        chainId: 295,
+        mirrornode: 'https://mainnet-public.mirrornode.hedera.com/api/v1/',
+    },
+    {
+        chainId: 296,
+        mirrornode: 'https://testnet.mirrornode.hedera.com/api/v1/',
+    },
+    {
+        chainId: 297,
+        mirrornode: 'https://previewnet.mirrornode.hedera.com/api/v1/',
+    },
+];
 
 /**
- * @typedef {object} HederaHardhatConfig
- * @property {object} hedera - Hedera configuration object
- * @property {Chain[]} hedera.chains - Supported chains configuration
- */
-
-/**
- * @typedef {object} HederaHardhatUserConfig
- * @property {object} hedera - Hedera configuration object
- * @property {Chain[]} hedera.chains - Supported chains configuration
- */
-
-/**
- * Extends the provider with the HederaProvider.
- *
- * @param {object} provider - The original Hardhat provider.
- * @param {HederaHardhatConfig} config - The Hardhat configuration, including Hedera-specific settings.
- * @param {object} network - The network information.
- * @returns {Promise<HederaProvider>} A new instance of HederaProvider.
+ * Extends the provider with `HederaProvider` only when the forked network is a Hedera network.
  */
 extendProvider(async (provider, config, network) => {
-  const chainId = await provider.request({ method: 'eth_chainId' });
-  const networkData = config.hedera.chains.find(chain => chain.chainId === chainId)
-  if (networkData && networkData.mirrornode) {
-    return new HederaProvider(provider, new MirrorNodeClient(networkData.mirrornode));
-  }
-  return provider;
-});
+    const networkConfig = config.networks[network];
+    if ('forking' in networkConfig) {
+        const { forking } = networkConfig;
+        if (forking.url) {
+            const net = await (new JsonRpcProvider(forking.url)).getNetwork();
+            const chain = chains[Number(net.chainId)];
+            if (chain !== undefined) {
+                return new HederaProvider(provider, new MirrorNodeClient(chain.mirrornode));
+            }
+        }
+    }
 
-/**
- * Extends the Hardhat config to include Hedera-specific configurations.
- *
- * @param {HederaHardhatConfig} config - The final Hardhat configuration object.
- * @param {Readonly<HederaHardhatUserConfig>} userConfig - The user's Hardhat configuration object, provided via hardhat.config.js or similar.
- */
-extendConfig((config, userConfig) => {
-  config.hedera = config.hedera || {};
-  config.hedera.chains = [
-    {
-      chainId: 295,
-      mirrornode: 'https://mainnet-public.mirrornode.hedera.com/api/v1/',
-    },
-    {
-      chainId: 296,
-      mirrornode: 'https://testnet.mirrornode.hedera.com/api/v1/',
-    },
-    {
-      chainId: 297,
-      mirrornode: 'https://previewnet.mirrornode.hedera.com/api/v1/',
-    },
-  ];
+    return provider;
 });
