@@ -59,7 +59,12 @@ class HederaProvider extends ProviderWrapper {
   constructor(wrappedProvider, mirrorNode) {
     super(wrappedProvider);
     this.mirrorNode = mirrorNode;
-    /** @type {string[]} */
+
+    /**
+     * List of actions already done to prevent fetching the same data more than once.
+     * 
+     * @type {('hts_code' | `${'token' | 'balance' | 'allowance' | 'account'}_${string}`)[]}
+     */
     this.actionDone = [];
   }
 
@@ -122,6 +127,7 @@ class HederaProvider extends ProviderWrapper {
    * (such as name, balance, decimals, etc.). The relationships between tokens and users are dynamically loaded based
    * on the incoming call request. We infer the required information, determine where it should be stored in the smart
    * contract's memory, and set it before making the actual request.
+   * 
    * @private
    * @param {object} args - The request arguments. Contains:
    *    @param {string} args.method - The method to be called (e.g., 'eth_call').
@@ -152,8 +158,8 @@ class HederaProvider extends ProviderWrapper {
   /**
    * Loads base token data into storage for the specified token.
    *
-   * Sets the token proxy code and basic data into storage. When a request is directed to the address reserved
-   * for a Hedera token, we:
+   * Sets the token proxy code and basic data into storage.
+   * When a request is directed to the address reserved for a Hedera token, we
    *  - Load the bytecode that emulates its behavior on the actual Hedera EVM into memory.
    *  - Load its basic data, such as name and decimals, into the appropriate storage slots in
    *    the smart contract's memory.
@@ -197,6 +203,7 @@ class HederaProvider extends ProviderWrapper {
 
   /**
    * Loads the balance of a specific account for the specified token.
+   * 
    * @private
    * @param {string} account - The account address to load balance for.
    * @param {string} target - The target token contract address.
@@ -223,6 +230,7 @@ class HederaProvider extends ProviderWrapper {
 
   /**
    * Loads the allowance for a specific owner-spender pair for the specified token.
+   * 
    * @private
    * @param {string} owner - The owner address.
    * @param {string} spender - The spender address.
@@ -256,6 +264,7 @@ class HederaProvider extends ProviderWrapper {
 
   /**
    * Assigns an EVM account address to a corresponding Hedera account ID.
+   * 
    * @private
    * @param {string} accountId - The Hedera account ID.
    * @param {string} evmAddress - The corresponding EVM address.
@@ -275,6 +284,7 @@ class HederaProvider extends ProviderWrapper {
 
   /**
    * Loads a string value into the storage of the target contract.
+   * 
    * @private
    * @param {string} target - The target contract address.
    * @param {number} initialSlot - The initial storage slot.
@@ -301,6 +311,7 @@ class HederaProvider extends ProviderWrapper {
 
   /**
    * Assigns a value to a specific storage slot of the target contract.
+   * 
    * @private
    * @param {string} target - The target contract address.
    * @param {string} slot - The storage slot.
