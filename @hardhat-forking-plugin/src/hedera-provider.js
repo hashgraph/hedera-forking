@@ -98,7 +98,7 @@ class HederaProvider extends ProviderWrapper {
       method: 'eth_getCode',
       params: [HTS_ADDRESS, 'latest'],
     });
-    if (!['0xfe', '0x'].includes(current)) {
+    if (!['0xfe', '0x'].includes(/**@type{string}*/(current))) {
       return;
     }
     await this._wrappedProvider.request({
