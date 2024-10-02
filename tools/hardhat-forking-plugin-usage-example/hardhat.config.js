@@ -21,47 +21,12 @@
 require("@nomicfoundation/hardhat-toolbox-viem");
 require("@nomicfoundation/hardhat-chai-matchers");
 require("@hashgraph/hardhat-forking-plugin");
-const { task } = require("hardhat/config");
 
 // Import dotenv module to access variables stored in the .env file
 require("dotenv").config();
 
-task("show-balance", async (taskArgs) => {
-  const showBalance = require("./scripts/showBalance");
-  return showBalance(taskArgs.contractAddress, taskArgs.accountAddress);
-});
-
-task("show-name", async (taskArgs) => {
-  const showName = require("./scripts/showName");
-  return showName(taskArgs.contractAddress);
-});
-
-task("show-symbol", async (taskArgs) => {
-  const showSymbol = require("./scripts/showSymbol");
-  return showSymbol(taskArgs.contractAddress);
-});
-
-task("show-decimals", async (taskArgs) => {
-  const showDecimals = require("./scripts/showDecimals");
-  return showDecimals(taskArgs.contractAddress);
-});
-
-task("mine-block", async () => {
-  const mineBlock = require("./scripts/mineBlock");
-  return mineBlock();
-});
-
-
-task("show-allowance", async (taskArgs) => {
-  const showAllowance = require("./scripts/showAllowance");
-  return showAllowance(taskArgs.contractAddress, taskArgs.accountAddress, taskArgs.spenderAddress);
-});
-
 /** @type import('@hashgraph/hardhat-forking-plugin').HeaderaHardhatConfig */
 module.exports = {
-  hedera: {
-    mirrornode: process.env.HEDERA_MIRRORNODE_URL ? process.env.HEDERA_MIRRORNODE_URL: 'https://testnet.mirrornode.hedera.com/api/v1/'
-  },
   mocha: {
     timeout: 3600000
   },

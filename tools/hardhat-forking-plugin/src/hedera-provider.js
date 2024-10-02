@@ -21,10 +21,30 @@ const fs = require('fs');
 const path = require('path');
 const HTS = require('../out/HtsSystemContract.sol/HtsSystemContract.json');
 const MirrornodeClient = require('./client').MirrornodeClient;
-const { accountIdToHex, getAccountStorageSlot } = require('./utils');
-const {ProviderWrapper} = require("hardhat/plugins");
+const { ProviderWrapper } = require("hardhat/plugins");
 
 const HTS_ADDRESS = '0x0000000000000000000000000000000000000167';
+
+/**
+ * Converts a Hedera account ID to its corresponding hexadecimal representation.
+ *
+ * @param {string} accountId - The Hedera account ID in the format `shard.realm.account`.
+ * @returns {string} The hexadecimal representation of the account ID.
+ */
+const accountIdToHex = (accountId) => parseInt(accountId.split('.')[2], 10).toString(16);
+
+/**
+ * Generates the storage slot for a given selector and list of account IDs.
+ *
+ * @param {string} selector - The selector function name, e.g., 'balanceOf(address)'.
+ * @param {string[]} accountIds - Array of Hedera account IDs that will be used to generate the storage slot.
+ * @returns {string} The storage slot as a hexadecimal string.
+ */
+const getAccountStorageSlot = (selector, accountIds) =>
+  `${keccak256(toUtf8Bytes(selector)).slice(0, 10)}${accountIds
+    .map((accountId) => accountIdToHex(accountId).padStart(8, '0'))
+    .join('')
+    .padStart(56, '0')}`
 
 /**
  * HederaProvider is a wrapper around a Hardhat provider, enabling Hedera-related logic.
@@ -42,8 +62,6 @@ class HederaProvider extends ProviderWrapper {
     this.mirrornode = mirrornode;
     /** @type {string[]} */
     this.actionDone = [];
-    /** @private {number} */
-    this.requestId = 0;
   }
 
   /**
@@ -147,7 +165,7 @@ class HederaProvider extends ProviderWrapper {
     if (this.actionDone.includes(`token_${target}`)) {
       return;
     }
-    const token = await this.mirrornode.getTokenById(`0.0.${Number(target)}`, this.reqId());
+    const token = await this.mirrornode.getTokenById(`0.0.${Number(target)}`);
     if (!token) {
       return;
     }
@@ -187,12 +205,12 @@ class HederaProvider extends ProviderWrapper {
     if (this.actionDone.includes(`balance_${account}`)) {
       return;
     }
-    const accountId = (await this.mirrornode.getAccount(account, this.reqId()))?.account;
+    const accountId = (await this.mirrornode.getAccount(account))?.account;
     if (!accountId) {
       return;
     }
     await this.assignEvmAccountAddress(accountId, account);
-    const result = await this.mirrornode.getBalanceOfToken(`0.0.${Number(target)}`, accountId, this.reqId());
+    const result = await this.mirrornode.getBalanceOfToken(`0.0.${Number(target)}`, accountId);
     const balance = result.balances.length > 0 ? result.balances[0].balance : 0;
     await this.assignValueToSlot(
       target,
@@ -214,8 +232,8 @@ class HederaProvider extends ProviderWrapper {
     if (this.actionDone.includes(`allowance_${owner}_${spender}`)) {
       return;
     }
-    const ownerId = (await this.mirrornode.getAccount(owner, this.reqId()))?.account;
-    const spenderId = (await this.mirrornode.getAccount(spender, this.reqId()))?.account;
+    const ownerId = (await this.mirrornode.getAccount(owner))?.account;
+    const spenderId = (await this.mirrornode.getAccount(spender))?.account;
     if (!ownerId || !spenderId) {
       return;
     }
@@ -225,7 +243,6 @@ class HederaProvider extends ProviderWrapper {
       ownerId,
       `0.0.${Number(target)}`,
       spenderId,
-      this.reqId()
     );
     const allowance = result.allowances.length > 0 ? result.allowances[0].amount : 0;
     await this.assignValueToSlot(
@@ -294,15 +311,6 @@ class HederaProvider extends ProviderWrapper {
       method: 'hardhat_setStorageAt',
       params: [target, slot, value],
     });
-  }
-
-  /**
-   * Generates a unique request ID for this plugin's operations.
-   * @private
-   * @returns {string} - The request ID.
-   */
-  reqId() {
-    return `hardhat-hedera-plugin-${this.requestId++}`;
   }
 }
 

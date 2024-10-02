@@ -21,43 +21,36 @@ const hre = require('hardhat');
 const { expect } = require('chai');
 
 describe('RPC', function () {
-  const contractAddress = '0x000000000000000000000000000000000047b52a';
   const accountAddress = '0x292c4acf9ec49af888d4051eb4a4dc53694d1380';
   const spenderAddress = '0x000000000000000000000000000000000043f832';
+  let ft;
+  beforeEach(async () => {
+      ft = await hre.viem.getContractAt('IERC20', '0x000000000000000000000000000000000047b52a');
+  });
 
  it('add sample transaction to the forked network', async function () {
-    expect(await hre.run('mine-block')).to.be.true;
+    expect(await hre.network.provider.send('hardhat_mine', ['0x001'])).to.be.true;
   });
 
  it('show decimals', async function () {
-    const res = await hre.run('show-decimals', { contractAddress });
-    expect(res).to.be.equal(13);
+      expect(await ft.read.decimals()).to.be.equal(13);
   });
 
     it('get name', async function () {
-      const res = await hre.run('show-name', { contractAddress });
-      expect(res).to.be.equal('Very long string, just to make sure that it exceeds 31 bytes and requires more than 1 storage slot.');
+      expect(await ft.read.name()).to.be.equal(
+          'Very long string, just to make sure that it exceeds 31 bytes and requires more than 1 storage slot.',
+      );
     });
 
-    it('get symbol', async function () {
-      const res = await hre.run('show-symbol', { contractAddress });
-      expect(res).to.be.equal('SHRT');
-    });
+ it('get symbol', async function () {
+    expect(await ft.read.symbol()).to.be.equal('SHRT');
+  });
 
  it('get balance', async function () {
-    const res = await hre.run('show-balance', {
-      contractAddress,
-      accountAddress,
-    });
-    expect(res).to.be.equal(9995);
+    expect(await ft.read.balanceOf([accountAddress])).to.be.equal(9995);
   });
 
   it('get allowance', async function () {
-    const res = await hre.run('show-allowance', {
-      contractAddress,
-      accountAddress,
-      spenderAddress,
-    });
-    expect(res).to.be.equal(0);
+    expect(await ft.read.allowance([accountAddress, spenderAddress])).to.be.equal(0);
   });
 });
