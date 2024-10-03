@@ -1,5 +1,5 @@
 /*-
- * Hedera Hardhat Plugin Project
+ * Hedera Hardhat Forking Plugin
  *
  * Copyright (C) 2024 Hedera Hashgraph, LLC
  *
@@ -19,9 +19,8 @@
 const { keccak256, toUtf8Bytes } = require('ethers');
 const fs = require('fs');
 const path = require('path');
-const HTS = require('../out/HtsSystemContract.sol/HtsSystemContract.json');
-const MirrornodeClient = require('./client').MirrornodeClient;
-const { ProviderWrapper } = require("hardhat/plugins");
+const HTS = require('../out/HtsSystemContract.json');
+const { ProviderWrapper } = require('hardhat/plugins');
 
 const HTS_ADDRESS = '0x0000000000000000000000000000000000000167';
 
@@ -48,27 +47,33 @@ const getAccountStorageSlot = (selector, accountIds) =>
 
 /**
  * HederaProvider is a wrapper around a Hardhat provider, enabling Hedera-related logic.
- * @class
  */
 class HederaProvider extends ProviderWrapper {
+
   /**
    * Creates an instance of HederaProvider.
-   * @param {object} wrappedProvider - The provider being wrapped.
-   * @param {MirrornodeClient} mirrornode - The client used to query the Hedera network's mirrornode.
+   * 
+   * @param {import('hardhat/types').EIP1193Provider} wrappedProvider The provider being wrapped.
+   * @param {import('./client').MirrorNodeClient} mirrorNode The client used to query the Hedera network's mirrornode.
    */
-  constructor(wrappedProvider, mirrornode) {
+  constructor(wrappedProvider, mirrorNode) {
     super(wrappedProvider);
-    /** @private {MirrornodeClient} */
-    this.mirrornode = mirrornode;
-    /** @type {string[]} */
+    this.mirrorNode = mirrorNode;
+
+    /**
+     * List of actions already done to prevent fetching the same data more than once.
+     * 
+     * @type {('hts_code' | `${'token' | 'balance' | 'allowance' | 'account'}_${string}`)[]}
+     */
     this.actionDone = [];
   }
 
   /**
    * Processes a request and ensures HTS code and token data are loaded before passing it to the provider.
+   * 
    * @param {object} args - The request arguments. Contains:
-   *    @param {string} args.method - The method to be called (e.g., 'eth_call').
-   *    @param {Array<{to: string, data: string}>} args.params - Array of parameters
+   * @param {string} args.method - The method to be called (e.g., 'eth_call').
+   * @param {Array<{to: string, data: string}>} args.params - Array of parameters
    * @returns {Promise<any>} - The result of the request.
    */
   async request(args) {
@@ -86,6 +91,7 @@ class HederaProvider extends ProviderWrapper {
    * data from the actual Hedera Token Service. Since the EVM does not handle this by default, we need to emulate
    * this behavior in the forks for proper functionality. To achieve this, we are setting the HTS code here,
    * which will mimic the behavior of the real HTS.
+   * 
    * @private
    * @returns {Promise<void>}
    */
@@ -97,7 +103,7 @@ class HederaProvider extends ProviderWrapper {
       method: 'eth_getCode',
       params: [HTS_ADDRESS, 'latest'],
     });
-    if (!['0xfe', '0x'].includes(current)) {
+    if (!['0xfe', '0x'].includes(/**@type{string}*/(current))) {
       return;
     }
     await this._wrappedProvider.request({
@@ -121,6 +127,7 @@ class HederaProvider extends ProviderWrapper {
    * (such as name, balance, decimals, etc.). The relationships between tokens and users are dynamically loaded based
    * on the incoming call request. We infer the required information, determine where it should be stored in the smart
    * contract's memory, and set it before making the actual request.
+   * 
    * @private
    * @param {object} args - The request arguments. Contains:
    *    @param {string} args.method - The method to be called (e.g., 'eth_call').
@@ -139,7 +146,7 @@ class HederaProvider extends ProviderWrapper {
     }
     await this.loadBaseTokenData(target);
     const selector = data.slice(0, 10);
-    if (selector === `${keccak256(toUtf8Bytes('balanceOf(address)'))}`.slice(0, 10)) {
+    if (selector === keccak256(toUtf8Bytes('balanceOf(address)')).slice(0, 10)) {
       await this.loadBalanceOfAnAccount(`0x${data.slice(-40)}`, target);
       return;
     }
@@ -151,8 +158,8 @@ class HederaProvider extends ProviderWrapper {
   /**
    * Loads base token data into storage for the specified token.
    *
-   * Sets the token proxy code and basic data into storage. When a request is directed to the address reserved
-   * for a Hedera token, we:
+   * Sets the token proxy code and basic data into storage.
+   * When a request is directed to the address reserved for a Hedera token, we
    *  - Load the bytecode that emulates its behavior on the actual Hedera EVM into memory.
    *  - Load its basic data, such as name and decimals, into the appropriate storage slots in
    *    the smart contract's memory.
@@ -165,7 +172,7 @@ class HederaProvider extends ProviderWrapper {
     if (this.actionDone.includes(`token_${target}`)) {
       return;
     }
-    const token = await this.mirrornode.getTokenById(`0.0.${Number(target)}`);
+    const token = await this.mirrorNode.getTokenById(`0.0.${Number(target)}`);
     if (!token) {
       return;
     }
@@ -196,6 +203,7 @@ class HederaProvider extends ProviderWrapper {
 
   /**
    * Loads the balance of a specific account for the specified token.
+   * 
    * @private
    * @param {string} account - The account address to load balance for.
    * @param {string} target - The target token contract address.
@@ -205,12 +213,12 @@ class HederaProvider extends ProviderWrapper {
     if (this.actionDone.includes(`balance_${account}`)) {
       return;
     }
-    const accountId = (await this.mirrornode.getAccount(account))?.account;
+    const accountId = (await this.mirrorNode.getAccount(account))?.account;
     if (!accountId) {
       return;
     }
     await this.assignEvmAccountAddress(accountId, account);
-    const result = await this.mirrornode.getBalanceOfToken(`0.0.${Number(target)}`, accountId);
+    const result = await this.mirrorNode.getBalanceOfToken(`0.0.${Number(target)}`, accountId);
     const balance = result.balances.length > 0 ? result.balances[0].balance : 0;
     await this.assignValueToSlot(
       target,
@@ -222,6 +230,7 @@ class HederaProvider extends ProviderWrapper {
 
   /**
    * Loads the allowance for a specific owner-spender pair for the specified token.
+   * 
    * @private
    * @param {string} owner - The owner address.
    * @param {string} spender - The spender address.
@@ -232,14 +241,14 @@ class HederaProvider extends ProviderWrapper {
     if (this.actionDone.includes(`allowance_${owner}_${spender}`)) {
       return;
     }
-    const ownerId = (await this.mirrornode.getAccount(owner))?.account;
-    const spenderId = (await this.mirrornode.getAccount(spender))?.account;
+    const ownerId = (await this.mirrorNode.getAccount(owner))?.account;
+    const spenderId = (await this.mirrorNode.getAccount(spender))?.account;
     if (!ownerId || !spenderId) {
       return;
     }
     await this.assignEvmAccountAddress(ownerId, owner);
     await this.assignEvmAccountAddress(spenderId, spender);
-    const result = await this.mirrornode.getAllowanceForToken(
+    const result = await this.mirrorNode.getAllowanceForToken(
       ownerId,
       `0.0.${Number(target)}`,
       spenderId,
@@ -255,6 +264,7 @@ class HederaProvider extends ProviderWrapper {
 
   /**
    * Assigns an EVM account address to a corresponding Hedera account ID.
+   * 
    * @private
    * @param {string} accountId - The Hedera account ID.
    * @param {string} evmAddress - The corresponding EVM address.
@@ -274,6 +284,7 @@ class HederaProvider extends ProviderWrapper {
 
   /**
    * Loads a string value into the storage of the target contract.
+   * 
    * @private
    * @param {string} target - The target contract address.
    * @param {number} initialSlot - The initial storage slot.
@@ -300,6 +311,7 @@ class HederaProvider extends ProviderWrapper {
 
   /**
    * Assigns a value to a specific storage slot of the target contract.
+   * 
    * @private
    * @param {string} target - The target contract address.
    * @param {string} slot - The storage slot.
