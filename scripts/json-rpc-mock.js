@@ -68,12 +68,12 @@ const isHIP719Contract = address => Object
     .includes(address.toLowerCase());
 
 /**
- * Function signature for `eth_*` method handlers.
+ * Function signature for `eth_*` and `net_*` method handlers.
  * The `params` argument comes from the JSON-RPC request,
  * so it must to be declared as `unknown[]`.
  * Therefore, each method handler should validate each element of `params` they use.
  * 
- * @typedef {(params: unknown[], reqId: string) => Promise<string>} EthHandler
+ * @typedef {(params: unknown[], reqId: string) => Promise<unknown>} EthHandler
  */
 
 /**
@@ -83,6 +83,21 @@ const isHIP719Contract = address => Object
  * Official Ethereum JSON-RPC spec can be found at https://ethereum.github.io/execution-apis/api-documentation/.
  */
 const eth = {
+
+    /**
+     * https://docs.infura.io/api/networks/ethereum/json-rpc-methods/net_version
+     * 
+     * @type {EthHandler}
+     */
+    net_version: async () => parseInt('0x12b').toString(),
+
+    /**
+     * https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_chainid
+     * 
+     * @type {EthHandler}
+     */
+    eth_chainId: async () => '0x12b',
+
     /** 
      * https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_blocknumber
      * 
@@ -98,11 +113,25 @@ const eth = {
     eth_gasPrice: async () => '0x1802ba9f400',
 
     /**
-     * https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_chainid
+     * https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_feehistory
      * 
      * @type {EthHandler}
      */
-    eth_chainId: async () => '0x12b',
+    eth_feeHistory: async () => ({
+        "baseFeePerGas": [
+          "0x192cc091400",
+          "0x192cc091400"
+        ],
+        "gasUsedRatio": [
+          0.5
+        ],
+        "oldestBlock": "0x8e1376",
+        "reward": [
+          [
+            "0x0"
+          ]
+        ]
+      }),
 
     /**
      * https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_getblockbynumber
