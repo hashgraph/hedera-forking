@@ -44,7 +44,7 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Install Plugin Dependencies
+      - name: Install @hardhat-forking-plugin Dependencies
         working-directory: ./@hardhat-forking-plugin
         run: npm ci && npm run build
 

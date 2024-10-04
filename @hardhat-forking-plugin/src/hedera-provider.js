@@ -52,7 +52,7 @@ class HederaProvider extends ProviderWrapper {
 
   /**
    * Creates an instance of HederaProvider.
-   * 
+   *
    * @param {import('hardhat/types').EIP1193Provider} wrappedProvider The provider being wrapped.
    * @param {import('./client').MirrorNodeClient} mirrorNode The client used to query the Hedera network's mirrornode.
    */
@@ -62,7 +62,7 @@ class HederaProvider extends ProviderWrapper {
 
     /**
      * List of actions already done to prevent fetching the same data more than once.
-     * 
+     *
      * @type {('hts_code' | `${'token' | 'balance' | 'allowance' | 'account'}_${string}`)[]}
      */
     this.actionDone = [];
@@ -70,7 +70,7 @@ class HederaProvider extends ProviderWrapper {
 
   /**
    * Processes a request and ensures HTS code and token data are loaded before passing it to the provider.
-   * 
+   *
    * @param {object} args - The request arguments. Contains:
    * @param {string} args.method - The method to be called (e.g., 'eth_call').
    * @param {Array<{to: string, data: string}>} args.params - Array of parameters
@@ -91,7 +91,7 @@ class HederaProvider extends ProviderWrapper {
    * data from the actual Hedera Token Service. Since the EVM does not handle this by default, we need to emulate
    * this behavior in the forks for proper functionality. To achieve this, we are setting the HTS code here,
    * which will mimic the behavior of the real HTS.
-   * 
+   *
    * @private
    * @returns {Promise<void>}
    */
@@ -127,7 +127,7 @@ class HederaProvider extends ProviderWrapper {
    * (such as name, balance, decimals, etc.). The relationships between tokens and users are dynamically loaded based
    * on the incoming call request. We infer the required information, determine where it should be stored in the smart
    * contract's memory, and set it before making the actual request.
-   * 
+   *
    * @private
    * @param {object} args - The request arguments. Contains:
    *    @param {string} args.method - The method to be called (e.g., 'eth_call').
@@ -160,9 +160,8 @@ class HederaProvider extends ProviderWrapper {
    *
    * Sets the token proxy code and basic data into storage.
    * When a request is directed to the address reserved for a Hedera token, we
-   *  - Load the bytecode that emulates its behavior on the actual Hedera EVM into memory.
-   *  - Load its basic data, such as name and decimals, into the appropriate storage slots in
-   *    the smart contract's memory.
+   * load its basic data, such as name and decimals, into the appropriate storage slots in
+   * the smart contract's memory.
    *
    * @private
    * @param {string} target - The target address of the token contract.
@@ -176,22 +175,13 @@ class HederaProvider extends ProviderWrapper {
     if (!token) {
       return;
     }
-    await this._wrappedProvider.request({
-      method: 'hardhat_setCode',
-      params: [
-        target,
-        fs
-          .readFileSync(path.resolve(__dirname, '..', 'out', 'HIP719.bytecode'), 'utf8')
-          .replace('fefefefefefefefefefefefefefefefefefefefe', target.replace('0x', '')),
-      ],
-    });
     const storageLayout = HTS.storageLayout.storage;
     for (const layout of storageLayout) {
       const value = `${token[layout.label.replace(/([A-Z])/g, '_$1').toLowerCase()]}`;
       if (layout.type === 't_string_storage') {
         await this.loadStringIntoStorage(target, Number(layout.slot), value);
       } else {
-        await this.assignValueToSlot(
+        await this._setStorageAt(
           target,
           `0x${Number(layout.slot).toString(16)}`,
           `0x${parseInt(value, 10).toString(16).padStart(64, '0')}`
@@ -203,7 +193,7 @@ class HederaProvider extends ProviderWrapper {
 
   /**
    * Loads the balance of a specific account for the specified token.
-   * 
+   *
    * @private
    * @param {string} account - The account address to load balance for.
    * @param {string} target - The target token contract address.
@@ -220,7 +210,7 @@ class HederaProvider extends ProviderWrapper {
     await this.assignEvmAccountAddress(accountId, account);
     const result = await this.mirrorNode.getBalanceOfToken(`0.0.${Number(target)}`, accountId);
     const balance = result.balances.length > 0 ? result.balances[0].balance : 0;
-    await this.assignValueToSlot(
+    await this._setStorageAt(
       target,
       getAccountStorageSlot('balanceOf(address)', [accountId]),
       `0x${balance.toString(16).padStart(64, '0')}`
@@ -230,7 +220,7 @@ class HederaProvider extends ProviderWrapper {
 
   /**
    * Loads the allowance for a specific owner-spender pair for the specified token.
-   * 
+   *
    * @private
    * @param {string} owner - The owner address.
    * @param {string} spender - The spender address.
@@ -254,7 +244,7 @@ class HederaProvider extends ProviderWrapper {
       spenderId,
     );
     const allowance = result.allowances.length > 0 ? result.allowances[0].amount : 0;
-    await this.assignValueToSlot(
+    await this._setStorageAt(
       target,
       getAccountStorageSlot('allowance(address,address)', [spenderId, ownerId]),
       `0x${allowance.toString(16).padStart(64, '0')}`
@@ -264,7 +254,7 @@ class HederaProvider extends ProviderWrapper {
 
   /**
    * Assigns an EVM account address to a corresponding Hedera account ID.
-   * 
+   *
    * @private
    * @param {string} accountId - The Hedera account ID.
    * @param {string} evmAddress - The corresponding EVM address.
@@ -274,7 +264,7 @@ class HederaProvider extends ProviderWrapper {
     if (this.actionDone.includes(`account_${accountId}`)) {
       return;
     }
-    await this.assignValueToSlot(
+    await this._setStorageAt(
       HTS_ADDRESS,
       `${`${keccak256(toUtf8Bytes('getAccountId(address)'))}`.slice(0, 10)}0000000000000000${evmAddress.slice(2)}`,
       `0x${accountIdToHex(accountId).padStart(64, '0')}`
@@ -284,7 +274,7 @@ class HederaProvider extends ProviderWrapper {
 
   /**
    * Loads a string value into the storage of the target contract.
-   * 
+   *
    * @private
    * @param {string} target - The target contract address.
    * @param {number} initialSlot - The initial storage slot.
@@ -295,10 +285,10 @@ class HederaProvider extends ProviderWrapper {
     const [hexStr, lenByte] =
       value.length > 31 ? ['0', value.length * 2 + 1] : [Buffer.from(value).toString('hex'), value.length * 2];
     const storageMemory = `${hexStr.padEnd(64 - 2, '0')}${lenByte.toString(16).padStart(2, '0')}`;
-    await this.assignValueToSlot(target, `0x${initialSlot.toString(16)}`, `0x${storageMemory}`);
+    await this._setStorageAt(target, `0x${initialSlot.toString(16)}`, `0x${storageMemory}`);
     for (let i = 0; i < (value.length + 31) / 32; i++) {
       const nextSlot = BigInt(keccak256(`0x${initialSlot.toString(16).padStart(64, '0')}`)) + BigInt(i);
-      await this.assignValueToSlot(
+      await this._setStorageAt(
         target,
         `0x${nextSlot.toString(16)}`,
         `0x${Buffer.from(value)
@@ -311,14 +301,14 @@ class HederaProvider extends ProviderWrapper {
 
   /**
    * Assigns a value to a specific storage slot of the target contract.
-   * 
+   *
    * @private
    * @param {string} target - The target contract address.
    * @param {string} slot - The storage slot.
    * @param {string} value - The value to store.
    * @returns {Promise<void>}
    */
-  async assignValueToSlot(target, slot, value) {
+  async _setStorageAt(target, slot, value) {
     await this._wrappedProvider.request({
       method: 'hardhat_setStorageAt',
       params: [target, slot, value],

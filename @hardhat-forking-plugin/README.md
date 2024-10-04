@@ -28,24 +28,11 @@ You can then proceed with writing your tests, and the plugin will allow you to q
 
 ## Configuration
 
-By default, the plugin uses the Hedera Mirror Node based on the guessed chain ID from the current network.
+By default, the plugin uses the Hedera Mirror Node based on the guessed chain ID from the currently forked network.
+
+The value of the configuration parameter: hardhat.forking.url will be used to infer the initial chain ID.
+
 Only chain IDs 295 (Mainnet), 296 (Testnet), and 297 (Previewnet) are supported.
-
-If you want to mock our precompile for forked networks with different chain IDs or use a custom endpoint,
-update your Hardhat configuration as follows:
-
-```javascript
-module.exports = {
-  hedera: {
-    chanis: {
-        chainId: 31337, // Default chain id for hardhat forks
-        mirrornode: "https://mainnet-public.mirrornode.hedera.com/api/v1/",
-    }
-  }
-};
-```
-
-This configuration enables you to test your code against actual token data stored on the Hedera mainnet.
 
 ## Endpoints with Altered Behavior
 
@@ -53,7 +40,7 @@ The first RPC call using the Hardhat provider will set up the HTS bytecode via t
 
 This operation will only work if the precompile address is not already occupied by an existing smart contract on your network. Forks of networks with no code deployed to the `0x167` address are required for this functionality.
 
-Each time the `eth_call` method is invoked, the target address will be checked to see if it represents a token by querying the MirrorNode. If a token with the same address as the target exists on the MirrorNode, the `TokenProxy` bytecode will be set as its code using the `hardhat_setCode` method. Additionally, its basic storage fields (such as name, balance, decimals, etc.) will be set using the `hardhat_setStorageAt` method.
+Each time the `eth_call` method is invoked, the target address will be checked to see if it represents a token by querying the MirrorNode. Its basic storage fields (such as name, balance, decimals, etc.) will be set using the `hardhat_setStorageAt` method.
 
 If the function selector in the `eth_call` request corresponds to any of the following functions, an additional operation will be performed, as described below:
 
