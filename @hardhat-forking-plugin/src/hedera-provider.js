@@ -17,8 +17,6 @@
  */
 
 const { keccak256, toUtf8Bytes } = require('ethers');
-const fs = require('fs');
-const path = require('path');
 const HTS = require('../out/HtsSystemContract.json');
 const { ProviderWrapper } = require('hardhat/plugins');
 
