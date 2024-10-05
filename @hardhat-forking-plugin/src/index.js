@@ -18,7 +18,7 @@
 
 const { extendProvider } = require('hardhat/config');
 const { JsonRpcProvider } = require('ethers');
-const { MirrorNodeClient } = require('./client');
+const { MirrorNodeClient } = require('./mirror-node-client');
 const { HederaProvider } = require('./hedera-provider');
 
 const chains = {
