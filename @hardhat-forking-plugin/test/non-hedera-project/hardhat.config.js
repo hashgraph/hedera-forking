@@ -19,10 +19,9 @@
 
 require('@nomicfoundation/hardhat-ethers');
 require('@hashgraph/hardhat-forking-plugin');
+const { projectTestConfig } = require('../.lib');
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
-    mocha: {
-        timeout: 30000
-    },
+    ...projectTestConfig,
 };

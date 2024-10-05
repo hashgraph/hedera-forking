@@ -18,23 +18,16 @@
 
 const hre = require('hardhat');
 const { expect } = require('chai');
-const { getProviderExtensions } = require('../../.lib');
+const { getProviderExtensions } = require('../.lib');
 
-describe('hedera-mainnet-project', function () {
+describe('non-hedera-project', function () {
 
     before('provider call to force its initialization', async function () {
         await hre.network.provider.request({ method: 'eth_chainId' });
     });
 
-    it('should have `HederaProvider` as a loaded extension', async function () {
+    it('should not have `HederaProvider` as a loaded extension', async function () {
         const extensions = getProviderExtensions(hre.network.provider).map(p => p.constructor.name);
-        expect(extensions).to.include('HederaProvider');
-    });
-
-    it('should have `HederaProvider` set to fetch token data from mainnet Mirror Node', async function () {
-        const [provider] = getProviderExtensions(hre.network.provider)
-            .filter(p => p.constructor.name === 'HederaProvider');
-        expect(/**@type{import('../../../src/hedera-provider').HederaProvider}*/(provider).mirrorNode.url)
-            .to.be.equal('https://mainnet-public.mirrornode.hedera.com/api/v1/');
+        expect(extensions).to.not.include('HederaProvider');
     });
 });
