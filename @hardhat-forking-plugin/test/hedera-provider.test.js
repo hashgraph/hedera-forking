@@ -17,7 +17,7 @@
  */
 
 const sinon = require('sinon');
-const { MirrorNodeClient } = require('../src/client');
+const { MirrorNodeClient } = require('../src/mirror-node-client');
 const { HederaProvider, HTS_ADDRESS } = require('../src/hedera-provider');
 
 describe('::HederaProvider', function () {
@@ -105,7 +105,6 @@ describe('::HederaProvider', function () {
     const mockAccount = '0x0000000000000000000000000000000000000001';
     const targetTokenAddress = '0x0000000000000000000000000000000000000100';
     const balanceOfCall = `${mockAccount.slice(2).padStart(64, '0')}`;
-    const balanceResult = { balances: [{ balance: 1000 }] };
 
     mockWrappedProvider.request
       .withArgs({
@@ -114,7 +113,7 @@ describe('::HederaProvider', function () {
       })
       .resolves('0xfe');
     mockMirrornode.getAccount.resolves({ account: '0.0.123' });
-    mockMirrornode.getBalanceOfToken.resolves(balanceResult);
+    mockMirrornode.getBalanceOfToken.resolves({ balances: [{ balance: 1000 }] });
 
     await provider.request({
       method: 'eth_call',
@@ -125,27 +124,75 @@ describe('::HederaProvider', function () {
     sinon.assert.calledWith(mockMirrornode.getBalanceOfToken, sinon.match.string, sinon.match.string,);
   });
 
-  it('should handle `allowance(address,address)` call', async function () {
-    const mockOwner = '0x0000000000000000000000000000000000000001';
-    const mockSpender = '0x0000000000000000000000000000000000000002';
+  it('should handle `balanceOf(address)` call even when `getBalanceOfToken` returns null', async function () {
+    const mockAccount = '0x0000000000000000000000000000000000000001';
     const targetTokenAddress = '0x0000000000000000000000000000000000000100';
-    const allowanceCallData = `${mockOwner.slice(2).padStart(64, '0')}${mockSpender.slice(2).padStart(64, '0')}`;
-    const allowanceResult = { allowances: [{ amount: 500 }] };
+    const balanceOfCall = `${mockAccount.slice(2).padStart(64, '0')}`;
 
     mockWrappedProvider.request
       .withArgs({
         method: 'eth_getCode',
         params: [HTS_ADDRESS, 'latest'],
       })
-      .resolves({ result: '0xfe' });
-
-    mockMirrornode.getAccount.withArgs(mockOwner).resolves({ account: '0.0.1001' });
-    mockMirrornode.getAccount.withArgs(mockSpender).resolves({ account: '0.0.1002' });
-    mockMirrornode.getAllowanceForToken.resolves(allowanceResult);
+      .resolves('0xfe');
+    mockMirrornode.getAccount.resolves({ account: '0.0.123' });
+    mockMirrornode.getBalanceOfToken.resolves(null);
 
     await provider.request({
       method: 'eth_call',
-      params: [{ to: targetTokenAddress, data: `0xdd62ed3e${allowanceCallData}` }],
+      params: [{ to: targetTokenAddress, data: `0x70a08231${balanceOfCall}` }],
+    });
+
+    sinon.assert.calledWith(mockMirrornode.getAccount, sinon.match.string);
+    sinon.assert.calledWith(mockMirrornode.getBalanceOfToken, sinon.match.string, sinon.match.string);
+  });
+
+  it('should handle `allowance(address,address)` call', async function () {
+    const owner = '0x0000000000000000000000000000000000000001';
+    const spender = '0x0000000000000000000000000000000000000002';
+
+    mockWrappedProvider.request
+      .withArgs({ method: 'eth_getCode', params: [HTS_ADDRESS, 'latest'] })
+      .resolves({ result: '0xfe' });
+
+    mockMirrornode.getAccount.withArgs(owner).resolves({ account: '0.0.1001' });
+    mockMirrornode.getAccount.withArgs(spender).resolves({ account: '0.0.1002' });
+    mockMirrornode.getAllowanceForToken.resolves({ allowances: [{ amount: 500 }] });
+
+    await provider.request({
+      method: 'eth_call',
+      params: [{
+        to: '0x0000000000000000000000000000000000000100',
+        data: `0xdd62ed3e${owner.slice(2).padStart(64, '0')}${spender.slice(2).padStart(64, '0')}`,
+      }],
+    });
+
+    sinon.assert.calledWith(
+      mockMirrornode.getAllowanceForToken,
+      sinon.match.string,
+      sinon.match.string,
+      sinon.match.string,
+    );
+  });
+
+  it('should handle `allowance(address,address)` call even when `getAllowanceForToken` returns null', async function () {
+    const owner = '0x0000000000000000000000000000000000000001';
+    const spender = '0x0000000000000000000000000000000000000002';
+
+    mockWrappedProvider.request
+      .withArgs({ method: 'eth_getCode', params: [HTS_ADDRESS, 'latest'] })
+      .resolves({ result: '0xfe' });
+
+    mockMirrornode.getAccount.withArgs(owner).resolves({ account: '0.0.1001' });
+    mockMirrornode.getAccount.withArgs(spender).resolves({ account: '0.0.1002' });
+    mockMirrornode.getAllowanceForToken.resolves(null);
+
+    await provider.request({
+      method: 'eth_call',
+      params: [{
+        to: '0x0000000000000000000000000000000000000100',
+        data: `0xdd62ed3e${owner.slice(2).padStart(64, '0')}${spender.slice(2).padStart(64, '0')}`,
+      }],
     });
 
     sinon.assert.calledWith(
