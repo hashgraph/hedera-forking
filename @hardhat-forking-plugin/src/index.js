@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-const { extendProvider } = require('hardhat/config');
+const { extendProvider, extendConfig } = require('hardhat/config');
 const { JsonRpcProvider } = require('ethers');
 const { MirrorNodeClient } = require('./mirror-node-client');
 const { HederaProvider } = require('./hedera-provider');
@@ -26,6 +26,20 @@ const chains = {
     296: 'https://testnet.mirrornode.hedera.com/api/v1/',
     297: 'https://previewnet.mirrornode.hedera.com/api/v1/',
 };
+
+// https://hardhat.org/hardhat-network/docs/guides/forking-other-networks#using-a-custom-hardfork-history
+// https://hardhat.org/hardhat-network/docs/reference#chains
+extendConfig((config, _userConfig) => {
+    const hardhatChains = config.networks.hardhat.chains;
+    for (const chainIdKey of Object.keys(chains)) {
+        const chainId = Number(chainIdKey);
+        if (hardhatChains.get(chainId) === undefined) {
+            hardhatChains.set(Number(chainId), {
+                hardforkHistory: new Map().set('shanghai', 0)
+            });
+        }
+    }
+});
 
 /**
  * Extends the provider with `HederaProvider` only when the forked network is a Hedera network.
