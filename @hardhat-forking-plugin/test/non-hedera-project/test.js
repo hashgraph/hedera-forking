@@ -30,4 +30,17 @@ describe('non-hedera-project', function () {
         const extensions = getProviderExtensions(hre.network.provider).map(p => p.constructor.name);
         expect(extensions).to.not.include('HederaProvider');
     });
+
+    it('should load Hedera hardfork history even on non-Hedera projects', async function () {
+        const { chains } = /** @type{import('hardhat/types').HardhatNetworkConfig} */(hre.network.config);
+        expect(chains.get(295)).to.be.deep.equal({
+            hardforkHistory: new Map().set('shanghai', 0)
+        });
+        expect(chains.get(296)).to.be.deep.equal({
+            hardforkHistory: new Map().set('shanghai', 0)
+        });
+        expect(chains.get(297)).to.be.deep.equal({
+            hardforkHistory: new Map().set('shanghai', 0)
+        });
+    });
 });
