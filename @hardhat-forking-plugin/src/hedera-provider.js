@@ -52,7 +52,7 @@ class HederaProvider extends ProviderWrapper {
    * Creates an instance of HederaProvider.
    *
    * @param {import('hardhat/types').EIP1193Provider} wrappedProvider The provider being wrapped.
-   * @param {import('./client').MirrorNodeClient} mirrorNode The client used to query the Hedera network's mirrornode.
+   * @param {import('./mirror-node-client').MirrorNodeClient} mirrorNode The client used to query the Hedera network's mirrornode.
    */
   constructor(wrappedProvider, mirrorNode) {
     super(wrappedProvider);
@@ -169,6 +169,11 @@ class HederaProvider extends ProviderWrapper {
     if (this.actionDone.includes(`token_${target}`)) {
       return;
     }
+
+    if (!target.startsWith('0x000000000000')) {
+      return;
+    }
+
     const token = await this.mirrorNode.getTokenById(`0.0.${Number(target)}`);
     if (!token) {
       return;
@@ -207,6 +212,9 @@ class HederaProvider extends ProviderWrapper {
     }
     await this.assignEvmAccountAddress(accountId, account);
     const result = await this.mirrorNode.getBalanceOfToken(`0.0.${Number(target)}`, accountId);
+    if (!result) {
+      return;
+    }
     const balance = result.balances.length > 0 ? result.balances[0].balance : 0;
     await this._setStorageAt(
       target,
@@ -241,6 +249,9 @@ class HederaProvider extends ProviderWrapper {
       `0.0.${Number(target)}`,
       spenderId,
     );
+    if (!result) {
+      return;
+    }
     const allowance = result.allowances.length > 0 ? result.allowances[0].amount : 0;
     await this._setStorageAt(
       target,

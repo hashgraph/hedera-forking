@@ -18,7 +18,7 @@
 
 const hre = require('hardhat');
 const { expect } = require('chai');
-const { getProviderExtensions } = require('../../.lib');
+const { getProviderExtensions } = require('../.lib');
 
 describe('hedera-fork-project', function () {
     const accountAddress = '0x292c4acf9ec49af888d4051eb4a4dc53694d1380';
@@ -39,7 +39,7 @@ describe('hedera-fork-project', function () {
     it('should have `HederaProvider` set to fetch token data from testnet Mirror Node', async function () {
         const [provider] = getProviderExtensions(hre.network.provider)
             .filter(p => p.constructor.name === 'HederaProvider');
-        expect(/**@type{import('../../../src/hedera-provider').HederaProvider}*/(provider).mirrorNode.url)
+        expect(/**@type{import('../../src/hedera-provider').HederaProvider}*/(provider).mirrorNode.url)
             .to.be.equal('https://testnet.mirrornode.hedera.com/api/v1/');
     });
 
@@ -65,5 +65,11 @@ describe('hedera-fork-project', function () {
 
     it('get allowance', async function () {
         expect(await ft['allowance'](accountAddress, spenderAddress)).to.be.equal(0n);
+    });
+
+    it('should get correct value when non-HTS address is called', async function () {
+        const contract = await hre.ethers.deployContract('One');
+        const result = await contract['getOne']();
+        expect(result).to.be.equal(1n);
     });
 });
