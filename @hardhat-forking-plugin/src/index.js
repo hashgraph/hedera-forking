@@ -28,6 +28,23 @@ const chains = {
 };
 
 /**
+ * Extends the Hardhat config to setup hardfork history for Hedera networks.
+ * This avoids the problem `No known hardfork for execution on historical block`
+ * when running a forked network against a Hedera network.
+ *
+ * Note that the Hardhat config will be extended regardless of the selected network.
+ * This is to simplify the `extendConfig` logic and it does not harm having the extra chains config.
+ * 
+ * We use `shanghai` as the default hardfork because setting this to `cancun` leads to the error
+ * 
+ * ```
+ * internal error: entered unreachable code: error: Header(ExcessBlobGasNotSet)
+ * ```
+ * 
+ * which looks like an issue in EDR
+ * https://github.com/NomicFoundation/edr/blob/8aded8ba38da741b6591a9550ab1f71cd138528e/crates/edr_evm/src/block/builder.rs#L99-L103.
+ * Nevertheless `cancun` opcodes work fine when running a Hardhat forked network.
+ *
  * https://hardhat.org/hardhat-network/docs/guides/forking-other-networks#using-a-custom-hardfork-history
  * https://hardhat.org/hardhat-network/docs/reference#chains
  */
