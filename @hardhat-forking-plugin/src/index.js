@@ -27,12 +27,16 @@ const chains = {
     297: 'https://previewnet.mirrornode.hedera.com/api/v1/',
 };
 
-// https://hardhat.org/hardhat-network/docs/guides/forking-other-networks#using-a-custom-hardfork-history
-// https://hardhat.org/hardhat-network/docs/reference#chains
+/**
+ * https://hardhat.org/hardhat-network/docs/guides/forking-other-networks#using-a-custom-hardfork-history
+ * https://hardhat.org/hardhat-network/docs/reference#chains
+ */
 extendConfig((config, _userConfig) => {
     const hardhatChains = config.networks.hardhat.chains;
     for (const chainIdKey of Object.keys(chains)) {
         const chainId = Number(chainIdKey);
+        // This can be set if the user configures a custom hardfork for a Hedera network.
+        // Don't override the value set by the user.
         if (hardhatChains.get(chainId) === undefined) {
             hardhatChains.set(Number(chainId), {
                 hardforkHistory: new Map().set('shanghai', 0)
