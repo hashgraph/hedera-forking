@@ -35,8 +35,8 @@ extendConfig((config, _userConfig) => {
     const hardhatChains = config.networks.hardhat.chains;
     for (const chainIdKey of Object.keys(chains)) {
         const chainId = Number(chainIdKey);
-        // This can be set if the user configures a custom hardfork for a Hedera network.
-        // Don't override the value set by the user.
+        // This can be already set if the user configures a custom hardfork for a Hedera network.
+        // We don't want to overwrite the value set by the user.
         if (hardhatChains.get(chainId) === undefined) {
             hardhatChains.set(Number(chainId), {
                 hardforkHistory: new Map().set('shanghai', 0)
