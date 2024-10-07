@@ -34,20 +34,20 @@ describe('hedera-fork-project', function () {
     /** @type {import('ethers').Contract} */
     let ft;
 
-    beforeEach(async () => {
-        ft = await hre.ethers.getContractAt('IERC20', tokenAddress);
-    });
-
     before(async () => {
         const bytecode = fs.readFileSync(__dirname + '/data/HIP719.bytecode').toString();
         await hre.network.provider.send('hardhat_setCode', [tokenAddress, bytecode]);
+    });
+
+    beforeEach(async () => {
+        ft = await hre.ethers.getContractAt('IERC20', tokenAddress);
         fetchStub = sinon.stub(global, 'fetch');
         for (let url of Object.keys(responses)) {
-            fetchStub.withArgs(url).resolves(new Response(JSON.stringify(responses[url])));
+            fetchStub.withArgs(url).resolves(new Response(responses[url]));
         }
     });
 
-    after(() => {
+    afterEach(() => {
         fetchStub.restore();
     });
 
