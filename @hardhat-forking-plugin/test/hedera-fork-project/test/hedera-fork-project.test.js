@@ -18,17 +18,38 @@
 
 const hre = require('hardhat');
 const { expect } = require('chai');
+
+const fs = require('fs');
+const sinon = require('sinon');
 const { getProviderExtensions } = require('../../.lib');
 
+const responses = require('./data/mirrornodeStubResponses.json');
+const tokenAddress = '0x000000000000000000000000000000000047b52a';
+const accountAddress = '0x292c4acf9ec49af888d4051eb4a4dc53694d1380';
+const spenderAddress = '0x000000000000000000000000000000000043f832';
+
 describe('hedera-fork-project', function () {
-    const accountAddress = '0x292c4acf9ec49af888d4051eb4a4dc53694d1380';
-    const spenderAddress = '0x000000000000000000000000000000000043f832';
+    /** @type {import('sinon').SinonStub} */
+    let fetchStub;
 
     /** @type {import('ethers').Contract} */
     let ft;
 
     beforeEach(async () => {
-        ft = await hre.ethers.getContractAt('IERC20', '0x000000000000000000000000000000000047b52a');
+        ft = await hre.ethers.getContractAt('IERC20', tokenAddress);
+    });
+
+    before(async () => {
+        const bytecode = fs.readFileSync(__dirname + '/data/HIP719.bytecode').toString();
+        await hre.network.provider.send('hardhat_setCode', [tokenAddress, bytecode]);
+        fetchStub = sinon.stub(global, 'fetch');
+        for (let url of Object.keys(responses)) {
+            fetchStub.withArgs(url).resolves(new Response(JSON.stringify(responses[url])));
+        }
+    });
+
+    after(() => {
+        fetchStub.restore();
     });
 
     it('should have `HederaProvider` as a loaded extension', async function () {
