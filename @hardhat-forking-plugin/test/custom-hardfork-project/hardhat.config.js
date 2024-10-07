@@ -24,6 +24,14 @@ const { projectTestConfig } = require('../.lib');
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
     ...projectTestConfig,
+    solidity: {
+        version: '0.8.24',
+        settings: {
+            // Override compiler version to compile `Cancun.sol`
+            // https://github.com/NomicFoundation/hardhat/issues/4851#issuecomment-1986148049
+            evmVersion: 'cancun',
+        }
+    },
     networks: {
         hardhat: {
             forking: {
@@ -32,7 +40,7 @@ module.exports = {
             chains: {
                 296: {
                     hardforkHistory: {
-                        'cancun': 1,
+                        'london': 1,
                     }
                 }
             }
