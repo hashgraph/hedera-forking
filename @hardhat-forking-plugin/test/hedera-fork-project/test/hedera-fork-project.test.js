@@ -18,7 +18,6 @@
 
 const hre = require('hardhat');
 const { expect } = require('chai');
-
 const fs = require('fs');
 const sinon = require('sinon');
 const { getProviderExtensions } = require('../../.lib');
