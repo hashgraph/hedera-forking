@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.25;
+pragma solidity ^0.8.15;
 
 interface IERC20 {
     function name() external view returns (string memory);
