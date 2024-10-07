@@ -22,6 +22,15 @@ const fs = require('fs');
 const sinon = require('sinon');
 const { getProviderExtensions } = require('../../.lib');
 
+/**
+ * @typedef {Object} MirrorNodeResponse
+ * @property {string} url - The URL of the API endpoint.
+ * @property {string} response - The JSON-encoded string of the response for the URL.
+ */
+
+/**
+ * @type {MirrorNodeResponse[]}
+ */
 const responses = require('./data/mirrornodeStubResponses.json');
 const tokenAddress = '0x000000000000000000000000000000000047b52a';
 const accountAddress = '0x292c4acf9ec49af888d4051eb4a4dc53694d1380';
@@ -42,8 +51,8 @@ describe('hedera-fork-project', function () {
     beforeEach(async () => {
         ft = await hre.ethers.getContractAt('IERC20', tokenAddress);
         fetchStub = sinon.stub(global, 'fetch');
-        for (let url of Object.keys(responses)) {
-            fetchStub.withArgs(url).resolves(new Response(responses[url]));
+        for (let { url, response } of responses) {
+            fetchStub.withArgs(url).resolves(new Response(response));
         }
     });
 
