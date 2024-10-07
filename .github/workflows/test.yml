@@ -46,7 +46,7 @@ jobs:
 
       - name: Install @hardhat-forking-plugin Dependencies
         working-directory: ./@hardhat-forking-plugin
-        run: npm ci && npm run build
+        run: npm ci
 
       - name: Run TypeScript Type-Check
         run: npm run type-check

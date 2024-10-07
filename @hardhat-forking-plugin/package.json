@@ -13,8 +13,9 @@
         "hardhat-plugin"
     ],
     "scripts": {
-        "test": "mocha",
+        "prepare": "npm run build",
         "build": "cp ../out/HtsSystemContract.sol/HtsSystemContract.json out",
+        "test": "mocha",
         "prepublishOnly": "npm run build"
     },
     "files": [
