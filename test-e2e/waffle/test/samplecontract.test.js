@@ -1,11 +1,10 @@
 import { expect } from 'chai';
 import dotenv from 'dotenv';
-import { providers, Wallet, ContractFactory, Contract } from 'ethers';
+import { Wallet, ContractFactory, Contract } from 'ethers';
 import { createFixtureLoader, MockProvider } from 'ethereum-waffle';
 import IERC20Contract from '../build/IERC20.json' assert { type: "json" };
 
 dotenv.config();
-const { JsonRpcProvider } = providers;
 
 const usdcAddress = process.env.ERC20_TOKEN_ADDRESS || '';
 const bob = '0x0000000000000000000000000000000000000887';
@@ -28,7 +27,15 @@ describe('RPC', function () {
     let wallet;
 
     beforeEach(async () => {
-        const provider = new JsonRpcProvider(process.env.RELAY_ENDPOINT);
+        const provider =  new MockProvider({
+            ganacheOptions: {
+                fork: {
+                    url: process.env.RELAY_ENDPOINT,
+                },
+            }
+        });
+
+        //const provider = new JsonRpcProvider(process.env.RELAY_ENDPOINT);
         wallet = new Wallet(process.env.OPERATOR_PRIVATE_KEY, provider);
 
         // Assign the fixture loader
