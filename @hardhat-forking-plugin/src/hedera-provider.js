@@ -66,21 +66,20 @@ class HederaProvider extends ProviderWrapper {
     this.actionDone = [];
 
     // @ts-ignore
-    const vm = wrappedProvider._node._vm;
+    const provider = wrappedProvider._provider;
 
     // @ts-ignore
-    vm.evm.events?.on('beforeMessage', async (/**@type{import('hardhat/internal/hardhat-network/provider/vm/types').MinimalMessage}*/message, resolve) => {
-      const toHex = (/**@type{{bytes: Uint8Array}}*/addr) => '0x' + /**@type{Buffer}*/(addr.bytes).toString('hex');
-      const { to, codeAddress } = message;
-      if (codeAddress !== undefined
-        && toHex(codeAddress) === '0x0000000000000000000000000000000000000167'
-        && to !== undefined
-      ) {
-        const target = toHex(to);
-        console.log('167 loadBaseTokenData', message);
+    provider.setCallOverrideCallback(async (address, data) => {
+      /** @param {Buffer} addr */
+      const toHex = (addr) => '0x' + addr.toString('hex');
+      address = toHex(address);
+      data = toHex(data);
+      console.log('setCallOverrideCallback', address, data);
+      if (address === '0x0000000000000000000000000000000000000167') {
+        const target = '0x000000000000000000000000000000000047b52a';
         await this.loadBaseTokenData(target);
       }
-      resolve?.();
+      return Promise.resolve(undefined);
     });
   }
 
