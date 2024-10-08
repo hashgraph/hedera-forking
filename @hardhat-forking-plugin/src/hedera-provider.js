@@ -64,6 +64,24 @@ class HederaProvider extends ProviderWrapper {
      * @type {('hts_code' | `${'token' | 'balance' | 'allowance' | 'account'}_${string}`)[]}
      */
     this.actionDone = [];
+
+    // @ts-ignore
+    const vm = wrappedProvider._node._vm;
+
+    // @ts-ignore
+    vm.evm.events?.on('beforeMessage', async (/**@type{import('hardhat/internal/hardhat-network/provider/vm/types').MinimalMessage}*/message, resolve) => {
+      const toHex = (/**@type{{bytes: Uint8Array}}*/addr) => '0x' + /**@type{Buffer}*/(addr.bytes).toString('hex');
+      const { to, codeAddress } = message;
+      if (codeAddress !== undefined
+        && toHex(codeAddress) === '0x0000000000000000000000000000000000000167'
+        && to !== undefined
+      ) {
+        const target = toHex(to);
+        console.log('167 loadBaseTokenData', message);
+        await this.loadBaseTokenData(target);
+      }
+      resolve?.();
+    });
   }
 
   /**
