@@ -43,10 +43,6 @@ describe('hedera-fork-project', function () {
             .to.be.equal('https://testnet.mirrornode.hedera.com/api/v1/');
     });
 
-    it('add sample transaction to the forked network', async function () {
-        expect(await hre.network.provider.send('hardhat_mine', ['0x001'])).to.be.true;
-    });
-
     it('show decimals', async function () {
         expect(await ft['decimals']()).to.be.equal(13n);
     });

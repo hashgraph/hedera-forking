@@ -24,6 +24,7 @@ describe('::projects', function () {
     this.timeout(30000);
 
     [
+        'custom-hardfork-project',
         'hedera-fork-project',
         'hedera-mainnet-project',
         'non-hedera-project',
