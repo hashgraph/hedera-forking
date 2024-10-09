@@ -8,6 +8,21 @@ dotenv.config();
 
 const usdcAddress = process.env.ERC20_TOKEN_ADDRESS || '';
 const bob = '0x0000000000000000000000000000000000000887';
+const providerConfig =  {
+    ganacheOptions: {
+        fork: {
+            url: process.env.RELAY_ENDPOINT,
+        },
+        wallet: {
+            accounts: [
+                {
+                    balance: `0x${Number(10 * 10**32).toString(16)}`,
+                    secretKey: process.env.OPERATOR_PRIVATE_KEY || '',
+                },
+            ],
+        },
+    },
+};
 
 describe('RPC', function () {
     this.timeout(100000);
@@ -27,21 +42,9 @@ describe('RPC', function () {
     let wallet;
 
     beforeEach(async () => {
-        const provider =  new MockProvider({
-            ganacheOptions: {
-                fork: {
-                    url: process.env.RELAY_ENDPOINT,
-                },
-            }
-        });
-
-        //const provider = new JsonRpcProvider(process.env.RELAY_ENDPOINT);
-        wallet = new Wallet(process.env.OPERATOR_PRIVATE_KEY, provider);
-
-        // Assign the fixture loader
+        const provider = new MockProvider(providerConfig);
+        wallet = provider.getWallets()[0];
         loadFixture = createFixtureLoader([wallet]);
-
-        // The fixture returns a Contract instance for IERC20
         fixture = ([wallet]) => ContractFactory.getContract(usdcAddress, IERC20Contract.abi, wallet);
     });
 
@@ -50,7 +53,6 @@ describe('RPC', function () {
          * @type {Contract}
          */
         const contract = await loadFixture(fixture);
-
         const balance = (await contract.balanceOf(wallet.address)).toNumber();
 
         expect(balance).to.not.equal(0, `Please use an account with a non-zero ${usdcAddress} token balance for this test to function correctly.`);
@@ -70,14 +72,4 @@ describe('RPC', function () {
 
         expect(balance).to.not.equal(0);
     });
-
-/**
- * OK THIS STILL DOES NOT SEEM TO WORK, I DONT KNOW HOW TO USE THE MOCK PROVIDER FROM THE WAFFLE ;/ .
-    it('should work with default wallet', async () => {
-        const tempWallet = new MockProvider().getWallets()[0];
-        const contract = await createFixtureLoader()(fixture);
-        const balance = (await contract.balanceOf(tempWallet.address)).toNumber();
-        expect(balance).to.equal(0); // Waffle accounts will have 0 balance
-    });
- */
 });
