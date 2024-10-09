@@ -20,7 +20,7 @@ const hre = require('hardhat');
 const { expect } = require('chai');
 const fs = require('fs');
 const sinon = require('sinon');
-const { getProviderExtensions } = require('../../.lib');
+const { getProviderExtensions } = require('../.lib');
 
 /**
  * @typedef {Object} MirrorNodeResponse
@@ -68,12 +68,8 @@ describe('hedera-fork-project', function () {
     it('should have `HederaProvider` set to fetch token data from testnet Mirror Node', async function () {
         const [provider] = getProviderExtensions(hre.network.provider)
             .filter(p => p.constructor.name === 'HederaProvider');
-        expect(/**@type{import('../../../src/hedera-provider').HederaProvider}*/(provider).mirrorNode.url)
+        expect(/**@type{import('../../src/hedera-provider').HederaProvider}*/(provider).mirrorNode.url)
             .to.be.equal('https://testnet.mirrornode.hedera.com/api/v1/');
-    });
-
-    it('add sample transaction to the forked network', async function () {
-        expect(await hre.network.provider.send('hardhat_mine', ['0x001'])).to.be.true;
     });
 
     it('show decimals', async function () {
@@ -94,5 +90,11 @@ describe('hedera-fork-project', function () {
 
     it('get allowance', async function () {
         expect(await ft['allowance'](accountAddress, spenderAddress)).to.be.equal(0n);
+    });
+
+    it('should get correct value when non-HTS address is called', async function () {
+        const contract = await hre.ethers.deployContract('One');
+        const result = await contract['getOne']();
+        expect(result).to.be.equal(1n);
     });
 });
