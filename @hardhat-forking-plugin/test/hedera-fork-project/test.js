@@ -31,12 +31,12 @@ describe('hedera-fork-project', function () {
         ft = await hre.ethers.getContractAt('IERC20', '0x000000000000000000000000000000000047b52a');
     });
 
-    it('should have `HederaProvider` as a loaded extension', async function () {
+    it.skip('should have `HederaProvider` as a loaded extension', async function () {
         const extensions = getProviderExtensions(hre.network.provider).map(p => p.constructor.name);
         expect(extensions).to.include('HederaProvider');
     });
 
-    it('should have `HederaProvider` set to fetch token data from testnet Mirror Node', async function () {
+    it.skip('should have `HederaProvider` set to fetch token data from testnet Mirror Node', async function () {
         const [provider] = getProviderExtensions(hre.network.provider)
             .filter(p => p.constructor.name === 'HederaProvider');
         expect(/**@type{import('../../src/hedera-provider').HederaProvider}*/(provider).mirrorNode.url)

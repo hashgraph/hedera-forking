@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-const { extendProvider, extendConfig } = require('hardhat/config');
-const { JsonRpcProvider } = require('ethers');
-const { MirrorNodeClient } = require('./mirror-node-client');
-const { HederaProvider } = require('./hedera-provider');
+const path = require('path');
+const log = require('util').debuglog('hedera-forking');
+const { Worker } = require('worker_threads');
+const { extendConfig } = require('hardhat/config');
 
 const chains = {
     295: 'https://mainnet-public.mirrornode.hedera.com/api/v1/',
@@ -48,35 +48,46 @@ const chains = {
  * https://hardhat.org/hardhat-network/docs/guides/forking-other-networks#using-a-custom-hardfork-history
  * https://hardhat.org/hardhat-network/docs/reference#chains
  */
-extendConfig((config, _userConfig) => {
+extendConfig((config, userConfig) => {
     const hardhatChains = config.networks.hardhat.chains;
     for (const chainIdKey of Object.keys(chains)) {
         const chainId = Number(chainIdKey);
         // This can be already set if the user configures a custom hardfork for a Hedera network.
         // We don't want to overwrite the value set by the user.
         if (hardhatChains.get(chainId) === undefined) {
+            log('Setting hardfork history for chain %d', chainId);
             hardhatChains.set(Number(chainId), {
                 hardforkHistory: new Map().set('shanghai', 0)
             });
+        } else {
+            log(`Hardfork history for chain %d set by the user`, chainId);
         }
     }
-});
 
-/**
- * Extends the provider with `HederaProvider` only when the forked network is a Hedera network.
- */
-extendProvider(async (provider, config, network) => {
-    const networkConfig = config.networks[network];
-    if ('forking' in networkConfig) {
-        const { forking } = networkConfig;
-        if (forking.url) {
-            const net = await (new JsonRpcProvider(forking.url)).getNetwork();
-            const mirrorNodeUrl = chains[/**@type{keyof typeof chains}*/(Number(net.chainId))];
-            if (mirrorNodeUrl !== undefined) {
-                return new HederaProvider(provider, new MirrorNodeClient(mirrorNodeUrl));
+    const forking = userConfig.networks?.hardhat?.forking;
+    if (forking !== undefined && 'chainId' in forking) {
+        // @ts-ignore
+        const { chainId, workerPort } = forking;
+        const mirrorNodeUrl = chains[/**@type{keyof typeof chains}*/(chainId)];
+        log(`Forking enabled using chainId=${chainId} workerPort=${workerPort}`);
+        if (mirrorNodeUrl !== undefined) {
+            const scriptPath = path.resolve(__dirname, './json-rpc-forwarder');
+            log('Starting JSON-RPC Forwarder server from `%s`', scriptPath);
+            const worker = new Worker(scriptPath, {
+                workerData: {
+                    forkingUrl: forking.url,
+                    mirrorNodeUrl,
+                    port: workerPort === undefined ? 1234 : Number(workerPort),
+                }
+            });
+            worker.on('error', err => console.log(err));
+            worker.on('exit', code => log('worker exited with code %d', code));
+            worker.unref();
+            process.on('exit', code => log('Main process exited with code %d', code));
+            // Should always be true
+            if (config.networks.hardhat.forking !== undefined) {
+                config.networks.hardhat.forking.url = `http://127.0.0.1:${workerPort}`;
             }
         }
     }
-
-    return provider;
 });

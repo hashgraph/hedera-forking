@@ -28,6 +28,8 @@ module.exports = {
         hardhat: {
             forking: {
                 url: 'https://testnet.hashio.io/api',
+                chainId: 296,
+                workerPort: 1235,
             }
         }
     }

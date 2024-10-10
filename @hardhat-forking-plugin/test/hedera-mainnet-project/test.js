@@ -23,15 +23,15 @@ const { getProviderExtensions } = require('../.lib');
 describe('hedera-mainnet-project', function () {
 
     before('provider call to force its initialization', async function () {
-        await hre.network.provider.request({ method: 'eth_chainId' });
+        // await hre.network.provider.request({ method: 'eth_chainId' });
     });
 
-    it('should have `HederaProvider` as a loaded extension', async function () {
+    it.skip('should have `HederaProvider` as a loaded extension', async function () {
         const extensions = getProviderExtensions(hre.network.provider).map(p => p.constructor.name);
         expect(extensions).to.include('HederaProvider');
     });
 
-    it('should have `HederaProvider` set to fetch token data from mainnet Mirror Node', async function () {
+    it.skip('should have `HederaProvider` set to fetch token data from mainnet Mirror Node', async function () {
         const [provider] = getProviderExtensions(hre.network.provider)
             .filter(p => p.constructor.name === 'HederaProvider');
         expect(/**@type{import('../../src/hedera-provider').HederaProvider}*/(provider).mirrorNode.url)
