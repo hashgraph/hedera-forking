@@ -28,7 +28,11 @@ const chains = {
 };
 
 /**
- * Extends the Hardhat config to setup hardfork history for Hedera networks.
+ * Extends the Hardhat config to setup hardfork history for Hedera networks and
+ * determine whether HTS emulation should be activated.
+ * 
+ * ### Hardfork History Setup
+ * 
  * This avoids the problem `No known hardfork for execution on historical block`
  * when running a forked network against a Hedera network.
  *
@@ -47,6 +51,28 @@ const chains = {
  *
  * https://hardhat.org/hardhat-network/docs/guides/forking-other-networks#using-a-custom-hardfork-history
  * https://hardhat.org/hardhat-network/docs/reference#chains
+ * 
+ * ### Activation of HTS emulation
+ * 
+ * It creates a service `Worker` that intercepts the JSON-RPC calls made to the remote network.
+ * This is called directly by EDR,
+ * so we can hook into `eth_getCode` and `eth_getStorageAt` to provide HTS emulation.
+ * 
+ * This needs to be done in the `extendConfig` because it changes the `forking.url`.
+ * The `forking.url` is then used to create an `EdrProviderWrapper` instance.
+ * The [`extendProvider`](https://hardhat.org/hardhat-runner/docs/advanced/building-plugins#extending-the-hardhat-provider)
+ * hook runs after the `EdrProviderWrapper` has been constructed,
+ * and it cannot be changed directly from the `EdrProviderWrapper` instance.
+ * 
+ * This creates a problem because the `extendConfig` callback cannot be `async`.
+ * Essentially the main issue is "since Hardhat needs to be loadable via `require` call, configuration must be synchronous".
+ * See the following issues for more details
+ * 
+ * - https://github.com/NomicFoundation/hardhat/issues/3287
+ * - https://github.com/NomicFoundation/hardhat/issues/2496
+ * 
+ * That's why we need to shift the setting of `chainId` and `workerPort` to the user,
+ * so we can update the `forking.url` if needed synchronously.
  */
 extendConfig((config, userConfig) => {
     const hardhatChains = config.networks.hardhat.chains;
