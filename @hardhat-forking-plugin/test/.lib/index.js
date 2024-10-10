@@ -17,31 +17,7 @@
  *
  */
 
-const { strict: assert } = require('assert');
-
 module.exports = {
-
-    /**
-     * Retrieves the chains of extensions of this `provider`.
-     * 
-     * The provider can be extended using Hardhat's
-     * [`extendProvider`](https://hardhat.org/hardhat-runner/docs/advanced/building-plugins#extending-the-hardhat-provider).
-     * 
-     * @param {unknown} provider 
-     * @returns {object[]}
-     */
-    getProviderExtensions(provider) {
-        const extensions = [];
-        while (provider !== undefined && provider !== null) {
-            assert(typeof provider === 'object');
-            extensions.push(provider);
-            if ('_provider' in provider) provider = provider._provider;
-            else if ('_wrappedProvider' in provider) provider = provider._wrappedProvider;
-            else if ('provider' in provider) provider = provider.provider;
-            else provider = undefined;
-        }
-        return extensions;
-    },
 
     /** 
      * Shared config for Hardhat test projects.
