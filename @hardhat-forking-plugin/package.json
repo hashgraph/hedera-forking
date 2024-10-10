@@ -13,14 +13,10 @@
         "hardhat-plugin"
     ],
     "scripts": {
-        "prepare": "npm run build",
-        "build": "cp ../out/HtsSystemContract.sol/HtsSystemContract.json out",
-        "test": "mocha",
-        "prepublishOnly": "npm run build"
+        "test": "mocha"
     },
     "files": [
-        "src/",
-        "out/"
+        "src/"
     ],
     "peerDependencies": {
         "ethers": "^6.11.2",
