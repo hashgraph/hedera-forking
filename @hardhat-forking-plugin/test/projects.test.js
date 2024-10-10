@@ -34,6 +34,7 @@ describe('::projects', function () {
 
             /**@type {import('hardhat/types').HardhatRuntimeEnvironment} */
             let hre;
+
             beforeEach('loading hardhat environment', function () {
                 process.chdir(path.join(__dirname, project));
                 hre = require('hardhat');

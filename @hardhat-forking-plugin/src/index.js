@@ -67,7 +67,10 @@ extendConfig((config, userConfig) => {
     const forking = userConfig.networks?.hardhat?.forking;
     if (forking !== undefined && 'chainId' in forking) {
         // @ts-ignore
-        const { chainId, workerPort } = forking;
+        let { chainId, workerPort } = forking;
+        if (workerPort === undefined) {
+            workerPort = 1234;
+        }
         const mirrorNodeUrl = chains[/**@type{keyof typeof chains}*/(chainId)];
         log(`Forking enabled using chainId=${chainId} workerPort=${workerPort}`);
         if (mirrorNodeUrl !== undefined) {
@@ -77,7 +80,7 @@ extendConfig((config, userConfig) => {
                 workerData: {
                     forkingUrl: forking.url,
                     mirrorNodeUrl,
-                    port: workerPort === undefined ? 1234 : Number(workerPort),
+                    port: workerPort,
                 }
             });
             worker.on('error', err => console.log(err));

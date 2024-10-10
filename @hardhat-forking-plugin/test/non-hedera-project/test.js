@@ -18,18 +18,8 @@
 
 const hre = require('hardhat');
 const { expect } = require('chai');
-const { getProviderExtensions } = require('../.lib');
 
 describe('non-hedera-project', function () {
-
-    before('provider call to force its initialization', async function () {
-        await hre.network.provider.request({ method: 'eth_chainId' });
-    });
-
-    it('should not have `HederaProvider` as a loaded extension', async function () {
-        const extensions = getProviderExtensions(hre.network.provider).map(p => p.constructor.name);
-        expect(extensions).to.not.include('HederaProvider');
-    });
 
     it('should load Hedera hardfork history even on non-Hedera projects', async function () {
         const { chains } = /** @type{import('hardhat/types').HardhatNetworkConfig} */(hre.network.config);
@@ -43,4 +33,5 @@ describe('non-hedera-project', function () {
             hardforkHistory: new Map().set('shanghai', 0)
         });
     });
+
 });

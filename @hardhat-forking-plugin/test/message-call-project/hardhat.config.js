@@ -29,7 +29,7 @@ module.exports = {
             forking: {
                 url: 'https://testnet.hashio.io/api',
                 chainId: 296,
-                workerPort: 1234,
+                workerPort: 1237,
             },
         }
     },
