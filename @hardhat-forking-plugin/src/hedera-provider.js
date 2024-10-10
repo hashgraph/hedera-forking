@@ -64,23 +64,6 @@ class HederaProvider extends ProviderWrapper {
      * @type {('hts_code' | `${'token' | 'balance' | 'allowance' | 'account'}_${string}`)[]}
      */
     this.actionDone = [];
-
-    // @ts-ignore
-    const provider = wrappedProvider._provider;
-
-    // @ts-ignore
-    provider.setCallOverrideCallback(async (address, data) => {
-      /** @param {Buffer} addr */
-      const toHex = (addr) => '0x' + addr.toString('hex');
-      address = toHex(address);
-      data = toHex(data);
-      console.log('setCallOverrideCallback', address, data);
-      if (address === '0x0000000000000000000000000000000000000167') {
-        const target = '0x000000000000000000000000000000000047b52a';
-        await this.loadBaseTokenData(target);
-      }
-      return Promise.resolve(undefined);
-    });
   }
 
   /**
