@@ -25,7 +25,8 @@ const { MirrorNodeClient } = require('./mirror-node-client');
 const { getHtsCode, getHtsStorageAt } = require('../..');
 const { HTSAddress } = require('../../utils');
 
-const { forkingUrl, mirrorNodeUrl, port } = workerData;
+/** @type{{forkingUrl: string, mirrorNodeUrl: string, port: number, addresses: string[]}} */
+const { forkingUrl, mirrorNodeUrl, port, addresses } = workerData;
 const mirrorNodeClient = new MirrorNodeClient(mirrorNodeUrl);
 
 debug('Starting JSON-RPC Relay Forwarder server on :%d, forking url=%s mirror node url=%s', port, forkingUrl, mirrorNodeUrl);
@@ -46,8 +47,22 @@ debug('Starting JSON-RPC Relay Forwarder server on :%d, forking url=%s mirror no
  * 
  */
 const eth = {
+
+    /** @type {EthHandler} */
+    eth_getBalance: async ([address, _blockNumber]) => {
+        assert(typeof address === 'string');
+        if (addresses.includes(address.toLowerCase())) {
+            return '0x0';
+        }
+        return null;
+    },
+
     /** @type {EthHandler} */
     eth_getCode: async ([address, _blockNumber]) => {
+        assert(typeof address === 'string');
+        if (addresses.includes(address.toLowerCase())) {
+            return '0x';
+        }
         if (address === HTSAddress) {
             debug('loading HTS Code at addres %s', address);
             return getHtsCode();
@@ -76,19 +91,19 @@ const server = http.createServer(function (req, res) {
     }).on('end', async () => {
         const body = Buffer.concat(chunks).toString();
         const { jsonrpc, id, method, params } = JSON.parse(body);
-        debug('request', id, method, params);
+        assert(jsonrpc === '2.0', 'Only JSON-RPC 2.0 allowed');
 
-        assert(jsonrpc === '2.0', 'Only JSON-RPC 2.0');
-
-        const handler = eth[/**@type{keyof typeof eth}*/(method)];
         const response = await async function () {
+            const handler = eth[/**@type{keyof typeof eth}*/(method)];
             if (handler !== undefined) {
                 const reqId = `[Request ID: ${id}]`;
                 const result = await handler(params, reqId);
                 if (result !== null) {
+                    debug('non-forwarded request', id, method, params);
                     return JSON.stringify({ jsonrpc, id, result });
                 }
             }
+            debug('fetch request', id, method, params);
             const result = await fetch(forkingUrl, { method: 'POST', body });
             return await result.text();
         }();

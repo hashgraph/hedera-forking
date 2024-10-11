@@ -33,6 +33,13 @@ declare module 'hardhat/types/config' {
          * If not provided, a default value will be used.
          */
         workerPort?: number;
+
+        /**
+         * List of addresses used by Hardhat when forking.
+         * The JSON-RPC Forwarder will **not** forward
+         * `eth_getCode` and `eth_getBalance` method calls for these addresses.
+         */
+        hardhatAddresses?: string[];
     }
 }
 

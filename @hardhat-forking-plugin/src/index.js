@@ -20,6 +20,7 @@ const path = require('path');
 const debug = require('util').debuglog('hedera-forking');
 const { Worker } = require('worker_threads');
 const { extendConfig, extendEnvironment } = require('hardhat/config');
+const { getAddresses } = require('./hardhat-addresses');
 
 const chains = {
     295: 'https://mainnet-public.mirrornode.hedera.com/api/v1/',
@@ -90,7 +91,8 @@ extendConfig((config, userConfig) => {
                 forkingConfig.chainId = chainId;
                 forkingConfig.mirrorNodeUrl = mirrorNodeUrl;
                 forkingConfig.workerPort = workerPort;
-                debug(`HTS emulation configured:`, forkingConfig);
+                forkingConfig.hardhatAddresses = getAddresses(config.networks.hardhat.accounts);
+                debug(`HTS emulation configured`);
             }
         } else {
             debug(`Mirror Node URL for chainId ${chainId} not found, HTS emulation disabled`);
@@ -120,7 +122,7 @@ extendConfig((config, userConfig) => {
  * so we can update the `forking.url` if needed **synchronously**.
  */
 extendEnvironment(hre => {
-    debug('extendEnvironment network config:', hre.network.config);
+    debug('extendEnvironment');
 
     if ('forking' in hre.network.config) {
         const forking = hre.network.config.forking;
@@ -132,6 +134,7 @@ extendEnvironment(hre => {
                     forkingUrl: forking.url,
                     mirrorNodeUrl: forking.mirrorNodeUrl,
                     port: forking.workerPort,
+                    addresses: forking.hardhatAddresses,
                 }
             });
             worker.on('error', err => console.log(err));
