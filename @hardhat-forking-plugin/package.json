@@ -23,8 +23,10 @@
         "hardhat": "^2.0.0"
     },
     "devDependencies": {
+        "@nomicfoundation/ethereumjs-util": "^9.0.4",
         "@nomicfoundation/hardhat-ethers": "^3.0.8",
         "@types/sinon": "^17.0.3",
+        "ethereum-cryptography": "^3.0.0",
         "sinon": "^19.0.2"
     }
 }
