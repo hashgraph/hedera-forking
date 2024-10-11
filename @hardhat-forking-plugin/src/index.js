@@ -134,7 +134,7 @@ extendEnvironment(hre => {
                     forkingUrl: forking.url,
                     mirrorNodeUrl: forking.mirrorNodeUrl,
                     port: forking.workerPort,
-                    addresses: forking.hardhatAddresses,
+                    hardhatAddresses: forking.hardhatAddresses,
                 }
             });
             worker.on('error', err => console.log(err));

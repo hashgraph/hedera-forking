@@ -25,8 +25,8 @@ const { MirrorNodeClient } = require('./mirror-node-client');
 const { getHtsCode, getHtsStorageAt } = require('../..');
 const { HTSAddress } = require('../../utils');
 
-/** @type{{forkingUrl: string, mirrorNodeUrl: string, port: number, addresses: string[]}} */
-const { forkingUrl, mirrorNodeUrl, port, addresses } = workerData;
+/** @type{{forkingUrl: string, mirrorNodeUrl: string, port: number, hardhatAddresses: string[]}} */
+const { forkingUrl, mirrorNodeUrl, port, hardhatAddresses } = workerData;
 const mirrorNodeClient = new MirrorNodeClient(mirrorNodeUrl);
 
 debug('Starting JSON-RPC Relay Forwarder server on :%d, forking url=%s mirror node url=%s', port, forkingUrl, mirrorNodeUrl);
@@ -51,7 +51,7 @@ const eth = {
     /** @type {EthHandler} */
     eth_getBalance: async ([address, _blockNumber]) => {
         assert(typeof address === 'string');
-        if (addresses.includes(address.toLowerCase())) {
+        if (hardhatAddresses.includes(address.toLowerCase())) {
             return '0x0';
         }
         return null;
@@ -60,7 +60,7 @@ const eth = {
     /** @type {EthHandler} */
     eth_getCode: async ([address, _blockNumber]) => {
         assert(typeof address === 'string');
-        if (addresses.includes(address.toLowerCase())) {
+        if (hardhatAddresses.includes(address.toLowerCase())) {
             return '0x';
         }
         if (address === HTSAddress) {
