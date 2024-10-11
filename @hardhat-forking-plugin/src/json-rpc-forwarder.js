@@ -18,8 +18,8 @@
 
 const { strict: assert } = require('assert');
 const http = require('http');
-const log = require('util').debuglog('hedera-forking-rpc');
-const { workerData } = require('worker_threads');
+const { workerData, parentPort } = require('worker_threads');
+const debug = require('util').debuglog('hedera-forking-rpc');
 
 const { MirrorNodeClient } = require('./mirror-node-client');
 const { getHtsCode, getHtsStorageAt } = require('../..');
@@ -28,7 +28,7 @@ const { HTSAddress } = require('../../utils');
 const { forkingUrl, mirrorNodeUrl, port } = workerData;
 const mirrorNodeClient = new MirrorNodeClient(mirrorNodeUrl);
 
-log('Creating JSON-RPC Relay Forwarder server on :%d, forking url=%s mirror node url=%s', port, forkingUrl, mirrorNodeUrl);
+debug('Starting JSON-RPC Relay Forwarder server on :%d, forking url=%s mirror node url=%s', port, forkingUrl, mirrorNodeUrl);
 
 /**
  * Function signature for `eth_*` method handlers.
@@ -49,7 +49,7 @@ const eth = {
     /** @type {EthHandler} */
     eth_getCode: async ([address, _blockNumber]) => {
         if (address === HTSAddress) {
-            log('loading HTS Code at addres %s', address);
+            debug('loading HTS Code at addres %s', address);
             return getHtsCode();
         }
         return null;
@@ -60,7 +60,7 @@ const eth = {
         assert(typeof address === 'string');
         assert(typeof slot === 'string');
         // @ts-ignore
-        return await getHtsStorageAt(address, slot, mirrorNodeClient, { trace: log }, requestIdPrefix);
+        return await getHtsStorageAt(address, slot, mirrorNodeClient, { trace: debug }, requestIdPrefix);
     },
 };
 
@@ -76,7 +76,7 @@ const server = http.createServer(function (req, res) {
     }).on('end', async () => {
         const body = Buffer.concat(chunks).toString();
         const { jsonrpc, id, method, params } = JSON.parse(body);
-        log('request', method, params);
+        debug('request', id, method, params);
 
         assert(jsonrpc === '2.0', 'Only JSON-RPC 2.0');
 
@@ -100,4 +100,7 @@ const server = http.createServer(function (req, res) {
     });
 });
 
-server.listen(port);
+server.listen(port, () => {
+    parentPort?.postMessage('listening');
+    debug(`JSON-RPC Relay Forwarder server listening on port ${port}`);
+});
