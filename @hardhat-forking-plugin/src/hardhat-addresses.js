@@ -21,15 +21,17 @@ const { mnemonicToSeedSync } = require('ethereum-cryptography/bip39');
 const { privateToAddress } = require("@nomicfoundation/ethereumjs-util");
 
 /**
+ * Gets the public Ethereum address from the respective private key.
  * 
- * @param {Uint8Array} pk 
- * @returns {string}
+ * @param {Uint8Array} pk the private key to convert.
+ * @returns {string} the Ethereum address corresponding to the `pk` private key.
  */
 const toHexStrAddress = pk => '0x' + Buffer.from(privateToAddress(pk)).toString('hex');
 
 module.exports = {
 
     /**
+     * Returns the addresses used by the Hardhat network from its `accounts` configuration.
      * 
      * @param {import("hardhat/types").HardhatNetworkAccountsConfig} accounts 
      * @returns {string[]}
