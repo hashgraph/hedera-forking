@@ -44,9 +44,6 @@ module.exports = {
     },
     networks: {
         hardhat: {
-            forking: {
-                url: 'https://testnet.hashio.io/api',
-            },
             // Custom `hardforkHistory` config to test is not overwritten by the plugin.
             chains: {
                 296: {

@@ -23,6 +23,13 @@ const hre = require('hardhat');
 
 describe('hedera-mainnet-project', function () {
 
+    it('should configure `forking` with mainnet values', async function () {
+        const { forking } = hre.config.networks.hardhat;
+        expect(forking?.chainId).to.be.equal(295);
+        expect(forking?.mirrorNodeUrl).to.be.equal('https://mainnet-public.mirrornode.hedera.com/api/v1/');
+        expect(forking?.workerPort).to.be.equal(1236);
+    });
+
     it('should have loaded the JSON-RPC Forwarder', async function () {
         // This is needed to ensure JSON-RPC Forwarder is listening
         await hre.jsonRPCForwarder;
