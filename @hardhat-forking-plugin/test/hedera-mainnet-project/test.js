@@ -24,12 +24,13 @@ const hre = require('hardhat');
 describe('hedera-mainnet-project', function () {
 
     it('should have loaded the JSON-RPC Forwarder', async function () {
-        const forking = hre.userConfig.networks?.hardhat?.forking;
+        // This is needed to ensure JSON-RPC Forwarder is listening
+        await hre.jsonRPCForwarder;
+        const { forking } = hre.config.networks.hardhat;
 
         assert(forking !== undefined);
-        assert('workerPort' in forking);
-        assert('chainId' in forking);
-        assert(typeof forking.chainId === 'number');
+        assert(forking.workerPort !== undefined);
+        assert(forking.chainId !== undefined);
 
         const provider = new JsonRpcProvider(`http://127.0.0.1:${forking.workerPort}`);
         const network = await provider.getNetwork();
