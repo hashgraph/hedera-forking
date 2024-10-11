@@ -143,8 +143,8 @@ extendEnvironment(hre => {
             hre.jsonRPCForwarder = new Promise(
                 resolve => {
                     worker.on('message', message => {
-                        if (message === 'listening') {
-                            debug(`JSON-RPC Forwarder ${message}...`);
+                        if (message.listening) {
+                            debug(`JSON-RPC Forwarder listening on port :${message.port}...`);
                             resolve(worker);
                         }
                     });

@@ -25,8 +25,13 @@ const { MirrorNodeClient } = require('./mirror-node-client');
 const { getHtsCode, getHtsStorageAt } = require('../..');
 const { HTSAddress } = require('../../utils');
 
-/** @type{{forkingUrl: string, mirrorNodeUrl: string, port: number, hardhatAddresses: string[]}} */
-const { forkingUrl, mirrorNodeUrl, port, hardhatAddresses } = workerData;
+/** @type{{
+ * forkingUrl: string,
+ * mirrorNodeUrl: string,
+ * port?: number,
+ * hardhatAddresses?: string[]}
+ * } */
+const { forkingUrl, mirrorNodeUrl, port, hardhatAddresses = [] } = workerData;
 const mirrorNodeClient = new MirrorNodeClient(mirrorNodeUrl);
 
 debug('Starting JSON-RPC Relay Forwarder server on :%d, forking url=%s mirror node url=%s', port, forkingUrl, mirrorNodeUrl);
@@ -116,6 +121,13 @@ const server = http.createServer(function (req, res) {
 });
 
 server.listen(port, () => {
-    parentPort?.postMessage('listening');
-    debug(`JSON-RPC Relay Forwarder server listening on port ${port}`);
+    const address = server.address();
+    assert(address !== null);
+    assert(typeof address === 'object');
+
+    parentPort?.postMessage({
+        listening: true,
+        ...address,
+    });
+    debug(`JSON-RPC Relay Forwarder server listening on port ${address.port}`);
 });
