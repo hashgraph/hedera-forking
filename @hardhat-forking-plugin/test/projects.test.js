@@ -40,8 +40,9 @@ describe('::projects', function () {
                 hre = require('hardhat');
             });
 
-            afterEach('resetting hardhat', function () {
+            afterEach('resetting hardhat', async function () {
                 resetHardhatContext();
+                (await hre.jsonRPCForwarder)?.terminate();
             });
 
             it(`hardhat project test for \`${project}\``, async function () {
