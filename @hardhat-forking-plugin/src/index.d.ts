@@ -16,6 +16,33 @@
  * limitations under the License.
  */
 
+declare module 'hardhat/types/config' {
+    interface HardhatNetworkForkingConfig {
+        /**
+         * The Hedera network chain ID to use when forking is enabled.
+         */
+        chainId?: number;
+
+        /**
+         * The Mirror Node URL used to fetch HTS data determined by `chainId`.
+         */
+        mirrorNodeUrl?: string;
+
+        /**
+         * A TCP port where the JSON-RPC Forwarder will listen if Hedera forking is enabled.
+         * If not provided, a default value will be used.
+         */
+        workerPort?: number;
+    }
+}
+
+declare module 'hardhat/types/runtime' {
+
+    interface HardhatRuntimeEnvironment {
+        jsonRPCForwarder?: Promise<import('worker_threads').Worker>;
+    }
+}
+
 // Signals to TypeScript this file is a module and not a script.
 // This suppresses missing type error when requiring this module.
 export { }
