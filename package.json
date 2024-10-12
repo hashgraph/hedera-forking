@@ -1,18 +1,10 @@
 {
-  "name": "@hashgraph/hedera-forking",
+  "name": "@hashgraph/hardhat-forking-plugin",
   "version": "0.0.1",
   "description": "Hedera HTS Forking Support",
-  "main": "./index.js",
-  "types": "./index.d.ts",
-  "exports": {
-    ".": {
-      "default": "./index.js",
-      "types": "./index.d.ts"
-    }
-  },
+  "exports": "./@hardhat-forking-plugin/src/index.js",
   "scripts": {
     "prepare": "husky",
-    "test": "mocha",
     "type-check": "tsc"
   },
   "author": "",

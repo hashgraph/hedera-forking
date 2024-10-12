@@ -3,8 +3,8 @@ const { expect, config } = require('chai');
 const { keccak256, id } = require('ethers');
 
 const { getHtsStorageAt: _getHtsStorageAt } = require('@hashgraph/hedera-forking');
-const utils = require('../utils');
-const { tokens } = require('./data');
+const utils = require('../src/utils');
+const { tokens } = require('../test/data');
 
 config.truncateThreshold = 0;
 
