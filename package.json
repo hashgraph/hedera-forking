@@ -10,7 +10,7 @@
   "author": "2024 Hedera Hashgraph, LLC",
   "license": "Apache-2.0",
   "dependencies": {
-    "ethers": "^6.7.0"
+    "ethers": "^6.1.0"
   },
   "devDependencies": {
     "husky": "^9.1.5",

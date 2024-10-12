@@ -10,7 +10,7 @@
     "test": "mocha"
   },
   "dependencies": {
-    "ethers": "^6.7.0"
+    "ethers": "^6.1.0"
   },
   "devDependencies": {
     "@types/chai": "^4.3.19",
