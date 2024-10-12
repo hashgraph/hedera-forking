@@ -9,7 +9,7 @@ const http = require('http');
 const { readFileSync } = require('fs');
 
 const { getHtsCode, getHtsStorageAt } = require('@hashgraph/hedera-forking');
-const { HTSAddress, ZERO_HEX_32_BYTE } = require('../utils');
+const { HTSAddress, ZERO_HEX_32_BYTE } = require('../src/utils');
 const { tokens } = require('../test/data');
 
 /** ANSI colors functions to avoid any external dependency. */
