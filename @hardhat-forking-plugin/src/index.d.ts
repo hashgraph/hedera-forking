@@ -24,7 +24,7 @@ declare module 'hardhat/types/config' {
         chainId?: number;
 
         /**
-         * The Mirror Node URL used to fetch HTS data determined by `chainId`.
+         * The Mirror Node URL used to fetch Hedera entity data determined by `chainId`.
          */
         mirrorNodeUrl?: string;
 
@@ -35,9 +35,12 @@ declare module 'hardhat/types/config' {
         workerPort?: number;
 
         /**
-         * List of addresses used by Hardhat when forking.
+         * List of [initial addresses](https://hardhat.org/hardhat-network/docs/reference#initial-state) used by Hardhat Network when forking.
+         * 
          * The JSON-RPC Forwarder will **not** forward
          * `eth_getCode` and `eth_getBalance` method calls for these addresses.
+         * They **should not** have any associated code nor balance in the remote network.
+         * It is intended as a way to make fewer requests to the remote JSON-RPC Relay.
          */
         hardhatAddresses?: string[];
     }

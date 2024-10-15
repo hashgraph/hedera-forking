@@ -30,7 +30,7 @@ const chains = {
 
 /**
  * Extends the Hardhat config to setup hardfork history for Hedera networks and
- * determine whether HTS emulation should be activated.
+ * determine whether system contract emulation should be activated.
  * 
  * ### Hardfork History Setup
  * 
