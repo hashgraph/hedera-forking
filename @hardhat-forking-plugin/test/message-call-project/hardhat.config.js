@@ -17,21 +17,20 @@
  *
  */
 
-module.exports = {
+require('@nomicfoundation/hardhat-ethers');
+require('@hashgraph/hardhat-forking-plugin');
+const { projectTestConfig } = require('../.lib');
 
-    /** 
-     * Shared config for Hardhat test projects.
-     * 
-     * @type import('hardhat/config').HardhatUserConfig
-     */
-    projectTestConfig: {
-        mocha: {
-            timeout: 30000
-        },
-        solidity: '0.8.9',
-        paths: {
-            tests: '.',
-            sources: '.',
+/** @type import('hardhat/config').HardhatUserConfig */
+module.exports = {
+    ...projectTestConfig,
+    networks: {
+        hardhat: {
+            forking: {
+                url: 'https://testnet.hashio.io/api',
+                chainId: 296,
+                workerPort: 1237,
+            },
         }
-    }
+    },
 };

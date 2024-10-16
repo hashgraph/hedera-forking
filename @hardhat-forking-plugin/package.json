@@ -13,22 +13,20 @@
         "hardhat-plugin"
     ],
     "scripts": {
-        "prepare": "npm run build",
-        "build": "cp ../out/HtsSystemContract.sol/HtsSystemContract.json out",
-        "test": "mocha",
-        "prepublishOnly": "npm run build"
+        "test": "mocha"
     },
     "files": [
-        "src/",
-        "out/"
+        "src/"
     ],
     "peerDependencies": {
         "ethers": "^6.11.2",
         "hardhat": "^2.0.0"
     },
     "devDependencies": {
+        "@nomicfoundation/ethereumjs-util": "^9.0.4",
         "@nomicfoundation/hardhat-ethers": "^3.0.8",
         "@types/sinon": "^17.0.3",
+        "ethereum-cryptography": "^3.0.0",
         "sinon": "^19.0.2"
     }
 }

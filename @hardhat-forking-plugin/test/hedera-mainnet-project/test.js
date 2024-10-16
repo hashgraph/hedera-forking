@@ -16,25 +16,33 @@
  * limitations under the License.
  */
 
-const hre = require('hardhat');
+const { strict: assert } = require('assert');
 const { expect } = require('chai');
-const { getProviderExtensions } = require('../.lib');
+const { JsonRpcProvider } = require('ethers');
+const hre = require('hardhat');
 
 describe('hedera-mainnet-project', function () {
 
-    before('provider call to force its initialization', async function () {
-        await hre.network.provider.request({ method: 'eth_chainId' });
+    it('should configure `forking` with mainnet values', async function () {
+        const { forking } = hre.config.networks.hardhat;
+        expect(forking?.chainId).to.be.equal(295);
+        expect(forking?.mirrorNodeUrl).to.be.equal('https://mainnet-public.mirrornode.hedera.com/api/v1/');
+        expect(forking?.workerPort).to.be.equal(1236);
     });
 
-    it('should have `HederaProvider` as a loaded extension', async function () {
-        const extensions = getProviderExtensions(hre.network.provider).map(p => p.constructor.name);
-        expect(extensions).to.include('HederaProvider');
+    it('should have loaded the JSON-RPC Forwarder', async function () {
+        // This is needed to ensure JSON-RPC Forwarder is listening
+        await hre.jsonRPCForwarder;
+        const { forking } = hre.config.networks.hardhat;
+
+        assert(forking !== undefined);
+        assert(forking.workerPort !== undefined);
+        assert(forking.chainId !== undefined);
+
+        const provider = new JsonRpcProvider(`http://127.0.0.1:${forking.workerPort}`);
+        const network = await provider.getNetwork();
+
+        expect(network.chainId).to.be.equal(BigInt(forking.chainId));
     });
 
-    it('should have `HederaProvider` set to fetch token data from mainnet Mirror Node', async function () {
-        const [provider] = getProviderExtensions(hre.network.provider)
-            .filter(p => p.constructor.name === 'HederaProvider');
-        expect(/**@type{import('../../src/hedera-provider').HederaProvider}*/(provider).mirrorNode.url)
-            .to.be.equal('https://mainnet-public.mirrornode.hedera.com/api/v1/');
-    });
 });
