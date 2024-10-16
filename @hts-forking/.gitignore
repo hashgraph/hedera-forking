@@ -1,5 +1,3 @@
-/node_modules/
-
 # Foundry cache and compiler files
 /cache/
 /out/*
