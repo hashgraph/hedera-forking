@@ -3,6 +3,10 @@
   "version": "0.0.1",
   "description": "Hedera HTS Forking Support",
   "exports": "./@hardhat-forking-plugin/src/index.js",
+  "private": true,
+  "workspaces": [
+    "@*"
+  ],
   "scripts": {
     "prepare": "husky",
     "type-check": "tsc"
