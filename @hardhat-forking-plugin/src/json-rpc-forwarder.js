@@ -22,7 +22,7 @@ const { workerData, parentPort } = require('worker_threads');
 const debug = require('util').debuglog('hedera-forking-rpc');
 
 const { MirrorNodeClient } = require('./mirror-node-client');
-const { getHtsCode, getHtsStorageAt } = require('@hashgraph/hts-forking');
+const { getHtsCode, getHtsStorageAt } = require('../../@hts-forking/src');
 const { HTSAddress } = require('../../@hts-forking/src/utils');
 
 /** @type{{
