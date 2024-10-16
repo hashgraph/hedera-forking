@@ -1,5 +1,5 @@
 {
-  "name": "@hashgraph/hedera-forking",
+  "name": "@hashgraph/hts-forking",
   "version": "0.0.1",
   "description": "Hedera HTS Forking Support",
   "repository": "github:hashgraph/hardhat-forking-plugin",

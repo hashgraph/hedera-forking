@@ -2,7 +2,7 @@ const { strict: assert } = require('assert');
 const { expect, config } = require('chai');
 const { keccak256, id } = require('ethers');
 
-const { getHtsStorageAt: _getHtsStorageAt } = require('@hashgraph/hedera-forking');
+const { getHtsStorageAt: _getHtsStorageAt } = require('@hashgraph/hts-forking');
 const utils = require('../src/utils');
 const { tokens } = require('../test/data');
 
@@ -15,7 +15,7 @@ describe('::getHtsStorageAt', function () {
      * 
      * When `TRACE` is set, `trace` logger will be enabled using a sequential `requestId`.
      * 
-     * @type {(address: string, slot: string, mirrorNodeClient: import('@hashgraph/hedera-forking').IMirrorNodeClient) => Promise<string | null>}
+     * @type {(address: string, slot: string, mirrorNodeClient: import('@hashgraph/hts-forking').IMirrorNodeClient) => Promise<string | null>}
      */
     const getHtsStorageAt = function () {
         const logger = !!process.env['TRACE']
@@ -25,7 +25,7 @@ describe('::getHtsStorageAt', function () {
         return (address, slot, mirrorNodeClient) => _getHtsStorageAt(address, slot, mirrorNodeClient, logger, `[Req ID: ${reqId++}]`);
     }();
 
-    /** @type {import('@hashgraph/hedera-forking').IMirrorNodeClient} */
+    /** @type {import('@hashgraph/hts-forking').IMirrorNodeClient} */
     const baseMirrorNodeClient = {
         getTokenById(_tokenId) {
             throw Error('Not implemented');
@@ -60,7 +60,7 @@ describe('::getHtsStorageAt', function () {
     });
 
     it(`should return \`ZERO_HEX_32_BYTE\` when \`address\` is not found for a non-keccaked slot`, async function () {
-        /** @type{import('@hashgraph/hedera-forking').IMirrorNodeClient} */
+        /** @type{import('@hashgraph/hts-forking').IMirrorNodeClient} */
         const mirrorNodeClient = { ...baseMirrorNodeClient, getTokenById: async _tokenId => null };
         const result = await getHtsStorageAt('0x0000000000000000000000000000000000000001', '0x0', mirrorNodeClient);
         expect(result).to.be.equal(utils.ZERO_HEX_32_BYTE);
@@ -70,7 +70,7 @@ describe('::getHtsStorageAt', function () {
         const slot = slotsByLabel[name];
         it(`should return \`ZERO_HEX_32_BYTE\` when \`address\` is not found for the keccaked slot of \`${slot}\` for field \`${name}\``, async function () {
             const keccakedSlot = keccak256('0x' + utils.toIntHex256(slot));
-            /** @type{import('@hashgraph/hedera-forking').IMirrorNodeClient} */
+            /** @type{import('@hashgraph/hts-forking').IMirrorNodeClient} */
             const mirrorNodeClient = { ...baseMirrorNodeClient, getTokenById: async _tokenId => null };
             const result = await getHtsStorageAt('0x0000000000000000000000000000000000000001', keccakedSlot, mirrorNodeClient);
             expect(result).to.be.equal(utils.ZERO_HEX_32_BYTE);
@@ -87,7 +87,7 @@ describe('::getHtsStorageAt', function () {
         });
 
         it(`should return address' suffix on \`0x167\` when accountId does not exist`, async function () {
-            /** @type{import('@hashgraph/hedera-forking').IMirrorNodeClient} */
+            /** @type{import('@hashgraph/hts-forking').IMirrorNodeClient} */
             const mirrorNodeClient = { ...baseMirrorNodeClient, getAccount: async _address => null };
             const slot = '0xe0b490f700000000000000004D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15';
             const result = await getHtsStorageAt(HTS, slot, mirrorNodeClient);
@@ -96,7 +96,7 @@ describe('::getHtsStorageAt', function () {
 
         ['1.0.1421', '0.1.1421'].forEach(accountId => {
             it(`should return \`ZERO_HEX_32_BYTE\` on \`0x167\` when slot matches \`getAccountId\` but \`${accountId}\`'s shard|realm is not zero`, async function () {
-                /** @type{import('@hashgraph/hedera-forking').IMirrorNodeClient} */
+                /** @type{import('@hashgraph/hts-forking').IMirrorNodeClient} */
                 const mirrorNodeClient = { ...baseMirrorNodeClient, getAccount: async _address => ({ account: accountId }) };
                 const slot = '0xe0b490f700000000000000004D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15';
                 const result = await getHtsStorageAt(HTS, slot, mirrorNodeClient);
@@ -124,7 +124,7 @@ describe('::getHtsStorageAt', function () {
         describe(`\`${symbol}(${address})\` token`, function () {
             const tokenResult = require(`./data/${symbol}/getToken.json`);
 
-            /** @type {import('@hashgraph/hedera-forking').IMirrorNodeClient} */
+            /** @type {import('@hashgraph/hts-forking').IMirrorNodeClient} */
             const mirrorNodeClient = {
                 ...baseMirrorNodeClient,
                 getTokenById(tokenId) {
@@ -196,7 +196,7 @@ describe('::getHtsStorageAt', function () {
              */
             const padAccountId = accountId => accountId.toString(16).padStart(8, '0');
 
-            (/**@type{{name: string, fn: import('@hashgraph/hedera-forking').IMirrorNodeClient['getBalanceOfToken']}[]}*/([
+            (/**@type{{name: string, fn: import('@hashgraph/hts-forking').IMirrorNodeClient['getBalanceOfToken']}[]}*/([
                 { name: 'balance is found', fn: async (_tid, accountId) => require(`./data/${symbol}/getBalanceOfToken_${accountId}`) },
                 { name: 'balance is empty', fn: async (_tid, _accountId) => ({ balances: [] }) },
             ])).forEach(({ name, fn: getBalanceOfToken }) => {
@@ -216,7 +216,7 @@ describe('::getHtsStorageAt', function () {
                 });
             });
 
-            (/**@type{{name: string, fn: import('@hashgraph/hedera-forking').IMirrorNodeClient['getAllowanceForToken']}[]}*/([
+            (/**@type{{name: string, fn: import('@hashgraph/hts-forking').IMirrorNodeClient['getAllowanceForToken']}[]}*/([
                 { name: 'allowance is found', fn: (accountId, _tid, spenderId) => require(`./data/${symbol}/getAllowanceForToken_${accountId}_${spenderId}`) },
                 { name: 'allowance is empty', fn: (_accountId, _tid, _spenderId) => ({ allowances: [] }) },
             ])).forEach(({ name, fn: getAllowanceForToken }) => {
