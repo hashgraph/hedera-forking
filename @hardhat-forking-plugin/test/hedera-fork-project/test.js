@@ -16,11 +16,13 @@
  * limitations under the License.
  */
 
-const hre = require('hardhat');
+const { strict: assert } = require('assert');
 const { expect } = require('chai');
 const fs = require('fs');
 const sinon = require('sinon');
 const { getProviderExtensions } = require('../.lib');
+const { JsonRpcProvider } = require('ethers');
+const hre = require('hardhat');
 
 /**
  * @typedef {Object} MirrorNodeResponse
@@ -60,16 +62,18 @@ describe('hedera-fork-project', function () {
         fetchStub.restore();
     });
 
-    it('should have `HederaProvider` as a loaded extension', async function () {
-        const extensions = getProviderExtensions(hre.network.provider).map(p => p.constructor.name);
-        expect(extensions).to.include('HederaProvider');
-    });
+    it('should have loaded the JSON-RPC Forwarder', async function () {
+        const forking = hre.userConfig.networks?.hardhat?.forking;
 
-    it('should have `HederaProvider` set to fetch token data from testnet Mirror Node', async function () {
-        const [provider] = getProviderExtensions(hre.network.provider)
-            .filter(p => p.constructor.name === 'HederaProvider');
-        expect(/**@type{import('../../src/hedera-provider').HederaProvider}*/(provider).mirrorNode.url)
-            .to.be.equal('https://testnet.mirrornode.hedera.com/api/v1/');
+        assert(forking !== undefined);
+        assert('workerPort' in forking);
+        assert('chainId' in forking);
+        assert(typeof forking.chainId === 'number');
+
+        const provider = new JsonRpcProvider(`http://127.0.0.1:${forking.workerPort}`);
+        const network = await provider.getNetwork();
+
+        expect(network.chainId).to.be.equal(BigInt(forking.chainId));
     });
 
     it('show decimals', async function () {

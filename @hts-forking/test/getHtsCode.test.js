@@ -1,6 +1,6 @@
 const { expect } = require('chai');
 
-const { getHtsCode } = require('@hashgraph/hedera-forking');
+const { getHtsCode } = require('@hashgraph/hts-forking');
 
 describe('::getHtsCode', function () {
 

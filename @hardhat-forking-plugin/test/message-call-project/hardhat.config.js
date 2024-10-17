@@ -17,21 +17,23 @@
  *
  */
 
-module.exports = {
+require('@nomicfoundation/hardhat-ethers');
+require('@hashgraph/hardhat-forking-plugin');
+const { projectTestConfig } = require('../.lib');
 
-    /** 
-     * Shared config for Hardhat test projects.
-     * 
-     * @type import('hardhat/config').HardhatUserConfig
-     */
-    projectTestConfig: {
-        mocha: {
-            timeout: 30000
-        },
-        solidity: '0.8.9',
-        paths: {
-            tests: '.',
-            sources: '.',
+/** @type import('hardhat/config').HardhatUserConfig */
+module.exports = {
+    ...projectTestConfig,
+    networks: {
+        hardhat: {
+            forking: {
+                url: 'https://testnet.hashio.io/api',
+                // This allows Hardhat to cache blocks coming from the JSON-RPC.
+                // Forking from a block is not fully integrated yet.
+                blockNumber: 10471740,
+                chainId: 296,
+                workerPort: 1237,
+            },
         }
-    }
+    },
 };

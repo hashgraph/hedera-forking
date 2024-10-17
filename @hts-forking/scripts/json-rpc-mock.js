@@ -8,8 +8,8 @@ const { strict: assert } = require('assert');
 const http = require('http');
 const { readFileSync } = require('fs');
 
-const { getHtsCode, getHtsStorageAt } = require('@hashgraph/hedera-forking');
-const { HTSAddress, ZERO_HEX_32_BYTE } = require('../utils');
+const { getHtsCode, getHtsStorageAt } = require('@hashgraph/hts-forking');
+const { HTSAddress, ZERO_HEX_32_BYTE } = require('../src/utils');
 const { tokens } = require('../test/data');
 
 /** ANSI colors functions to avoid any external dependency. */
@@ -194,7 +194,7 @@ const eth = {
             }
         };
 
-        /** @type {import('@hashgraph/hedera-forking').IMirrorNodeClient} */
+        /** @type {import('@hashgraph/hts-forking').IMirrorNodeClient} */
         const mirrorNodeClient = {
             async getTokenById(tokenId) {
                 if (tokens[tokenId] === undefined)

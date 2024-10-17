@@ -27,19 +27,22 @@ describe('::projects', function () {
         'custom-hardfork-project',
         'hedera-fork-project',
         'hedera-mainnet-project',
+        'message-call-project',
         'non-hedera-project',
     ].forEach(project => {
         describe(`entering project \`${project}\`...`, function () {
 
             /**@type {import('hardhat/types').HardhatRuntimeEnvironment} */
             let hre;
+
             beforeEach('loading hardhat environment', function () {
                 process.chdir(path.join(__dirname, project));
                 hre = require('hardhat');
             });
 
-            afterEach('resetting hardhat', function () {
+            afterEach('resetting hardhat', async function () {
                 resetHardhatContext();
+                (await hre.jsonRPCForwarder)?.terminate();
             });
 
             it(`hardhat project test for \`${project}\``, async function () {

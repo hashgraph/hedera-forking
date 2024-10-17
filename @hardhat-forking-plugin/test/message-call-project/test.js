@@ -14,24 +14,15 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
-module.exports = {
+const hre = require('hardhat');
+const { expect } = require('chai');
 
-    /** 
-     * Shared config for Hardhat test projects.
-     * 
-     * @type import('hardhat/config').HardhatUserConfig
-     */
-    projectTestConfig: {
-        mocha: {
-            timeout: 30000
-        },
-        solidity: '0.8.9',
-        paths: {
-            tests: '.',
-            sources: '.',
-        }
-    }
-};
+describe('message-call-project', function () {
+    it('should get decimals through internal message call', async function () {
+        const tokenAddress = '0x000000000000000000000000000000000047b52a';
+        const contract = await hre.ethers.deployContract('CallToken');
+        expect(await contract['getTokenDecimals'](tokenAddress)).to.be.equal(13n);
+    });
+});
