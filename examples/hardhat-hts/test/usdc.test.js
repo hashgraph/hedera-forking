@@ -1,7 +1,13 @@
 const { expect } = require('chai');
 const { ethers, network } = require('hardhat');
+const { loadFixture } = require('@nomicfoundation/hardhat-toolbox/network-helpers');
 
 describe('USDC example', function () {
+
+    async function id() {
+        const [receiver, spender] = await ethers.getSigners();
+        return { receiver, spender };
+    }
 
     /**
      * https://hashscan.io/testnet/token/0.0.429274
@@ -45,7 +51,8 @@ describe('USDC example', function () {
     });
 
     it("should `tranfer` tokens from account holder to one of Hardhat' signers", async function () {
-        const [receiver] = await ethers.getSigners();
+        const { receiver } = await loadFixture(id);
+
         expect(await usdc['balanceOf'](receiver.address)).to.be.equal(0n);
 
         // @ts-ignore
@@ -54,4 +61,19 @@ describe('USDC example', function () {
         expect(await usdc['balanceOf'](receiver.address)).to.be.equal(10_000_000n);
     });
 
+    it("should `tranferFrom` tokens from account holder after `approve`d one of Hardhat' signers", async function () {
+        const { receiver, spender } = await loadFixture(id);
+        expect(await usdc['balanceOf'](receiver.address)).to.be.equal(0n);
+
+        // @ts-ignore
+        await usdc.connect(holder)['approve'](spender, 5_000_000n);
+
+        expect(await usdc['allowance'](holder.address, spender.address)).to.be.equal(5_000_000n);
+
+        // @ts-ignore
+        await usdc.connect(spender)['transferFrom'](holder.address, receiver, 3_000_000n);
+
+        expect(await usdc['allowance'](holder.address, spender.address)).to.be.equal(2_000_000n);
+        expect(await usdc['balanceOf'](receiver.address)).to.be.equal(3_000_000n);
+    });
 });
