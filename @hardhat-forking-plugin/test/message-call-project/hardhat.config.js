@@ -28,6 +28,7 @@ module.exports = {
         hardhat: {
             forking: {
                 url: 'https://testnet.hashio.io/api',
+                blockNumber: 10471740,
                 chainId: 296,
                 workerPort: 1237,
             },
