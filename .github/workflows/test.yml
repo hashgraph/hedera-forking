@@ -44,10 +44,6 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Install @hardhat-forking-plugin Dependencies
-        working-directory: ./@hardhat-forking-plugin
-        run: npm ci
-
       - name: Run TypeScript Type-Check
         run: npm run type-check
 
@@ -74,7 +70,7 @@ jobs:
         run: npm ci
 
       - name: Run Unit Tests
-        run: npm run test
+        run: npm run test --workspace=@hts-forking
 
   sol-tests-local-storage:
     name: 'Forge tests w/storage emulation'
@@ -96,11 +92,13 @@ jobs:
           version: nightly
 
       - name: Run Forge build
+        working-directory: ./@hts-forking
         run: |
           forge --version
           forge build --sizes
 
       - name: Run Forge tests using local storage emulation (without forking)
+        working-directory: ./@hts-forking
         run: |
           forge test -vvv
 
@@ -132,13 +130,16 @@ jobs:
           version: nightly
 
       - name: Run Forge build
+        working-directory: ./@hts-forking
         run: |
           forge --version
           forge build --sizes
 
       - name: Start JSON-RPC mock server
+        working-directory: ./@hts-forking
         run: node scripts/json-rpc-mock.js &
 
       - name: Run Forge tests using JSON-RPC mock server for storage emulation (with forking)
+        working-directory: ./@hts-forking
         run: |
           forge test -vvv --fork-url http://localhost:7546 --no-storage-caching

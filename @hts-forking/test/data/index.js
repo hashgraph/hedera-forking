@@ -13,7 +13,7 @@ module.exports = {
      * In turn, each token folder should contain a `getToken.json` that matches the response from `GET /api/v1/tokens/{tokenId}`.
      */
     tokens: function (/**@type {{[tokenId: string]: {symbol: string, address: string}}}*/ tokens) {
-        const tokensMockPath = './test/data';
+        const tokensMockPath = __dirname;
         for (const symbol of readdirSync(tokensMockPath)) {
             if (symbol.endsWith('.json') || symbol.endsWith('.js'))
                 continue;

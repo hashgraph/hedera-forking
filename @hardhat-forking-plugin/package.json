@@ -18,6 +18,9 @@
     "files": [
         "src/"
     ],
+    "dependencies": {
+        "@hashgraph/hts-forking": "0.0.1"
+    },
     "peerDependencies": {
         "ethers": "^6.11.2",
         "hardhat": "^2.0.0"

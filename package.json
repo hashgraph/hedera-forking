@@ -1,33 +1,24 @@
 {
-  "name": "@hashgraph/hedera-forking",
+  "name": "@hashgraph/hardhat-forking-plugin",
   "version": "0.0.1",
   "description": "Hedera HTS Forking Support",
-  "main": "./index.js",
-  "types": "./index.d.ts",
-  "exports": {
-    ".": {
-      "default": "./index.js",
-      "types": "./index.d.ts"
-    }
-  },
+  "exports": "./@hardhat-forking-plugin/src/index.js",
+  "private": true,
+  "workspaces": [
+    "@*"
+  ],
   "scripts": {
     "prepare": "husky",
-    "test": "mocha",
     "type-check": "tsc"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "2024 Hedera Hashgraph, LLC",
+  "license": "Apache-2.0",
   "dependencies": {
-    "ethers": "^6.7.0"
+    "ethers": "^6.1.0"
   },
   "devDependencies": {
-    "@types/chai": "^4.3.19",
-    "@types/mocha": "^10.0.7",
-    "chai": "^4.0.0",
     "husky": "^9.1.5",
     "lint-staged": "^15.2.10",
-    "mocha": "^10.7.3",
-    "pino": "^7.11.0",
     "prettier": "^3.3.3",
     "typescript": "^5.5.4"
   }

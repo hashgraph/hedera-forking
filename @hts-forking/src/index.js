@@ -1,7 +1,7 @@
 const { keccak256 } = require('ethers');
 const utils = require('./utils');
 
-const hts = require('./out/HtsSystemContract.sol/HtsSystemContract.json');
+const hts = require('../out/HtsSystemContract.sol/HtsSystemContract.json');
 
 /**
  * Represents a slot entry in `storageLayout.storage`.
