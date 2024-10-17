@@ -17,10 +17,8 @@
  */
 
 const { strict: assert } = require('assert');
-const { expect } = require('chai');
 const fs = require('fs');
 const sinon = require('sinon');
-const { getProviderExtensions } = require('../.lib');
 const { JsonRpcProvider } = require('ethers');
 const hre = require('hardhat');
 
