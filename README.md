@@ -299,3 +299,30 @@ Handling strings longer than 31 bytes is more complex
 2. **Retrieve the Value.** Access the value stored at this hash slot. If the string exceeds 32 bytes, retrieve the additional segments from consecutive slots (_e.g._, `hashSlot + 1`, `hashSlot + 2`, _etc._), until the entire string is reconstructed.
 
 This process requires careful calculation and multiple reads from storage to handle longer strings properly.
+
+## Support
+
+If you have a question on how to use the product, please see our
+[support guide](https://github.com/hashgraph/.github/blob/main/SUPPORT.md).
+
+## Contributing
+
+Contributions are welcome. Please see the
+[contributing guide](https://github.com/hashgraph/.github/blob/main/CONTRIBUTING.md)
+to see how you can get involved.
+
+## Code of Conduct
+
+This project is governed by the
+[Contributor Covenant Code of Conduct](https://github.com/hashgraph/.github/blob/main/CODE_OF_CONDUCT.md). By
+participating, you are expected to uphold this code of conduct. Please report unacceptable behavior
+to [oss@hedera.com](mailto:oss@hedera.com).
+
+## License
+
+[Apache License 2.0](LICENSE)
+
+## Security
+
+Please do not file a public ticket mentioning the vulnerability.
+Refer to the security policy defined in the [SECURITY.md](SECURITY.md).
