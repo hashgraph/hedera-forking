@@ -12,9 +12,10 @@ describe('USDC example', function () {
     /**
      * https://hashscan.io/testnet/token/0.0.429274
      * https://testnet.mirrornode.hedera.com/api/v1/tokens/0.0.429274
-     * 
-     * @type {import('ethers').Contract}
      */
+    const usdcAddress = '0x0000000000000000000000000000000000068cDa';
+
+    /** @type {import('ethers').Contract} */
     let usdc;
 
     /**
@@ -25,7 +26,7 @@ describe('USDC example', function () {
     let holder;
 
     beforeEach(async () => {
-        usdc = await ethers.getContractAt('IERC20', '0x0000000000000000000000000000000000068cDa');
+        usdc = await ethers.getContractAt('IERC20', usdcAddress);
 
         const holderAddress = '0x0000000000000000000000000000000000002004';
         // https://hardhat.org/hardhat-network/docs/reference#hardhat_impersonateaccount
@@ -36,13 +37,25 @@ describe('USDC example', function () {
         holder = await ethers.getSigner(holderAddress);
     });
 
-    it('should get name and symbol', async function () {
+    it('should get name, symbol and decimals', async function () {
         const name = await usdc['name']();
         const symbol = await usdc['symbol']();
         const decimals = await usdc['decimals']();
         expect(name).to.be.equal('USD Coin');
         expect(symbol).to.be.equal('USDC');
         expect(decimals).to.be.equal(6n);
+    });
+
+    it('should get Token name through a contract call', async function () {
+        const CallToken = await ethers.getContractFactory('CallToken');
+        const callToken = await CallToken.deploy();
+
+        expect(await callToken['getTokenName'](usdcAddress))
+            .to.be.equal('USD Coin');
+
+        // Another HTS Token created for test purposes
+        expect(await callToken['getTokenName']('0x000000000000000000000000000000000047b52a'))
+            .to.be.equal('Very long string, just to make sure that it exceeds 31 bytes and requires more than 1 storage slot.');
     });
 
     it('should get `balanceOf` account holder', async function () {
