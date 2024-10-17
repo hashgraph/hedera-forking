@@ -71,32 +71,32 @@ describe('hedera-fork-project', function () {
         const provider = new JsonRpcProvider(`http://127.0.0.1:${forking.workerPort}`);
         const network = await provider.getNetwork();
 
-        expect(network.chainId).to.be.equal(BigInt(forking.chainId));
+        assert(network.chainId === BigInt(forking.chainId));
     });
 
     it('show decimals', async function () {
-        expect(await ft['decimals']()).to.be.equal(13n);
+        assert(await ft['decimals']() === 13n);
     });
 
     it('get name', async function () {
-        expect(await ft['name']()).to.be.equal('Very long string, just to make sure that it exceeds 31 bytes and requires more than 1 storage slot.');
+        assert(await ft['name']() === 'Very long string, just to make sure that it exceeds 31 bytes and requires more than 1 storage slot.');
     });
 
     it('get symbol', async function () {
-        expect(await ft['symbol']()).to.be.equal('SHRT');
+        assert(await ft['symbol']() === 'SHRT');
     });
 
     it('get balance', async function () {
-        expect(await ft['balanceOf'](accountAddress)).to.be.equal(9995n);
+        assert(await ft['balanceOf'](accountAddress) === 9995n);
     });
 
     it('get allowance', async function () {
-        expect(await ft['allowance'](accountAddress, spenderAddress)).to.be.equal(0n);
+        assert(await ft['allowance'](accountAddress, spenderAddress) === 0n);
     });
 
     it('should get correct value when non-HTS address is called', async function () {
         const contract = await hre.ethers.deployContract('One');
         const result = await contract['getOne']();
-        expect(result).to.be.equal(1n);
+        assert(result === 1n);
     });
 });
