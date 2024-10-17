@@ -110,6 +110,15 @@ const server = http.createServer(function (req, res) {
             }
             debug('fetch request', id, method, params);
             const result = await fetch(forkingUrl, { method: 'POST', body });
+
+            if (method === 'eth_getBlockByNumber') {
+                const json = await result.json();
+                for (const tx of json.result.transactions) {
+                    tx.accessList = [];
+                }
+                return JSON.stringify(json);
+            }
+
             return await result.text();
         }();
 

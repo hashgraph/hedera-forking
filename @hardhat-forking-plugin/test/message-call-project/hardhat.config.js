@@ -28,6 +28,9 @@ module.exports = {
         hardhat: {
             forking: {
                 url: 'https://testnet.hashio.io/api',
+                // This allows Hardhat to cache blocks coming from the JSON-RPC.
+                // Forking from a block is not fully integrated yet.
+                blockNumber: 10471740,
                 chainId: 296,
                 workerPort: 1237,
             },
