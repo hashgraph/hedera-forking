@@ -29,7 +29,7 @@ module.exports = {
             forking: {
                 url: 'https://testnet.hashio.io/api',
                 // This allows Hardhat to enable JSON-RPC's response cache.
-                // Forking from a block is not fully integrated yet into HTS emulation.
+                // Forking from a block is not fully integrated yet into System Contract emulation.
                 blockNumber: 10471740,
                 chainId: 296,
                 workerPort: 1237,
