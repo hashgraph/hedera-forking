@@ -8,8 +8,9 @@ module.exports = {
     hardhat: {
       forking: {
         url: 'https://testnet.hashio.io/api',
-        // Here we can use `blockNumber` to enable JSON-RPC Relay's response cache
-        // blockNumber: 10471740,
+        // This allows Hardhat to enable JSON-RPC's response cache.
+        // Forking from a block is not fully integrated yet into HTS emulation.
+        blockNumber: 10471740,
         chainId: 296,
         workerPort: 1235,
       },
