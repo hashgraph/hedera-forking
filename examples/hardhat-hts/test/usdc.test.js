@@ -38,16 +38,16 @@ describe('USDC example', function () {
     }
 
     /**
-     * https://hashscan.io/testnet/token/0.0.429274
-     * https://testnet.mirrornode.hedera.com/api/v1/tokens/0.0.429274
+     * https://hashscan.io/mainnet/token/0.0.456858
+     * https://mainnet.mirrornode.hedera.com/api/v1/tokens/0.0.456858
      */
-    const usdcAddress = '0x0000000000000000000000000000000000068cDa';
+    const usdcAddress = '0x000000000000000000000000000000000006f89a';
 
     /** @type {import('ethers').Contract} */
     let usdc;
 
     /**
-     * https://hashscan.io/testnet/account/0.0.8196
+     * https://hashscan.io/mainnet/account/0.0.6279
      * 
      * @type {import('@nomicfoundation/hardhat-ethers/signers').HardhatEthersSigner}
      */
@@ -56,7 +56,7 @@ describe('USDC example', function () {
     beforeEach(async () => {
         usdc = await ethers.getContractAt('IERC20', usdcAddress);
 
-        const holderAddress = '0x0000000000000000000000000000000000002004';
+        const holderAddress = '0x0000000000000000000000000000000000001887';
         // https://hardhat.org/hardhat-network/docs/reference#hardhat_impersonateaccount
         await network.provider.request({
             method: 'hardhat_impersonateAccount',
@@ -80,10 +80,6 @@ describe('USDC example', function () {
 
         expect(await callToken['getTokenName'](usdcAddress))
             .to.be.equal('USD Coin');
-
-        // Another HTS Token created for test purposes
-        expect(await callToken['getTokenName']('0x000000000000000000000000000000000047b52a'))
-            .to.be.equal('Very long string, just to make sure that it exceeds 31 bytes and requires more than 1 storage slot.');
     });
 
     it('should get `balanceOf` account holder', async function () {
