@@ -2,6 +2,7 @@
   "name": "hardhat-hts-plugin-example",
   "version": "1.0.0",
   "description": "",
+  "private": true,
   "scripts": {
     "test": "hardhat test"
   },
