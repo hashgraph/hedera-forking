@@ -23,6 +23,5 @@
   },
   "exclude": [
     "./launch-token/",
-    "./examples/",
   ]
 }

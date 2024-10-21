@@ -87,6 +87,7 @@ describe('USDC example', function () {
 
         expect(await usdc['balanceOf'](receiver.address)).to.be.equal(0n);
 
+        // @ts-ignore
         await usdc.connect(holder)['transfer'](receiver, 10_000_000n);
 
         expect(await usdc['balanceOf'](receiver.address)).to.be.equal(10_000_000n);
@@ -96,10 +97,12 @@ describe('USDC example', function () {
         const { receiver, spender } = await loadFixture(id);
         expect(await usdc['balanceOf'](receiver.address)).to.be.equal(0n);
 
+        // @ts-ignore
         await usdc.connect(holder)['approve'](spender, 5_000_000n);
 
         expect(await usdc['allowance'](holder.address, spender.address)).to.be.equal(5_000_000n);
 
+        // @ts-ignore
         await usdc.connect(spender)['transferFrom'](holder.address, receiver, 3_000_000n);
 
         expect(await usdc['allowance'](holder.address, spender.address)).to.be.equal(2_000_000n);
