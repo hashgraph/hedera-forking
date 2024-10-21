@@ -9,7 +9,7 @@
   "author": "2024 Hedera Hashgraph, LLC",
   "license": "Apache-2.0",
   "devDependencies": {
-    "@hashgraph/hardhat-forking-plugin": "https://github.com/hashgraph/hedera-forking.git",
+    "@hashgraph/hardhat-forking-plugin": "git+https://github.com/hashgraph/hedera-forking.git",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0"
   }
 }
