@@ -19,9 +19,9 @@
     "noImplicitThis": true,
     "noPropertyAccessFromIndexSignature": true,
     "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    "noUnusedParameters": true
   },
   "exclude": [
-    "./launch-token/",
+    "./launch-token/"
   ]
 }
