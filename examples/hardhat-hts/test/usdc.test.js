@@ -21,6 +21,15 @@ const { expect } = require('chai');
 const { ethers, network } = require('hardhat');
 const { loadFixture } = require('@nomicfoundation/hardhat-toolbox/network-helpers');
 
+/**
+ * Wrapper around `Contract::connect` to reify its return type.
+ *
+ * @param {import('ethers').Contract} contract 
+ * @param {import('@nomicfoundation/hardhat-ethers/signers').HardhatEthersSigner} signer 
+ * @returns {import('ethers').Contract}
+ */
+const connectAs = (contract, signer) => /**@type{import('ethers').Contract}*/(contract.connect(signer));
+
 describe('USDC example', function () {
 
     async function id() {
@@ -87,8 +96,7 @@ describe('USDC example', function () {
 
         expect(await usdc['balanceOf'](receiver.address)).to.be.equal(0n);
 
-        // @ts-ignore
-        await usdc.connect(holder)['transfer'](receiver, 10_000_000n);
+        await connectAs(usdc, holder)['transfer'](receiver, 10_000_000n);
 
         expect(await usdc['balanceOf'](receiver.address)).to.be.equal(10_000_000n);
     });
@@ -97,13 +105,11 @@ describe('USDC example', function () {
         const { receiver, spender } = await loadFixture(id);
         expect(await usdc['balanceOf'](receiver.address)).to.be.equal(0n);
 
-        // @ts-ignore
-        await usdc.connect(holder)['approve'](spender, 5_000_000n);
+        await connectAs(usdc, holder)['approve'](spender, 5_000_000n);
 
         expect(await usdc['allowance'](holder.address, spender.address)).to.be.equal(5_000_000n);
 
-        // @ts-ignore
-        await usdc.connect(spender)['transferFrom'](holder.address, receiver, 3_000_000n);
+        await connectAs(usdc, spender)['transferFrom'](holder.address, receiver, 3_000_000n);
 
         expect(await usdc['allowance'](holder.address, spender.address)).to.be.equal(2_000_000n);
         expect(await usdc['balanceOf'](receiver.address)).to.be.equal(3_000_000n);
