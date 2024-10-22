@@ -27,6 +27,10 @@ module.exports = [
         },
     },
     {
+        // https://eslint.org/docs/latest/use/configure/ignore#ignoring-files
+        ignores: ['launch-token/', 'lib/'],
+    },
+    {
         languageOptions: {
             globals: {
                 ...globals.node,
