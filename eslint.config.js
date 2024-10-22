@@ -48,6 +48,7 @@ module.exports = [
                 'argsIgnorePattern': '^_',
                 'varsIgnorePattern': '^_',
             }],
+            // https://github.com/nikku/eslint-plugin-license-header?tab=readme-ov-file#eslint-plugin-license-header
             'license-header/header': ['error', './resources/license.js.header']
         }
     }
