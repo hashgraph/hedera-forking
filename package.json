@@ -9,7 +9,8 @@
   ],
   "scripts": {
     "prepare": "husky",
-    "type-check": "tsc"
+    "type-check": "tsc",
+    "lint": "eslint"
   },
   "author": "2024 Hedera Hashgraph, LLC",
   "license": "Apache-2.0",
