@@ -33,5 +33,6 @@ module.exports = {
     // https://github.com/lint-staged/lint-staged?tab=readme-ov-file#example-wrap-filenames-in-single-quotes-and-run-once-per-file
     '*.sol': files => files.map(file => `grep --quiet "SPDX-License-Identifier: Apache-2.0" ${file}`),
 
+    // Apply linter rules. See `eslint.config.js` for details.
     '*.js': 'eslint --fix',
 };
