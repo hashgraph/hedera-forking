@@ -20,21 +20,18 @@ const { strict: assert } = require('assert');
 const http = require('http');
 const { workerData, parentPort } = require('worker_threads');
 const debug = require('util').debuglog('hedera-forking-rpc');
+const c = require('ansi-colors');
 
 const { MirrorNodeClient } = require('./mirror-node-client');
 const { getHtsCode, getHtsStorageAt } = require('../../@hts-forking/src');
 const { HTSAddress } = require('../../@hts-forking/src/utils');
 
-/** @type{{
- * forkingUrl: string,
- * mirrorNodeUrl: string,
- * port?: number,
- * hardhatAddresses?: string[]}
- * } */
-const { forkingUrl, mirrorNodeUrl, port, hardhatAddresses = [] } = workerData;
-const mirrorNodeClient = new MirrorNodeClient(mirrorNodeUrl);
+/** @type {import('hardhat/types').HardhatNetworkForkingConfig} */
+const { url, blockNumber, mirrorNodeUrl, workerPort, hardhatAddresses = [] } = workerData;
+assert(mirrorNodeUrl !== undefined);
+const mirrorNodeClient = new MirrorNodeClient(mirrorNodeUrl, blockNumber);
 
-debug('Starting JSON-RPC Relay Forwarder server on :%d, forking url=%s mirror node url=%s', port, forkingUrl, mirrorNodeUrl);
+debug(c.yellow('Starting JSON-RPC Relay Forwarder server on :%d, forking url=%s blockNumber=%d mirror node url=%s'), workerPort, url, blockNumber, mirrorNodeUrl);
 
 /**
  * Function signature for `eth_*` method handlers.
@@ -104,12 +101,12 @@ const server = http.createServer(function (req, res) {
                 const reqId = `[Request ID: ${id}]`;
                 const result = await handler(params, reqId);
                 if (result !== null) {
-                    debug('non-forwarded request', id, method, params);
+                    debug(c.dim('non-forwarded request'), c.dim(id), c.blue(method), params);
                     return JSON.stringify({ jsonrpc, id, result });
                 }
             }
-            debug('fetch request', id, method, params);
-            const result = await fetch(forkingUrl, { method: 'POST', body });
+            debug('fetch request', c.dim(id), c.blue(method), params);
+            const result = await fetch(url, { method: 'POST', body });
 
             if (method === 'eth_getBlockByNumber') {
                 const json = await result.json();
@@ -129,7 +126,7 @@ const server = http.createServer(function (req, res) {
     });
 });
 
-server.listen(port, () => {
+server.listen(workerPort, () => {
     const address = server.address();
     assert(address !== null);
     assert(typeof address === 'object');
