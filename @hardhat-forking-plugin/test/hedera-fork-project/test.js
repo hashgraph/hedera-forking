@@ -100,6 +100,6 @@ describe('hedera-fork-project', function () {
     it('should get correct value when non-HTS address is called', async function () {
         const contract = await hre.ethers.deployContract('One');
         const result = await contract['getOne']();
-        assert(result === 1n);
+        expect(result).to.be.equal(1n);
     });
 });
