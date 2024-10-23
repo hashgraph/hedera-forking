@@ -17,6 +17,7 @@
  */
 
 const { strict: assert } = require('assert');
+const { expect } = require('chai');
 const fs = require('fs');
 const sinon = require('sinon');
 const { JsonRpcProvider } = require('ethers');
@@ -44,12 +45,14 @@ describe('hedera-fork-project', function () {
     let ft;
 
     before(async () => {
-        const bytecode = fs.readFileSync(__dirname + '/data/HIP719.bytecode').toString();
+        const bytecode = fs.readFileSync(__dirname + '/data/HIP719.bytecode')
+            .toString()
+            .replace('fefefefefefefefefefefefefefefefefefefefe', tokenAddress.substring(2));
         await hre.network.provider.send('hardhat_setCode', [tokenAddress, bytecode]);
+        ft = await hre.ethers.getContractAt('IERC20', tokenAddress);
     });
 
     beforeEach(async () => {
-        ft = await hre.ethers.getContractAt('IERC20', tokenAddress);
         fetchStub = sinon.stub(global, 'fetch');
         for (let { url, response } of responses) {
             fetchStub.withArgs(url).resolves(new Response(response));
@@ -71,27 +74,27 @@ describe('hedera-fork-project', function () {
         const provider = new JsonRpcProvider(`http://127.0.0.1:${forking.workerPort}`);
         const network = await provider.getNetwork();
 
-        assert(network.chainId === BigInt(forking.chainId));
+        expect(network.chainId).to.be.equal(BigInt(forking.chainId));
     });
 
     it('show decimals', async function () {
-        assert(await ft['decimals']() === 13n);
+        expect(await ft['decimals']()).to.be.equal(13n);
     });
 
     it('get name', async function () {
-        assert(await ft['name']() === 'Very long string, just to make sure that it exceeds 31 bytes and requires more than 1 storage slot.');
+        expect(await ft['name']()).to.be.equal('Very long string, just to make sure that it exceeds 31 bytes and requires more than 1 storage slot.');
     });
 
     it('get symbol', async function () {
-        assert(await ft['symbol']() === 'SHRT');
+        expect(await ft['symbol']()).to.be.equal('SHRT');
     });
 
     it('get balance', async function () {
-        assert(await ft['balanceOf'](accountAddress) === 9995n);
+        expect(await ft['balanceOf'](accountAddress)).to.be.equal(9995n);
     });
 
     it('get allowance', async function () {
-        assert(await ft['allowance'](accountAddress, spenderAddress) === 0n);
+        expect(await ft['allowance'](accountAddress, spenderAddress)).to.be.equal(0n);
     });
 
     it('should get correct value when non-HTS address is called', async function () {
