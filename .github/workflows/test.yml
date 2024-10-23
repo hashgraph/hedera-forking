@@ -47,6 +47,9 @@ jobs:
       - name: Run TypeScript Type-Check
         run: npm run type-check
 
+      - name: Run ESLint
+        run: npm run lint
+
   unit-test:
     name: 'NPM Unit Tests'
     runs-on: smart-contracts-linux-medium

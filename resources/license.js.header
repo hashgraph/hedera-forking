@@ -15,12 +15,3 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-require('@nomicfoundation/hardhat-ethers');
-require('@hashgraph/hardhat-forking-plugin');
-const { projectTestConfig } = require('../.lib');
-
-/** @type import('hardhat/config').HardhatUserConfig */
-module.exports = {
-    ...projectTestConfig,
-};

@@ -28,7 +28,7 @@ describe('hedera-fork-project', function () {
     /** @type {import('ethers').Contract} */
     let ft;
 
-    beforeEach(async () => {
+    beforeEach(async function () {
         ft = await hre.ethers.getContractAt('IERC20', '0x000000000000000000000000000000000047b52a');
     });
 

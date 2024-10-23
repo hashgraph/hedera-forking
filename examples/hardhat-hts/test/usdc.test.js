@@ -14,7 +14,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 const { expect } = require('chai');
@@ -53,7 +52,7 @@ describe('USDC example', function () {
      */
     let holder;
 
-    beforeEach(async () => {
+    beforeEach(async function () {
         usdc = await ethers.getContractAt('IERC20', usdcAddress);
 
         const holderAddress = '0x0000000000000000000000000000000000001887';
