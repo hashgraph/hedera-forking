@@ -29,7 +29,6 @@ const { HTSAddress } = require('../../@hts-forking/src/utils');
 /** @type {import('hardhat/types').HardhatNetworkForkingConfig} */
 const { url, blockNumber, mirrorNodeUrl, workerPort, hardhatAddresses = [] } = workerData;
 assert(mirrorNodeUrl !== undefined);
-const mirrorNodeClient = new MirrorNodeClient(mirrorNodeUrl, blockNumber);
 
 debug(c.yellow('Starting JSON-RPC Relay Forwarder server on :%d, forking url=%s blockNumber=%d mirror node url=%s'), workerPort, url, blockNumber, mirrorNodeUrl);
 
@@ -66,16 +65,18 @@ const eth = {
             return '0x';
         }
         if (address === HTSAddress) {
-            debug('loading HTS Code at addres %s', address);
+            debug(c.yellow('loading HTS Code at address %s'), address);
             return getHtsCode();
         }
         return null;
     },
 
     /** @type {EthHandler} */
-    eth_getStorageAt: async ([address, slot, _blockNumber], requestIdPrefix) => {
+    eth_getStorageAt: async ([address, slot, blockNumber], requestIdPrefix) => {
         assert(typeof address === 'string');
         assert(typeof slot === 'string');
+        const mirrorNodeClient = new MirrorNodeClient(mirrorNodeUrl, Number(blockNumber));
+
         // @ts-ignore
         return await getHtsStorageAt(address, slot, mirrorNodeClient, { trace: debug }, requestIdPrefix);
     },
