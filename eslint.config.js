@@ -50,9 +50,15 @@ module.exports = [
     },
     {
         rules: {
+            // https://eslint.org/docs/latest/rules/no-unused-vars
             'no-unused-vars': ['error', {
                 'argsIgnorePattern': '^_',
                 'varsIgnorePattern': '^_',
+            }],
+
+            // https://eslint.org/docs/latest/rules/prefer-const
+            'prefer-const': ['warn', {
+                'destructuring': 'all',
             }],
 
             // https://github.com/nikku/eslint-plugin-license-header?tab=readme-ov-file#eslint-plugin-license-header

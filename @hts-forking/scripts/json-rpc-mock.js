@@ -267,7 +267,7 @@ http.createServer(function (req, res) {
 
     // https://nodejs.org/en/learn/modules/anatomy-of-an-http-transaction
     /** @type {Uint8Array[]} */
-    let chunks = [];
+    const chunks = [];
     req.on('data', chunk => {
         chunks.push(chunk);
     }).on('end', async () => {
