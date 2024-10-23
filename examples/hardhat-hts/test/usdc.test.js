@@ -52,7 +52,7 @@ describe('USDC example', function () {
      */
     let holder;
 
-    beforeEach(async () => {
+    beforeEach(async function () {
         usdc = await ethers.getContractAt('IERC20', usdcAddress);
 
         const holderAddress = '0x0000000000000000000000000000000000001887';
