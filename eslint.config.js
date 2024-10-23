@@ -40,6 +40,8 @@ module.exports = [
     },
     // @ts-ignore
     require('@eslint/js').configs.recommended,
+    // @ts-ignore
+    require('eslint-plugin-mocha').configs.flat.recommended,
     {
         plugins: {
             // @ts-ignore
@@ -52,8 +54,13 @@ module.exports = [
                 'argsIgnorePattern': '^_',
                 'varsIgnorePattern': '^_',
             }],
+
             // https://github.com/nikku/eslint-plugin-license-header?tab=readme-ov-file#eslint-plugin-license-header
-            'license-header/header': ['error', './resources/license.js.header']
+            'license-header/header': ['error', './resources/license.js.header'],
+
+            // Disable to use dynamically generated tests https://mochajs.org/#dynamically-generating-tests
+            // https://github.com/lo1tuma/eslint-plugin-mocha/blob/main/docs/rules/no-setup-in-describe.md
+            'mocha/no-setup-in-describe': 'off',
         }
     }
 ];
