@@ -50,16 +50,13 @@ describe('hedera-fork-project', function () {
             .replace('fefefefefefefefefefefefefefefefefefefefe', tokenAddress.substring(2));
         await hre.network.provider.send('hardhat_setCode', [tokenAddress, bytecode]);
         ft = await hre.ethers.getContractAt('IERC20', tokenAddress);
-    });
-
-    beforeEach(async () => {
         fetchStub = sinon.stub(global, 'fetch');
-        for (let { url, response } of responses) {
+        for (const { url, response } of responses) {
             fetchStub.withArgs(url).resolves(new Response(response));
         }
     });
 
-    afterEach(() => {
+    after(() => {
         fetchStub.restore();
     });
 
