@@ -51,8 +51,9 @@ describe('hedera-fork-project', function () {
         await hre.network.provider.send('hardhat_setCode', [tokenAddress, bytecode]);
         ft = await hre.ethers.getContractAt('IERC20', tokenAddress);
         fetchStub = sinon.stub(global, 'fetch');
-        for (const { url, response } of responses) {
-            fetchStub.withArgs(url).resolves(new Response(response));
+        for (const { endpoint, response } of responses) {
+            fetchStub.withArgs(`https://testnet.mirrornode.hedera.com/api/v1/${endpoint}`)
+              .resolves(new Response(response));
         }
     });
 
