@@ -28,6 +28,12 @@ describe('fork-block-project', function () {
      */
     const whbarAddress = '0x0000000000000000000000000000000000163b5a';
 
+    /**
+     * https://hashscan.io/mainnet/token/0.0.456858
+     * https://mainnet.mirrornode.hedera.com/api/v1/tokens/0.0.456858
+     */
+    const usdcAddress = '0x000000000000000000000000000000000006f89a';
+
     it.skip('should not fetch token data in a block where token is not yet created', async function () {
         const ft = await hre.ethers.getContractAt('IERC20', whbarAddress);
         expect(await ft['name']()).to.be.equal('asd');
@@ -42,10 +48,21 @@ describe('fork-block-project', function () {
         expect(await ft['decimals']()).to.be.equal(8n);
     });
 
+    it("should get account's correct balance at different forking blocks", async function () {
+        const usdc = await hre.ethers.getContractAt('IERC20', usdcAddress);
+        const holderAddress = '0x0000000000000000000000000000000000001887';
+
+        expect(await usdc['balanceOf'](holderAddress)).to.be.equal(321444n);
+
+        resetTo(70520505);
+        expect(await usdc['balanceOf'](holderAddress)).to.be.equal(31_166_366226n);
+
+        resetTo(70715000);
+        expect(await usdc['balanceOf'](holderAddress)).to.be.equal(49_857_361652n);
+    });
 });
 
 /**
- * 
  * @param {number} blockNumber 
  */
 async function resetTo(blockNumber) {
@@ -55,7 +72,7 @@ async function resetTo(blockNumber) {
     await hre.network.provider.request({
         method: 'hardhat_reset', params: [{
             forking: {
-                // jsonRpcUrl: 'https://mainnet.hashio.io/api',
+                // Forwards requests to `https://mainnet.hashio.io/api`
                 jsonRpcUrl: `http://127.0.0.1:${forking.workerPort}`,
                 blockNumber,
             }

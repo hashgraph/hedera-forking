@@ -99,8 +99,7 @@ const server = http.createServer(function (req, res) {
         const response = await async function () {
             const handler = eth[/**@type{keyof typeof eth}*/(method)];
             if (handler !== undefined) {
-                const reqId = `[Request ID: ${id}]`;
-                const result = await handler(params, reqId);
+                const result = await handler(params, `[Request ID: ${id}]`);
                 if (result !== null) {
                     debug(c.dim('non-forwarded request'), c.dim(id), c.blue(method), params);
                     return JSON.stringify({ jsonrpc, id, result });
