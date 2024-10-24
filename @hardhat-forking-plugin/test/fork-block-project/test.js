@@ -35,8 +35,11 @@ describe('fork-block-project', function () {
     const usdcAddress = '0x000000000000000000000000000000000006f89a';
 
     it('should not fetch token data in a block where token is not yet created', async function () {
+        const [account] = await hre.ethers.getSigners();
+
         const ft = await hre.ethers.getContractAt('IERC20', whbarAddress);
         expect(await ft['name']()).to.be.equal('');
+        expect(await ft['balanceOf'](account.address)).to.be.equal(0n);
     });
 
     it('should retrieve token data when forking from token creation block', async function () {
