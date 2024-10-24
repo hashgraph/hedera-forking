@@ -34,12 +34,13 @@ describe('fork-block-project', function () {
      */
     const usdcAddress = '0x000000000000000000000000000000000006f89a';
 
-    it.skip('should not fetch token data in a block where token is not yet created', async function () {
+    it('should not fetch token data in a block where token is not yet created', async function () {
         const ft = await hre.ethers.getContractAt('IERC20', whbarAddress);
-        expect(await ft['name']()).to.be.equal('asd');
+        expect(await ft['name']()).to.be.equal('');
     });
 
     it('should retrieve token data when forking from token creation block', async function () {
+        // Token creation block
         resetTo(40804822 + 1);
 
         const ft = await hre.ethers.getContractAt('IERC20', whbarAddress);
@@ -54,6 +55,7 @@ describe('fork-block-project', function () {
 
         expect(await usdc['balanceOf'](holderAddress)).to.be.equal(321444n);
 
+        // Just some block number we verified the balance was changed in mainnet
         resetTo(70520505);
         expect(await usdc['balanceOf'](holderAddress)).to.be.equal(31_166_366226n);
 
