@@ -26,11 +26,10 @@ const { MirrorNodeClient } = require('./mirror-node-client');
 const { getHtsCode, getHtsStorageAt } = require('../../@hts-forking/src');
 const { HTSAddress } = require('../../@hts-forking/src/utils');
 
-/** @type {import('hardhat/types').HardhatNetworkForkingConfig} */
-const { url, blockNumber, mirrorNodeUrl, workerPort, hardhatAddresses = [] } = workerData;
-assert(mirrorNodeUrl !== undefined);
+/** @type {Partial<import('hardhat/types').HardhatNetworkForkingConfig>} */
+const { url: forkingUrl, blockNumber, mirrorNodeUrl, workerPort, hardhatAddresses = [] } = workerData;
 
-debug(c.yellow('Starting JSON-RPC Relay Forwarder server on :%d, forking url=%s blockNumber=%d mirror node url=%s'), workerPort, url, blockNumber, mirrorNodeUrl);
+debug(c.yellow('Starting JSON-RPC Relay Forwarder server on :%d, forking url=%s blockNumber=%d mirror node url=%s'), workerPort, forkingUrl, blockNumber, mirrorNodeUrl);
 
 /**
  * Function signature for `eth_*` method handlers.
@@ -73,6 +72,8 @@ const eth = {
 
     /** @type {EthHandler} */
     eth_getStorageAt: async ([address, slot, blockNumber], requestIdPrefix) => {
+        assert(mirrorNodeUrl !== undefined);
+
         assert(typeof address === 'string');
         assert(typeof slot === 'string');
         const mirrorNodeClient = new MirrorNodeClient(mirrorNodeUrl, Number(blockNumber));
@@ -106,7 +107,8 @@ const server = http.createServer(function (req, res) {
                 }
             }
             debug('fetch request', c.dim(id), c.blue(method), params);
-            const result = await fetch(url, { method: 'POST', body });
+            assert(forkingUrl !== undefined);
+            const result = await fetch(forkingUrl, { method: 'POST', body });
 
             if (method === 'eth_getBlockByNumber') {
                 const json = await result.json();
