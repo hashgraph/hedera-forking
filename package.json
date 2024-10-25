@@ -9,7 +9,8 @@
   ],
   "scripts": {
     "prepare": "husky",
-    "type-check": "tsc"
+    "type-check": "tsc",
+    "lint": "eslint"
   },
   "author": "2024 Hedera Hashgraph, LLC",
   "license": "Apache-2.0",
@@ -17,9 +18,14 @@
     "ethers": "^6.1.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.13.0",
+    "eslint": "^9.13.0",
+    "eslint-plugin-license-header": "^0.6.1",
+    "eslint-plugin-mocha": "^10.5.0",
+    "globals": "^15.11.0",
     "husky": "^9.1.5",
     "lint-staged": "^15.2.10",
     "prettier": "^3.3.3",
-    "typescript": "^5.5.4"
+    "typescript": "^5.4.5"
   }
 }

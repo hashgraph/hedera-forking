@@ -14,7 +14,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 require('@nomicfoundation/hardhat-ethers');
@@ -28,8 +27,8 @@ module.exports = {
         hardhat: {
             forking: {
                 url: 'https://testnet.hashio.io/api',
-                // This allows Hardhat to cache blocks coming from the JSON-RPC.
-                // Forking from a block is not fully integrated yet.
+                // This allows Hardhat to enable JSON-RPC's response cache.
+                // Forking from a block is not fully integrated yet into System Contract emulation.
                 blockNumber: 10471740,
                 chainId: 296,
                 workerPort: 1237,
