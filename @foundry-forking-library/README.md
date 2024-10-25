@@ -10,3 +10,11 @@ deployCodeTo("@hashgraph/hedera-forking/@foundry-forking-library/HtsSystemContra
 before your tests. And that's it!
 
 Please note that, for now, only fungible tokens are supported.
+
+## Tests
+
+In order to test the solution run:
+```shell
+forge test  --fork-url "https://testnet.hashio.io/api" --ffi --chain 296
+```
+Testnet addresses are used for testing purposes and may stop working after a reset.
