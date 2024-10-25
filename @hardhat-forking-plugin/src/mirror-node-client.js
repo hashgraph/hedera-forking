@@ -108,6 +108,9 @@ class MirrorNodeClient {
       debug('Mirror Node request', url);
       const response = await fetch(url);
       if (!response.ok) {
+        if (response.status === 404) {
+          return null;
+        }
         throw new Error(`Request failed with status ${response.status}: ${response.statusText}`);
       }
       return await response.json();
