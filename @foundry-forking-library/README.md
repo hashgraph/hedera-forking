@@ -15,6 +15,6 @@ Please note that, for now, only fungible tokens are supported.
 
 In order to test the solution run:
 ```shell
-forge test  --fork-url "https://testnet.hashio.io/api" --ffi --chain 296
+forge test  --fork-url "https://testnet.hashio.io/api" --chain 296
 ```
 Testnet addresses are used for testing purposes and may stop working after a reset.

@@ -2,6 +2,7 @@
 src = "src"
 out = "out"
 libs = ["../lib"]
+ffi = true
 
 extra_output = ["storageLayout"]
 

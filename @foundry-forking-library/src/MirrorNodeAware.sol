@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import {CommonBase} from "forge-std/Base.sol";
 import "surl/Surl.sol";
 
-contract MirrorNodeAware is CommonBase {
+abstract contract MirrorNodeAware is CommonBase {
     using Surl for *;
 
     string private constant MAINNET_MIRROR_NODE_URL = "https://mainnet-public.mirrornode.hedera.com/api/v1/";
@@ -22,7 +22,7 @@ contract MirrorNodeAware is CommonBase {
         return abi.decode(vm.parseJson(json, string(abi.encodePacked(".", field))), (string));
     }
 
-    function _getAllowanceFromMirrorNode(uint256 ownerId, uint256 spenderId) internal returns (uint256) {
+    function _getAllowanceFromMirrorNode(address ownerId, address spenderId) internal returns (uint256) {
         string memory allowancesUrl = string(abi.encodePacked(
             _mirrorNodeUrl(),
             "accounts/0.0.",
@@ -41,18 +41,10 @@ contract MirrorNodeAware is CommonBase {
     }
 
     function _getAccountBalanceFromMirrorNode(address account) internal returns (uint256) {
-        string memory accountUrl = string(abi.encodePacked(
-            _mirrorNodeUrl(),
-            "accounts/",
-            vm.toLowercase(vm.toString(account))
-        ));
-        (uint256 accountStatusCode, bytes memory accountJson) = accountUrl.get();
-        if (accountStatusCode != 200) {
+        uint32 accountId = _getAccountIdFromMirrorNode(account);
+        if (accountId == 0) {
             return 0;
         }
-        uint32 accountId = uint32(vm.parseUint(
-            vm.replace(abi.decode(vm.parseJson(string(accountJson), ".account"), (string)), "0.0.", ""))
-        );
         string memory balancesUrl = string(abi.encodePacked(
             _mirrorNodeUrl(),
             "tokens/0.0.",
@@ -69,6 +61,22 @@ contract MirrorNodeAware is CommonBase {
         }
 
         return 0;
+    }
+
+    function _getAccountIdFromMirrorNode(address account) internal returns (uint32) {
+        string memory accountUrl = string(abi.encodePacked(
+            _mirrorNodeUrl(),
+            "accounts/",
+            vm.toLowercase(vm.toString(account))
+        ));
+        (uint256 accountStatusCode, bytes memory accountJson) = accountUrl.get();
+        if (accountStatusCode != 200) {
+            return 0;
+        }
+
+        return uint32(vm.parseUint(
+            vm.replace(abi.decode(vm.parseJson(string(accountJson), ".account"), (string)), "0.0.", ""))
+        );
     }
 
     function _mirrorNodeUrl() private view returns (string memory) {

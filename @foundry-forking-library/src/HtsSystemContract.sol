@@ -15,13 +15,13 @@ contract HtsSystemContract is StdCheats, IERC20Events, MirrorNodeAware {
     string private symbol;
     uint8 private decimals;
     uint256 private totalSupply;
-
+    mapping(address => uint256) private balances;
+    mapping(address => mapping(address => uint256)) private allowances;
     bool private initialized;
-    mapping(bytes32 => bool) private initializedApprovals;
-    mapping(bytes32 => bool) private initializedBalances;
+    mapping(address => mapping(address => bool)) private initializedAllowances;
 
-    event Associated(address indexed account);
-    event Dissociated(address indexed account);
+    // HTS Memory will be used for that...
+    mapping(address => mapping(address => bool)) private initializedBalances;
 
     /**
      * @dev Prevents delegatecall into the modified method.
@@ -32,45 +32,17 @@ contract HtsSystemContract is StdCheats, IERC20Events, MirrorNodeAware {
     }
 
     /**
-     * @dev Returns the account id (omitting both shard and realm numbers) of the given `address`.
-     * The storage adapter, _i.e._, `getHtsStorageAt`, assumes that both shard and realm numbers are zero.
-     * Thus, they can be omitted from the account id.
-     *
-     * See https://docs.hedera.com/hedera/core-concepts/accounts/account-properties
-     * for more info on account properties.
-     */
-    function getAccountId(address account) htsCall external view returns (uint32 accountId) {
-        bytes4 selector = HtsSystemContract.getAccountId.selector;
-        uint64 pad = 0x0;
-        uint256 slot = uint256(bytes32(abi.encodePacked(selector, pad, account)));
-        assembly {
-            accountId := sload(slot)
-        }
-        if (accountId == 0) {
-            accountId = uint32(bytes4(keccak256(abi.encodePacked(account))));
-        }
-    }
-
-    /**
      * @dev HTS Storage will be used to keep a track of initialization of storage slot on the token contract.
      * The reason for that is not make the 'deal' test method still working. We can't read from 2 slots of the same
      * smart contract. 1 slot has to be used only, that's why we will use the second smart contract (HTS) memory to hold
      * the initialization status.
      */
-    function initializeApproval(address token, address from, address to) public {
-        initializedApprovals[keccak256(abi.encodePacked(token, from, to))] = true;
-    }
-
-    function isInitializedApproval(address token, address from, address to) public view returns (bool) {
-        return initializedApprovals[keccak256(abi.encodePacked(token, from, to))];
-    }
-
     function initializeBalance(address token, address account) public {
-        initializedBalances[keccak256(abi.encodePacked(token, account))] = true;
+        initializedBalances[token][account] = true;
     }
 
     function isInitializedBalance(address token, address account) public view returns (bool) {
-        return initializedBalances[keccak256(abi.encodePacked(token, account))];
+        return initializedBalances[token][account];
     }
 
     /**
@@ -163,7 +135,7 @@ contract HtsSystemContract is StdCheats, IERC20Events, MirrorNodeAware {
         } else if (selector == IERC20.balanceOf.selector) {
             require(msg.data.length >= 60, "balanceOf: Not enough calldata");
             address account = address(bytes20(msg.data[40:60]));
-            uint256 inMemory = __balanceOf(account);
+            uint256 inMemory = balances[account];
             if (inMemory > 0 || HtsSystemContract(HTS_ADDRESS).isInitializedBalance(address(this), account)) {
                 return abi.encode(inMemory);
             }
@@ -196,13 +168,10 @@ contract HtsSystemContract is StdCheats, IERC20Events, MirrorNodeAware {
             require(msg.data.length >= 92, "allowance: Not enough calldata");
             address owner = address(bytes20(msg.data[40:60]));
             address spender = address(bytes20(msg.data[72:92]));
-            if (!HtsSystemContract(HTS_ADDRESS).isInitializedApproval(address(this), owner, spender)) {
-                return abi.encode(_getAllowanceFromMirrorNode(
-                    HtsSystemContract(HTS_ADDRESS).getAccountId(owner),
-                    HtsSystemContract(HTS_ADDRESS).getAccountId(spender)
-                ));
+            if (!initializedAllowances[owner][spender]) {
+                return abi.encode(_getAllowanceFromMirrorNode(owner, spender));
             }
-            return abi.encode(__allowance(owner, spender));
+            return abi.encode(allowances[owner][spender]);
         } else if (selector == IERC20.approve.selector) {
             require(msg.data.length >= 92, "approve: Not enough calldata");
             address spender = address(bytes20(msg.data[40:60]));
@@ -217,55 +186,12 @@ contract HtsSystemContract is StdCheats, IERC20Events, MirrorNodeAware {
         revert ("redirectForToken: not supported");
     }
 
-    function _balanceOfSlot(address account) private view returns (uint256 slot) {
-        bytes4 selector = IERC20.balanceOf.selector;
-        uint192 pad = 0x0;
-        uint32 accountId = HtsSystemContract(HTS_ADDRESS).getAccountId(account);
-        slot = uint256(bytes32(abi.encodePacked(selector, pad, accountId)));
-    }
-
-    function _allowanceSlot(address owner, address spender) private view returns (uint256 slot) {
-        bytes4 selector = IERC20.allowance.selector;
-        uint160 pad = 0x0;
-        uint32 ownerId = HtsSystemContract(HTS_ADDRESS).getAccountId(owner);
-        uint32 spenderId = HtsSystemContract(HTS_ADDRESS).getAccountId(spender);
-        slot = uint256(bytes32(abi.encodePacked(selector, pad, spenderId, ownerId)));
-    }
-
-    function __balanceOf(address account) private view returns (uint256 amount) {
-        uint256 slot = _balanceOfSlot(account);
-        if (slot == 0) {
-            return 0;
-        }
-        assembly {
-            amount := sload(slot)
-        }
-    }
-
-    function __allowance(address owner, address spender) private view returns (uint256 amount) {
-        uint256 slot = _allowanceSlot(owner, spender);
-        assembly {
-            amount := sload(slot)
-        }
-    }
-
     function _transfer(address from, address to, uint256 amount) private {
         require(from != address(0), "hts: invalid sender");
         require(to != address(0), "hts: invalid receiver");
-
-        uint256 fromSlot = _balanceOfSlot(from);
-        uint256 fromBalance;
-        assembly { fromBalance := sload(fromSlot) }
-        require(fromBalance >= amount, "_transfer: insufficient balance");
-        assembly { sstore(fromSlot, sub(fromBalance, amount)) }
-
-        uint256 toSlot = _balanceOfSlot(to);
-        uint256 toBalance;
-        assembly { toBalance := sload(toSlot) }
-        // Solidity's checked arithmetic will revert if this overflows
-        // https://soliditylang.org/blog/2020/12/16/solidity-v0.8.0-release-announcement
-        uint256 newToBalance = toBalance + amount;
-        assembly { sstore(toSlot, newToBalance) }
+        require(balances[from] >= amount, "_transfer: insufficient balance");
+        balances[from] -= amount;
+        balances[to] += amount;
 
         emit Transfer(from, to, amount);
     }
@@ -273,10 +199,7 @@ contract HtsSystemContract is StdCheats, IERC20Events, MirrorNodeAware {
     function _approve(address owner, address spender, uint256 amount) private {
         require(owner != address(0), "_approve: invalid owner");
         require(spender != address(0), "_approve: invalid spender");
-        uint256 allowanceSlot = _allowanceSlot(owner, spender);
-        assembly {
-            sstore(allowanceSlot, amount)
-        }
+        allowances[owner][spender] = amount;
     }
 
     /**
@@ -284,7 +207,7 @@ contract HtsSystemContract is StdCheats, IERC20Events, MirrorNodeAware {
      * their account IDs.
      */
     function _spendAllowance(address owner, address spender, uint256 amount) private {
-        uint256 currentAllowance = __allowance(owner, spender);
+        uint256 currentAllowance = allowances[owner][spender];
         if (currentAllowance != type(uint256).max) {
             require(currentAllowance >= amount, "_spendAllowance: insufficient");
             unchecked {
@@ -319,26 +242,15 @@ contract HtsSystemContract is StdCheats, IERC20Events, MirrorNodeAware {
         if (HtsSystemContract(HTS_ADDRESS).isInitializedBalance(address(this), account)) {
             return;
         }
-
-        uint256 slot = _balanceOfSlot(account);
-        uint256 accountBalance = _getAccountBalanceFromMirrorNode(account);
-        assembly { sstore(slot, accountBalance) }
-
+        balances[account] = _getAccountBalanceFromMirrorNode(account);
         HtsSystemContract(HTS_ADDRESS).initializeBalance(address(this), account);
     }
 
     function _initializeApproval(address owner, address spender) private  {
-        if (HtsSystemContract(HTS_ADDRESS).isInitializedApproval(address(this), owner, spender)) {
+        if (initializedAllowances[owner][spender]) {
             return;
         }
-
-        uint256 slot = _allowanceSlot(owner, spender);
-        uint256 allowance = _getAllowanceFromMirrorNode(
-            HtsSystemContract(HTS_ADDRESS).getAccountId(owner),
-            HtsSystemContract(HTS_ADDRESS).getAccountId(spender)
-        );
-        assembly { sstore(slot, allowance) }
-
-        HtsSystemContract(HTS_ADDRESS).initializeApproval(address(this), owner, spender);
+        allowances[owner][spender] = _getAllowanceFromMirrorNode(owner, spender);
+        initializedAllowances[owner][spender] = true;
     }
 }
