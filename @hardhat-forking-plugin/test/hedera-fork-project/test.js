@@ -44,7 +44,7 @@ describe('hedera-fork-project', function () {
     /** @type {import('ethers').Contract} */
     let ft;
 
-    before(async () => {
+    before(async function () {
         const bytecode = fs.readFileSync(__dirname + '/data/HIP719.bytecode')
             .toString()
             .replace('fefefefefefefefefefefefefefefefefefefefe', tokenAddress.substring(2));
@@ -57,7 +57,7 @@ describe('hedera-fork-project', function () {
         }
     });
 
-    after(() => {
+    after(function () {
         fetchStub.restore();
     });
 
