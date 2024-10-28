@@ -25,7 +25,7 @@ const hre = require('hardhat');
 
 /**
  * @typedef {Object} MirrorNodeResponse
- * @property {string} url - The URL of the API endpoint.
+ * @property {string} endpoint - The URL of the API endpoint.
  * @property {string} response - The JSON-encoded string of the response for the URL.
  */
 
