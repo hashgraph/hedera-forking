@@ -25,6 +25,7 @@ describe('::projects', function () {
 
     [
         'custom-hardfork-project',
+        'fork-block-project',
         'hedera-fork-project',
         'hedera-mainnet-project',
         'message-call-project',

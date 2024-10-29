@@ -20,21 +20,16 @@ const { strict: assert } = require('assert');
 const http = require('http');
 const { workerData, parentPort } = require('worker_threads');
 const debug = require('util').debuglog('hedera-forking-rpc');
+const c = require('ansi-colors');
 
 const { MirrorNodeClient } = require('./mirror-node-client');
 const { getHtsCode, getHtsStorageAt } = require('../../@hts-forking/src');
 const { HTSAddress } = require('../../@hts-forking/src/utils');
 
-/** @type{{
- * forkingUrl: string,
- * mirrorNodeUrl: string,
- * port?: number,
- * hardhatAddresses?: string[]}
- * } */
-const { forkingUrl, mirrorNodeUrl, port, hardhatAddresses = [] } = workerData;
-const mirrorNodeClient = new MirrorNodeClient(mirrorNodeUrl);
+/** @type {Partial<import('hardhat/types').HardhatNetworkForkingConfig>} */
+const { url: forkingUrl, blockNumber, mirrorNodeUrl, workerPort, hardhatAddresses = [] } = workerData;
 
-debug('Starting JSON-RPC Relay Forwarder server on :%d, forking url=%s mirror node url=%s', port, forkingUrl, mirrorNodeUrl);
+debug(c.yellow('Starting JSON-RPC Relay Forwarder server on :%d, forking url=%s blockNumber=%d mirror node url=%s'), workerPort, forkingUrl, blockNumber, mirrorNodeUrl);
 
 /**
  * Function signature for `eth_*` method handlers.
@@ -69,16 +64,20 @@ const eth = {
             return '0x';
         }
         if (address === HTSAddress) {
-            debug('loading HTS Code at addres %s', address);
+            debug(c.yellow('loading HTS Code at address %s'), address);
             return getHtsCode();
         }
         return null;
     },
 
     /** @type {EthHandler} */
-    eth_getStorageAt: async ([address, slot, _blockNumber], requestIdPrefix) => {
+    eth_getStorageAt: async ([address, slot, blockNumber], requestIdPrefix) => {
+        assert(mirrorNodeUrl !== undefined);
+
         assert(typeof address === 'string');
         assert(typeof slot === 'string');
+        const mirrorNodeClient = new MirrorNodeClient(mirrorNodeUrl, Number(blockNumber));
+
         // @ts-ignore
         return await getHtsStorageAt(address, slot, mirrorNodeClient, { trace: debug }, requestIdPrefix);
     },
@@ -101,14 +100,14 @@ const server = http.createServer(function (req, res) {
         const response = await async function () {
             const handler = eth[/**@type{keyof typeof eth}*/(method)];
             if (handler !== undefined) {
-                const reqId = `[Request ID: ${id}]`;
-                const result = await handler(params, reqId);
+                const result = await handler(params, `[Request ID: ${id}]`);
                 if (result !== null) {
-                    debug('non-forwarded request', id, method, params);
+                    debug(c.dim('non-forwarded request'), c.dim(id), c.blue(method), params);
                     return JSON.stringify({ jsonrpc, id, result });
                 }
             }
-            debug('fetch request', id, method, params);
+            debug('fetch request', c.dim(id), c.blue(method), params);
+            assert(forkingUrl !== undefined);
             const result = await fetch(forkingUrl, { method: 'POST', body });
 
             if (method === 'eth_getBlockByNumber') {
@@ -129,7 +128,7 @@ const server = http.createServer(function (req, res) {
     });
 });
 
-server.listen(port, () => {
+server.listen(workerPort, () => {
     const address = server.address();
     assert(address !== null);
     assert(typeof address === 'object');

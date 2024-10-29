@@ -129,14 +129,7 @@ extendEnvironment(hre => {
         if (forking.chainId !== undefined) {
             const scriptPath = path.resolve(__dirname, './json-rpc-forwarder');
             debug(`Creating JSON-RPC Forwarder server from \`${scriptPath}\``);
-            const worker = new Worker(scriptPath, {
-                workerData: {
-                    forkingUrl: forking.url,
-                    mirrorNodeUrl: forking.mirrorNodeUrl,
-                    port: forking.workerPort,
-                    hardhatAddresses: forking.hardhatAddresses,
-                }
-            });
+            const worker = new Worker(scriptPath, { workerData: forking });
             worker.on('error', err => console.log(err));
             worker.on('exit', code => debug(`Worker exited with code ${code}`));
 

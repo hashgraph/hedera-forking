@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+const debug = require('util').debuglog('hedera-forking-mirror');
+
 /**
  * Class representing a client for interacting with the Hedera Mirror Node API.
  */
@@ -25,9 +27,12 @@ class MirrorNodeClient {
    * Creates a new instance of the `MirrorNodeClient`.
    * 
    * @param {string} url The base URL of the Hedera Mirror Node API.
+   * @param {number=} blockNumber
    */
-  constructor(url) {
+  constructor(url, blockNumber) {
     this.url = url;
+    this.blockNumber = blockNumber;
+    this.forkBlock = null;
   }
 
   /**
@@ -60,7 +65,7 @@ class MirrorNodeClient {
    * @returns {Promise<{ allowances: Array<{ amount: number }> } | null>} A `Promise` resolving to the token allowances.
    */
   async getAllowanceForToken(accountId, tokenId, spenderId) {
-    return this.get(`accounts/${accountId}/allowances/tokens?token.id=${tokenId}&spender.id=${spenderId}`);
+    return this.get(`accounts/${accountId}/allowances/tokens?token.id=${tokenId}&spender.id=${spenderId}`, false);
   }
 
   /**
@@ -74,22 +79,43 @@ class MirrorNodeClient {
   }
 
   /**
+   * 
+   * @param {number} blockNumber 
+   */
+  async getTimestamp(blockNumber) {
+    if (this.forkBlock === null) {
+      this.forkBlock = await this.get(`blocks/${blockNumber}`, false);
+    }
+    return this.forkBlock.timestamp.to;
+  }
+
+  /**
    * Sends a `GET` request to the specified Mirror Node URL and returns the response data.
    * 
    * @private
    * @template T
-   * @param {string} url The URL to send the GET request to.
+   * @param {string} endpoint The endpoint to send the `GET` request to.
+   * @param {boolean} withTimestamp
    * @returns {Promise<T | null>} A `Promise` resolving to the response data or `null` if an error happened.
    */
-  async get(url) {
+  async get(endpoint, withTimestamp = true) {
+    const timestamp = withTimestamp && this.blockNumber !== undefined
+      ? `${endpoint.includes('?') ? '&' : '?'}timestamp=${await this.getTimestamp(this.blockNumber)}`
+      : '';
+
     try {
-      const response = await fetch(`${this.url}${url}`);
+      const url = `${this.url}${endpoint}${timestamp}`;
+      debug('Mirror Node request', url);
+      const response = await fetch(url);
       if (!response.ok) {
+        if (response.status === 404) {
+          return null;
+        }
         throw new Error(`Request failed with status ${response.status}: ${response.statusText}`);
       }
       return await response.json();
     } catch (err) {
-      console.error(`Error fetching data from ${url}`);
+      console.error(`Error fetching data from ${endpoint}`);
       console.error(err);
       return null;
     }
