@@ -1,9 +1,9 @@
 [submodule "lib/forge-std"]
 	path = lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
-[submodule "lib/surl"]
-	path = lib/surl
-	url = https://github.com/memester-xyz/surl
 [submodule "launch-token"]
 	path = launch-token
 	url = https://github.com/defigirlxo/My-First-Crypto.git
+[submodule "lib/surl"]
+	path = lib/surl
+	url = https://github.com/memester-xyz/surl
