@@ -13,7 +13,7 @@
     },
     "decimals": "0",
     "deleted": false,
-    "expiry_timestamp": 1.732158479e+18,
+    "expiry_timestamp": 1.732158479e18,
     "fee_schedule_key": null,
     "freeze_default": false,
     "freeze_key": null,
