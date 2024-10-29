@@ -39,7 +39,7 @@ module.exports = {
             // > [...]
             // > I suggest to set the default evmVersion to paris if the compiler version is >=0.8.20 and the user hasn't configured it themselves.
             evmVersion: 'cancun',
-        }
+        },
     },
     networks: {
         hardhat: {
@@ -48,9 +48,9 @@ module.exports = {
                 296: {
                     hardforkHistory: {
                         'london': 1,
-                    }
-                }
-            }
-        }
-    }
+                    },
+                },
+            },
+        },
+    },
 };

@@ -22,11 +22,12 @@ const { JsonRpcProvider } = require('ethers');
 const hre = require('hardhat');
 
 describe('hedera-mainnet-project', function () {
-
     it('should configure `forking` with mainnet values', async function () {
         const { forking } = hre.config.networks.hardhat;
         expect(forking?.chainId).to.be.equal(295);
-        expect(forking?.mirrorNodeUrl).to.be.equal('https://mainnet-public.mirrornode.hedera.com/api/v1/');
+        expect(forking?.mirrorNodeUrl).to.be.equal(
+            'https://mainnet-public.mirrornode.hedera.com/api/v1/'
+        );
         expect(forking?.workerPort).to.be.equal(1236);
     });
 
@@ -44,5 +45,4 @@ describe('hedera-mainnet-project', function () {
 
         expect(network.chainId).to.be.equal(BigInt(forking.chainId));
     });
-
 });

@@ -33,6 +33,6 @@ module.exports = {
                 chainId: 296,
                 workerPort: 1237,
             },
-        }
+        },
     },
 };

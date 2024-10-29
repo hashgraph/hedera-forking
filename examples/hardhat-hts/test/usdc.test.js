@@ -23,14 +23,14 @@ const { loadFixture } = require('@nomicfoundation/hardhat-toolbox/network-helper
 /**
  * Wrapper around `Contract::connect` to reify its return type.
  *
- * @param {import('ethers').Contract} contract 
- * @param {import('@nomicfoundation/hardhat-ethers/signers').HardhatEthersSigner} signer 
+ * @param {import('ethers').Contract} contract
+ * @param {import('@nomicfoundation/hardhat-ethers/signers').HardhatEthersSigner} signer
  * @returns {import('ethers').Contract}
  */
-const connectAs = (contract, signer) => /**@type{import('ethers').Contract}*/(contract.connect(signer));
+const connectAs = (contract, signer) =>
+    /**@type{import('ethers').Contract}*/ (contract.connect(signer));
 
 describe('USDC example', function () {
-
     async function id() {
         const [receiver, spender] = await ethers.getSigners();
         return { receiver, spender };
@@ -47,7 +47,7 @@ describe('USDC example', function () {
 
     /**
      * https://hashscan.io/mainnet/account/0.0.6279
-     * 
+     *
      * @type {import('@nomicfoundation/hardhat-ethers/signers').HardhatEthersSigner}
      */
     let holder;
@@ -77,8 +77,7 @@ describe('USDC example', function () {
         const CallToken = await ethers.getContractFactory('CallToken');
         const callToken = await CallToken.deploy();
 
-        expect(await callToken['getTokenName'](usdcAddress))
-            .to.be.equal('USD Coin');
+        expect(await callToken['getTokenName'](usdcAddress)).to.be.equal('USD Coin');
     });
 
     it('should get `balanceOf` account holder', async function () {

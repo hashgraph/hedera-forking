@@ -31,7 +31,7 @@ module.exports = {
                 blockNumber: 40804822,
                 chainId: 295,
                 workerPort: 1235,
-            }
-        }
-    }
+            },
+        },
+    },
 };

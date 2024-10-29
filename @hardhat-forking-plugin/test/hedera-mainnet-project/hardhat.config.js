@@ -29,7 +29,7 @@ module.exports = {
                 url: 'https://mainnet.hashio.io/api',
                 chainId: 295,
                 workerPort: 1236,
-            }
-        }
-    }
+            },
+        },
+    },
 };

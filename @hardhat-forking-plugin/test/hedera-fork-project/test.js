@@ -45,15 +45,17 @@ describe('hedera-fork-project', function () {
     let ft;
 
     before(async function () {
-        const bytecode = fs.readFileSync(__dirname + '/data/HIP719.bytecode')
+        const bytecode = fs
+            .readFileSync(__dirname + '/data/HIP719.bytecode')
             .toString()
             .replace('fefefefefefefefefefefefefefefefefefefefe', tokenAddress.substring(2));
         await hre.network.provider.send('hardhat_setCode', [tokenAddress, bytecode]);
         ft = await hre.ethers.getContractAt('IERC20', tokenAddress);
         fetchStub = sinon.stub(global, 'fetch');
         for (const { endpoint, response } of responses) {
-            fetchStub.withArgs(`https://testnet.mirrornode.hedera.com/api/v1/${endpoint}`)
-              .resolves(new Response(response));
+            fetchStub
+                .withArgs(`https://testnet.mirrornode.hedera.com/api/v1/${endpoint}`)
+                .resolves(new Response(response));
         }
     });
 
@@ -80,7 +82,9 @@ describe('hedera-fork-project', function () {
     });
 
     it('get name', async function () {
-        expect(await ft['name']()).to.be.equal('Very long string, just to make sure that it exceeds 31 bytes and requires more than 1 storage slot.');
+        expect(await ft['name']()).to.be.equal(
+            'Very long string, just to make sure that it exceeds 31 bytes and requires more than 1 storage slot.'
+        );
     });
 
     it('get symbol', async function () {
