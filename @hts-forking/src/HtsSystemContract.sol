@@ -5,17 +5,14 @@ import {IERC20Events, IERC20} from "./IERC20.sol";
 
 contract HtsSystemContract is IERC20Events {
 
-    address private constant HTS_ADDRESS = address(0x167);
+    address internal constant HTS_ADDRESS = address(0x167);
 
     // All ERC20 properties are accessed with a `delegatecall` from the Token Proxy.
     // See `__redirectForToken` for more details.
-    string private name;
-    string private symbol;
+    string internal name;
+    string internal symbol;
     uint8 private decimals;
     uint256 private totalSupply;
-
-    event Associated(address indexed account);
-    event Dissociated(address indexed account);
 
     /**
      * @dev Prevents delegatecall into the modified method.
@@ -29,12 +26,14 @@ contract HtsSystemContract is IERC20Events {
      * @dev Returns the account id (omitting both shard and realm numbers) of the given `address`.
      * The storage adapter, _i.e._, `getHtsStorageAt`, assumes that both shard and realm numbers are zero.
      * Thus, they can be omitted from the account id.
-     * 
+     *
      * See https://docs.hedera.com/hedera/core-concepts/accounts/account-properties
      * for more info on account properties.
      */
-    function getAccountId(address account) htsCall external view returns (uint32 accountId) {
-        bytes4 selector = HtsSystemContract.getAccountId.selector;
+    function getAccountId(address account) htsCall public virtual view returns (uint32 accountId) {
+        // 0xe0b490f7 is the selector for HtsSystemContract.getAccountId.
+        // Due to limitations with virtual functions, we use a direct byte assignment here.
+        bytes4 selector = 0xe0b490f7;
         uint64 pad = 0x0;
         uint256 slot = uint256(bytes32(abi.encodePacked(selector, pad, account)));
         assembly {
@@ -45,7 +44,7 @@ contract HtsSystemContract is IERC20Events {
     /**
      * @dev Validates `redirectForToken(address,bytes)` dispatcher arguments.
      *
-     * The interaction between tokens and HTS System Contract is specified in 
+     * The interaction between tokens and HTS System Contract is specified in
      * https://hips.hedera.com/hip/hip-218 and
      * https://hips.hedera.com/hip/hip-719.
      *
@@ -87,7 +86,7 @@ contract HtsSystemContract is IERC20Events {
      * `address(0x167).redirectForToken(tokenAddr, bytesData)`.
      * The reason being direct calls read storage from `0x167` address.
      * But delegate calls on the other hand read storage from the token address.
-     * 
+     *
      * [1] https://docs.soliditylang.org/en/v0.8.23/abi-spec.html#function-selector-and-argument-encoding
      */
     fallback (bytes calldata) external returns (bytes memory) {
@@ -112,7 +111,7 @@ contract HtsSystemContract is IERC20Events {
     /**
      * @dev Addresses are word right-padded starting from memory position `28`.
      */
-    function __redirectForToken() private returns (bytes memory) {
+    function __redirectForToken() internal virtual returns (bytes memory) {
         bytes4 selector = bytes4(msg.data[24:28]);
 
         if (selector == IERC20.name.selector) {
@@ -166,14 +165,14 @@ contract HtsSystemContract is IERC20Events {
         revert ("redirectForToken: not supported");
     }
 
-    function _balanceOfSlot(address account) private view returns (uint256 slot) {
+    function _balanceOfSlot(address account) internal view returns (uint256 slot) {
         bytes4 selector = IERC20.balanceOf.selector;
         uint192 pad = 0x0;
         uint32 accountId = HtsSystemContract(HTS_ADDRESS).getAccountId(account);
         slot = uint256(bytes32(abi.encodePacked(selector, pad, accountId)));
     }
 
-    function _allowanceSlot(address owner, address spender) private view returns (uint256 slot) {
+    function _allowanceSlot(address owner, address spender) internal view returns (uint256 slot) {
         bytes4 selector = IERC20.allowance.selector;
         uint160 pad = 0x0;
         uint32 ownerId = HtsSystemContract(HTS_ADDRESS).getAccountId(owner);
