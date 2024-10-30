@@ -5,11 +5,13 @@ This library contains the code for the HtsSystemContract, which dynamically popu
 Forked networks are unable to retrieve the code of the smart contract deployed at address 0x167 on their own.  You can use the bytecode from this implementation of HTS and run your tests just as you would on non-forked networks. In order to accomplish that simply run:
 
 ```solidity
-address htsAddress = 0x0000000000000000000000000000000000000167;
-deployCodeTo("HtsSystemContractInitialized.sol", htsAddress);
-vm.allowCheatcodes(htsAddress);
+deployCodeTo("HtsSystemContractInitialized.sol", address(0x167));
+vm.allowCheatcodes(address(0x167));
 ```
-before your tests. And that's it!
+before your tests.
+
+ - `deployCodeTo("HtsSystemContractInitialized.sol", address(0x167));` – Deploys our HTS contract code for forked networks to the expected address (0x167).
+ - `vm.allowCheatcodes(address(0x167));` – Grants this address permission to use VM tools. We use `surl` to fetch our token storage data from the MirrorNode, and `surl` requires `vm::ffi` to execute bash CLI commands for these requests. We also use the VM for type casting and JSON parsing.
 
 Please note that, for now, only fungible tokens are supported.
 

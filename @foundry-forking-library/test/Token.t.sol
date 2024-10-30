@@ -26,9 +26,8 @@ contract TokenTest is Test, IERC20Events {
     address internal MFCT = 0x0000000000000000000000000000000000483077;
 
     function setUp() external {
-        address htsAddress = 0x0000000000000000000000000000000000000167;
-        deployCodeTo("HtsSystemContractInitialized.sol", htsAddress);
-        vm.allowCheatcodes(htsAddress);
+        deployCodeTo("HtsSystemContractInitialized.sol", address(0x167));
+        vm.allowCheatcodes(address(0x167));
     }
 
     function test_ERC20_name() view external {
