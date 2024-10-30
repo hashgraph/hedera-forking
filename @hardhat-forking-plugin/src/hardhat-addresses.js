@@ -26,7 +26,7 @@ const { privateToAddress } = require('@nomicfoundation/ethereumjs-util');
  * @param {Uint8Array} pk the private key to convert.
  * @returns {string} the Ethereum address corresponding to the `pk` private key.
  */
-const getEthAddress = pk => '0x' + Buffer.from(privateToAddress(pk)).toString('hex');
+const getEvmAddress = pk => '0x' + Buffer.from(privateToAddress(pk)).toString('hex');
 
 module.exports = {
     /**
@@ -38,7 +38,7 @@ module.exports = {
     getAddresses(accounts) {
         if (Array.isArray(accounts)) {
             return accounts.map(account =>
-                getEthAddress(Buffer.from(account.privateKey.replace('0x', ''), 'hex'))
+                getEvmAddress(Buffer.from(account.privateKey.replace('0x', ''), 'hex'))
             );
         } else {
             const seed = mnemonicToSeedSync(accounts.mnemonic, accounts.passphrase);
@@ -49,7 +49,7 @@ module.exports = {
                 const derived = masterKey.derive(`${accounts.path}/${i}`);
                 if (derived.privateKey === null) continue;
 
-                const address = getEthAddress(derived.privateKey);
+                const address = getEvmAddress(derived.privateKey);
                 addresses.push(address);
             }
 
