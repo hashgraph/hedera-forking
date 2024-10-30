@@ -65,11 +65,11 @@ contract MocksToStorageLoader is CommonBase, StdCheats {
     }
 
     function _deployTokenProxyBytecode(address tokenAddress) private {
+        string memory template = vm.replace(vm.trim(vm.readFile("./src/HIP719.bytecode.json")), "\"", "");
         string memory placeholder = "fefefefefefefefefefefefefefefefefefefefe";
-        string memory bytecodePath = string.concat("./test/lib/HIP719.bytecode");
-        string memory addressString = vm.replace(vm.toLowercase(vm.toString(tokenAddress)), "0x", "");
-        string memory updatedBytecode = vm.replace(vm.readFile(bytecodePath), placeholder, addressString);
-        vm.etch(tokenAddress, vm.parseBytes(updatedBytecode));
+        string memory addressString = vm.replace(vm.toString(tokenAddress), "0x", "");
+        string memory proxyBytecode = vm.replace(template, placeholder, addressString);
+        vm.etch(tokenAddress, vm.parseBytes(proxyBytecode));
     }
 
     function _loadTokenData(address tokenAddress, string memory tokenSymbol) private {
