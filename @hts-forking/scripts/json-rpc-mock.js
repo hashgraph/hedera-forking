@@ -24,10 +24,14 @@
 
 const { strict: assert } = require('assert');
 const http = require('http');
-const { readFileSync } = require('fs');
 
-const { getHtsCode, getHtsStorageAt } = require('@hashgraph/hts-forking');
-const { HTSAddress, ZERO_HEX_32_BYTE } = require('../src/utils');
+const {
+    getHtsCode,
+    getHtsStorageAt,
+    HTSAddress,
+    getHIP719Code,
+} = require('@hashgraph/hts-forking');
+const { ZERO_HEX_32_BYTE } = require('../src/utils');
 const { tokens } = require('../test/data');
 
 /** ANSI colors functions to avoid any external dependency. */
@@ -39,44 +43,6 @@ const c = {
     magenta: (/**@type{unknown}*/ text) => `\x1b[35m${text}\x1b[0m`,
     cyan: (/**@type{unknown}*/ text) => `\x1b[36m${text}\x1b[0m`,
 };
-
-/**
- * Returns the token proxy contract bytecode for the given `address`.
- * Based on the proxy contract defined by https://hips.hedera.com/hip/hip-719.
- * For reference, you can see the
- * [`hedera-services`](https://github.com/hashgraph/hedera-services/blob/fbac99e75c27bf9c70ebc78c5de94a9109ab1851/hedera-node/hedera-smart-contract-service-impl/src/main/java/com/hedera/node/app/service/contract/impl/state/DispatchingEvmFrameState.java#L96)
- * implementation.
- *
- * The **template** bytecode can also be obtained using the `eth_getCode` JSON-RPC method with an HTS token.
- * For example, for `USDC` https://hashscan.io/testnet/token/0.0.429274
- *
- * ```sh
- * cast code --rpc-url https://testnet.hashio.io/api 0x0000000000000000000000000000000000068cDa
- * ```
- *
- * > The template bytecode is loaded from `test/lib/HIP719.bytecode`
- * > so it can be shared with Solidity tests.
- *
- * @param {string} address The token contract `address` to replace.
- * @returns {string} The bytecode for token proxy contract with the replaced `address`.
- */
-const getHIP719Code = (function () {
-    const hip719BytecodePath = './test/lib/HIP719.bytecode';
-    console.info(
-        c.cyan('[INFO]'),
-        'Load HIP719 template bytecode from',
-        c.yellow(hip719BytecodePath)
-    );
-    const templateBytecode = readFileSync(hip719BytecodePath, 'utf8');
-    return (/**@type{string}*/ address) => {
-        assert(address.startsWith('0x'), `address must start with \`0x\` prefix: ${address}`);
-        assert(address.length === 2 + 40, `address must be a valid Ethereum address: ${address}`);
-        return templateBytecode.replace(
-            'fefefefefefefefefefefefefefefefefefefefe',
-            address.slice(2)
-        );
-    };
-})();
 
 /**
  * Determines whether `address` should be treated as a HIP-719 token proxy contract.

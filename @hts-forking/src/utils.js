@@ -23,19 +23,9 @@
  */
 module.exports = {
     /**
-     * The prefix that token addresses must match in order to perform token lookup.
-     */
-    LONG_ZERO_PREFIX: '0x000000000000',
-
-    /**
      * When a slot is empty, zero must be returned.
      */
     ZERO_HEX_32_BYTE: '0x0000000000000000000000000000000000000000000000000000000000000000',
-
-    /**
-     *
-     */
-    HTSAddress: '0x0000000000000000000000000000000000000167',
 
     /**
      * Converts a _camelCase_ string to a _snake_case_ string.

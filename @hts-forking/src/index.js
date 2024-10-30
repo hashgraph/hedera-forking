@@ -70,6 +70,20 @@ function inferSlotAndOffset(nrequestedSlot, MAX_ELEMENTS = 100) {
 }
 
 module.exports = {
+    HTSAddress: '0x0000000000000000000000000000000000000167',
+
+    LONG_ZERO_PREFIX: '0x000000000000',
+
+    /**
+     * @param {string} address
+     */
+    getHIP719Code(address) {
+        const templateCode = require('./HIP719.bytecode.json');
+        // assert(address.startsWith('0x'), `address must start with \`0x\` prefix: ${address}`);
+        // assert(address.length === 2 + 40, `address must be a valid Ethereum address: ${address}`);
+        return templateCode.replace('fefefefefefefefefefefefefefefefefefefefe', address.slice(2));
+    },
+
     getHtsCode() {
         return hts.deployedBytecode.object;
     },
@@ -96,12 +110,15 @@ module.exports = {
          */
         const rtrace = (value, msg) => (trace(`${msg}, returning \`${value}\``), value);
 
-        if (!address.startsWith(utils.LONG_ZERO_PREFIX))
-            return rtrace(null, `${address} does not start with \`${utils.LONG_ZERO_PREFIX}\``);
+        if (!address.startsWith(module.exports.LONG_ZERO_PREFIX))
+            return rtrace(
+                null,
+                `${address} does not start with \`${module.exports.LONG_ZERO_PREFIX}\``
+            );
 
         const nrequestedSlot = BigInt(requestedSlot);
 
-        if (address === utils.HTSAddress) {
+        if (address === module.exports.HTSAddress) {
             // Encoded `address(0x167).getAccountId(address)` slot
             // slot(256) = `getAccountId`selector(32) + padding(64) + address(160)
             if (nrequestedSlot >> 160n === 0xe0b490f7_0000_0000_0000_0000n) {
