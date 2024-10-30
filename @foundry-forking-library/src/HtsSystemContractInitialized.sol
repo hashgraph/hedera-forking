@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import {Vm} from "forge-std/Vm.sol";
 import {HtsSystemContract} from "@hts-forking/HtsSystemContract.sol";
 import {IERC20} from "@hts-forking/IERC20.sol";
-import {MirrorNodeLib} from "./lib/MirrorNodeLib.sol";
+import {MirrorNodeLib} from "./MirrorNodeLib.sol";
 
 contract HtsSystemContractInitialized is HtsSystemContract {
     using MirrorNodeLib for *;
@@ -31,6 +31,10 @@ contract HtsSystemContractInitialized is HtsSystemContract {
         return initializedBalances[token][account];
     }
 
+    function initialize(address target) htsCall public {
+        vm.allowCheatcodes(target);
+    }
+
     function getAccountId(address account) htsCall public view override returns (uint32 accountId) {
         accountId = super.getAccountId(account);
         // For testing, we support accounts created with `makeAddr`. These accounts will not exist on the mirror node,
@@ -41,8 +45,8 @@ contract HtsSystemContractInitialized is HtsSystemContract {
     }
 
     function __redirectForToken() internal override returns (bytes memory) {
+        HtsSystemContractInitialized(HTS_ADDRESS).initialize(address(this));
         bytes4 selector = bytes4(msg.data[24:28]);
-
         if (selector == IERC20.name.selector && !initialized) {
             return abi.encode(MirrorNodeLib.getTokenStringDataFromMirrorNode("name"));
         } else if (selector == IERC20.decimals.selector && !initialized) {
