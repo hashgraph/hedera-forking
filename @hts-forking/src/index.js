@@ -30,21 +30,22 @@ const hts = require('../out/HtsSystemContract.sol/HtsSystemContract.json');
 /**
  * @type {Map<bigint, StorageSlot>}
  */
-const slotMap = function (slotMap) {
+const slotMap = (function (slotMap) {
     for (const slot of hts.storageLayout.storage) {
         slotMap.set(BigInt(slot.slot), slot);
     }
     return slotMap;
-}(new Map());
+})(new Map());
 
 /**
  * @type {{[t_name: string]: (value: string) => string}}
  */
 const typeConverter = {
     t_string_storage: str => {
-        const [hexStr, lenByte] = str.length > 31
-            ? ['0', str.length * 2 + 1]
-            : [Buffer.from(str).toString('hex'), str.length * 2];
+        const [hexStr, lenByte] =
+            str.length > 31
+                ? ['0', str.length * 2 + 1]
+                : [Buffer.from(str).toString('hex'), str.length * 2];
 
         return `${hexStr.padEnd(64 - 2, '0')}${lenByte.toString(16).padStart(2, '0')}`;
     },
@@ -107,18 +108,33 @@ module.exports = {
                 const encodedAddress = requestedSlot.slice(-40);
                 const account = await mirrorNodeClient.getAccount(encodedAddress);
                 if (account === null)
-                    return rtrace(`0x${requestedSlot.slice(-8).padStart(64, '0')}`, `Requested address to account id, but address \`${encodedAddress}\` not found, use suffix as slot`);
+                    return rtrace(
+                        `0x${requestedSlot.slice(-8).padStart(64, '0')}`,
+                        `Requested address to account id, but address \`${encodedAddress}\` not found, use suffix as slot`
+                    );
 
                 const [shardNum, realmNum, accountId] = account.account.split('.');
                 if (shardNum !== '0')
-                    return rtrace(utils.ZERO_HEX_32_BYTE, `Requested address to account id, but shardNum in \`${account.account}\` is not zero`);
+                    return rtrace(
+                        utils.ZERO_HEX_32_BYTE,
+                        `Requested address to account id, but shardNum in \`${account.account}\` is not zero`
+                    );
                 if (realmNum !== '0')
-                    return rtrace(utils.ZERO_HEX_32_BYTE, `Requested address to account id, but realmNum in \`${account.account}\` is not zero`);
+                    return rtrace(
+                        utils.ZERO_HEX_32_BYTE,
+                        `Requested address to account id, but realmNum in \`${account.account}\` is not zero`
+                    );
 
-                return rtrace(`0x${utils.toIntHex256(accountId)}`, `Requested address to account id, and slot matches \`getAccountId\``);
+                return rtrace(
+                    `0x${utils.toIntHex256(accountId)}`,
+                    `Requested address to account id, and slot matches \`getAccountId\``
+                );
             }
 
-            return rtrace(utils.ZERO_HEX_32_BYTE, `Requested slot for 0x167 matches field, not found`);
+            return rtrace(
+                utils.ZERO_HEX_32_BYTE,
+                `Requested slot for 0x167 matches field, not found`
+            );
         }
 
         const tokenId = `0.0.${parseInt(address, 16)}`;
@@ -126,43 +142,75 @@ module.exports = {
 
         // Encoded `address(tokenId).balanceOf(address)` slot
         // slot(256) = `balanceOf`selector(32) + padding(192) + accountId(32)
-        if (nrequestedSlot >> 32n === 0x70a08231_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000n) {
+        if (
+            nrequestedSlot >> 32n ===
+            0x70a08231_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000n
+        ) {
             const accountId = `0.0.${parseInt(requestedSlot.slice(-8), 16)}`;
-            const { balances } = await mirrorNodeClient.getBalanceOfToken(tokenId, accountId, reqId);
-            if (balances.length === 0)
-                return rtrace(utils.ZERO_HEX_32_BYTE, 'Balance not found');
+            const { balances } = await mirrorNodeClient.getBalanceOfToken(
+                tokenId,
+                accountId,
+                reqId
+            );
+            if (balances.length === 0) return rtrace(utils.ZERO_HEX_32_BYTE, 'Balance not found');
 
             const value = balances[0].balance;
-            return rtrace(`0x${value.toString(16).padStart(64, '0')}`, `Requested slot matches \`${tokenId}.balanceOf(${accountId})\``);
+            return rtrace(
+                `0x${value.toString(16).padStart(64, '0')}`,
+                `Requested slot matches \`${tokenId}.balanceOf(${accountId})\``
+            );
         }
 
         // Encoded `address(tokenId).allowance(owner, spender)` slot
         // slot(256) = `allowance`selector(32) + padding(160) + spenderId(32) + ownerId(32)
-        if (nrequestedSlot >> 64n === 0xdd62ed3e_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000n) {
+        if (
+            nrequestedSlot >> 64n ===
+            0xdd62ed3e_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000n
+        ) {
             const ownerId = `0.0.${parseInt(requestedSlot.slice(-8), 16)}`;
             const spenderId = `0.0.${parseInt(requestedSlot.slice(-16, -8), 16)}`;
-            const { allowances } = await mirrorNodeClient.getAllowanceForToken(ownerId, tokenId, spenderId, reqId);
+            const { allowances } = await mirrorNodeClient.getAllowanceForToken(
+                ownerId,
+                tokenId,
+                spenderId,
+                reqId
+            );
 
             if (allowances.length === 0)
-                return rtrace(utils.ZERO_HEX_32_BYTE, `Allowance of token ${tokenId} from ${ownerId} assigned to ${spenderId} not found`);
+                return rtrace(
+                    utils.ZERO_HEX_32_BYTE,
+                    `Allowance of token ${tokenId} from ${ownerId} assigned to ${spenderId} not found`
+                );
             const value = allowances[0].amount;
-            return rtrace(`0x${value.toString(16).padStart(64, '0')}`, `Requested slot matches \`${tokenId}.allowance(${ownerId}, ${spenderId})\``);
+            return rtrace(
+                `0x${value.toString(16).padStart(64, '0')}`,
+                `Requested slot matches \`${tokenId}.allowance(${ownerId}, ${spenderId})\``
+            );
         }
 
         const keccakedSlot = inferSlotAndOffset(nrequestedSlot);
         if (keccakedSlot !== null) {
             const tokenData = await mirrorNodeClient.getTokenById(tokenId);
             if (tokenData === null)
-                return rtrace(utils.ZERO_HEX_32_BYTE, `Requested slot matches keccaked slot but token was not found`);
+                return rtrace(
+                    utils.ZERO_HEX_32_BYTE,
+                    `Requested slot matches keccaked slot but token was not found`
+                );
 
             const offset = keccakedSlot.offset;
             const label = keccakedSlot.slot.label;
             const value = tokenData[utils.toSnakeCase(label)];
             if (typeof value !== 'string')
-                return rtrace(utils.ZERO_HEX_32_BYTE, `Requested slot matches keccaked slot but its field \`${label}\` was not found in token or it is not a string`);
+                return rtrace(
+                    utils.ZERO_HEX_32_BYTE,
+                    `Requested slot matches keccaked slot but its field \`${label}\` was not found in token or it is not a string`
+                );
             const hexStr = Buffer.from(value).toString('hex');
             const kecRes = hexStr.substring(offset * 64, (offset + 1) * 64).padEnd(64, '0');
-            return rtrace(`0x${kecRes}`, `Get storage ${address} slot: ${requestedSlot}, result: ${kecRes}`);
+            return rtrace(
+                `0x${kecRes}`,
+                `Get storage ${address} slot: ${requestedSlot}, result: ${kecRes}`
+            );
         }
         const slot = slotMap.get(nrequestedSlot);
         if (slot === undefined)
@@ -170,12 +218,21 @@ module.exports = {
 
         const tokenResult = await mirrorNodeClient.getTokenById(tokenId);
         if (tokenResult === null)
-            return rtrace(utils.ZERO_HEX_32_BYTE, `Requested slot matches ${slot.label} field, but token was not found`);
+            return rtrace(
+                utils.ZERO_HEX_32_BYTE,
+                `Requested slot matches ${slot.label} field, but token was not found`
+            );
 
         const value = tokenResult[utils.toSnakeCase(slot.label)];
         if (typeConverter[slot.type] === undefined || !value || typeof value !== 'string')
-            return rtrace(utils.ZERO_HEX_32_BYTE, `Requested slot matches ${slot.label} field, but it is not supported`);
+            return rtrace(
+                utils.ZERO_HEX_32_BYTE,
+                `Requested slot matches ${slot.label} field, but it is not supported`
+            );
 
-        return rtrace(`0x${typeConverter[slot.type](value)}`, `Requested slot matches \`${slot.label}\` field (type=\`${slot.type}\`)`);
+        return rtrace(
+            `0x${typeConverter[slot.type](value)}`,
+            `Requested slot matches \`${slot.label}\` field (type=\`${slot.type}\`)`
+        );
     },
 };

@@ -20,19 +20,25 @@
 module.exports = {
     // lint-staged appends all matched files at the end of the command
     // https://github.com/lint-staged/lint-staged?tab=readme-ov-file#what-commands-are-supported
-    '@hts-forking/out/HtsSystemContract.sol/HtsSystemContract.json': 'prettier --write',
+    '*.json': 'prettier --write',
+
+    // Override `--tab-width` to indent Markdown list items properly
+    '*.md': 'prettier --tab-width 2 --write',
 
     // Check `package.json` files have appropriate `Apache-2.0` license and author
     // https://github.com/lint-staged/lint-staged?tab=readme-ov-file#example-wrap-filenames-in-single-quotes-and-run-once-per-file
-    'package.json': files => files.flatMap(file => [
-        `grep --quiet '"license"\\s*:\\s*"Apache-2.0"' ${file}`,
-        `grep --quiet '"author"\\s*:\\s*"2024 Hedera Hashgraph, LLC"' ${file}`,
-    ]),
+    'package.json': files =>
+        files.flatMap(file => [
+            `grep --quiet '"license"\\s*:\\s*"Apache-2.0"' ${file}`,
+            `grep --quiet '"author"\\s*:\\s*"2024 Hedera Hashgraph, LLC"' ${file}`,
+        ]),
 
     // Check Solidity files have appropriate `Apache-2.0` license identifier
     // https://github.com/lint-staged/lint-staged?tab=readme-ov-file#example-wrap-filenames-in-single-quotes-and-run-once-per-file
-    '*.sol': files => files.map(file => `grep --quiet "SPDX-License-Identifier: Apache-2.0" ${file}`),
+    '*.sol': files =>
+        files.map(file => `grep --quiet "SPDX-License-Identifier: Apache-2.0" ${file}`),
 
-    // Apply linter rules. See `eslint.config.js` for details.
-    '*.js': 'eslint --fix',
+    // Apply linter and prettier rules.
+    // See `eslint.config.js` and `.prettierrc.json` for details.
+    '*.{js,d.ts}': ['eslint --fix', 'prettier --write'],
 };

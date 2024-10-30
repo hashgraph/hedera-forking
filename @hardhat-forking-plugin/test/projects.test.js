@@ -32,7 +32,6 @@ describe('::projects', function () {
         'non-hedera-project',
     ].forEach(project => {
         describe(`entering project \`${project}\`...`, function () {
-
             /**@type {import('hardhat/types').HardhatRuntimeEnvironment} */
             let hre;
 

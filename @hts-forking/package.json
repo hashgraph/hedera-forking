@@ -1,22 +1,22 @@
 {
-  "name": "@hashgraph/hts-forking",
-  "version": "0.0.1",
-  "description": "Hedera HTS Forking Support",
-  "repository": "github:hashgraph/hardhat-forking-plugin",
-  "author": "2024 Hedera Hashgraph, LLC",
-  "license": "Apache-2.0",
-  "exports": "./src/index.js",
-  "scripts": {
-    "test": "mocha"
-  },
-  "dependencies": {
-    "ethers": "^6.1.0"
-  },
-  "devDependencies": {
-    "@types/chai": "^4.3.20",
-    "@types/mocha": "^10.0.7",
-    "chai": "^4.0.0",
-    "mocha": "^10.7.3",
-    "pino": "^7.11.0"
-  }
+    "name": "@hashgraph/hts-forking",
+    "version": "0.0.1",
+    "description": "Hedera HTS Forking Support",
+    "repository": "github:hashgraph/hardhat-forking-plugin",
+    "author": "2024 Hedera Hashgraph, LLC",
+    "license": "Apache-2.0",
+    "exports": "./src/index.js",
+    "scripts": {
+        "test": "mocha"
+    },
+    "dependencies": {
+        "ethers": "^6.1.0"
+    },
+    "devDependencies": {
+        "@types/chai": "^4.3.20",
+        "@types/mocha": "^10.0.7",
+        "chai": "^4.0.0",
+        "mocha": "^10.7.3",
+        "pino": "^7.11.0"
+    }
 }

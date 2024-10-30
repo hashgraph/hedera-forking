@@ -1,31 +1,32 @@
 {
-  "name": "@hashgraph/hardhat-forking-plugin",
-  "version": "0.0.1",
-  "description": "Hedera HTS Forking Support",
-  "exports": "./@hardhat-forking-plugin/src/index.js",
-  "private": true,
-  "workspaces": [
-    "@*"
-  ],
-  "scripts": {
-    "prepare": "husky",
-    "type-check": "tsc",
-    "lint": "eslint"
-  },
-  "author": "2024 Hedera Hashgraph, LLC",
-  "license": "Apache-2.0",
-  "dependencies": {
-    "ethers": "^6.1.0"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.13.0",
-    "eslint": "^9.13.0",
-    "eslint-plugin-license-header": "^0.6.1",
-    "eslint-plugin-mocha": "^10.5.0",
-    "globals": "^15.11.0",
-    "husky": "^9.1.5",
-    "lint-staged": "^15.2.10",
-    "prettier": "^3.3.3",
-    "typescript": "^5.4.5"
-  }
+    "name": "@hashgraph/hardhat-forking-plugin",
+    "version": "0.0.1",
+    "description": "Hedera HTS Forking Support",
+    "exports": "./@hardhat-forking-plugin/src/index.js",
+    "private": true,
+    "workspaces": [
+        "@*"
+    ],
+    "scripts": {
+        "prepare": "husky",
+        "type-check": "tsc",
+        "lint": "eslint"
+    },
+    "author": "2024 Hedera Hashgraph, LLC",
+    "license": "Apache-2.0",
+    "dependencies": {
+        "ethers": "^6.1.0"
+    },
+    "devDependencies": {
+        "@eslint/js": "^9.13.0",
+        "eslint": "^9.13.0",
+        "eslint-plugin-license-header": "^0.6.1",
+        "eslint-plugin-mocha": "^10.5.0",
+        "globals": "^15.11.0",
+        "husky": "^9.1.5",
+        "lint-staged": "^15.2.10",
+        "prettier": "^3.3.3",
+        "typescript": "^5.4.5",
+        "typescript-eslint": "^8.12.0"
+    }
 }

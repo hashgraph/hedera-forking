@@ -26,16 +26,17 @@ module.exports = {
      * for example `0.0.429274`.
      * The EVM `address` is then computed by converting the `accountId` to its hexadecimal representation
      * (and padding accordingly).
-     * 
+     *
      * Each folder under `test/data/` represents a token identified by its symbol.
      * In turn, each token folder should contain a `getToken.json` that matches the response from `GET /api/v1/tokens/{tokenId}`.
      */
-    tokens: function (/**@type {{[tokenId: string]: {symbol: string, address: string}}}*/ tokens) {
+    tokens: (function (/**@type {{[tokenId: string]: {symbol: string, address: string}}}*/ tokens) {
         const tokensMockPath = __dirname;
         for (const symbol of readdirSync(tokensMockPath)) {
-            if (symbol.endsWith('.json') || symbol.endsWith('.js'))
-                continue;
-            const { token_id } = JSON.parse(readFileSync(`${tokensMockPath}/${symbol}/getToken.json`, 'utf8'));
+            if (symbol.endsWith('.json') || symbol.endsWith('.js')) continue;
+            const { token_id } = JSON.parse(
+                readFileSync(`${tokensMockPath}/${symbol}/getToken.json`, 'utf8')
+            );
             assert(typeof token_id === 'string');
 
             const [_shardNum, _realmNum, accountId] = token_id.split('.');
@@ -45,5 +46,5 @@ module.exports = {
             tokens[token_id] = { symbol, address };
         }
         return tokens;
-    }({}),
+    })({}),
 };

@@ -21,7 +21,6 @@ const { expect } = require('chai');
 const hre = require('hardhat');
 
 describe('fork-block-project', function () {
-
     /**
      * https://hashscan.io/mainnet/token/0.0.1456986
      * https://mainnet.mirrornode.hedera.com/api/v1/tokens/0.0.1456986
@@ -68,19 +67,22 @@ describe('fork-block-project', function () {
 });
 
 /**
- * @param {number} blockNumber 
+ * @param {number} blockNumber
  */
 async function resetTo(blockNumber) {
     const { forking } = hre.config.networks.hardhat;
     assert(forking !== undefined);
 
     await hre.network.provider.request({
-        method: 'hardhat_reset', params: [{
-            forking: {
-                // Forwards requests to `https://mainnet.hashio.io/api`
-                jsonRpcUrl: `http://127.0.0.1:${forking.workerPort}`,
-                blockNumber,
-            }
-        }]
+        method: 'hardhat_reset',
+        params: [
+            {
+                forking: {
+                    // Forwards requests to `https://mainnet.hashio.io/api`
+                    jsonRpcUrl: `http://127.0.0.1:${forking.workerPort}`,
+                    blockNumber,
+                },
+            },
+        ],
     });
 }

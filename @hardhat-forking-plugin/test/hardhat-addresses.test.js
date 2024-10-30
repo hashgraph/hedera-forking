@@ -20,7 +20,6 @@ const { expect } = require('chai');
 const { getAddresses } = require('../src/hardhat-addresses');
 
 describe('::hardhat-addresses', function () {
-
     it('should get addresses from HD Wallet configuration', function () {
         const hdWalletConfig = {
             initialIndex: 0,
@@ -50,7 +49,7 @@ describe('::hardhat-addresses', function () {
             '0x2546bcd3c84621e976d8185a91a922ae77ecec30',
             '0xbda5747bfd65f08deb54cb465eb87d40e51b197e',
             '0xdd2fd4581271e230360230f9337d5c0430bf44c0',
-            '0x8626f6940e2eb28930efb4cef49b2d1f2c9c1199'
+            '0x8626f6940e2eb28930efb4cef49b2d1f2c9c1199',
         ];
 
         expect(getAddresses(hdWalletConfig)).to.be.deep.equal(accounts);
@@ -58,8 +57,14 @@ describe('::hardhat-addresses', function () {
 
     it('should get addresses from private keys', function () {
         const accounts = [
-            { privateKey: '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', balance: '1000' },
-            { privateKey: '59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d', balance: '1000' },
+            {
+                privateKey: '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
+                balance: '1000',
+            },
+            {
+                privateKey: '59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d',
+                balance: '1000',
+            },
         ];
 
         expect(getAddresses(accounts)).to.be.deep.equal([
@@ -67,5 +72,4 @@ describe('::hardhat-addresses', function () {
             '0x70997970c51812dc3a010c7d01b50e0d17dc79c8',
         ]);
     });
-
 });

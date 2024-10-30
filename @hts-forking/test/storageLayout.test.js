@@ -21,7 +21,6 @@ const { expect } = require('chai');
 const { storageLayout } = require('../out/HtsSystemContract.sol/HtsSystemContract.json');
 
 describe('::storageLayout', function () {
-
     it('should have one slot per field (sanity check to ensure slots are unique)', function () {
         const set = new Set(storageLayout.storage.map(slot => Number(slot.slot)));
         expect(set.size).to.be.equal(storageLayout.storage.length);
@@ -32,7 +31,7 @@ describe('::storageLayout', function () {
     });
 
     describe('storage', function () {
-        storageLayout.storage.forEach(({label, offset, slot, type}) => {
+        storageLayout.storage.forEach(({ label, offset, slot, type }) => {
             it(`should have slot \`${label}(${slot}): ${type}\` at \`offset\` \`0\` (to avoid packing, thus avoiding making many requests per slot)`, function () {
                 expect(offset, label).to.be.equal(0);
             });

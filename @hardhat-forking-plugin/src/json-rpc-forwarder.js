@@ -27,27 +27,40 @@ const { getHtsCode, getHtsStorageAt } = require('../../@hts-forking/src');
 const { HTSAddress } = require('../../@hts-forking/src/utils');
 
 /** @type {Partial<import('hardhat/types').HardhatNetworkForkingConfig>} */
-const { url: forkingUrl, blockNumber, mirrorNodeUrl, workerPort, hardhatAddresses = [] } = workerData;
+const {
+    url: forkingUrl,
+    blockNumber,
+    mirrorNodeUrl,
+    workerPort,
+    hardhatAddresses = [],
+} = workerData;
 
-debug(c.yellow('Starting JSON-RPC Relay Forwarder server on :%d, forking url=%s blockNumber=%d mirror node url=%s'), workerPort, forkingUrl, blockNumber, mirrorNodeUrl);
+debug(
+    c.yellow(
+        'Starting JSON-RPC Relay Forwarder server on :%d, forking url=%s blockNumber=%d mirror node url=%s'
+    ),
+    workerPort,
+    forkingUrl,
+    blockNumber,
+    mirrorNodeUrl
+);
 
 /**
  * Function signature for `eth_*` method handlers.
  * The `params` argument comes from the JSON-RPC request,
  * so it must to be declared as `unknown[]`.
  * Therefore, each method handler should validate each element of `params` they use.
- * 
+ *
  * When this handler returns `null`
  * it means the original call needs to be **forwarded** to the remote JSON-RPC Relay.
  *
- * @typedef {(params: unknown[], requestIdPrefix: string) => Promise<unknown | null>} EthHandler
+ * @typedef {(params: unknown[], reqIdPrefix: string) => Promise<unknown | null>} EthHandler
  */
 
 /**
- * 
+ *
  */
 const eth = {
-
     /** @type {EthHandler} */
     eth_getBalance: async ([address, _blockNumber]) => {
         assert(typeof address === 'string');
@@ -71,15 +84,16 @@ const eth = {
     },
 
     /** @type {EthHandler} */
-    eth_getStorageAt: async ([address, slot, blockNumber], requestIdPrefix) => {
+    eth_getStorageAt: async ([address, slot, blockNumber], reqIdPrefix) => {
         assert(mirrorNodeUrl !== undefined);
 
         assert(typeof address === 'string');
         assert(typeof slot === 'string');
         const mirrorNodeClient = new MirrorNodeClient(mirrorNodeUrl, Number(blockNumber));
+        const logger = { trace: debug };
 
-        // @ts-ignore
-        return await getHtsStorageAt(address, slot, mirrorNodeClient, { trace: debug }, requestIdPrefix);
+        // @ts-expect-error: Argument of type 'MirrorNodeClient' is not assignable to parameter of type 'IMirrorNodeClient'.
+        return await getHtsStorageAt(address, slot, mirrorNodeClient, logger, reqIdPrefix);
     },
 };
 
@@ -97,8 +111,8 @@ const server = http.createServer(function (req, res) {
         const { jsonrpc, id, method, params } = JSON.parse(body);
         assert(jsonrpc === '2.0', 'Only JSON-RPC 2.0 allowed');
 
-        const response = await async function () {
-            const handler = eth[/**@type{keyof typeof eth}*/(method)];
+        const response = await (async function () {
+            const handler = eth[/**@type{keyof typeof eth}*/ (method)];
             if (handler !== undefined) {
                 const result = await handler(params, `[Request ID: ${id}]`);
                 if (result !== null) {
@@ -119,7 +133,7 @@ const server = http.createServer(function (req, res) {
             }
 
             return await result.text();
-        }();
+        })();
 
         res.setHeader('Content-Type', 'application/json');
         res.writeHead(200);

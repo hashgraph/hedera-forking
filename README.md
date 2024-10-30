@@ -46,12 +46,12 @@ Given it is written in Solidity, it can executed in a development network enviro
 This project has two main parts
 
 - **[`HtsSystemContract.sol`](./src/HtsSystemContract.sol) Solidity Contract**.
-This contract provides an emulator for the Hedera Token Service written in Solidity.
-It is specially designed to work in a forked network.
-Its storage reads and writes are crafted to be reversible in a way the `hedera-forking` package can fetch the appropriate data.
+  This contract provides an emulator for the Hedera Token Service written in Solidity.
+  It is specially designed to work in a forked network.
+  Its storage reads and writes are crafted to be reversible in a way the `hedera-forking` package can fetch the appropriate data.
 - **[`@hashgraph/hedera-forking`](./index.js) CommonJS Package**.
-Provides functions that can be hooked into the Relay to fetch the appropiate data when HTS System Contract (at address `0x167`) or Hedera Tokens are invoked.
-This package uses the compilation output of the `HtsSystemContract` contract to return its bytecode and to map storage slots to field names.
+  Provides functions that can be hooked into the Relay to fetch the appropiate data when HTS System Contract (at address `0x167`) or Hedera Tokens are invoked.
+  This package uses the compilation output of the `HtsSystemContract` contract to return its bytecode and to map storage slots to field names.
 
 > [!IMPORTANT]
 > The compilation output of `HtsSystemContract` is version controlled.
@@ -99,9 +99,9 @@ sequenceDiagram
 The relevant interactions are
 
 - **(3).** This is the code defined by [HIP-719](https://hips.hedera.com/hip/hip-719#specification).
-For reference, you can see the
-[`hedera-services`](https://github.com/hashgraph/hedera-services/blob/fbac99e75c27bf9c70ebc78c5de94a9109ab1851/hedera-node/hedera-smart-contract-service-impl/src/main/java/com/hedera/node/app/service/contract/impl/state/DispatchingEvmFrameState.java#L96)
-implementation.
+  For reference, you can see the
+  [`hedera-services`](https://github.com/hashgraph/hedera-services/blob/fbac99e75c27bf9c70ebc78c5de94a9109ab1851/hedera-node/hedera-smart-contract-service-impl/src/main/java/com/hedera/node/app/service/contract/impl/state/DispatchingEvmFrameState.java#L96)
+  implementation.
 - **(5)**-**(6)**. This calls `getHtsCode` which in turn returns the bytecode compiled from `HtsSystemContract.sol`.
 - **(9)**-**(12)**. This calls `getHtsStorageAt` which uses the `HtsSystemContract`'s [Storage Layout](#storage-layout) to fetch the appropriate state from the Mirror Node.
 
@@ -216,12 +216,12 @@ module.exports = {
   solidity: {
     settings: {
       outputSelection: {
-        "*": {
-          "*": ["storageLayout"]
-        }
-      }
-    }
-  }
+        '*': {
+          '*': ['storageLayout'],
+        },
+      },
+    },
+  },
 };
 ```
 
@@ -253,8 +253,8 @@ The storage layout is represented in JSON format with the following fields
 - **`contract`**. The name of the contract.
 - **`label`**. The name of the instance variable.
 - **`offset`**. The starting location of the variable within a `uint256` storage word.
-Multiple variables may be packed into a single memory slot when their types are smaller than a 32 bytes word.
-In such cases, the `offset` value for the second and subsequent variables will differ from `0`.
+  Multiple variables may be packed into a single memory slot when their types are smaller than a 32 bytes word.
+  In such cases, the `offset` value for the second and subsequent variables will differ from `0`.
 - **`slot`**. A integer representing the slot number in storage.
 - **`type`**. The type of the value stored in the slot.
 
@@ -292,9 +292,9 @@ Handling strings longer than 31 bytes is more complex
 
 1. **Calculate the Slot Hash.** Start by calculating the Keccak-256 hash of the slot number where the string is stored.
 
-    ```solidity
-    bytes32 hashSlot = keccak256(abi.encodePacked(uint256(slotNumber)));
-    ```
+   ```solidity
+   bytes32 hashSlot = keccak256(abi.encodePacked(uint256(slotNumber)));
+   ```
 
 2. **Retrieve the Value.** Access the value stored at this hash slot. If the string exceeds 32 bytes, retrieve the additional segments from consecutive slots (_e.g._, `hashSlot + 1`, `hashSlot + 2`, _etc._), until the entire string is reconstructed.
 

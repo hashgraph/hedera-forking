@@ -21,9 +21,8 @@ const path = require('path');
 const { Worker } = require('worker_threads');
 
 class Provider {
-
     /**
-     * @param {number} port 
+     * @param {number} port
      */
     constructor(port) {
         this.port = port;
@@ -31,13 +30,16 @@ class Provider {
     }
 
     /**
-     * @param {string} method 
-     * @param {unknown[]} params 
+     * @param {string} method
+     * @param {unknown[]} params
      */
     async request(method, params) {
         const id = this.id++;
-        const body = { jsonrpc: '2.0', id, method, params }
-        const response = await fetch(`http://127.0.0.1:${this.port}`, { method: 'POST', body: JSON.stringify(body) });
+        const body = { jsonrpc: '2.0', id, method, params };
+        const response = await fetch(`http://127.0.0.1:${this.port}`, {
+            method: 'POST',
+            body: JSON.stringify(body),
+        });
         const { jsonrpc, id: respId, result } = await response.json();
 
         expect(jsonrpc).to.be.equal('2.0');
@@ -47,39 +49,46 @@ class Provider {
 }
 
 describe('::json-rpc-forwarder', function () {
-
     /** @type {Provider} */
     let provider;
 
     before(async function () {
         const scriptPath = path.resolve(__dirname, '..', 'src', './json-rpc-forwarder');
-        const port = await (new Promise(resolve => new Worker(scriptPath, {
-            workerData: {
-                hardhatAddresses: [
-                    '0x70997970c51812dc3a010c7d01b50e0d17dc79c8',
-                ]
-            }
-        }).on('message', message => {
-            if (message.listening) {
-                resolve(message.port);
-            }
-        }).unref()));
+        const port = await new Promise(resolve =>
+            new Worker(scriptPath, {
+                workerData: {
+                    hardhatAddresses: ['0x70997970c51812dc3a010c7d01b50e0d17dc79c8'],
+                },
+            })
+                .on('message', message => {
+                    if (message.listening) {
+                        resolve(message.port);
+                    }
+                })
+                .unref()
+        );
         provider = new Provider(port);
     });
 
     it('should return code for HTS emulation', async function () {
-        const result = await provider.request('eth_getCode', ['0x0000000000000000000000000000000000000167']);
+        const result = await provider.request('eth_getCode', [
+            '0x0000000000000000000000000000000000000167',
+        ]);
         expect(result).to.have.length.greaterThan(4);
         expect(result.startsWith('0x')).to.be.true;
     });
 
     it('should return empty code for any Hardhat address', async function () {
-        const result = await provider.request('eth_getCode', ['0x70997970c51812dc3a010c7d01b50e0d17dc79c8']);
+        const result = await provider.request('eth_getCode', [
+            '0x70997970c51812dc3a010c7d01b50e0d17dc79c8',
+        ]);
         expect(result).to.be.equal('0x');
     });
 
     it('should return no native token balance for any Hardhat addressi', async function () {
-        const result = await provider.request('eth_getBalance', ['0x70997970c51812dc3a010c7d01b50e0d17dc79c8']);
+        const result = await provider.request('eth_getBalance', [
+            '0x70997970c51812dc3a010c7d01b50e0d17dc79c8',
+        ]);
         expect(result).to.be.equal('0x0');
     });
 });

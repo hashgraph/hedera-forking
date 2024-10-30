@@ -18,27 +18,28 @@
 
 const { HDKey } = require('ethereum-cryptography/hdkey');
 const { mnemonicToSeedSync } = require('ethereum-cryptography/bip39');
-const { privateToAddress } = require("@nomicfoundation/ethereumjs-util");
+const { privateToAddress } = require('@nomicfoundation/ethereumjs-util');
 
 /**
  * Gets the public Ethereum address from the respective private key.
- * 
+ *
  * @param {Uint8Array} pk the private key to convert.
  * @returns {string} the Ethereum address corresponding to the `pk` private key.
  */
-const toHexStrAddress = pk => '0x' + Buffer.from(privateToAddress(pk)).toString('hex');
+const getEvmAddress = pk => '0x' + Buffer.from(privateToAddress(pk)).toString('hex');
 
 module.exports = {
-
     /**
      * Returns the addresses used by the Hardhat network from its `accounts` configuration.
-     * 
-     * @param {import("hardhat/types").HardhatNetworkAccountsConfig} accounts 
+     *
+     * @param {import("hardhat/types").HardhatNetworkAccountsConfig} accounts
      * @returns {string[]}
      */
     getAddresses(accounts) {
         if (Array.isArray(accounts)) {
-            return accounts.map(account => toHexStrAddress(Buffer.from(account.privateKey.replace('0x', ''), 'hex')))
+            return accounts.map(account =>
+                getEvmAddress(Buffer.from(account.privateKey.replace('0x', ''), 'hex'))
+            );
         } else {
             const seed = mnemonicToSeedSync(accounts.mnemonic, accounts.passphrase);
             const masterKey = HDKey.fromMasterSeed(seed);
@@ -48,7 +49,7 @@ module.exports = {
                 const derived = masterKey.derive(`${accounts.path}/${i}`);
                 if (derived.privateKey === null) continue;
 
-                const address = toHexStrAddress(derived.privateKey);
+                const address = getEvmAddress(derived.privateKey);
                 addresses.push(address);
             }
 
