@@ -57,6 +57,7 @@ describe('::json-rpc-forwarder', function () {
         const port = await new Promise(resolve =>
             new Worker(scriptPath, {
                 workerData: {
+                    mirrorNodeUrl: '',
                     hardhatAddresses: ['0x70997970c51812dc3a010c7d01b50e0d17dc79c8'],
                 },
             })

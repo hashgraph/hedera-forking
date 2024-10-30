@@ -23,8 +23,13 @@ const debug = require('util').debuglog('hedera-forking-rpc');
 const c = require('ansi-colors');
 
 const { MirrorNodeClient } = require('./mirror-node-client');
-const { getHtsCode, getHtsStorageAt } = require('../../@hts-forking/src');
-const { HTSAddress } = require('../../@hts-forking/src/utils');
+const {
+    getHtsCode,
+    getHtsStorageAt,
+    HTSAddress,
+    LONG_ZERO_PREFIX,
+    getHIP719Code,
+} = require('../../@hts-forking/src');
 
 /** @type {Partial<import('hardhat/types').HardhatNetworkForkingConfig>} */
 const {
@@ -34,6 +39,8 @@ const {
     workerPort,
     hardhatAddresses = [],
 } = workerData;
+
+assert(mirrorNodeUrl !== undefined, 'json-rpc-forwarder: Missing Mirror Node URL');
 
 debug(
     c.yellow(
@@ -71,7 +78,7 @@ const eth = {
     },
 
     /** @type {EthHandler} */
-    eth_getCode: async ([address, _blockNumber]) => {
+    eth_getCode: async ([address, blockNumber]) => {
         assert(typeof address === 'string');
         if (hardhatAddresses.includes(address.toLowerCase())) {
             return '0x';
@@ -80,13 +87,20 @@ const eth = {
             debug(c.yellow('loading HTS Code at address %s'), address);
             return getHtsCode();
         }
+        if (address.startsWith(LONG_ZERO_PREFIX)) {
+            const mirrorNodeClient = new MirrorNodeClient(mirrorNodeUrl, Number(blockNumber));
+            const tokenId = `0.0.${parseInt(address, 16)}`;
+            const token = await mirrorNodeClient.getTokenById(tokenId);
+            if (token !== null) {
+                return getHIP719Code(address);
+            }
+            return '0x';
+        }
         return null;
     },
 
     /** @type {EthHandler} */
     eth_getStorageAt: async ([address, slot, blockNumber], reqIdPrefix) => {
-        assert(mirrorNodeUrl !== undefined);
-
         assert(typeof address === 'string');
         assert(typeof slot === 'string');
         const mirrorNodeClient = new MirrorNodeClient(mirrorNodeUrl, Number(blockNumber));

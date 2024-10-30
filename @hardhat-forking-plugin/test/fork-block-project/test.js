@@ -18,6 +18,7 @@
 
 const { strict: assert } = require('assert');
 const { expect } = require('chai');
+require('@nomicfoundation/hardhat-chai-matchers');
 const hre = require('hardhat');
 
 describe('fork-block-project', function () {
@@ -37,8 +38,10 @@ describe('fork-block-project', function () {
         const [account] = await hre.ethers.getSigners();
 
         const ft = await hre.ethers.getContractAt('IERC20', whbarAddress);
-        expect(await ft['name']()).to.be.equal('');
-        expect(await ft['balanceOf'](account.address)).to.be.equal(0n);
+        await expect(ft['name']()).to.be.rejectedWith('could not decode result data');
+        await expect(ft['balanceOf'](account.address)).to.be.rejectedWith(
+            'could not decode result data'
+        );
     });
 
     it('should retrieve token data when forking from token creation block', async function () {
