@@ -7,10 +7,6 @@ import "surl/Surl.sol";
 library MirrorNodeLib {
     using Surl for *;
 
-    bytes private constant MAINNET_MIRROR_NODE_URL = "https://mainnet-public.mirrornode.hedera.com/api/v1/";
-    bytes private constant TESTNET_MIRROR_NODE_URL = "https://testnet.mirrornode.hedera.com/api/v1/";
-    bytes private constant PREVIEWNET_MIRROR_NODE_URL = "https://previewnet.mirrornode.hedera.com/api/v1/";
-
     Vm internal constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
     function getTokenStringDataFromMirrorNode(string memory field) internal returns (string memory) {
@@ -83,13 +79,13 @@ library MirrorNodeLib {
 
     function _mirrorNodeUrl() private view returns (string memory) {
         if (block.chainid == 295) {
-            return string(MAINNET_MIRROR_NODE_URL);
+            return "https://mainnet-public.mirrornode.hedera.com/api/v1/";
         }
         if (block.chainid == 296) {
-            return string(TESTNET_MIRROR_NODE_URL);
+            return "https://testnet.mirrornode.hedera.com/api/v1/";
         }
         if (block.chainid == 297) {
-            return string(PREVIEWNET_MIRROR_NODE_URL);
+            return "https://previewnet.mirrornode.hedera.com/api/v1/";
         }
 
         revert("The provided chain ID is not supported by the Hedera Mirror Node library. Please use one of the supported chain IDs: 295, 296, or 297.");
