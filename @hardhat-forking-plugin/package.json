@@ -27,9 +27,10 @@
     },
     "devDependencies": {
         "@nomicfoundation/ethereumjs-util": "^9.0.4",
+        "@nomicfoundation/hardhat-chai-matchers": "^2.0.8",
         "@nomicfoundation/hardhat-ethers": "^3.0.8",
         "@types/sinon": "^17.0.3",
-        "ethereum-cryptography": "^3.0.0",
+        "ethereum-cryptography": "^0.1.0",
         "sinon": "^19.0.2"
     }
 }
