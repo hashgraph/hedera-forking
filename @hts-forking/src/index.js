@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+const { strict: assert } = require('assert');
 const { keccak256 } = require('ethers');
 const utils = require('./utils');
 
@@ -79,8 +80,8 @@ module.exports = {
      */
     getHIP719Code(address) {
         const templateCode = require('./HIP719.bytecode.json');
-        // assert(address.startsWith('0x'), `address must start with \`0x\` prefix: ${address}`);
-        // assert(address.length === 2 + 40, `address must be a valid Ethereum address: ${address}`);
+        assert(address.startsWith('0x'), `address must start with \`0x\` prefix: ${address}`);
+        assert(address.length === 2 + 40, `address must be a valid Ethereum address: ${address}`);
         return templateCode.replace('fefefefefefefefefefefefefefefefefefefefe', address.slice(2));
     },
 
@@ -110,15 +111,12 @@ module.exports = {
          */
         const rtrace = (value, msg) => (trace(`${msg}, returning \`${value}\``), value);
 
-        if (!address.startsWith(module.exports.LONG_ZERO_PREFIX))
-            return rtrace(
-                null,
-                `${address} does not start with \`${module.exports.LONG_ZERO_PREFIX}\``
-            );
+        if (!address.startsWith(exports.LONG_ZERO_PREFIX))
+            return rtrace(null, `${address} does not start with \`${exports.LONG_ZERO_PREFIX}\``);
 
         const nrequestedSlot = BigInt(requestedSlot);
 
-        if (address === module.exports.HTSAddress) {
+        if (address === exports.HTSAddress) {
             // Encoded `address(0x167).getAccountId(address)` slot
             // slot(256) = `getAccountId`selector(32) + padding(64) + address(160)
             if (nrequestedSlot >> 160n === 0xe0b490f7_0000_0000_0000_0000n) {
