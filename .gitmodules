@@ -4,6 +4,3 @@
 [submodule "launch-token"]
 	path = launch-token
 	url = https://github.com/defigirlxo/My-First-Crypto.git
-[submodule "lib/surl"]
-	path = lib/surl
-	url = https://github.com/memester-xyz/surl
