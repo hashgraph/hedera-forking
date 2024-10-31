@@ -49,7 +49,7 @@ interface IMirrorNodeClient {
         balances: {
             balance: number;
         }[];
-    }>;
+    } | null>;
 
     /**
      * Returns information for fungible token allowances for an account.
@@ -68,7 +68,7 @@ interface IMirrorNodeClient {
         allowances: {
             amount: number;
         }[];
-    }>;
+    } | null>;
 
     /**
      * Get account by alias, id, or evm address.

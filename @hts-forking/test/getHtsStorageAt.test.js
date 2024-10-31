@@ -255,6 +255,7 @@ describe('::getHtsStorageAt', function () {
                         require(`./data/${symbol}/getBalanceOfToken_${accountId}`),
                 },
                 { name: 'balance is empty', fn: async (_tid, _accountId) => ({ balances: [] }) },
+                { name: 'balance is null', fn: async (_tid, _accountId) => null },
             ]).forEach(({ name, fn: getBalanceOfToken }) => {
                 const selector = id('balanceOf(address)').slice(0, 10);
                 const padding = '0'.repeat(24 * 2);
@@ -267,7 +268,10 @@ describe('::getHtsStorageAt', function () {
                         getBalanceOfToken,
                     });
 
-                    const { balances } = await getBalanceOfToken('<not used>', `0.0.${accountId}`);
+                    const { balances } = (await getBalanceOfToken(
+                        '<not used>',
+                        `0.0.${accountId}`
+                    )) ?? { balances: [] };
                     expect(result).to.be.equal(
                         balances.length === 0
                             ? utils.ZERO_HEX_32_BYTE
@@ -286,6 +290,10 @@ describe('::getHtsStorageAt', function () {
                     name: 'allowance is empty',
                     fn: (_accountId, _tid, _spenderId) => ({ allowances: [] }),
                 },
+                {
+                    name: 'allowance is null',
+                    fn: (_accountId, _tid, _spenderId) => null,
+                },
             ]).forEach(({ name, fn: getAllowanceForToken }) => {
                 const selector = id('allowance(address,address)').slice(0, 10);
                 const padding = '0'.repeat(20 * 2);
@@ -299,11 +307,11 @@ describe('::getHtsStorageAt', function () {
                         getAllowanceForToken,
                     });
 
-                    const { allowances } = await getAllowanceForToken(
+                    const { allowances } = (await getAllowanceForToken(
                         `0.0.${accountId}`,
                         '<not used>',
                         `0.0.${spenderId}`
-                    );
+                    )) ?? { allowances: [] };
                     expect(result).to.be.equal(
                         allowances.length === 0
                             ? utils.ZERO_HEX_32_BYTE
