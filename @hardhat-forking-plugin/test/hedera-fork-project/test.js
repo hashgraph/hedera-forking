@@ -18,26 +18,16 @@
 
 const { strict: assert } = require('assert');
 const { expect } = require('chai');
-const fs = require('fs');
+const { getHIP719Code } = require('@hashgraph/hts-forking');
 const sinon = require('sinon');
 const { JsonRpcProvider } = require('ethers');
 const hre = require('hardhat');
 
-/**
- * @typedef {Object} MirrorNodeResponse
- * @property {string} endpoint - The URL of the API endpoint.
- * @property {string} response - The JSON-encoded string of the response for the URL.
- */
-
-/**
- * @type {MirrorNodeResponse[]}
- */
-const responses = require('./data/mirrornodeStubResponses.json');
-const tokenAddress = '0x000000000000000000000000000000000047b52a';
-const accountAddress = '0x292c4acf9ec49af888d4051eb4a4dc53694d1380';
-const spenderAddress = '0x000000000000000000000000000000000043f832';
-
 describe('hedera-fork-project', function () {
+    const tokenAddress = '0x000000000000000000000000000000000047b52a';
+    const accountAddress = '0x292c4acf9ec49af888d4051eb4a4dc53694d1380';
+    const spenderAddress = '0x000000000000000000000000000000000043f832';
+
     /** @type {import('sinon').SinonStub} */
     let fetchStub;
 
@@ -45,14 +35,13 @@ describe('hedera-fork-project', function () {
     let ft;
 
     before(async function () {
-        const bytecode = fs
-            .readFileSync(__dirname + '/data/HIP719.bytecode')
-            .toString()
-            .replace('fefefefefefefefefefefefefefefefefefefefe', tokenAddress.substring(2));
-        await hre.network.provider.send('hardhat_setCode', [tokenAddress, bytecode]);
+        await hre.network.provider.send('hardhat_setCode', [
+            tokenAddress,
+            getHIP719Code(tokenAddress),
+        ]);
         ft = await hre.ethers.getContractAt('IERC20', tokenAddress);
         fetchStub = sinon.stub(global, 'fetch');
-        for (const { endpoint, response } of responses) {
+        for (const { endpoint, response } of require('./mirrorNodeResponses.json')) {
             fetchStub
                 .withArgs(`https://testnet.mirrornode.hedera.com/api/v1/${endpoint}`)
                 .resolves(new Response(response));

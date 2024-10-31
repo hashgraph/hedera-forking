@@ -19,6 +19,7 @@
 const { expect } = require('chai');
 const path = require('path');
 const { Worker } = require('worker_threads');
+const { HTSAddress } = require('@hashgraph/hts-forking');
 
 class Provider {
     /**
@@ -57,6 +58,7 @@ describe('::json-rpc-forwarder', function () {
         const port = await new Promise(resolve =>
             new Worker(scriptPath, {
                 workerData: {
+                    mirrorNodeUrl: '',
                     hardhatAddresses: ['0x70997970c51812dc3a010c7d01b50e0d17dc79c8'],
                 },
             })
@@ -71,9 +73,7 @@ describe('::json-rpc-forwarder', function () {
     });
 
     it('should return code for HTS emulation', async function () {
-        const result = await provider.request('eth_getCode', [
-            '0x0000000000000000000000000000000000000167',
-        ]);
+        const result = await provider.request('eth_getCode', [HTSAddress]);
         expect(result).to.have.length.greaterThan(4);
         expect(result.startsWith('0x')).to.be.true;
     });

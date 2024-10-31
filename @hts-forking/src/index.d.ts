@@ -49,7 +49,7 @@ interface IMirrorNodeClient {
         balances: {
             balance: number;
         }[];
-    }>;
+    } | null>;
 
     /**
      * Returns information for fungible token allowances for an account.
@@ -68,7 +68,7 @@ interface IMirrorNodeClient {
         allowances: {
             amount: number;
         }[];
-    }>;
+    } | null>;
 
     /**
      * Get account by alias, id, or evm address.
@@ -93,6 +93,39 @@ interface IMirrorNodeClient {
 }
 
 /**
+ * The HTS System Contract is exposed via the
+ * [`0x0000000000000000000000000000000000000167` address](https://github.com/hashgraph/hedera-smart-contracts?tab=readme-ov-file#hedera-token-service-hts-system-contract).
+ */
+export const HTSAddress: string;
+
+/**
+ * The prefix that token addresses must match in order to perform token lookup.
+ */
+export const LONG_ZERO_PREFIX: string;
+
+/**
+ * Returns the token proxy contract bytecode for the given `address`.
+ * Based on the proxy contract defined by [HIP-719](https://hips.hedera.com/hip/hip-719).
+ *
+ * For reference, you can see the
+ * [`hedera-services`](https://github.com/hashgraph/hedera-services/blob/fbac99e75c27bf9c70ebc78c5de94a9109ab1851/hedera-node/hedera-smart-contract-service-impl/src/main/java/com/hedera/node/app/service/contract/impl/state/DispatchingEvmFrameState.java#L96)
+ * implementation.
+ *
+ * The **template** bytecode can also be obtained using the `eth_getCode` JSON-RPC method with an HTS token.
+ * For example,
+ * to get the proxy bytecode for `USDC` on _mainnet_ https://hashscan.io/mainnet/token/0.0.456858,
+ * we can use
+ *
+ * ```sh
+ * cast code --rpc-url https://mainnet.hashio.io/api 0x000000000000000000000000000000000006f89a
+ * ```
+ *
+ * @param {string} address The token contract `address` to replace.
+ * @returns {string} The bytecode for token proxy contract with the replaced `address`.
+ */
+export function getHIP719Code(address: string): string;
+
+/**
  * Gets the bytecode for the Solidity implementation of the HTS System Contract.
  */
 export function getHtsCode(): string;
@@ -113,13 +146,13 @@ export function getHtsCode(): string;
  * @param address
  * @param slot
  * @param mirrorNodeClient
- * @param logger An object with a `trace: pino.LogFn` method.
+ * @param logger
  * @param requestIdPrefix A prefix ID to identify the request in the logs.
  */
 export function getHtsStorageAt(
     address: string,
     slot: string,
     mirrorNodeClient: IMirrorNodeClient,
-    logger?: Pick<import('pino').Logger, 'trace'>,
+    logger: { trace: (msg: string) => void },
     requestIdPrefix?: string
 ): Promise<string | null>;

@@ -49,7 +49,7 @@ class MirrorNodeClient {
      *
      * @param {string} tokenId the token ID to fetch the balance for.
      * @param {string} accountId the account ID to fetch the balance for.
-     * @returns {Promise<{ balances: Array<{ balance: number }> } | null>} A `Promise` resolving to the account's token balance.
+     * @returns {Promise<{ balances: { balance: number }[] } | null>} A `Promise` resolving to the account's token balance.
      */
     async getBalanceOfToken(tokenId, accountId) {
         return this.get(`tokens/${tokenId}/balances?account.id=${accountId}`);
@@ -61,7 +61,7 @@ class MirrorNodeClient {
      * @param {string} accountId The owner's account ID.
      * @param {string} tokenId The token ID.
      * @param {string} spenderId The spender's account ID.
-     * @returns {Promise<{ allowances: Array<{ amount: number }> } | null>} A `Promise` resolving to the token allowances.
+     * @returns {Promise<{ allowances: { amount: number }[] } | null>} A `Promise` resolving to the token allowances.
      */
     async getAllowanceForToken(accountId, tokenId, spenderId) {
         return this.get(
