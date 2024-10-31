@@ -92,8 +92,8 @@ module.exports = {
     /**
      * @param {string} address
      * @param {string} requestedSlot
-     * @param {import(".").IMirrorNodeClient} mirrorNodeClient
-     * @param {import("pino").Logger} logger
+     * @param {import('.').IMirrorNodeClient} mirrorNodeClient
+     * @param {{ trace: (msg: string) => void }} logger
      * @param {string=} reqId
      * @returns {Promise<string | null>}
      */

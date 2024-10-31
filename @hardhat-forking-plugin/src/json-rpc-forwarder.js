@@ -103,11 +103,13 @@ const eth = {
     eth_getStorageAt: async ([address, slot, blockNumber], reqIdPrefix) => {
         assert(typeof address === 'string');
         assert(typeof slot === 'string');
-        const mirrorNodeClient = new MirrorNodeClient(mirrorNodeUrl, Number(blockNumber));
-        const logger = { trace: debug };
-
-        // @ts-expect-error: Argument of type 'MirrorNodeClient' is not assignable to parameter of type 'IMirrorNodeClient'.
-        return await getHtsStorageAt(address, slot, mirrorNodeClient, logger, reqIdPrefix);
+        return await getHtsStorageAt(
+            address,
+            slot,
+            new MirrorNodeClient(mirrorNodeUrl, Number(blockNumber)),
+            { trace: msg => debug(c.dim(msg)) },
+            reqIdPrefix
+        );
     },
 };
 

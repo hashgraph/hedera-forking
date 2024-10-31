@@ -146,13 +146,13 @@ export function getHtsCode(): string;
  * @param address
  * @param slot
  * @param mirrorNodeClient
- * @param logger An object with a `trace: pino.LogFn` method.
+ * @param logger
  * @param requestIdPrefix A prefix ID to identify the request in the logs.
  */
 export function getHtsStorageAt(
     address: string,
     slot: string,
     mirrorNodeClient: IMirrorNodeClient,
-    logger?: Pick<import('pino').Logger, 'trace'>,
+    logger: { trace: (msg: string) => void },
     requestIdPrefix?: string
 ): Promise<string | null>;
