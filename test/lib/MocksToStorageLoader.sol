@@ -53,7 +53,7 @@ contract MocksToStorageLoader is CommonBase, StdCheats {
     }
 
     function _loadAccountData(address account) private {
-        string memory path = string.concat("./test/data/getAccount_", vm.toLowercase(vm.toString(account)), ".json");
+        string memory path = string.concat("./@hts-forking/test/data/getAccount_", vm.toLowercase(vm.toString(account)), ".json");
         uint256 accountId;
         if (vm.isFile(path)) {
             string memory json = vm.readFile(path);
@@ -65,7 +65,7 @@ contract MocksToStorageLoader is CommonBase, StdCheats {
     }
 
     function _deployTokenProxyBytecode(address tokenAddress) private {
-        string memory template = vm.replace(vm.trim(vm.readFile("./src/HIP719.bytecode.json")), "\"", "");
+        string memory template = vm.replace(vm.trim(vm.readFile("./@hts-forking/src/HIP719.bytecode.json")), "\"", "");
         string memory placeholder = "fefefefefefefefefefefefefefefefefefefefe";
         string memory addressString = vm.replace(vm.toString(tokenAddress), "0x", "");
         string memory proxyBytecode = vm.replace(template, placeholder, addressString);
@@ -74,7 +74,7 @@ contract MocksToStorageLoader is CommonBase, StdCheats {
 
     function _loadTokenData(address tokenAddress, string memory tokenSymbol) private {
         _deployTokenProxyBytecode(tokenAddress);
-        string memory path = string.concat("./test/data/", tokenSymbol, "/getToken.json");
+        string memory path = string.concat("./@hts-forking/test/data/", tokenSymbol, "/getToken.json");
         string memory json = vm.readFile(path);
         string memory name = abi.decode(vm.parseJson(json, ".name"), (string));
         uint256 decimals = uint8(vm.parseUint(abi.decode(vm.parseJson(json, ".decimals"), (string))));
@@ -97,7 +97,7 @@ contract MocksToStorageLoader is CommonBase, StdCheats {
     function _loadAllowancesOfAnAccount(address tokenAddress, string memory tokenSymbol, address ownerEVMAddress, address spenderEVMAddress) private {
         uint256 ownerId = HtsSystemContract(HTS).getAccountId(ownerEVMAddress);
         uint256 spenderId = HtsSystemContract(HTS).getAccountId(spenderEVMAddress);
-        string memory path = string.concat("./test/data/", tokenSymbol, "/getAllowanceForToken_0.0.", vm.toString(ownerId), "_0.0.", vm.toString(spenderId), ".json");
+        string memory path = string.concat("./@hts-forking/test/data/", tokenSymbol, "/getAllowanceForToken_0.0.", vm.toString(ownerId), "_0.0.", vm.toString(spenderId), ".json");
         uint256 allowance = 0;
 
         try vm.readFile(path) returns (string memory json) {
@@ -126,7 +126,7 @@ contract MocksToStorageLoader is CommonBase, StdCheats {
     function _loadBalanceOfAnAccount(address tokenAddress, string memory tokenSymbol, address accountEVMAddress) private {
         uint256 accountId = HtsSystemContract(HTS).getAccountId(accountEVMAddress);
         string memory accountIdString = vm.toString(accountId);
-        string memory path = string.concat("./test/data/", tokenSymbol, "/getBalanceOfToken_0.0.", accountIdString, ".json");
+        string memory path = string.concat("./@hts-forking/test/data/", tokenSymbol, "/getBalanceOfToken_0.0.", accountIdString, ".json");
         uint256 balance = 0;
 
         try vm.readFile(path) returns (string memory json) {
