@@ -71,7 +71,7 @@ describe('::getHtsStorageAt', function () {
             slotsByLabel[slot.label] = slot.slot;
         }
         return slotsByLabel;
-    })({}, require('../res/HtsSystemContract.json'));
+    })({}, require('../resources/HtsSystemContract.json'));
 
     it(`should return \`null\` when \`address\` does not start with \`LONG_ZERO_PREFIX\` (${LONG_ZERO_PREFIX})`, async function () {
         const result = await getHtsStorageAt(

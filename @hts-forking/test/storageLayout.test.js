@@ -18,7 +18,7 @@
 
 const { expect } = require('chai');
 
-const { storageLayout } = require('../res/HtsSystemContract.json');
+const { storageLayout } = require('../resources/HtsSystemContract.json');
 
 describe('::storageLayout', function () {
     it('should have one slot per field (sanity check to ensure slots are unique)', function () {
