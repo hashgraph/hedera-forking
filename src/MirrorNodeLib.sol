@@ -2,7 +2,8 @@
 pragma solidity ^0.8.0;
 
 import {Vm} from "forge-std/Vm.sol";
-import "surl/Surl.sol";
+// https://github.com/foundry-rs/foundry/issues/9247
+import {Surl} from "surl/src/Surl.sol";
 
 library MirrorNodeLib {
     using Surl for *;
