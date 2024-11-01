@@ -2,7 +2,7 @@
 pragma solidity ^0.8.17;
 
 import {Test, console} from "forge-std/Test.sol";
-import {IERC20Events, IERC20} from "@hts-forking/IERC20.sol";
+import {IERC20Events, IERC20} from "../src/IERC20.sol";
 
 interface MethodNotSupported {
     function methodNotSupported() external view returns (uint256);
@@ -21,7 +21,7 @@ interface MethodNotSupported {
  * To get USDC balances for a given account using the Mirror Node you can use
  * https://mainnet.mirrornode.hedera.com/api/v1/tokens/0.0.456858/balances?account.id=0.0.38047
  */
-contract TokenTest is Test, IERC20Events {
+contract TokenTest2 is Test, IERC20Events {
     address internal USDC = 0x0000000000000000000000000000000000068cDa;
     address internal MFCT = 0x0000000000000000000000000000000000483077;
 
