@@ -20,7 +20,7 @@ const { strict: assert } = require('assert');
 const { keccak256 } = require('ethers');
 const { ZERO_HEX_32_BYTE, toIntHex256, toSnakeCase } = require('./utils');
 
-const hts = require('../out/HtsSystemContract.sol/HtsSystemContract.json');
+const hts = require('../resources/HtsSystemContract.json');
 
 /**
  * Represents a slot entry in `storageLayout.storage`.
