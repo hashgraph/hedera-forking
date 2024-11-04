@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
-import {IERC20Events, IERC20} from "./IERC20.sol";
+import {IERC20Events, IERC20, IERC20Mintable} from "./IERC20.sol";
 
 contract HtsSystemContract is IERC20Events {
 
@@ -162,6 +162,18 @@ contract HtsSystemContract is IERC20Events {
             _approve(owner, spender, amount);
             emit Approval(owner, spender, amount);
             return abi.encode(true);
+        } else if (selector == IERC20Mintable.mint.selector) {
+            require(msg.data.length >= 92, "mint: Not enough calldata");
+            address account = address(bytes20(msg.data[40:60]));
+            uint256 amount = uint256(bytes32(msg.data[60:92]));
+            _mint(account, amount);
+            return abi.encode(true);
+        } else if (selector == IERC20Mintable.burn.selector) {
+            require(msg.data.length >= 92, "burn: Not enough calldata");
+            address account = address(bytes20(msg.data[40:60]));
+            uint256 amount = uint256(bytes32(msg.data[60:92]));
+            _burn(account, amount);
+            return abi.encode(true);
         }
         revert ("redirectForToken: not supported");
     }
@@ -181,6 +193,20 @@ contract HtsSystemContract is IERC20Events {
         slot = uint256(bytes32(abi.encodePacked(selector, pad, spenderId, ownerId)));
     }
 
+    function _mintSlot(address account) private view returns (uint256 slot) {
+        bytes4 selector = IERC20Mintable.mint.selector;
+        uint192 pad = 0x0;
+        uint32 accountId = HtsSystemContract(HTS_ADDRESS).getAccountId(account);
+        slot = uint256(bytes32(abi.encodePacked(selector, pad, accountId)));
+    }
+
+    function _burnSlot(address account) private view returns (uint256 slot) {
+        bytes4 selector = IERC20Mintable.burn.selector;
+        uint192 pad = 0x0;
+        uint32 accountId = HtsSystemContract(HTS_ADDRESS).getAccountId(account);
+        slot = uint256(bytes32(abi.encodePacked(selector, pad, accountId)));
+    }
+
     function __balanceOf(address account) private view returns (uint256 amount) {
         uint256 slot = _balanceOfSlot(account);
         assembly {
@@ -193,6 +219,35 @@ contract HtsSystemContract is IERC20Events {
         assembly {
             amount := sload(slot)
         }
+    }
+
+    function _mint(address account, uint256 amount) internal {
+        require(account != address(0), "_mint: invalid account");
+        require(amount > 0, "_mint: invalid amount");
+
+        uint256 accountSlot = _mintSlot(account);
+        uint256 accountBalance;
+        assembly { accountBalance := sload(accountSlot) }
+        uint256 newAccountBalance = accountBalance + amount;
+        assembly { sstore(accountSlot, newAccountBalance) }
+
+        totalSupply += amount;
+        emit Transfer(address(0), account, amount);
+    }
+
+    function _burn(address account, uint256 amount) internal {
+        require(account != address(0), "_burn: invalid account");
+        require(amount > 0, "_burn: invalid amount");
+
+        uint256 accountSlot = _burnSlot(account);
+        uint256 accountBalance;
+        assembly { accountBalance := sload(accountSlot) }
+        require(accountBalance >= amount, "_burn: insufficient balance");
+        uint256 newAccountBalance = accountBalance - amount;
+        assembly { sstore(accountSlot, newAccountBalance) }
+
+        totalSupply -= amount;
+        emit Transfer(account, address(0), amount);
     }
 
     function _transfer(address from, address to, uint256 amount) private {
