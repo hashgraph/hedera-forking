@@ -23,14 +23,14 @@ contract HtsSystemContractInitialized is HtsSystemContract {
      * smart contract. 1 slot has to be used only, that's why we will use the second smart contract (HTS) memory to hold
      * the initialization status.
      */
-    function initializeBalance(address token, address account) htsCall public {
-        initializedBalances[token][account] = true;
-    }
-
     function isInitializedBalance(address token, address account) htsCall public view returns (bool) {
         return initializedBalances[token][account];
     }
 
+    /*
+     * @dev HTS can be used to propagate allow cheat codes flag onto the token Proxies Smart Contracts.
+     * We can call vm.allowCheatcodes from within the HTS context.
+     */
     function initialize(address target) htsCall public {
         vm.allowCheatcodes(target);
     }
@@ -47,15 +47,7 @@ contract HtsSystemContractInitialized is HtsSystemContract {
     function __redirectForToken() internal override returns (bytes memory) {
         HtsSystemContractInitialized(HTS_ADDRESS).initialize(address(this));
         bytes4 selector = bytes4(msg.data[24:28]);
-        if (selector == IERC20.name.selector && !initialized) {
-            return abi.encode(MirrorNodeLib.getTokenStringDataFromMirrorNode("name"));
-        } else if (selector == IERC20.decimals.selector && !initialized) {
-            return abi.encode(uint8(vm.parseUint(MirrorNodeLib.getTokenStringDataFromMirrorNode("decimals"))));
-        } else if (selector == IERC20.totalSupply.selector && !initialized) {
-            return abi.encode(uint256(vm.parseUint(MirrorNodeLib.getTokenStringDataFromMirrorNode("total_supply"))));
-        } else if (selector == IERC20.symbol.selector && !initialized) {
-            return abi.encode(MirrorNodeLib.getTokenStringDataFromMirrorNode("symbol"));
-        } else if (selector == IERC20.balanceOf.selector && msg.data.length >= 60) {
+        if (selector == IERC20.balanceOf.selector) {
             // We have to always read from this memory slot in order to make deal work correctly.
             bytes memory balance = super.__redirectForToken();
             address account = address(bytes20(msg.data[40:60]));
@@ -64,16 +56,17 @@ contract HtsSystemContractInitialized is HtsSystemContract {
                 return balance;
             }
             return abi.encode(MirrorNodeLib.getAccountBalanceFromMirrorNode(account));
-        } else if (selector == IERC20.transfer.selector && msg.data.length >= 92) {
-            address to = address(bytes20(msg.data[40:60]));
-            address owner = msg.sender;
-            _initializeTokenData();
-            _initializeAccountsRelations(owner, to);
+        }
+        _initializeTokenData();
+        if (
+            (selector == IERC20.transfer.selector || selector == IERC20.approve.selector)
+            && msg.data.length >= 92
+        ) {
+            _initializeAccountsRelations(msg.sender, address(bytes20(msg.data[40:60])));
         } else if (selector == IERC20.transferFrom.selector && msg.data.length >= 124) {
             address from = address(bytes20(msg.data[40:60]));
             address to = address(bytes20(msg.data[72:92]));
             address spender = msg.sender;
-            _initializeTokenData();
             _initializeAccountsRelations(from, to);
             if (from != spender) {
                 _initializeAccountsRelations(spender, to);
@@ -82,14 +75,7 @@ contract HtsSystemContractInitialized is HtsSystemContract {
         } else if (selector == IERC20.allowance.selector && msg.data.length >= 92) {
             address owner = address(bytes20(msg.data[40:60]));
             address spender = address(bytes20(msg.data[72:92]));
-            if (!initializedAllowances[owner][spender]) {
-                return abi.encode(MirrorNodeLib.getAllowanceFromMirrorNode(owner, spender));
-            }
-        } else if (selector == IERC20.approve.selector && msg.data.length >= 92) {
-            address spender = address(bytes20(msg.data[40:60]));
-            address owner = msg.sender;
-            _initializeTokenData();
-            _initializeAccountsRelations(owner, spender);
+            _initializeApproval(owner, spender);
         }
         return super.__redirectForToken();
     }
@@ -101,14 +87,11 @@ contract HtsSystemContractInitialized is HtsSystemContract {
         if (initialized) {
             return;
         }
-        initialized = true;
-        name = MirrorNodeLib.getTokenStringDataFromMirrorNode("name");
-        symbol = MirrorNodeLib.getTokenStringDataFromMirrorNode("symbol");
-
-        uint8 decimals = uint8(vm.parseUint(MirrorNodeLib.getTokenStringDataFromMirrorNode("decimals")));
-        uint256 totalSupply = uint256(vm.parseUint(MirrorNodeLib.getTokenStringDataFromMirrorNode("total_supply")));
-        vm.store(address(this), bytes32(uint256(2)), bytes32(uint256(decimals)));
-        vm.store(address(this), bytes32(uint256(3)), bytes32(totalSupply));
+        _initializeStringSlot(address(this), uint256(0), MirrorNodeLib.getTokenStringDataFromMirrorNode("name"));
+        _initializeStringSlot(address(this), uint256(1), MirrorNodeLib.getTokenStringDataFromMirrorNode("symbol"));
+        vm.store(address(this), bytes32(uint256(2)), bytes32(vm.parseUint(MirrorNodeLib.getTokenStringDataFromMirrorNode("decimals"))));
+        vm.store(address(this), bytes32(uint256(3)), bytes32(vm.parseUint(MirrorNodeLib.getTokenStringDataFromMirrorNode("total_supply"))));
+        vm.store(address(this), bytes32(uint256(4)), bytes32(uint256(1)));
     }
 
     function _initializeAccountsRelations(address firstAccount, address secondAccount) private {
@@ -125,7 +108,9 @@ contract HtsSystemContractInitialized is HtsSystemContract {
         uint256 slot = super._balanceOfSlot(account);
         uint256 balance = MirrorNodeLib.getAccountBalanceFromMirrorNode(account);
         vm.store(address(this), bytes32(slot), bytes32(balance));
-        HtsSystemContractInitialized(HTS_ADDRESS).initializeBalance(address(this), account);
+
+        bytes32 mappingSlot = keccak256(abi.encode(address(this), keccak256(abi.encode(account, uint256(6)))));
+        vm.store(HTS_ADDRESS, mappingSlot, bytes32(uint256(1)));
     }
 
     function _initializeApproval(address owner, address spender) private  {
@@ -135,6 +120,42 @@ contract HtsSystemContractInitialized is HtsSystemContract {
         uint256 slot = super._allowanceSlot(owner, spender);
         uint256 allowance = MirrorNodeLib.getAllowanceFromMirrorNode(owner, spender);
         vm.store(address(this), bytes32(slot), bytes32(allowance));
-        initializedAllowances[owner][spender] = true;
+        bytes32 mappingSlot = keccak256(abi.encode(spender, keccak256(abi.encode(owner, uint256(5)))));
+        vm.store(address(this), mappingSlot, bytes32(uint256(1)));
+    }
+
+    function _initializeStringSlot(address target, uint256 startingSlot, string memory value) private {
+        if (bytes(value).length <= 31) {
+            bytes32 rightPaddedSymbol;
+            assembly {
+                rightPaddedSymbol := mload(add(value, 32))
+            }
+            bytes32 storageSlotValue = bytes32(bytes(value).length * 2) | rightPaddedSymbol;
+            vm.store(target, bytes32(startingSlot), storageSlotValue);
+            return;
+        }
+
+        bytes memory valueBytes = bytes(value);
+        uint256 length = bytes(value).length;
+        bytes32 lengthLeftPadded = bytes32(length * 2 + 1);
+        vm.store(target, bytes32(startingSlot), lengthLeftPadded);
+        uint256 numChunks = (length + 31) / 32;
+        bytes32 baseSlot = keccak256(abi.encodePacked(startingSlot));
+
+        for (uint256 i = 0; i < numChunks; i++) {
+            bytes32 chunk;
+            uint256 chunkStart = i * 32;
+            uint256 chunkEnd = chunkStart + 32;
+
+            if (chunkEnd > length) {
+                chunkEnd = length;
+            }
+
+            for (uint256 j = chunkStart; j < chunkEnd; j++) {
+                chunk |= bytes32(valueBytes[j]) >> (8 * (j - chunkStart));
+            }
+
+            vm.store(target, bytes32(uint256(baseSlot) + i), chunk);
+        }
     }
 }
