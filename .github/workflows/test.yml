@@ -95,13 +95,11 @@ jobs:
           version: nightly
 
       - name: Run Forge build
-        working-directory: ./@hts-forking
         run: |
           forge --version
           forge build --sizes
 
       - name: Run Forge tests using local storage emulation (without forking)
-        working-directory: ./@hts-forking
         run: |
           forge test -vvv
 
@@ -133,7 +131,6 @@ jobs:
           version: nightly
 
       - name: Run Forge build
-        working-directory: ./@hts-forking
         run: |
           forge --version
           forge build --sizes
@@ -143,6 +140,5 @@ jobs:
         run: node scripts/json-rpc-mock.js &
 
       - name: Run Forge tests using JSON-RPC mock server for storage emulation (with forking)
-        working-directory: ./@hts-forking
         run: |
           forge test -vvv --fork-url http://localhost:7546 --no-storage-caching

@@ -1,14 +1,14 @@
 [profile.default]
 src = "src"
 out = "out"
-libs = ["../lib"]
+libs = ["lib"]
 
 extra_output = ["storageLayout"]
 
 # Grant (test) contracts access to read files (`vm.readFile`) from the specified folders.
 fs_permissions = [
-    { access = "read", path = "./src"},
-    { access = "read", path = "./test/data"}
+    { access = "read", path = "./@hts-forking/src"},
+    { access = "read", path = "./@hts-forking/test/data"}
 ]
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
