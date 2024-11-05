@@ -201,7 +201,7 @@ contract TokenTest is Test, TestSetup, IERC20Events {
         assertEq(IERC20(USDC).allowance(alice, bob), allowanceAmount - transferAmount);
     }
 
-    function mintIncreasesTotalSupplyAndBalance() public {
+    function test_mint_should_increase_total_supply_and_account_balance() external {
         address account = address(0x123);
         uint256 amount = 1000;
 
@@ -217,23 +217,23 @@ contract TokenTest is Test, TestSetup, IERC20Events {
         assertEq(newBalance, initialBalance + amount, "Account balance should increase by minted amount");
     }
 
-    function mintToZeroAddressReverts() public {
+    function test_mint_should_revert_to_zero_address() external {
         address account = address(0);
         uint256 amount = 1000;
 
-        vm.expectRevert(bytes("mint: Not enough calldata"));
+        vm.expectRevert(bytes("_mint: invalid account"));
         IERC20Mintable(USDC).mint(account, amount);
     }
 
-    function mintZeroAmountReverts() public {
+    function test_mint_should_revert_with_zero_amount() external {
         address account = address(0x123);
         uint256 amount = 0;
 
-        vm.expectRevert(bytes("mint: Not enough calldata"));
+        vm.expectRevert(bytes("_mint: invalid amount"));
         IERC20Mintable(USDC).mint(account, amount);
     }
 
-    function burnDecreasesTotalSupplyAndBalance() public {
+    function test_burn_should_decrease_total_supply_and_account_balance() external {
         address account = address(0x123);
         uint256 amount = 1000;
 
@@ -251,23 +251,23 @@ contract TokenTest is Test, TestSetup, IERC20Events {
         assertEq(newBalance, initialBalance - amount, "Account balance should decrease by burned amount");
     }
 
-    function burnFromZeroAddressReverts() public {
+    function test_burn_should_revert_from_zero_address() external {
         address account = address(0);
         uint256 amount = 1000;
 
-        vm.expectRevert(bytes("burn: Not enough calldata"));
+        vm.expectRevert(bytes("_burn: invalid account"));
         IERC20Mintable(USDC).burn(account, amount);
     }
 
-    function burnZeroAmountReverts() public {
+    function test_burn_should_revert_with_zero_amount() external {
         address account = address(0x123);
         uint256 amount = 0;
 
-        vm.expectRevert(bytes("burn: Not enough calldata"));
+        vm.expectRevert(bytes("_burn: invalid amount"));
         IERC20Mintable(USDC).burn(account, amount);
     }
 
-    function burnMoreThanBalanceReverts() public {
+    function test_burn_should_revert_when_insufficient_balance_in_account() external {
         address account = address(0x123);
         uint256 amount = 1000;
 
