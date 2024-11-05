@@ -141,4 +141,9 @@ jobs:
 
       - name: Run Forge tests using JSON-RPC mock server for storage emulation (with forking)
         run: |
-          forge test -vvv --fork-url http://localhost:7546 --no-storage-caching
+          forge test -vvv --fork-url http://localhost:7546 --no-storage-caching --match-contract Test
+          forge test -vvv --fork-url http://localhost:7546 --no-storage-caching --match-contract HTS
+      - name: Run Forge tests using JSON-RPC Mainnet and Testnet servers (with forking)
+        run: |
+          forge test -vvv --fork-url https://mainnet.hashio.io/api" --chain 295 --no-storage-caching --match-contract DealCheatCodeIssueTest
+          forge test -vvv --fork-url https://testnet.hashio.io/api --chain 296 --no-storage-caching --match-contract TokenFork
