@@ -165,7 +165,7 @@ contract HtsSystemContract is IERC20Events {
             emit Approval(owner, spender, amount);
             return abi.encode(true);
         } else if (selector == IERC20Mintable.mint.selector) {
-            require(msg.data.length >= 92, "mintFrom: Not enough calldata");
+            require(msg.data.length >= 92, "mint: Not enough calldata");
             address account = address(bytes20(msg.data[40:60]));
             uint256 amount = uint256(bytes32(msg.data[60:92]));
             _mint(account, amount);
