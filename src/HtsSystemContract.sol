@@ -164,27 +164,22 @@ contract HtsSystemContract is IERC20Events {
             _approve(owner, spender, amount);
             emit Approval(owner, spender, amount);
             return abi.encode(true);
-        } else if (selector == IERC20Mintable.mintFrom.selector) {
+        } else if (selector == IERC20Mintable.mint.selector) {
             require(msg.data.length >= 92, "mintFrom: Not enough calldata");
             address account = address(bytes20(msg.data[40:60]));
             uint256 amount = uint256(bytes32(msg.data[60:92]));
             _mint(account, amount);
             return abi.encode(true);
-        } else if (selector == IERC20Mintable.mint.selector) {
-            require(msg.data.length >= 60, "mint: Not enough calldata");
+        } else if (selector == IERC20Burnable.burn.selector) {
+            require(msg.data.length >= 60, "burn: Not enough calldata");
             uint256 amount = uint256(bytes32(msg.data[40:60]));
-            _mint(_toEvmAddress(treasuryAccountId), amount);
+            _burn(msg.sender, amount);
             return abi.encode(true);
         } else if (selector == IERC20Burnable.burnFrom.selector) {
             require(msg.data.length >= 92, "burnFrom: Not enough calldata");
             address account = address(bytes20(msg.data[40:60]));
             uint256 amount = uint256(bytes32(msg.data[60:92]));
             _burn(account, amount);
-            return abi.encode(true);
-        } else if (selector == IERC20Burnable.burn.selector) {
-            require(msg.data.length >= 60, "burn: Not enough calldata");
-            uint256 amount = uint256(bytes32(msg.data[40:60]));
-            _burn(msg.sender, amount);
             return abi.encode(true);
         }
         revert ("redirectForToken: not supported");

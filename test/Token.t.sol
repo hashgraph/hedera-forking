@@ -207,7 +207,7 @@ contract TokenTest is Test, TestSetup, IERC20Events {
 
         vm.expectEmit(USDC);
         emit Transfer(USDC_TREASURY, account, amount);
-        IERC20Mintable(USDC).mintFrom(account, amount);
+        IERC20Mintable(USDC).mint(account, amount);
     }
 
     function test_mint_should_increase_total_supply_and_account_balance() external {
@@ -217,7 +217,7 @@ contract TokenTest is Test, TestSetup, IERC20Events {
         uint256 initialTotalSupply = IERC20(USDC).totalSupply();
         uint256 initialBalance = IERC20(USDC).balanceOf(account);
 
-        IERC20Mintable(USDC).mintFrom(account, amount);
+        IERC20Mintable(USDC).mint(account, amount);
 
         uint256 newTotalSupply = IERC20(USDC).totalSupply();
         uint256 newBalance = IERC20(USDC).balanceOf(account);
@@ -231,7 +231,7 @@ contract TokenTest is Test, TestSetup, IERC20Events {
         uint256 amount = 1000;
 
         vm.expectRevert(bytes("_mint: invalid account"));
-        IERC20Mintable(USDC).mintFrom(account, amount);
+        IERC20Mintable(USDC).mint(account, amount);
     }
 
     function test_mint_should_revert_with_zero_amount() external {
@@ -239,25 +239,36 @@ contract TokenTest is Test, TestSetup, IERC20Events {
         uint256 amount = 0;
 
         vm.expectRevert(bytes("_mint: invalid amount"));
-        IERC20Mintable(USDC).mintFrom(account, amount);
+        IERC20Mintable(USDC).mint(account, amount);
     }
 
-    function test_burn_should_emit_transfer_event() external {
+    function test_burn_should_emit_transfer_event_from_caller() external {
+        uint256 amount = 1000;
+
+        IERC20Mintable(USDC).mint(address(this), amount);
+
+        vm.expectEmit(USDC);
+        emit Transfer(address(this), address(0), amount);
+
+        IERC20Burnable(USDC).burn(amount);
+    }
+
+    function test_burnFrom_should_emit_transfer_event() external {
         address account = address(0x123);
         uint256 amount = 1000;
 
-        IERC20Mintable(USDC).mintFrom(account, amount);
+        IERC20Mintable(USDC).mint(account, amount);
 
         vm.expectEmit(USDC);
-        emit Transfer(account, USDC_TREASURY, amount);
+        emit Transfer(account, address(0), amount);
         IERC20Burnable(USDC).burnFrom(account, amount);
     }
 
-    function test_burn_should_decrease_total_supply_and_account_balance() external {
+    function test_burnFrom_should_decrease_total_supply_and_account_balance() external {
         address account = address(0x123);
         uint256 amount = 1000;
 
-        IERC20Mintable(USDC).mintFrom(account, amount);
+        IERC20Mintable(USDC).mint(account, amount);
 
         uint256 initialTotalSupply = IERC20(USDC).totalSupply();
         uint256 initialBalance = IERC20(USDC).balanceOf(account);
@@ -271,7 +282,7 @@ contract TokenTest is Test, TestSetup, IERC20Events {
         assertEq(newBalance, initialBalance - amount, "Account balance should decrease by burned amount");
     }
 
-    function test_burn_should_revert_from_zero_address() external {
+    function test_burnFrom_should_revert_from_zero_address() external {
         address account = address(0);
         uint256 amount = 1000;
 
@@ -279,7 +290,7 @@ contract TokenTest is Test, TestSetup, IERC20Events {
         IERC20Burnable(USDC).burnFrom(account, amount);
     }
 
-    function test_burn_should_revert_with_zero_amount() external {
+    function test_burnFrom_should_revert_with_zero_amount() external {
         address account = address(0x123);
         uint256 amount = 0;
 
@@ -287,11 +298,11 @@ contract TokenTest is Test, TestSetup, IERC20Events {
         IERC20Burnable(USDC).burnFrom(account, amount);
     }
 
-    function test_burn_should_revert_when_insufficient_balance_in_account() external {
+    function test_burnFrom_should_revert_when_insufficient_balance_in_account() external {
         address account = address(0x123);
         uint256 amount = 1000;
 
-        IERC20Mintable(USDC).mintFrom(account, amount);
+        IERC20Mintable(USDC).mint(account, amount);
 
         uint256 burnAmount = amount + 1;
 

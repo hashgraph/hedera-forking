@@ -169,4 +169,27 @@ contract MocksToStorageLoader is CommonBase, StdCheats {
         _loadBalanceOfAnAccount(tokenAddress, tokenSymbol, 0x0000000000000000000000000000000000000887);
         _loadAllowancesOfAnAccount(tokenAddress, tokenSymbol, 0x000000000000000000000000000000000040984F, 0x0000000000000000000000000000000000000537);
     }
+
+    // Extract the account number from the account ID
+    // The account ID is in the format `0.0.<account_number>`
+    function _parseAccountNumber(string memory accountId) internal pure returns (uint256) {
+        // Split the account ID by the delimiter '.'
+        bytes memory parts = bytes(accountId);
+        uint256 len = parts.length;
+        uint256 accountNumber = 0;
+        uint256 i = 4; // Skip the first 4 characters `0.0.`
+        while (i < len) {
+            accountNumber = accountNumber * 10 + (uint8(parts[i]) - 48);
+            i++;
+        }
+        return accountNumber;
+    }
+
+    function _toEvmAddress(string memory accountId) internal pure returns (address) {
+        // Parse the account number
+        uint256 accountNumber = _parseAccountNumber(accountId);
+
+        // Convert to address by padding the account number to 20 bytes
+        return address(uint160(accountNumber));
+    }
 }
