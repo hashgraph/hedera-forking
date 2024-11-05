@@ -3,6 +3,9 @@ src = "src"
 out = "out"
 libs = ["lib"]
 
+# Required by surl; you have to set this value to true in order to use HtsSystemContractInitialized.
+ffi = true
+
 extra_output = ["storageLayout"]
 
 # Grant (test) contracts access to read files (`vm.readFile`) from the specified folders.
@@ -12,7 +15,3 @@ fs_permissions = [
 ]
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
-
-[profile.forking]
-ffi = true
-test = "examples/foundry-hts/test"

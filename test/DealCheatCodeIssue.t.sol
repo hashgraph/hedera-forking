@@ -9,6 +9,8 @@ contract DealCheatCodeIssueTest is Test {
     address user1;
 
     function setUp() public {
+        vm.selectFork(vm.createFork("https://mainnet.hashio.io/api", 295));
+
         // Add the lines below to make this test work correctly!
         deployCodeTo("HtsSystemContractInitialized.sol", address(0x167));
         vm.allowCheatcodes(address(0x167));
@@ -20,7 +22,7 @@ contract DealCheatCodeIssueTest is Test {
         deal(USDC_mainnet, user1, 1000 * 10e8);
     }
 
-    function test_UserBalance() public {
+    function test_UserBalance() view public {
         uint256 userBalance = IERC20(USDC_mainnet).balanceOf(user1);
         assertEq(userBalance, 1000 * 10e8);
     }
