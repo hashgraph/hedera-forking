@@ -206,7 +206,7 @@ contract TokenTest is Test, TestSetup, IERC20Events {
         uint256 amount = 1000;
 
         vm.expectEmit(USDC);
-        emit Transfer(USDC_TREASURY, account, amount);
+        emit Transfer(address(0), account, amount);
         IERC20Mintable(USDC).mint(account, amount);
     }
 
@@ -243,70 +243,97 @@ contract TokenTest is Test, TestSetup, IERC20Events {
     }
 
     function test_burn_should_emit_transfer_event_from_caller() external {
+        // https://hashscan.io/testnet/account/0.0.1421
+        address owner = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
         uint256 amount = 1000;
 
-        IERC20Mintable(USDC).mint(address(this), amount);
+        IERC20Mintable(USDC).mint(owner, amount);
 
+        vm.prank(owner);
         vm.expectEmit(USDC);
-        emit Transfer(address(this), address(0), amount);
-
+        emit Transfer(owner, address(0), amount);
         IERC20Burnable(USDC).burn(amount);
     }
 
     function test_burnFrom_should_emit_transfer_event() external {
-        address account = address(0x123);
+        // https://hashscan.io/testnet/account/0.0.1421
+        address owner = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
+        // https://hashscan.io/testnet/account/0.0.1335
+        address spender = 0x0000000000000000000000000000000000000537;
         uint256 amount = 1000;
 
-        IERC20Mintable(USDC).mint(account, amount);
+        IERC20Mintable(USDC).mint(owner, amount);
 
+        vm.prank(owner);
+        IERC20(USDC).approve(spender, amount);
+
+        vm.prank(spender);
         vm.expectEmit(USDC);
-        emit Transfer(account, address(0), amount);
-        IERC20Burnable(USDC).burnFrom(account, amount);
+        emit Transfer(owner, address(0), amount);
+        IERC20Burnable(USDC).burnFrom(owner, amount);
     }
 
     function test_burnFrom_should_decrease_total_supply_and_account_balance() external {
-        address account = address(0x123);
+        // https://hashscan.io/testnet/account/0.0.1421
+        address owner = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
+        // https://hashscan.io/testnet/account/0.0.1335
+        address spender = 0x0000000000000000000000000000000000000537;
         uint256 amount = 1000;
 
-        IERC20Mintable(USDC).mint(account, amount);
+        IERC20Mintable(USDC).mint(owner, amount);
 
         uint256 initialTotalSupply = IERC20(USDC).totalSupply();
-        uint256 initialBalance = IERC20(USDC).balanceOf(account);
+        uint256 initialBalance = IERC20(USDC).balanceOf(owner);
 
-        IERC20Burnable(USDC).burnFrom(account, amount);
+        vm.prank(owner);
+        IERC20(USDC).approve(spender, amount);
+
+        vm.prank(spender);
+        IERC20Burnable(USDC).burnFrom(owner, amount);
 
         uint256 newTotalSupply = IERC20(USDC).totalSupply();
-        uint256 newBalance = IERC20(USDC).balanceOf(account);
+        uint256 newBalance = IERC20(USDC).balanceOf(owner);
 
         assertEq(newTotalSupply, initialTotalSupply - amount, "Total supply should decrease by burned amount");
         assertEq(newBalance, initialBalance - amount, "Account balance should decrease by burned amount");
     }
 
     function test_burnFrom_should_revert_from_zero_address() external {
-        address account = address(0);
+        // https://hashscan.io/testnet/account/0.0.1335
+        address spender = 0x0000000000000000000000000000000000000537;
         uint256 amount = 1000;
 
-        vm.expectRevert(bytes("_burn: invalid account"));
-        IERC20Burnable(USDC).burnFrom(account, amount);
+        vm.prank(spender);
+        vm.expectRevert(bytes("_spendAllowance: insufficient"));
+        IERC20Burnable(USDC).burnFrom(address(0), amount);
     }
 
     function test_burnFrom_should_revert_with_zero_amount() external {
+        // https://hashscan.io/testnet/account/0.0.1421
+        address owner = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
         address account = address(0x123);
         uint256 amount = 0;
+
+        vm.prank(owner);
+        IERC20(USDC).approve(address(this), amount);
 
         vm.expectRevert(bytes("_burn: invalid amount"));
         IERC20Burnable(USDC).burnFrom(account, amount);
     }
 
     function test_burnFrom_should_revert_when_insufficient_balance_in_account() external {
+        // https://hashscan.io/testnet/account/0.0.1421
+        address owner = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
         address account = address(0x123);
         uint256 amount = 1000;
 
         IERC20Mintable(USDC).mint(account, amount);
 
         uint256 burnAmount = amount + 1;
+        vm.prank(owner);
+        IERC20(USDC).approve(address(this), burnAmount);
 
-        vm.expectRevert(bytes("_burn: insufficient balance"));
+        vm.expectRevert(bytes("_spendAllowance: insufficient"));
         IERC20Burnable(USDC).burnFrom(account, burnAmount);
     }
 }

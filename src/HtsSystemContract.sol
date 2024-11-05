@@ -14,7 +14,6 @@ contract HtsSystemContract is IERC20Events {
     string private symbol;
     uint8 private decimals;
     uint256 private totalSupply;
-    string private treasuryAccountId;
 
     event Associated(address indexed account);
     event Dissociated(address indexed account);
@@ -179,6 +178,7 @@ contract HtsSystemContract is IERC20Events {
             require(msg.data.length >= 92, "burnFrom: Not enough calldata");
             address account = address(bytes20(msg.data[40:60]));
             uint256 amount = uint256(bytes32(msg.data[60:92]));
+            _spendAllowance(account, msg.sender, amount);
             _burn(account, amount);
             return abi.encode(true);
         }
@@ -218,43 +218,36 @@ contract HtsSystemContract is IERC20Events {
         require(account != address(0), "_mint: invalid account");
         require(amount > 0, "_mint: invalid amount");
 
-        uint256 accountSlot = _balanceOfSlot(account);
-        uint256 accountBalance;
-        assembly { accountBalance := sload(accountSlot) }
-        uint256 newAccountBalance = accountBalance + amount;
-        assembly { sstore(accountSlot, newAccountBalance) }
-
         totalSupply += amount;
+        _update(address(0), account, amount);
 
-        address treasuryAccount = _toEvmAddress(treasuryAccountId);
-        console.logAddress(treasuryAccount);
-        emit Transfer(treasuryAccount, account, amount);
+        emit Transfer(address(0), account, amount);
     }
 
     function _burn(address account, uint256 amount) internal {
         require(account != address(0), "_burn: invalid account");
         require(amount > 0, "_burn: invalid amount");
 
-        uint256 accountSlot = _balanceOfSlot(account);
-        uint256 accountBalance;
-        assembly { accountBalance := sload(accountSlot) }
-        require(accountBalance >= amount, "_burn: insufficient balance");
-        uint256 newAccountBalance = accountBalance - amount;
-        assembly { sstore(accountSlot, newAccountBalance) }
-
         totalSupply -= amount;
+        _update(account, address(0), amount);
+
         emit Transfer(account, address(0), amount);
     }
 
     function _transfer(address from, address to, uint256 amount) private {
         require(from != address(0), "hts: invalid sender");
         require(to != address(0), "hts: invalid receiver");
+        _update(from, to, amount);
+    }
 
+    function _update(address from, address to, uint256 amount) private {
         uint256 fromSlot = _balanceOfSlot(from);
         uint256 fromBalance;
-        assembly { fromBalance := sload(fromSlot) }
-        require(fromBalance >= amount, "_transfer: insufficient balance");
-        assembly { sstore(fromSlot, sub(fromBalance, amount)) }
+        if (from != address(0)) {
+            assembly { fromBalance := sload(fromSlot) }
+            require(fromBalance >= amount, "_transfer: insufficient balance");
+            assembly { sstore(fromSlot, sub(fromBalance, amount)) }
+        }
 
         uint256 toSlot = _balanceOfSlot(to);
         uint256 toBalance;
@@ -303,13 +296,5 @@ contract HtsSystemContract is IERC20Events {
             i++;
         }
         return accountNumber;
-    }
-
-    function _toEvmAddress(string memory accountId) internal pure returns (address) {
-        // Parse the account number
-        uint256 accountNumber = _parseAccountNumber(accountId);
-
-        // Convert to address by padding the account number to 20 bytes
-        return address(uint160(accountNumber));
     }
 }
