@@ -6,3 +6,5 @@
 
 # HTS compiler output needed for `npm` package
 !/out/HtsSystemContract.sol/
+
+.idea
