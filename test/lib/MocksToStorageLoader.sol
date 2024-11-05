@@ -7,7 +7,7 @@ import {CommonBase} from "forge-std/Base.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
 import {IERC20} from "../../src/IERC20.sol";
 import {HtsSystemContract} from "../../src/HtsSystemContract.sol";
-import {HVM} from "../../src/dev-tools/HVM.sol";
+import {HVM} from "../../src/HVM.sol";
 
 contract MocksToStorageLoader is CommonBase, StdCheats {
     using stdStorage for StdStorage;

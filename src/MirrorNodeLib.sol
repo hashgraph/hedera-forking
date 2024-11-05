@@ -39,7 +39,7 @@ library MirrorNodeLib {
     }
 
     function getAccountBalanceFromMirrorNode(address account) internal returns (uint256) {
-        uint32 accountId = getAccountIdFromMirrorNode(account);
+        uint32 accountId = getAccountId(account);
         if (accountId == 0) {
             return 0;
         }
@@ -61,7 +61,7 @@ library MirrorNodeLib {
         return 0;
     }
 
-    function getAccountIdFromMirrorNode(address account) internal returns (uint32) {
+    function getAccountId(address account) internal returns (uint32) {
         string memory accountUrl = string(abi.encodePacked(
             _mirrorNodeUrl(),
             "accounts/",

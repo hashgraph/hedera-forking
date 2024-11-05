@@ -2,7 +2,7 @@
 pragma solidity ^0.8.17;
 
 import {Test, Vm, console} from "forge-std/Test.sol";
-import {IERC20} from "src/IERC20.sol";
+import {IERC20} from "../src/IERC20.sol";
 
 contract DealCheatCodeIssueTest is Test {
     address USDC_mainnet = 0x000000000000000000000000000000000006f89a;
