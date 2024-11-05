@@ -193,20 +193,6 @@ contract HtsSystemContract is IERC20Events {
         slot = uint256(bytes32(abi.encodePacked(selector, pad, spenderId, ownerId)));
     }
 
-    function _mintSlot(address account) private view returns (uint256 slot) {
-        bytes4 selector = IERC20Mintable.mint.selector;
-        uint192 pad = 0x0;
-        uint32 accountId = HtsSystemContract(HTS_ADDRESS).getAccountId(account);
-        slot = uint256(bytes32(abi.encodePacked(selector, pad, accountId)));
-    }
-
-    function _burnSlot(address account) private view returns (uint256 slot) {
-        bytes4 selector = IERC20Mintable.burn.selector;
-        uint192 pad = 0x0;
-        uint32 accountId = HtsSystemContract(HTS_ADDRESS).getAccountId(account);
-        slot = uint256(bytes32(abi.encodePacked(selector, pad, accountId)));
-    }
-
     function __balanceOf(address account) private view returns (uint256 amount) {
         uint256 slot = _balanceOfSlot(account);
         assembly {
@@ -225,7 +211,7 @@ contract HtsSystemContract is IERC20Events {
         require(account != address(0), "_mint: invalid account");
         require(amount > 0, "_mint: invalid amount");
 
-        uint256 accountSlot = _mintSlot(account);
+        uint256 accountSlot = _balanceOfSlot(account);
         uint256 accountBalance;
         assembly { accountBalance := sload(accountSlot) }
         uint256 newAccountBalance = accountBalance + amount;
@@ -239,7 +225,7 @@ contract HtsSystemContract is IERC20Events {
         require(account != address(0), "_burn: invalid account");
         require(amount > 0, "_burn: invalid amount");
 
-        uint256 accountSlot = _burnSlot(account);
+        uint256 accountSlot = _balanceOfSlot(account);
         uint256 accountBalance;
         assembly { accountBalance := sload(accountSlot) }
         require(accountBalance >= amount, "_burn: insufficient balance");

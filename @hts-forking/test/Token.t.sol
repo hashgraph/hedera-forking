@@ -2,7 +2,7 @@
 pragma solidity ^0.8.17;
 
 import {Test, console} from "forge-std/Test.sol";
-import {IERC20Events, IERC20} from "../src/IERC20.sol";
+import {IERC20Events, IERC20, IERC20Mintable} from "../src/IERC20.sol";
 import {TestSetup} from "./lib/TestSetup.sol";
 
 interface MethodNotSupported {
@@ -199,5 +199,83 @@ contract TokenTest is Test, TestSetup, IERC20Events {
         assertEq(IERC20(USDC).balanceOf(bob), 0);
         assertEq(IERC20(USDC).balanceOf(charlie), transferAmount);
         assertEq(IERC20(USDC).allowance(alice, bob), allowanceAmount - transferAmount);
+    }
+
+    function mintIncreasesTotalSupplyAndBalance() public {
+        address account = address(0x123);
+        uint256 amount = 1000;
+
+        uint256 initialTotalSupply = IERC20(USDC).totalSupply();
+        uint256 initialBalance = IERC20(USDC).balanceOf(account);
+
+        IERC20Mintable(USDC).mint(account, amount);
+
+        uint256 newTotalSupply = IERC20(USDC).totalSupply();
+        uint256 newBalance = IERC20(USDC).balanceOf(account);
+
+        assertEq(newTotalSupply, initialTotalSupply + amount, "Total supply should increase by minted amount");
+        assertEq(newBalance, initialBalance + amount, "Account balance should increase by minted amount");
+    }
+
+    function mintToZeroAddressReverts() public {
+        address account = address(0);
+        uint256 amount = 1000;
+
+        vm.expectRevert(bytes("mint: Not enough calldata"));
+        IERC20Mintable(USDC).mint(account, amount);
+    }
+
+    function mintZeroAmountReverts() public {
+        address account = address(0x123);
+        uint256 amount = 0;
+
+        vm.expectRevert(bytes("mint: Not enough calldata"));
+        IERC20Mintable(USDC).mint(account, amount);
+    }
+
+    function burnDecreasesTotalSupplyAndBalance() public {
+        address account = address(0x123);
+        uint256 amount = 1000;
+
+        IERC20Mintable(USDC).mint(account, amount);
+
+        uint256 initialTotalSupply = IERC20(USDC).totalSupply();
+        uint256 initialBalance = IERC20(USDC).balanceOf(account);
+
+        IERC20Mintable(USDC).burn(account, amount);
+
+        uint256 newTotalSupply = IERC20(USDC).totalSupply();
+        uint256 newBalance = IERC20(USDC).balanceOf(account);
+
+        assertEq(newTotalSupply, initialTotalSupply - amount, "Total supply should decrease by burned amount");
+        assertEq(newBalance, initialBalance - amount, "Account balance should decrease by burned amount");
+    }
+
+    function burnFromZeroAddressReverts() public {
+        address account = address(0);
+        uint256 amount = 1000;
+
+        vm.expectRevert(bytes("burn: Not enough calldata"));
+        IERC20Mintable(USDC).burn(account, amount);
+    }
+
+    function burnZeroAmountReverts() public {
+        address account = address(0x123);
+        uint256 amount = 0;
+
+        vm.expectRevert(bytes("burn: Not enough calldata"));
+        IERC20Mintable(USDC).burn(account, amount);
+    }
+
+    function burnMoreThanBalanceReverts() public {
+        address account = address(0x123);
+        uint256 amount = 1000;
+
+        IERC20Mintable(USDC).mint(account, amount);
+
+        uint256 burnAmount = amount + 1;
+
+        vm.expectRevert(bytes("_burn: insufficient balance"));
+        IERC20Mintable(USDC).burn(account, burnAmount);
     }
 }

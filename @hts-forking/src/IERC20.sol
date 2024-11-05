@@ -31,7 +31,7 @@ interface IERC20 {
     function approve(address spender, uint256 amount) external returns (bool);
 }
 
-interface IERC20Mintable {
+interface IERC20Mintable is IERC20 {
     function mint(address account, uint256 amount) external;
     function burn(address account, uint256 amount) external;
 }
