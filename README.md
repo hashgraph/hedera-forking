@@ -194,6 +194,50 @@ For example
 forge test --match-contract TokenTest -vvvv
 ```
 
+
+------------
+# Sample Usage On forked networks
+
+This repository includes the example Smart Contract referenced in this [issue](https://github.com/hashgraph/hedera-smart-contracts/issues/863).
+
+## Fixing Your Tests
+
+To set up and fix your Foundry tests with Hedera forking, follow these steps:
+
+1. **Install the Hedera Forking Library**:
+   ```shell
+   forge install git@github.com:hashgraph/hedera-forking.git
+   ```
+
+2. **Add Setup Code in Your Test Files**:
+   Include the following lines in the setup phase of your tests to deploy the required contract code and enable cheat codes:
+
+   ```solidity
+   deployCodeTo("HtsSystemContractInitialized.sol", address(0x167));
+   vm.allowCheatcodes(address(0x167));
+   ```
+
+## Running the Tests
+
+To run the tests and observe the setup in action, use the following command:
+
+```shell
+forge test --fork-url "https://mainnet.hashio.io/api" --chain 295 --match-contract DealCheatCodeIssueTest
+```
+
+## Requirements
+
+To use this library in your tests, you need to enable `ffi`. You can do this by adding the following lines to your `.toml` file:
+
+```toml
+[profile.default]
+ffi = true
+```
+
+Alternatively, you can add the `--ffi` flag to your execution script. This is necessary because our library uses `surl`, which relies on `ffi` to make requests.
+
+------------
+
 ### `HtsSystemContract` Solidity tests + Relay for storage emulation (with forking)
 
 These tests are the same of the section above, but instead of using the `json-rpc-mock.js` it uses the Relay with `hedera-forking` enabled pointing to `testnet`.
