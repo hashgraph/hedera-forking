@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {Vm} from "forge-std/Vm.sol";
-import "surl/Surl.sol";
+import "surl/src/Surl.sol";
 
 library MirrorNodeLib {
     using Surl for *;
