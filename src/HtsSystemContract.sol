@@ -282,19 +282,4 @@ contract HtsSystemContract is IERC20Events {
             }
         }
     }
-
-    // Extract the account number from the account ID
-    // The account ID is in the format `0.0.<account_number>`
-    function _parseAccountNumber(string memory accountId) internal pure returns (uint256) {
-        // Split the account ID by the delimiter '.'
-        bytes memory parts = bytes(accountId);
-        uint256 len = parts.length;
-        uint256 accountNumber = 0;
-        uint256 i = 4; // Skip the first 4 characters `0.0.`
-        while (i < len) {
-            accountNumber = accountNumber * 10 + (uint8(parts[i]) - 48);
-            i++;
-        }
-        return accountNumber;
-    }
 }
