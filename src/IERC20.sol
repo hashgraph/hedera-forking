@@ -32,6 +32,11 @@ interface IERC20 {
 }
 
 interface IERC20Mintable is IERC20 {
-    function mint(address account, uint256 amount) external;
-    function burn(address account, uint256 amount) external;
+    function mint(uint256 amount) external;
+    function mintFrom(address account, uint256 amount) external;
+}
+
+interface IERC20Burnable is IERC20 {
+    function burn(uint256 amount) external;
+    function burnFrom(address account, uint256 amount) external;
 }

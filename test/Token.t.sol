@@ -2,7 +2,7 @@
 pragma solidity ^0.8.17;
 
 import {Test, console} from "forge-std/Test.sol";
-import {IERC20Events, IERC20, IERC20Mintable} from "../src/IERC20.sol";
+import {IERC20Events, IERC20, IERC20Burnable, IERC20Mintable} from "../src/IERC20.sol";
 import {TestSetup} from "./lib/TestSetup.sol";
 
 interface MethodNotSupported {
@@ -201,6 +201,15 @@ contract TokenTest is Test, TestSetup, IERC20Events {
         assertEq(IERC20(USDC).allowance(alice, bob), allowanceAmount - transferAmount);
     }
 
+    function test_mint_should_emit_transfer_event() external {
+        address account = address(0x123);
+        uint256 amount = 1000;
+
+        vm.expectEmit(USDC);
+        emit Transfer(USDC_TREASURY, account, amount);
+        IERC20Mintable(USDC).mintFrom(account, amount);
+    }
+
     function test_mint_should_increase_total_supply_and_account_balance() external {
         address account = address(0x123);
         uint256 amount = 1000;
@@ -208,7 +217,7 @@ contract TokenTest is Test, TestSetup, IERC20Events {
         uint256 initialTotalSupply = IERC20(USDC).totalSupply();
         uint256 initialBalance = IERC20(USDC).balanceOf(account);
 
-        IERC20Mintable(USDC).mint(account, amount);
+        IERC20Mintable(USDC).mintFrom(account, amount);
 
         uint256 newTotalSupply = IERC20(USDC).totalSupply();
         uint256 newBalance = IERC20(USDC).balanceOf(account);
@@ -222,7 +231,7 @@ contract TokenTest is Test, TestSetup, IERC20Events {
         uint256 amount = 1000;
 
         vm.expectRevert(bytes("_mint: invalid account"));
-        IERC20Mintable(USDC).mint(account, amount);
+        IERC20Mintable(USDC).mintFrom(account, amount);
     }
 
     function test_mint_should_revert_with_zero_amount() external {
@@ -230,19 +239,30 @@ contract TokenTest is Test, TestSetup, IERC20Events {
         uint256 amount = 0;
 
         vm.expectRevert(bytes("_mint: invalid amount"));
-        IERC20Mintable(USDC).mint(account, amount);
+        IERC20Mintable(USDC).mintFrom(account, amount);
+    }
+
+    function test_burn_should_emit_transfer_event() external {
+        address account = address(0x123);
+        uint256 amount = 1000;
+
+        IERC20Mintable(USDC).mintFrom(account, amount);
+
+        vm.expectEmit(USDC);
+        emit Transfer(account, USDC_TREASURY, amount);
+        IERC20Burnable(USDC).burnFrom(account, amount);
     }
 
     function test_burn_should_decrease_total_supply_and_account_balance() external {
         address account = address(0x123);
         uint256 amount = 1000;
 
-        IERC20Mintable(USDC).mint(account, amount);
+        IERC20Mintable(USDC).mintFrom(account, amount);
 
         uint256 initialTotalSupply = IERC20(USDC).totalSupply();
         uint256 initialBalance = IERC20(USDC).balanceOf(account);
 
-        IERC20Mintable(USDC).burn(account, amount);
+        IERC20Burnable(USDC).burnFrom(account, amount);
 
         uint256 newTotalSupply = IERC20(USDC).totalSupply();
         uint256 newBalance = IERC20(USDC).balanceOf(account);
@@ -256,7 +276,7 @@ contract TokenTest is Test, TestSetup, IERC20Events {
         uint256 amount = 1000;
 
         vm.expectRevert(bytes("_burn: invalid account"));
-        IERC20Mintable(USDC).burn(account, amount);
+        IERC20Burnable(USDC).burnFrom(account, amount);
     }
 
     function test_burn_should_revert_with_zero_amount() external {
@@ -264,18 +284,18 @@ contract TokenTest is Test, TestSetup, IERC20Events {
         uint256 amount = 0;
 
         vm.expectRevert(bytes("_burn: invalid amount"));
-        IERC20Mintable(USDC).burn(account, amount);
+        IERC20Burnable(USDC).burnFrom(account, amount);
     }
 
     function test_burn_should_revert_when_insufficient_balance_in_account() external {
         address account = address(0x123);
         uint256 amount = 1000;
 
-        IERC20Mintable(USDC).mint(account, amount);
+        IERC20Mintable(USDC).mintFrom(account, amount);
 
         uint256 burnAmount = amount + 1;
 
         vm.expectRevert(bytes("_burn: insufficient balance"));
-        IERC20Mintable(USDC).burn(account, burnAmount);
+        IERC20Burnable(USDC).burnFrom(account, burnAmount);
     }
 }

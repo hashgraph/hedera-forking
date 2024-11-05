@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
-import {IERC20Events, IERC20, IERC20Mintable} from "./IERC20.sol";
+import "../lib/forge-std/src/console.sol";
+import {IERC20Events, IERC20, IERC20Mintable, IERC20Burnable} from "./IERC20.sol";
 
 contract HtsSystemContract is IERC20Events {
 
@@ -13,6 +14,7 @@ contract HtsSystemContract is IERC20Events {
     string private symbol;
     uint8 private decimals;
     uint256 private totalSupply;
+    string private treasuryAccountId;
 
     event Associated(address indexed account);
     event Dissociated(address indexed account);
@@ -162,17 +164,27 @@ contract HtsSystemContract is IERC20Events {
             _approve(owner, spender, amount);
             emit Approval(owner, spender, amount);
             return abi.encode(true);
-        } else if (selector == IERC20Mintable.mint.selector) {
-            require(msg.data.length >= 92, "mint: Not enough calldata");
+        } else if (selector == IERC20Mintable.mintFrom.selector) {
+            require(msg.data.length >= 92, "mintFrom: Not enough calldata");
             address account = address(bytes20(msg.data[40:60]));
             uint256 amount = uint256(bytes32(msg.data[60:92]));
             _mint(account, amount);
             return abi.encode(true);
-        } else if (selector == IERC20Mintable.burn.selector) {
-            require(msg.data.length >= 92, "burn: Not enough calldata");
+        } else if (selector == IERC20Mintable.mint.selector) {
+            require(msg.data.length >= 60, "mint: Not enough calldata");
+            uint256 amount = uint256(bytes32(msg.data[40:60]));
+            _mint(_toEvmAddress(treasuryAccountId), amount);
+            return abi.encode(true);
+        } else if (selector == IERC20Burnable.burnFrom.selector) {
+            require(msg.data.length >= 92, "burnFrom: Not enough calldata");
             address account = address(bytes20(msg.data[40:60]));
             uint256 amount = uint256(bytes32(msg.data[60:92]));
             _burn(account, amount);
+            return abi.encode(true);
+        } else if (selector == IERC20Burnable.burn.selector) {
+            require(msg.data.length >= 60, "burn: Not enough calldata");
+            uint256 amount = uint256(bytes32(msg.data[40:60]));
+            _burn(msg.sender, amount);
             return abi.encode(true);
         }
         revert ("redirectForToken: not supported");
@@ -218,7 +230,10 @@ contract HtsSystemContract is IERC20Events {
         assembly { sstore(accountSlot, newAccountBalance) }
 
         totalSupply += amount;
-        emit Transfer(address(0), account, amount);
+
+        address treasuryAccount = _toEvmAddress(treasuryAccountId);
+        console.logAddress(treasuryAccount);
+        emit Transfer(treasuryAccount, account, amount);
     }
 
     function _burn(address account, uint256 amount) internal {
@@ -278,5 +293,28 @@ contract HtsSystemContract is IERC20Events {
                 _approve(owner, spender, currentAllowance - amount);
             }
         }
+    }
+
+    // Extract the account number from the account ID
+    // The account ID is in the format `0.0.<account_number>`
+    function _parseAccountNumber(string memory accountId) internal pure returns (uint256) {
+        // Split the account ID by the delimiter '.'
+        bytes memory parts = bytes(accountId);
+        uint256 len = parts.length;
+        uint256 accountNumber = 0;
+        uint256 i = 4; // Skip the first 4 characters `0.0.`
+        while (i < len) {
+            accountNumber = accountNumber * 10 + (uint8(parts[i]) - 48);
+            i++;
+        }
+        return accountNumber;
+    }
+
+    function _toEvmAddress(string memory accountId) internal pure returns (address) {
+        // Parse the account number
+        uint256 accountNumber = _parseAccountNumber(accountId);
+
+        // Convert to address by padding the account number to 20 bytes
+        return address(uint160(accountNumber));
     }
 }

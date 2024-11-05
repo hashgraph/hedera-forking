@@ -80,6 +80,8 @@ contract MocksToStorageLoader is CommonBase, StdCheats {
         uint256 decimals = uint8(vm.parseUint(abi.decode(vm.parseJson(json, ".decimals"), (string))));
         string memory symbol = abi.decode(vm.parseJson(json, ".symbol"), (string));
         uint256 totalSupply = vm.parseUint(abi.decode(vm.parseJson(json, ".total_supply"), (string)));
+        string memory treasuryAccountId = abi.decode(vm.parseJson(json, ".treasury_account_id"), (string));
+        address treasuryAddress = _toEvmAddress(treasuryAccountId);
 
         stdstore
             .target(tokenAddress)
@@ -90,6 +92,7 @@ contract MocksToStorageLoader is CommonBase, StdCheats {
             .sig(IERC20.totalSupply.selector)
             .checked_write(totalSupply);
 
+        _loadBalanceOfAnAccount(tokenAddress, tokenSymbol, treasuryAddress);
         _assignStringToSlot(tokenAddress, 0, name);
         _assignStringToSlot(tokenAddress, 1, symbol);
     }
