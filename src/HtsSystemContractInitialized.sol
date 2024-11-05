@@ -60,24 +60,28 @@ contract HtsSystemContractInitialized is HtsSystemContract {
             return abi.encode(MirrorNodeLib.getAccountBalanceFromMirrorNode(account));
         }
         _initializeTokenData();
-        if (
-            (selector == IERC20.transfer.selector || selector == IERC20.approve.selector)
-            && msg.data.length >= 92
-        ) {
-            _initializeAccountsRelations(msg.sender, address(bytes20(msg.data[40:60])));
+        if (selector == IERC20.transfer.selector && msg.data.length >= 92) {
+            address from = msg.sender;
+            address to = address(bytes20(msg.data[40:60]));
+            _initializeAccountBalance(from);
+            _initializeAccountBalance(to);
         } else if (selector == IERC20.transferFrom.selector && msg.data.length >= 124) {
             address from = address(bytes20(msg.data[40:60]));
             address to = address(bytes20(msg.data[72:92]));
             address spender = msg.sender;
-            _initializeAccountsRelations(from, to);
+            _initializeAccountBalance(from);
+            _initializeAccountBalance(to);
             if (from != spender) {
-                _initializeAccountsRelations(spender, to);
-                _initializeAccountsRelations(from, spender);
+                _initializeApproval(from, spender);
             }
         } else if (selector == IERC20.allowance.selector && msg.data.length >= 92) {
             address owner = address(bytes20(msg.data[40:60]));
             address spender = address(bytes20(msg.data[72:92]));
             _initializeApproval(owner, spender);
+        } else if (selector == IERC20.approve.selector && msg.data.length >= 92) {
+            address from = msg.sender;
+            address to = address(bytes20(msg.data[40:60]));
+            _initializeApproval(from, to);
         }
         return super.__redirectForToken();
     }
@@ -106,13 +110,6 @@ contract HtsSystemContractInitialized is HtsSystemContract {
             bytes32(vm.parseUint(MirrorNodeLib.getTokenStringDataFromMirrorNode("total_supply")))
         );
         vm.store(address(this), bytes32(HVM.getSlot("initialized")), bytes32(uint256(1)));
-    }
-
-    function _initializeAccountsRelations(address firstAccount, address secondAccount) private {
-        _initializeAccountBalance(firstAccount);
-        _initializeAccountBalance(secondAccount);
-        _initializeApproval(firstAccount, secondAccount);
-        _initializeApproval(secondAccount, firstAccount);
     }
 
     function _initializeAccountBalance(address account) private  {
