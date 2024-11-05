@@ -2,8 +2,8 @@
 pragma solidity ^0.8.0;
 
 import {Vm} from "forge-std/Vm.sol";
-import {HtsSystemContract} from "../HtsSystemContract.sol";
-import {IERC20} from "../IERC20.sol";
+import {HtsSystemContract} from "./HtsSystemContract.sol";
+import {IERC20} from "./IERC20.sol";
 import {MirrorNodeLib} from "./MirrorNodeLib.sol";
 import {HVM} from "./HVM.sol";
 
