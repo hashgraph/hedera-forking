@@ -217,21 +217,13 @@ contract HtsSystemContract is IERC20Events {
     function _mint(address account, uint256 amount) internal {
         require(account != address(0), "_mint: invalid account");
         require(amount > 0, "_mint: invalid amount");
-
-        totalSupply += amount;
         _update(address(0), account, amount);
-
-        emit Transfer(address(0), account, amount);
     }
 
     function _burn(address account, uint256 amount) internal {
         require(account != address(0), "_burn: invalid account");
         require(amount > 0, "_burn: invalid amount");
-
-        totalSupply -= amount;
         _update(account, address(0), amount);
-
-        emit Transfer(account, address(0), amount);
     }
 
     function _transfer(address from, address to, uint256 amount) private {
@@ -241,21 +233,27 @@ contract HtsSystemContract is IERC20Events {
     }
 
     function _update(address from, address to, uint256 amount) private {
-        uint256 fromSlot = _balanceOfSlot(from);
-        uint256 fromBalance;
-        if (from != address(0)) {
+        if (from == address(0)) {
+            totalSupply += amount;
+        } else {
+            uint256 fromSlot = _balanceOfSlot(from);
+            uint256 fromBalance;
             assembly { fromBalance := sload(fromSlot) }
             require(fromBalance >= amount, "_transfer: insufficient balance");
             assembly { sstore(fromSlot, sub(fromBalance, amount)) }
         }
 
-        uint256 toSlot = _balanceOfSlot(to);
-        uint256 toBalance;
-        assembly { toBalance := sload(toSlot) }
-        // Solidity's checked arithmetic will revert if this overflows
-        // https://soliditylang.org/blog/2020/12/16/solidity-v0.8.0-release-announcement
-        uint256 newToBalance = toBalance + amount;
-        assembly { sstore(toSlot, newToBalance) }
+        if (to == address(0)) {
+            totalSupply -= amount;
+        } else {
+            uint256 toSlot = _balanceOfSlot(to);
+            uint256 toBalance;
+            assembly { toBalance := sload(toSlot) }
+            // Solidity's checked arithmetic will revert if this overflows
+            // https://soliditylang.org/blog/2020/12/16/solidity-v0.8.0-release-announcement
+            uint256 newToBalance = toBalance + amount;
+            assembly { sstore(toSlot, newToBalance) }
+        }
 
         emit Transfer(from, to, amount);
     }
