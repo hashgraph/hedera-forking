@@ -21,9 +21,7 @@ module.exports = {
     // lint-staged appends all matched files at the end of the command
     // https://github.com/lint-staged/lint-staged?tab=readme-ov-file#what-commands-are-supported
     '*.json': 'prettier --write',
-
-    // Override `--tab-width` to indent Markdown list items properly
-    '*.md': 'prettier --tab-width 2 --write',
+    '*.md': 'prettier --write',
 
     // Check `package.json` files have appropriate `Apache-2.0` license and author
     // https://github.com/lint-staged/lint-staged?tab=readme-ov-file#example-wrap-filenames-in-single-quotes-and-run-once-per-file
