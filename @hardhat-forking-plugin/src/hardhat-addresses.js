@@ -31,6 +31,16 @@ const getEvmAddress = pk => '0x' + Buffer.from(privateToAddress(pk)).toString('h
 module.exports = {
     /**
      * Returns the addresses used by the Hardhat network from its `accounts` configuration.
+     * Using the default Hardhat configuration,
+     * this function returns the list of
+     * [initial addresses](https://hardhat.org/hardhat-network/docs/reference#initial-state) used by Hardhat Network.
+     *
+     * Calling the `eth_accounts` method on the Hardhat provider would return the same result.
+     * However, we need a **sync** method to resolve the addresses given how Hardhat `require` works.
+     *
+     * The implementation was taken from
+     * [here](https://github.com/NomicFoundation/hardhat/blob/1c491eb9fc8b399e480aa257d0f0832f66440be1/packages/hardhat-core/src/internal/util/keys-derivation.ts#L25-L26) and
+     * [here](https://github.com/NomicFoundation/hardhat/blob/1c491eb9fc8b399e480aa257d0f0832f66440be1/packages/hardhat-core/src/internal/core/providers/util.ts#L29-L44).
      *
      * @param {import("hardhat/types").HardhatNetworkAccountsConfig} accounts
      * @returns {string[]}
