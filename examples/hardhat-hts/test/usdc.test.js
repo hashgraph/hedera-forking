@@ -108,4 +108,19 @@ describe('USDC example', function () {
         expect(await usdc['allowance'](holder.address, spender.address)).to.be.equal(2_000_000n);
         expect(await usdc['balanceOf'](receiver.address)).to.be.equal(3_000_000n);
     });
+
+    it("should indirectly `tranferFrom` tokens from account holder after `approve`d one of Hardhat' signers", async function () {
+        const { receiver } = await loadFixture(id);
+        expect(await usdc['balanceOf'](receiver.address)).to.be.equal(0n);
+
+        const CallToken = await ethers.getContractFactory('CallToken');
+        const callToken = await CallToken.deploy();
+        const callTokenAddress = await callToken.getAddress();
+
+        await connectAs(usdc, holder)['approve'](callTokenAddress, 3_000_000n);
+        await connectAs(callToken, holder)['invokeTransferFrom'](usdcAddress, receiver, 2_000_000n);
+
+        expect(await usdc['allowance'](holder.address, callTokenAddress)).to.be.equal(1_000_000n);
+        expect(await usdc['balanceOf'](receiver.address)).to.be.equal(2_000_000n);
+    });
 });
