@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.17;
 
-import {Test} from "forge-std/Test.sol";
+import {IHederaTokenService} from "../src/IHederaTokenService.sol";
 import {HtsSystemContract} from "../src/HtsSystemContract.sol";
 import {TestSetup} from "./lib/TestSetup.sol";
+import {Test} from "forge-std/Test.sol";
+import {IERC20Events} from "../src/IERC20.sol";
 
 contract HTSTest is Test, TestSetup {
 
@@ -40,5 +42,114 @@ contract HTSTest is Test, TestSetup {
         vm.expectRevert(bytes("htsCall: delegated call"));
         (bool revertsAsExpected, ) = HTS.delegatecall(abi.encodeWithSelector(HtsSystemContract.getAccountId.selector, address(this)));
         assertTrue(revertsAsExpected, "expectRevert: call did not revert");
+    }
+
+    function test_mintToken_should_succeed_with_valid_input() external {
+        address token = USDC;
+        int64 amount = 1000;
+        int64 totalSupply = 10000000005000000;
+        bytes[] memory metadata = new bytes[](0);
+        IHederaTokenService.TokenInfo memory tokenInfo = IHederaTokenService.TokenInfo(
+            IHederaTokenService.HederaToken(
+                "USDC",
+                "USDC",
+                USDC_TREASURY,
+                "",
+                false,
+                totalSupply + amount,
+                false,
+                new IHederaTokenService.TokenKey[](0),
+                IHederaTokenService.Expiry(0, address(0), 0)
+            ),
+            totalSupply,
+            false,
+            false,
+            false,
+            new IHederaTokenService.FixedFee[](0),
+            new IHederaTokenService.FractionalFee[](0),
+            new IHederaTokenService.RoyaltyFee[](0),
+            ""
+        );
+
+        vm.mockCall(HTS, abi.encodeWithSelector(HtsSystemContract._mockTokenInfo.selector, token), abi.encode(22, tokenInfo));
+        vm.expectEmit(HTS);
+        emit IERC20Events.Transfer(address(0), USDC_TREASURY, uint64(amount));
+        (int64 responseCode, int64 newTotalSupply, int64[] memory serialNumbers) = HtsSystemContract(HTS).mintToken(token, amount, metadata);
+
+        assertEq(responseCode, 22);
+        assertEq(newTotalSupply, totalSupply + amount);
+        assertEq(serialNumbers.length, 0);
+    }
+
+    function test_mintToken_should_revert_with_invalid_token() external {
+        address token = address(0);
+        int64 amount = 1000;
+        bytes[] memory metadata = new bytes[](0);
+
+        vm.expectRevert(bytes("mintToken: invalid token"));
+        HtsSystemContract(HTS).mintToken(token, amount, metadata);
+    }
+
+    function test_mintToken_should_revert_with_invalid_amount() external {
+        address token = address(0x123);
+        int64 amount = 0;
+        bytes[] memory metadata = new bytes[](0);
+
+        vm.expectRevert(bytes("mintToken: invalid amount"));
+        HtsSystemContract(HTS).mintToken(token, amount, metadata);
+    }
+
+    function test_burnToken_should_succeed_with_valid_input() external {
+        address token = MFCT;
+        int64 amount = 1000;
+        int64 totalSupply = 10000000005000000;
+        int64[] memory serialNumbers = new int64[](0);
+        IHederaTokenService.TokenInfo memory tokenInfo = IHederaTokenService.TokenInfo(
+            IHederaTokenService.HederaToken(
+                "MFCT",
+                "MFCT",
+                MFCT_TREASURY,
+                "",
+                false,
+                totalSupply + amount,
+                false,
+                new IHederaTokenService.TokenKey[](0),
+                IHederaTokenService.Expiry(0, address(0), 0)
+            ),
+            totalSupply,
+            false,
+            false,
+            false,
+            new IHederaTokenService.FixedFee[](0),
+            new IHederaTokenService.FractionalFee[](0),
+            new IHederaTokenService.RoyaltyFee[](0),
+            ""
+        );
+
+        vm.mockCall(HTS, abi.encodeWithSelector(HtsSystemContract._mockTokenInfo.selector, token), abi.encode(22, tokenInfo));
+        vm.expectEmit(HTS);
+        emit IERC20Events.Transfer(MFCT_TREASURY, address(0), uint64(amount));
+        (int64 responseCode, int64 newTotalSupply) = HtsSystemContract(HTS).burnToken(token, amount, serialNumbers);
+
+        assertEq(responseCode, 22);
+        assertEq(newTotalSupply, totalSupply - amount);
+    }
+
+    function test_burnToken_should_revert_with_invalid_token() external {
+        address token = address(0);
+        int64 amount = 1000;
+        int64[] memory serialNumbers = new int64[](0);
+
+        vm.expectRevert(bytes("burnToken: invalid token"));
+        HtsSystemContract(HTS).burnToken(token, amount, serialNumbers);
+    }
+
+    function test_burnToken_should_revert_with_invalid_amount() external {
+        address token = address(0x123);
+        int64 amount = 0;
+        int64[] memory serialNumbers = new int64[](0);
+
+        vm.expectRevert(bytes("burnToken: invalid amount"));
+        HtsSystemContract(HTS).burnToken(token, amount, serialNumbers);
     }
 }

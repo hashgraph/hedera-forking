@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "../lib/forge-std/src/console.sol";
 import {IERC20Events, IERC20, IERC20Mintable, IERC20Burnable} from "./IERC20.sol";
+import {IHederaTokenService} from "./IHederaTokenService.sol";
 
 contract HtsSystemContract is IERC20Events {
 
@@ -41,6 +42,92 @@ contract HtsSystemContract is IERC20Events {
         assembly {
             accountId := sload(slot)
         }
+    }
+
+    /// TODO: This will be implemented in another PR for https://github.com/hashgraph/hedera-forking/issues/108
+    /// Query token info
+    /// @param token The token address to check
+    /// @return responseCode The response code for the status of the request. SUCCESS is 22.
+    /// @return tokenInfo TokenInfo info for `token`
+    function getTokenInfo(address token) external view returns (int64 responseCode, IHederaTokenService.TokenInfo memory tokenInfo) {
+        responseCode = 22; // HederaResponseCodes.SUCCESS
+        tokenInfo = _mockTokenInfo(token);
+    }
+
+    function _mockTokenInfo(address token) public view returns (IHederaTokenService.TokenInfo memory tokenInfo) {
+        tokenInfo = IHederaTokenService.TokenInfo(
+            IHederaTokenService.HederaToken(
+                "",
+                "",
+                address(0),
+                "",
+                false,
+                0,
+                false,
+                new IHederaTokenService.TokenKey[](0),
+                IHederaTokenService.Expiry(0, address(0), 0)
+            ),
+            int64(uint64(totalSupply)),
+            false,
+            false,
+            false,
+            new IHederaTokenService.FixedFee[](0),
+            new IHederaTokenService.FractionalFee[](0),
+            new IHederaTokenService.RoyaltyFee[](0),
+            ""
+        );
+    }
+
+    /// Mints an amount of the token to the defined treasury account
+    /// @param token The token for which to mint tokens. If token does not exist, transaction results in
+    ///              INVALID_TOKEN_ID
+    /// @param amount Applicable to tokens of type FUNGIBLE_COMMON. The amount to mint to the Treasury Account.
+    ///               Amount must be a positive non-zero number represented in the lowest denomination of the
+    ///               token. The new supply must be lower than 2^63.
+    /// @param metadata Applicable to tokens of type NON_FUNGIBLE_UNIQUE. A list of metadata that are being created.
+    ///                 Maximum allowed size of each metadata is 100 bytes
+    /// @return responseCode The response code for the status of the request. SUCCESS is 22.
+    /// @return newTotalSupply The new supply of tokens. For NFTs it is the total count of NFTs
+    /// @return serialNumbers If the token is an NFT the newly generate serial numbers, othersise empty.
+    function mintToken(address token, int64 amount, bytes[] memory metadata) htsCall external returns (
+        int64 responseCode,
+        int64 newTotalSupply,
+        int64[] memory serialNumbers
+    ) {
+        require(token != address(0), "mintToken: invalid token");
+        require(amount > 0, "mintToken: invalid amount");
+
+        IHederaTokenService.TokenInfo memory tokenInfo = _mockTokenInfo(token);
+
+        _mint(tokenInfo.token.treasury, uint64(amount));
+
+        responseCode = 22; // HederaResponseCodes.SUCCESS
+        newTotalSupply = int64(uint64(totalSupply));
+        serialNumbers = new int64[](0);
+    }
+
+    /// Burns an amount of the token from the defined treasury account
+    /// @param token The token for which to burn tokens. If token does not exist, transaction results in
+    ///              INVALID_TOKEN_ID
+    /// @param amount  Applicable to tokens of type FUNGIBLE_COMMON. The amount to burn from the Treasury Account.
+    ///                Amount must be a positive non-zero number, not bigger than the token balance of the treasury
+    ///                account (0; balance], represented in the lowest denomination.
+    /// @param serialNumbers Applicable to tokens of type NON_FUNGIBLE_UNIQUE. The list of serial numbers to be burned.
+    /// @return responseCode The response code for the status of the request. SUCCESS is 22.
+    /// @return newTotalSupply The new supply of tokens. For NFTs it is the total count of NFTs
+    function burnToken(address token, int64 amount, int64[] memory serialNumbers) htsCall external returns (
+        int64 responseCode,
+        int64 newTotalSupply
+    ) {
+        require(token != address(0), "burnToken: invalid token");
+        require(amount > 0, "burnToken: invalid amount");
+
+        IHederaTokenService.TokenInfo memory tokenInfo = _mockTokenInfo(token);
+
+        _burn(tokenInfo.token.treasury, uint64(amount));
+
+        responseCode = 22; // HederaResponseCodes.SUCCESS
+        newTotalSupply = int64(uint64(totalSupply));
     }
 
     /**
