@@ -7,7 +7,7 @@ import {IERC20} from "./IERC20.sol";
 import {MirrorNodeLib} from "./MirrorNodeLib.sol";
 import {HVM} from "./HVM.sol";
 
-contract HtsSystemContractInitialized is HtsSystemContract {
+contract HtsSystemContractFFI is HtsSystemContract {
     using MirrorNodeLib for *;
     using HVM for *;
 
@@ -47,17 +47,17 @@ contract HtsSystemContractInitialized is HtsSystemContract {
     }
 
     function __redirectForToken() internal override returns (bytes memory) {
-        HtsSystemContractInitialized(HTS_ADDRESS).initialize(address(this));
+        HtsSystemContractFFI(HTS_ADDRESS).initialize(address(this));
         bytes4 selector = bytes4(msg.data[24:28]);
         if (selector == IERC20.balanceOf.selector) {
             // We have to always read from this memory slot in order to make deal work correctly.
             bytes memory balance = super.__redirectForToken();
             address account = address(bytes20(msg.data[40:60]));
             uint256 value = abi.decode(balance, (uint256));
-            if (value > 0 || HtsSystemContractInitialized(HTS_ADDRESS).isInitializedBalance(address(this), account)) {
+            if (value > 0 || HtsSystemContractFFI(HTS_ADDRESS).isInitializedBalance(address(this), account)) {
                 return balance;
             }
-            return abi.encode(MirrorNodeLib.getAccountBalanceFromMirrorNode(account));
+            return abi.encode(MirrorNodeLib.getAccountBalance(account));
         }
         _initializeTokenData();
         if (selector == IERC20.transfer.selector && msg.data.length >= 92) {
@@ -93,31 +93,31 @@ contract HtsSystemContractInitialized is HtsSystemContract {
         if (initialized) {
             return;
         }
-        HVM.storeString(address(this), HVM.getSlot("name"), MirrorNodeLib.getTokenStringDataFromMirrorNode("name"));
+        HVM.storeString(address(this), HVM.getSlot("name"), MirrorNodeLib.getTokenStringData("name"));
         HVM.storeString(
             address(this),
             HVM.getSlot("symbol"),
-            MirrorNodeLib.getTokenStringDataFromMirrorNode("symbol")
+            MirrorNodeLib.getTokenStringData("symbol")
         );
         vm.store(
             address(this),
             bytes32(HVM.getSlot("decimals")),
-            bytes32(vm.parseUint(MirrorNodeLib.getTokenStringDataFromMirrorNode("decimals")))
+            bytes32(vm.parseUint(MirrorNodeLib.getTokenStringData("decimals")))
         );
         vm.store(
             address(this),
             bytes32(HVM.getSlot("totalSupply")),
-            bytes32(vm.parseUint(MirrorNodeLib.getTokenStringDataFromMirrorNode("total_supply")))
+            bytes32(vm.parseUint(MirrorNodeLib.getTokenStringData("total_supply")))
         );
         vm.store(address(this), bytes32(HVM.getSlot("initialized")), bytes32(uint256(1)));
     }
 
     function _initializeAccountBalance(address account) private  {
-        if (HtsSystemContractInitialized(HTS_ADDRESS).isInitializedBalance(address(this), account)) {
+        if (HtsSystemContractFFI(HTS_ADDRESS).isInitializedBalance(address(this), account)) {
             return;
         }
         uint256 slot = super._balanceOfSlot(account);
-        uint256 balance = MirrorNodeLib.getAccountBalanceFromMirrorNode(account);
+        uint256 balance = MirrorNodeLib.getAccountBalance(account);
         vm.store(address(this), bytes32(slot), bytes32(balance));
 
         bytes32 mappingSlot = keccak256(
@@ -131,7 +131,7 @@ contract HtsSystemContractInitialized is HtsSystemContract {
             return;
         }
         uint256 slot = super._allowanceSlot(owner, spender);
-        uint256 allowance = MirrorNodeLib.getAllowanceFromMirrorNode(owner, spender);
+        uint256 allowance = MirrorNodeLib.getAllowance(owner, spender);
         vm.store(address(this), bytes32(slot), bytes32(allowance));
         bytes32 mappingSlot = keccak256(
             abi.encode(spender, keccak256(abi.encode(owner, HVM.getSlot("initializedAllowances"))))
