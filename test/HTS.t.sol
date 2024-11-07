@@ -1,15 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.17;
 
-import {CommonBase} from "../lib/forge-std/src/Base.sol";
-import {StdAssertions} from "../lib/forge-std/src/StdAssertions.sol";
-import {StdChains} from "../lib/forge-std/src/StdChains.sol";
-import {StdCheats, StdCheatsSafe} from "../lib/forge-std/src/StdCheats.sol";
-import {StdUtils} from "../lib/forge-std/src/StdUtils.sol";
-import {Test} from "../lib/forge-std/src/Test.sol";
+import {Test} from "forge-std/Test.sol";
+import {TestSetup} from "./lib/TestSetup.sol";
 import {HtsSystemContract} from "../src/HtsSystemContract.sol";
 import {IHederaTokenService} from "../src/IHederaTokenService.sol";
-import {TestSetup} from "lib/TestSetup.sol";
 
 contract HTSTest is Test, TestSetup {
 

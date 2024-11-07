@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
-import {console} from "../lib/forge-std/src/console.sol";
 import {IERC20Events, IERC20} from "./IERC20.sol";
 import {IHederaTokenService} from "./IHederaTokenService.sol";
 
@@ -44,7 +43,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
         }
     }
 
-    function _mockTokenInfo(address token) public view returns (IHederaTokenService.TokenInfo memory tokenInfo) {
+    function _mockTokenInfo() public view returns (IHederaTokenService.TokenInfo memory tokenInfo) {
         tokenInfo = IHederaTokenService.TokenInfo(
             IHederaTokenService.HederaToken(
                 "",
@@ -87,7 +86,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
         require(token != address(0), "mintToken: invalid token");
         require(amount > 0, "mintToken: invalid amount");
 
-        IHederaTokenService.TokenInfo memory tokenInfo = this._mockTokenInfo(token);
+        IHederaTokenService.TokenInfo memory tokenInfo = this._mockTokenInfo();
         address treasuryAccount = tokenInfo.token.treasury;
         require(treasuryAccount != address(0), "mintToken: invalid account");
 
@@ -115,7 +114,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
         require(token != address(0), "burnToken: invalid token");
         require(amount > 0, "burnToken: invalid amount");
 
-        IHederaTokenService.TokenInfo memory tokenInfo = this._mockTokenInfo(token);
+        IHederaTokenService.TokenInfo memory tokenInfo = this._mockTokenInfo();
         address treasuryAccount = tokenInfo.token.treasury;
         require(treasuryAccount != address(0), "burnToken: invalid account");
 
@@ -186,9 +185,6 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
         require(fallbackSelector == 0x618dc65e, "fallback: unsupported selector");
 
         address token = address(bytes20(msg.data[4:24]));
-        if (token != address(this)) {
-            console.log("token: ", string(msg.data[4:24]), "this: ", address(this));
-        }
         require(token == address(this), "fallback: token is not caller");
 
         // Even if the `__redirectForToken` method does not have any formal parameters,
@@ -310,7 +306,6 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
             // https://soliditylang.org/blog/2020/12/16/solidity-v0.8.0-release-announcement
             uint256 newToBalance = toBalance + amount;
             assembly { sstore(toSlot, newToBalance) }
-            console.log("to balance: ", newToBalance);
         }
     }
 
