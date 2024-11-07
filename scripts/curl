@@ -1,8 +1,12 @@
 #!/usr/bin/env node
 
 const { strict: assert } = require('assert');
-const { LONG_ZERO_PREFIX } = require('../@hts-forking/src');
+const { appendFileSync } = require('fs');
+const { join } = require('path');
+
 const { tokens } = require('../@hts-forking/test/data');
+
+const LONG_ZERO_PREFIX = '0x000000000000';
 
 const { endpoint, searchParams } = function () {
     const urlarg = process.argv.at(-1);
@@ -10,6 +14,8 @@ const { endpoint, searchParams } = function () {
 
     const url = new URL(urlarg);
     assert(url.pathname.startsWith('/api/v1/'));
+
+    appendFileSync(join(__dirname, 'curl.log'), `${urlarg}\n`, 'utf-8');
     return {
         endpoint: url.pathname.replace('/api/v1/', ''),
         searchParams: url.searchParams
