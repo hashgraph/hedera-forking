@@ -37,15 +37,10 @@ contract HtsSystemContractFFI is HtsSystemContract {
         vm.allowCheatcodes(target);
     }
 
+    // For testing, we support accounts created with `makeAddr`. These accounts will not exist on the mirror node,
+    // so we calculate a deterministic (but unique) ID at runtime as a fallback.
     function getAccountId(address account) htsCall public view override returns (uint32 accountId) {
-        // accountId = super.getAccountId(account);
-        // For testing, we support accounts created with `makeAddr`. These accounts will not exist on the mirror node,
-        // so we calculate a deterministic (but unique) ID at runtime as a fallback.
-        // if (accountId == 0) {
-            accountId = uint32(bytes4(keccak256(abi.encodePacked(account))));
-        // } else {
-            // revert("asdasdadsdasadsads");
-        // }
+        accountId = uint32(bytes4(keccak256(abi.encodePacked(account))));
     }
 
     function __redirectForToken() internal override returns (bytes memory) {
@@ -95,6 +90,7 @@ contract HtsSystemContractFFI is HtsSystemContract {
         if (initialized) {
             return;
         }
+        // TODO: Avoid making many requests to the Mirror Node
         HVM.storeString(address(this), HVM.getSlot("name"), MirrorNodeLib.getTokenStringData("name"));
         HVM.storeString(
             address(this),
