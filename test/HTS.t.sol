@@ -30,7 +30,7 @@ contract HTSTest is Test, TestSetup {
     }
 
     function test_HTS_getAccountId_should_return_account_number() view external {
-        // In FFI mode, `getAccountId`
+        // In FFI mode, `getAccountId` is not needed, so we can omit this test.
         if (testMode == TestMode.FFI) {
             return;
         }
