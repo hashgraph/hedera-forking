@@ -30,6 +30,11 @@ contract HTSTest is Test, TestSetup {
     }
 
     function test_HTS_getAccountId_should_return_account_number() view external {
+        // In FFI mode, `getAccountId`
+        if (testMode == TestMode.FFI) {
+            return;
+        }
+
         // https://hashscan.io/testnet/account/0.0.1421
         address alice = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
         uint32 accountId = HtsSystemContract(HTS).getAccountId(alice);

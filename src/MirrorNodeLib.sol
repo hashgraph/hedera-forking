@@ -9,7 +9,7 @@ library MirrorNodeLib {
 
     Vm internal constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
-    function getTokenStringDataFromMirrorNode(string memory field) internal returns (string memory) {
+    function getTokenStringData(string memory field) internal returns (string memory) {
         (uint256 status, bytes memory data) = string(abi.encodePacked(
             _mirrorNodeUrl(),
             "tokens/0.0.",
@@ -20,15 +20,15 @@ library MirrorNodeLib {
         return abi.decode(vm.parseJson(json, string(abi.encodePacked(".", field))), (string));
     }
 
-    function getAllowanceFromMirrorNode(address ownerId, address spenderId) internal returns (uint256) {
+    function getAllowance(address owner, address spender) internal returns (uint256) {
         string memory allowancesUrl = string(abi.encodePacked(
             _mirrorNodeUrl(),
             "accounts/0.0.",
-            vm.toString(ownerId),
+            vm.toString(uint160(owner)),
             "/allowances/tokens?token.id=0.0.",
             vm.toString(uint160(address(this))),
             "&spender.id=0.0.",
-            vm.toString(spenderId)
+            vm.toString(uint160(spender))
         ));
 
         (uint256 allowancesStatusCode, bytes memory allowancesJson) = allowancesUrl.get();
@@ -38,7 +38,7 @@ library MirrorNodeLib {
         return 0;
     }
 
-    function getAccountBalanceFromMirrorNode(address account) internal returns (uint256) {
+    function getAccountBalance(address account) internal returns (uint256) {
         uint32 accountId = getAccountId(account);
         if (accountId == 0) {
             return 0;
