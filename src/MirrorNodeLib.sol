@@ -24,11 +24,11 @@ library MirrorNodeLib {
         string memory allowancesUrl = string(abi.encodePacked(
             _mirrorNodeUrl(),
             "accounts/0.0.",
-            vm.toString(uint160(owner)),
+            vm.toString(uint160(getAccountId(owner))),
             "/allowances/tokens?token.id=0.0.",
             vm.toString(uint160(address(this))),
             "&spender.id=0.0.",
-            vm.toString(uint160(spender))
+            vm.toString(uint160(getAccountId(spender)))
         ));
 
         (uint256 allowancesStatusCode, bytes memory allowancesJson) = allowancesUrl.get();
