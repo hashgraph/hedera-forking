@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
-import "../lib/forge-std/src/console.sol";
+import {console} from "../lib/forge-std/src/console.sol";
 import {IERC20Events, IERC20} from "./IERC20.sol";
 import {IHederaTokenService} from "./IHederaTokenService.sol";
 
-contract HtsSystemContract is IERC20Events {
+contract HtsSystemContract is IHederaTokenService, IERC20Events {
 
     address private constant HTS_ADDRESS = address(0x167);
 
@@ -42,16 +42,6 @@ contract HtsSystemContract is IERC20Events {
         assembly {
             accountId := sload(slot)
         }
-    }
-
-    /// TODO: This will be implemented in another PR for https://github.com/hashgraph/hedera-forking/issues/108
-    /// Query token info
-    /// @param token The token address to check
-    /// @return responseCode The response code for the status of the request. SUCCESS is 22.
-    /// @return tokenInfo TokenInfo info for `token`
-    function getTokenInfo(address token) external view returns (int64 responseCode, IHederaTokenService.TokenInfo memory tokenInfo) {
-        responseCode = 22; // HederaResponseCodes.SUCCESS
-        tokenInfo = _mockTokenInfo(token);
     }
 
     function _mockTokenInfo(address token) public view returns (IHederaTokenService.TokenInfo memory tokenInfo) {
@@ -97,13 +87,16 @@ contract HtsSystemContract is IERC20Events {
         require(token != address(0), "mintToken: invalid token");
         require(amount > 0, "mintToken: invalid amount");
 
-        IHederaTokenService.TokenInfo memory tokenInfo = _mockTokenInfo(token);
+        IHederaTokenService.TokenInfo memory tokenInfo = this._mockTokenInfo(token);
+        address treasuryAccount = tokenInfo.token.treasury;
+        require(treasuryAccount != address(0), "mintToken: invalid account");
 
-        _mint(tokenInfo.token.treasury, uint64(amount));
+        _update(address(0), treasuryAccount, uint64(amount));
 
         responseCode = 22; // HederaResponseCodes.SUCCESS
         newTotalSupply = int64(uint64(totalSupply));
         serialNumbers = new int64[](0);
+        require(newTotalSupply >= 0, "mintToken: invalid total supply");
     }
 
     /// Burns an amount of the token from the defined treasury account
@@ -122,12 +115,15 @@ contract HtsSystemContract is IERC20Events {
         require(token != address(0), "burnToken: invalid token");
         require(amount > 0, "burnToken: invalid amount");
 
-        IHederaTokenService.TokenInfo memory tokenInfo = _mockTokenInfo(token);
+        IHederaTokenService.TokenInfo memory tokenInfo = this._mockTokenInfo(token);
+        address treasuryAccount = tokenInfo.token.treasury;
+        require(treasuryAccount != address(0), "burnToken: invalid account");
 
-        _burn(tokenInfo.token.treasury, uint64(amount));
+        _update(treasuryAccount, address(0), uint64(amount));
 
         responseCode = 22; // HederaResponseCodes.SUCCESS
         newTotalSupply = int64(uint64(totalSupply));
+        require(newTotalSupply >= 0, "burnToken: invalid total supply");
     }
 
     /**
@@ -190,6 +186,9 @@ contract HtsSystemContract is IERC20Events {
         require(fallbackSelector == 0x618dc65e, "fallback: unsupported selector");
 
         address token = address(bytes20(msg.data[4:24]));
+        if (token != address(this)) {
+            console.log("token: ", string(msg.data[4:24]), "this: ", address(this));
+        }
         require(token == address(this), "fallback: token is not caller");
 
         // Even if the `__redirectForToken` method does not have any formal parameters,
@@ -283,22 +282,11 @@ contract HtsSystemContract is IERC20Events {
         }
     }
 
-    function _mint(address account, uint256 amount) internal {
-        require(account != address(0), "_mint: invalid account");
-        require(amount > 0, "_mint: invalid amount");
-        _update(address(0), account, amount);
-    }
-
-    function _burn(address account, uint256 amount) internal {
-        require(account != address(0), "_burn: invalid account");
-        require(amount > 0, "_burn: invalid amount");
-        _update(account, address(0), amount);
-    }
-
     function _transfer(address from, address to, uint256 amount) private {
         require(from != address(0), "hts: invalid sender");
         require(to != address(0), "hts: invalid receiver");
         _update(from, to, amount);
+        emit Transfer(from, to, amount);
     }
 
     function _update(address from, address to, uint256 amount) private {
@@ -322,9 +310,8 @@ contract HtsSystemContract is IERC20Events {
             // https://soliditylang.org/blog/2020/12/16/solidity-v0.8.0-release-announcement
             uint256 newToBalance = toBalance + amount;
             assembly { sstore(toSlot, newToBalance) }
+            console.log("to balance: ", newToBalance);
         }
-
-        emit Transfer(from, to, amount);
     }
 
     function _approve(address owner, address spender, uint256 amount) private {

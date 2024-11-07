@@ -203,4 +203,24 @@ interface IHederaTokenService {
         // The ID of the account to receive the custom fee, expressed as a solidity address
         address feeCollector;
     }
+
+    function mintToken(address token, int64 amount, bytes[] memory metadata) external returns (
+        int64 responseCode,
+        int64 newTotalSupply,
+        int64[] memory serialNumbers
+    );
+
+    /// Burns an amount of the token from the defined treasury account
+    /// @param token The token for which to burn tokens. If token does not exist, transaction results in
+    ///              INVALID_TOKEN_ID
+    /// @param amount  Applicable to tokens of type FUNGIBLE_COMMON. The amount to burn from the Treasury Account.
+    ///                Amount must be a positive non-zero number, not bigger than the token balance of the treasury
+    ///                account (0; balance], represented in the lowest denomination.
+    /// @param serialNumbers Applicable to tokens of type NON_FUNGIBLE_UNIQUE. The list of serial numbers to be burned.
+    /// @return responseCode The response code for the status of the request. SUCCESS is 22.
+    /// @return newTotalSupply The new supply of tokens. For NFTs it is the total count of NFTs
+    function burnToken(address token, int64 amount, int64[] memory serialNumbers) external returns (
+        int64 responseCode,
+        int64 newTotalSupply
+    );
 }
