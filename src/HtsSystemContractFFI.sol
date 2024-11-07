@@ -38,12 +38,14 @@ contract HtsSystemContractFFI is HtsSystemContract {
     }
 
     function getAccountId(address account) htsCall public view override returns (uint32 accountId) {
-        accountId = super.getAccountId(account);
+        // accountId = super.getAccountId(account);
         // For testing, we support accounts created with `makeAddr`. These accounts will not exist on the mirror node,
         // so we calculate a deterministic (but unique) ID at runtime as a fallback.
-        if (accountId == 0) {
+        // if (accountId == 0) {
             accountId = uint32(bytes4(keccak256(abi.encodePacked(account))));
-        }
+        // } else {
+            // revert("asdasdadsdasadsads");
+        // }
     }
 
     function __redirectForToken() internal override returns (bytes memory) {
