@@ -3,6 +3,10 @@ src = "src"
 out = "out"
 libs = ["lib"]
 
+# Required by surl; you have to set this value to true in order to use `HtsSystemContractFFI`.
+# https://book.getfoundry.sh/cheatcodes/ffi
+ffi = true
+
 extra_output = ["storageLayout"]
 
 # Grant (test) contracts access to read files (`vm.readFile`) from the specified folders.

@@ -7,49 +7,16 @@ import {CommonBase} from "forge-std/Base.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
 import {IERC20} from "../../src/IERC20.sol";
 import {HtsSystemContract} from "../../src/HtsSystemContract.sol";
+import {HVM} from "../../src/HVM.sol";
 
 contract MocksToStorageLoader is CommonBase, StdCheats {
     using stdStorage for StdStorage;
+    using HVM for *;
 
     address HTS;
 
     constructor(address _HTS) {
         HTS = _HTS;
-    }
-
-    function _assignStringToSlot(address target, uint256 startingSlot, string memory value) private {
-        if (bytes(value).length <= 31) {
-            bytes32 rightPaddedSymbol;
-            assembly {
-                rightPaddedSymbol := mload(add(value, 32))
-            }
-            bytes32 storageSlotValue = bytes32(bytes(value).length * 2) | rightPaddedSymbol;
-            vm.store(target, bytes32(startingSlot), storageSlotValue);
-            return;
-        }
-
-        bytes memory valueBytes = bytes(value);
-        uint256 length = bytes(value).length;
-        bytes32 lengthLeftPadded = bytes32(length * 2 + 1);
-        vm.store(target, bytes32(startingSlot), lengthLeftPadded);
-        uint256 numChunks = (length + 31) / 32;
-        bytes32 baseSlot = keccak256(abi.encodePacked(startingSlot));
-
-        for (uint256 i = 0; i < numChunks; i++) {
-            bytes32 chunk;
-            uint256 chunkStart = i * 32;
-            uint256 chunkEnd = chunkStart + 32;
-
-            if (chunkEnd > length) {
-                chunkEnd = length;
-            }
-
-            for (uint256 j = chunkStart; j < chunkEnd; j++) {
-                chunk |= bytes32(valueBytes[j]) >> (8 * (j - chunkStart));
-            }
-
-            vm.store(target, bytes32(uint256(baseSlot) + i), chunk);
-        }
     }
 
     function _loadAccountData(address account) private {
@@ -90,8 +57,8 @@ contract MocksToStorageLoader is CommonBase, StdCheats {
             .sig(IERC20.totalSupply.selector)
             .checked_write(totalSupply);
 
-        _assignStringToSlot(tokenAddress, 0, name);
-        _assignStringToSlot(tokenAddress, 1, symbol);
+        HVM.storeString(tokenAddress, HVM.getSlot("name"), name);
+        HVM.storeString(tokenAddress, HVM.getSlot("symbol"), symbol);
     }
 
     function _loadAllowancesOfAnAccount(address tokenAddress, string memory tokenSymbol, address ownerEVMAddress, address spenderEVMAddress) private {

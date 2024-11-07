@@ -91,7 +91,7 @@ contract TokenTest is Test, TestSetup, IERC20Events {
         assertEq(balance, 370_000000);
     }
 
-    function test_ERC20_allowance() view external {
+    function test_ERC20_allowance_from_remote() view external {
         // https://hashscan.io/testnet/account/0.0.4233295
         address owner = address(0x000000000000000000000000000000000040984F);
         // https://hashscan.io/testnet/account/0.0.1335
