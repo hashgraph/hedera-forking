@@ -59,7 +59,6 @@ abstract contract TestSetup is StdCheats {
     MocksToStorageLoader private loader;
 
     function setUpMockStorageForNonFork() internal {
-        console.log("HTS code has %d bytes", HTS.code.length);
         if (HTS.code.length == 0) {
             console.log("HTS code length is 0, non-fork test, code and data provided locally");
             loader = new MocksToStorageLoader(HTS);
@@ -75,7 +74,7 @@ abstract contract TestSetup is StdCheats {
 
             testMode = TestMode.FFI;
         } else {
-            console.log("HTS code length is greater than 1, HTS code comes from forked network");
+            console.log("HTS code length is greater than 1 (%d), HTS code comes from forked network", HTS.code.length);
             
             testMode = TestMode.JSON_RPC;
         }
