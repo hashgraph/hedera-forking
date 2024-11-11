@@ -8,14 +8,14 @@ import {HTS_ADDRESS} from "./HtsSystemContract.sol";
 
 contract MirrorNodeFFI is IMirrorNode {
 
-    Vm private constant _vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
+    Vm private constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
     function getTokenData(address token) external returns (string memory) {
         require((uint160(token) >> 32) == 0, "Invalid token address");
         (uint256 status, bytes memory json) = Surl.get(string.concat(
             _mirrorNodeUrl(),
             "tokens/0.0.",
-            _vm.toString(uint160(token))
+            vm.toString(uint160(token))
         ));
         require(status == 200, "Status not OK");
         return string(json);
@@ -28,9 +28,9 @@ contract MirrorNodeFFI is IMirrorNode {
         (uint256 status, bytes memory json) = Surl.get(string.concat(
             _mirrorNodeUrl(),
             "tokens/0.0.",
-            _vm.toString(uint160(token)),
+            vm.toString(uint160(token)),
             "/balances?account.id=0.0.",
-            _vm.toString(accountId)
+            vm.toString(accountId)
         ));
         require(status == 200, "Status not OK");
         return string(json);
@@ -41,11 +41,11 @@ contract MirrorNodeFFI is IMirrorNode {
         (uint256 status, bytes memory json) = Surl.get(string.concat(
             _mirrorNodeUrl(),
             "accounts/0.0.",
-            _vm.toString(_getAccountIdCached(owner)),
+            vm.toString(_getAccountIdCached(owner)),
             "/allowances/tokens?token.id=0.0.",
-            _vm.toString(uint160(token)),
+            vm.toString(uint160(token)),
             "&spender.id=0.0.",
-            _vm.toString(_getAccountIdCached(spender))
+            vm.toString(_getAccountIdCached(spender))
         ));
         require(status == 200);
         return string(json);
@@ -56,12 +56,12 @@ contract MirrorNodeFFI is IMirrorNode {
         uint64 pad = 0x0;
         bytes32 cachedValueSlot = bytes32(abi.encodePacked(bytes4(0xe0b490f8), pad, account));
         bytes32 cacheStatusSlot = bytes32(abi.encodePacked(bytes4(0xe0b490f9), pad, account));
-        if (uint256(_vm.load(HTS_ADDRESS, cacheStatusSlot)) != 0) {
-            return uint32(uint256(_vm.load(HTS_ADDRESS, cachedValueSlot)));
+        if (uint256(vm.load(HTS_ADDRESS, cacheStatusSlot)) != 0) {
+            return uint32(uint256(vm.load(HTS_ADDRESS, cachedValueSlot)));
         }
         uint32 accountId = _getAccountId(account);
-        _vm.store(HTS_ADDRESS, bytes32(cachedValueSlot), bytes32(uint256(accountId)));
-        _vm.store(HTS_ADDRESS, bytes32(cacheStatusSlot), bytes32(uint256(1)));
+        vm.store(HTS_ADDRESS, bytes32(cachedValueSlot), bytes32(uint256(accountId)));
+        vm.store(HTS_ADDRESS, bytes32(cacheStatusSlot), bytes32(uint256(1)));
         return accountId;
     }
 
@@ -69,15 +69,13 @@ contract MirrorNodeFFI is IMirrorNode {
         (uint256 status, bytes memory json) = Surl.get(string.concat(
             _mirrorNodeUrl(),
             "accounts/",
-            _vm.toString(account)
+            vm.toString(account)
         ));
         if (status != 200) {
             return 0;
         }
 
-        return uint32(_vm.parseUint(
-            _vm.replace(_vm.parseJsonString(string(json), ".account"), "0.0.", ""))
-        );
+        return uint32(vm.parseUint(vm.replace(vm.parseJsonString(string(json), ".account"), "0.0.", "")));
     }
 
     function _mirrorNodeUrl() private view returns (string memory) {

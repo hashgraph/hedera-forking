@@ -32,11 +32,9 @@ contract HtsSystemContract is IERC20Events {
      * for more info on account properties.
      */
     function getAccountId(address account) htsCall public virtual view returns (uint32 accountId) {
-        // 0xe0b490f7 is the selector for HtsSystemContract.getAccountId.
-        // Due to limitations with virtual functions, we use a direct byte assignment here.
-        bytes4 selector = 0xe0b490f7;
+        bytes4 selector = this.getAccountId.selector;
         uint64 pad = 0x0;
-        uint256 slot = uint256(bytes32(abi.encodePacked(selector, pad, account)));
+        bytes32 slot = bytes32(abi.encodePacked(selector, pad, account));
         assembly { accountId := sload(slot) }
     }
 

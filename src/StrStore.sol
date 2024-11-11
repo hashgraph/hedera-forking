@@ -3,18 +3,18 @@ pragma solidity ^0.8.0;
 
 import {Vm} from "forge-std/Vm.sol";
 
-Vm constant _vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
+Vm constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
 function storeString(address target, uint256 slot, string memory strvalue) {
     bytes memory value = bytes(strvalue);
     uint256 length = value.length;
     if (length <= 31) {
         bytes32 slotValue = bytes32(value) | bytes32(length * 2);
-        _vm.store(target, bytes32(slot), slotValue);
+        vm.store(target, bytes32(slot), slotValue);
         return;
     }
 
-    _vm.store(target, bytes32(slot), bytes32(length * 2 + 1));
+    vm.store(target, bytes32(slot), bytes32(length * 2 + 1));
     uint256 numChunks = (length + 31) / 32;
     bytes32 baseSlot = keccak256(abi.encodePacked(slot));
 
@@ -30,6 +30,6 @@ function storeString(address target, uint256 slot, string memory strvalue) {
             chunk |= bytes32(value[j]) >> (8 * (j - chunkStart));
         }
 
-        _vm.store(target, bytes32(uint256(baseSlot) + i), chunk);
+        vm.store(target, bytes32(uint256(baseSlot) + i), chunk);
     }
 }
