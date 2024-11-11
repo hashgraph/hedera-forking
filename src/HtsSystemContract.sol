@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {IERC20Events, IERC20} from "./IERC20.sol";
+import {IHRC719} from "./IHRC719.sol";
 
 contract HtsSystemContract is IERC20Events {
 
@@ -161,6 +162,25 @@ contract HtsSystemContract is IERC20Events {
             _approve(owner, spender, amount);
             emit Approval(owner, spender, amount);
             return abi.encode(true);
+        } else if (selector == IHRC719.associate.selector) {
+            uint256 slot = _isAssociatedSlot(msg.sender);
+            assembly {
+                sstore(slot, true)
+            }
+            return abi.encode(true);
+        } else if (selector == IHRC719.dissociate.selector) {
+            uint256 slot = _isAssociatedSlot(msg.sender);
+            assembly {
+                sstore(slot, false)
+            }
+            return abi.encode(true);
+        } else if (selector == IHRC719.isAssociated.selector) {
+            uint256 slot = _isAssociatedSlot(msg.sender);
+            bool res;
+            assembly {
+                res := sload(slot)
+            }
+            return abi.encode(res);
         }
         revert ("redirectForToken: not supported");
     }
@@ -178,6 +198,13 @@ contract HtsSystemContract is IERC20Events {
         uint32 ownerId = HtsSystemContract(HTS_ADDRESS).getAccountId(owner);
         uint32 spenderId = HtsSystemContract(HTS_ADDRESS).getAccountId(spender);
         slot = uint256(bytes32(abi.encodePacked(selector, pad, spenderId, ownerId)));
+    }
+
+    function _isAssociatedSlot(address account) internal view returns (uint256 slot) {
+        bytes4 selector = IHRC719.isAssociated.selector;
+        uint192 pad = 0x0;
+        uint32 accountId = HtsSystemContract(HTS_ADDRESS).getAccountId(account);
+        slot = uint256(bytes32(abi.encodePacked(selector, pad, accountId)));
     }
 
     function __balanceOf(address account) private view returns (uint256 amount) {
