@@ -131,12 +131,6 @@ contract HtsSystemContractJson is HtsSystemContract {
         vm.store(_scratchAddr(), slot, bytes32(uint(1)));
     }
 
-    /**
-     * @dev HTS Storage will be used to keep a track of initialization of storage slot on the token contract.
-     * The reason for that is not make the 'deal' test method still working. We can't read from 2 slots of the same
-     * smart contract. 1 slot has to be used only, that's why we will use the second smart contract (HTS) memory to hold
-     * the initialization status.
-     */
     function _scratchAddr() private view returns (address) {
         return address(bytes20(keccak256(abi.encode(address(this)))));
     }
