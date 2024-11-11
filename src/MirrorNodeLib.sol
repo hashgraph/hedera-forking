@@ -24,11 +24,11 @@ library MirrorNodeLib {
         string memory allowancesUrl = string(abi.encodePacked(
             _mirrorNodeUrl(),
             "accounts/0.0.",
-            vm.toString(uint160(getAccountId(owner))),
+            vm.toString(getAccountIdCached(owner)),
             "/allowances/tokens?token.id=0.0.",
             vm.toString(uint160(address(this))),
             "&spender.id=0.0.",
-            vm.toString(uint160(getAccountId(spender)))
+            vm.toString(getAccountIdCached(spender))
         ));
 
         (uint256 allowancesStatusCode, bytes memory allowancesJson) = allowancesUrl.get();
@@ -39,7 +39,7 @@ library MirrorNodeLib {
     }
 
     function getAccountBalance(address account) internal returns (uint256) {
-        uint32 accountId = getAccountId(account);
+        uint32 accountId = getAccountIdCached(account);
         if (accountId == 0) {
             return 0;
         }
@@ -59,6 +59,20 @@ library MirrorNodeLib {
         }
 
         return 0;
+    }
+    // Lets store the response somewhere in order to prevent multiple calls for the same account id
+    function getAccountIdCached(address account) internal returns (uint32) {
+        address target = address(0x167);
+        uint64 pad = 0x0;
+        bytes32 cachedValueSlot = bytes32(abi.encodePacked(bytes4(0xe0b490f8), pad, account));
+        bytes32 cacheStatusSlot = bytes32(abi.encodePacked(bytes4(0xe0b490f9), pad, account));
+        if (uint256(vm.load(target, cacheStatusSlot)) != 0) {
+            return uint32(uint256(vm.load(target, cachedValueSlot)));
+        }
+        uint32 accountId = getAccountId(account);
+        vm.store(target, bytes32(cachedValueSlot), bytes32(uint256(accountId)));
+        vm.store(target, bytes32(cacheStatusSlot), bytes32(uint256(1)));
+        return accountId;
     }
 
     function getAccountId(address account) internal returns (uint32) {
