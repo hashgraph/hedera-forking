@@ -5,6 +5,9 @@ import {console} from "forge-std/console.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
 import {Vm} from "forge-std/Vm.sol";
 
+import {HtsSystemContractJson} from "../../src/HtsSystemContractJson.sol";
+import {MirrorNodeFFI} from "../../src/MirrorNodeFFI.sol";
+
 import {MocksToStorageLoader} from "./MocksToStorageLoader.sol";
 
 abstract contract TestSetup is StdCheats {
@@ -69,7 +72,8 @@ abstract contract TestSetup is StdCheats {
             testMode = TestMode.NonFork;
         } else if (HTS.code.length == 1) {
             console.log("HTS code length is 1, forking from a remote Hedera network, HTS/FFI code with Mirror Node backend is deployed here");
-            deployCodeTo("HtsSystemContractFFI.sol", HTS);
+            deployCodeTo("HtsSystemContractJson.sol", HTS);
+            HtsSystemContractJson(HTS).setMirrorNodeProvider(new MirrorNodeFFI());
             vm.allowCheatcodes(HTS);
 
             testMode = TestMode.FFI;
