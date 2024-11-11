@@ -20,7 +20,7 @@ contract DealERC20Test is Test, TestSetup {
         deal(USDC, alice, 2000 * 10e8);
     }
 
-    function test_DealERC20_get_dealt_balance_of_new_account() view external {
+    function test_DealERC20_get_dealt_balance_of_unknown_account() view external {
         assertEq(IERC20(USDC).balanceOf(user1), 1000 * 10e8);
     }
 
