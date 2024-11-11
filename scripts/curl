@@ -43,7 +43,7 @@ for (const [re, fn] of /** @type {const} */([
     [/^accounts\/(0x[0-9a-fA-F]{40})$/, address => {
         assert(typeof address === 'string');
         try {
-            return require(`../@hts-forking/test/data/getAccount_${address}.json`);
+            return require(`../@hts-forking/test/data/getAccount_${address.toLowerCase()}.json`);
         } catch {
             if (address.startsWith(LONG_ZERO_PREFIX)) {
                 return { account: '0.0.' + parseInt(address, 16) };
