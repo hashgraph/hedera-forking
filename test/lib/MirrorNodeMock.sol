@@ -51,14 +51,5 @@ contract MirrorNodeMock is IMirrorNode {
             accountId = uint160(account);
         }
         return uint32(accountId);
-        // assignEvmAccountAddress(account, accountId);
     }
-
-    // function assignEvmAccountAddress(address account, uint256 accountId) public {
-    //     stdstore
-    //         .target(HTS)
-    //         .sig(HtsSystemContract.getAccountId.selector)
-    //         .with_key(account)
-    //         .checked_write(accountId);
-    // }
 }

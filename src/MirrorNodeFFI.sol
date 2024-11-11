@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import {Vm} from "forge-std/Vm.sol";
 import {Surl} from "surl/src/Surl.sol";
 import {IMirrorNode} from "./IMirrorNode.sol";
-import {HTS_ADDRESS} from "./HtsSystemContract.sol";
+import {HtsSystemContract, HTS_ADDRESS} from "./HtsSystemContract.sol";
 
 contract MirrorNodeFFI is IMirrorNode {
 
@@ -53,9 +53,10 @@ contract MirrorNodeFFI is IMirrorNode {
 
     // Lets store the response somewhere in order to prevent multiple calls for the same account id
     function _getAccountIdCached(address account) private returns (uint32) {
+        uint32 selector = uint32(HtsSystemContract.getAccountId.selector);
         uint64 pad = 0x0;
-        bytes32 cachedValueSlot = bytes32(abi.encodePacked(bytes4(0xe0b490f8), pad, account));
-        bytes32 cacheStatusSlot = bytes32(abi.encodePacked(bytes4(0xe0b490f9), pad, account));
+        bytes32 cachedValueSlot = bytes32(abi.encodePacked(selector + 1, pad, account));
+        bytes32 cacheStatusSlot = bytes32(abi.encodePacked(selector + 2, pad, account));
         if (uint256(vm.load(HTS_ADDRESS, cacheStatusSlot)) != 0) {
             return uint32(uint256(vm.load(HTS_ADDRESS, cachedValueSlot)));
         }
