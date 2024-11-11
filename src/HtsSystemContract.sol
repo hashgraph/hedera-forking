@@ -4,9 +4,9 @@ pragma solidity ^0.8.0;
 import {IERC20Events, IERC20} from "./IERC20.sol";
 import {IHRC719} from "./IHRC719.sol";
 
-contract HtsSystemContract is IERC20Events {
+address constant HTS_ADDRESS = address(0x167);
 
-    address internal constant HTS_ADDRESS = address(0x167);
+contract HtsSystemContract is IERC20Events {
 
     // All ERC20 properties are accessed with a `delegatecall` from the Token Proxy.
     // See `__redirectForToken` for more details.

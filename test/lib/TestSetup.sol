@@ -5,16 +5,13 @@ import {console} from "forge-std/console.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
 import {Vm} from "forge-std/Vm.sol";
 
-import {HtsSystemContractJson} from "../../src/HtsSystemContractJson.sol";
+import {HtsSystemContractJson, HTS_ADDRESS} from "../../src/HtsSystemContractJson.sol";
 import {MirrorNodeFFI} from "../../src/MirrorNodeFFI.sol";
-
-import {MocksToStorageLoader} from "./MocksToStorageLoader.sol";
+import {MirrorNodeMock} from "./MirrorNodeMock.sol";
 
 abstract contract TestSetup is StdCheats {
     // `vm` is private in StdCheats, so we duplicate it here
     Vm private constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
-
-    address internal constant HTS = 0x0000000000000000000000000000000000000167;
 
     /**
      * https://hashscan.io/testnet/token/0.0.429274
@@ -59,41 +56,29 @@ abstract contract TestSetup is StdCheats {
 
     TestMode internal testMode;
 
-    MocksToStorageLoader private loader;
-
     function setUpMockStorageForNonFork() internal {
-        if (HTS.code.length == 0) {
+        if (HTS_ADDRESS.code.length == 0) {
             console.log("HTS code length is 0, non-fork test, code and data provided locally");
-            loader = new MocksToStorageLoader(HTS);
-            loader.loadHts();
-            loader.loadToken(USDC, "USDC");
-            loader.loadToken(MFCT, "MFCT");
+
+            deployCodeTo("HtsSystemContractJson.sol", HTS_ADDRESS);
+            MirrorNodeMock mirrorNode = new MirrorNodeMock();
+            mirrorNode.deployHIP719Proxy(USDC, "USDC");
+            mirrorNode.deployHIP719Proxy(MFCT, "MFCT");
+            HtsSystemContractJson(HTS_ADDRESS).setMirrorNodeProvider(mirrorNode);
+            vm.allowCheatcodes(HTS_ADDRESS);
 
             testMode = TestMode.NonFork;
-        } else if (HTS.code.length == 1) {
+        } else if (HTS_ADDRESS.code.length == 1) {
             console.log("HTS code length is 1, forking from a remote Hedera network, HTS/FFI code with Mirror Node backend is deployed here");
-            deployCodeTo("HtsSystemContractJson.sol", HTS);
-            HtsSystemContractJson(HTS).setMirrorNodeProvider(new MirrorNodeFFI());
-            vm.allowCheatcodes(HTS);
+            deployCodeTo("HtsSystemContractJson.sol", HTS_ADDRESS);
+            HtsSystemContractJson(HTS_ADDRESS).setMirrorNodeProvider(new MirrorNodeFFI());
+            vm.allowCheatcodes(HTS_ADDRESS);
 
             testMode = TestMode.FFI;
         } else {
-            console.log("HTS code length is greater than 1 (%d), HTS code comes from forked network", HTS.code.length);
+            console.log("HTS code length is greater than 1 (%d), HTS code comes from forked network", HTS_ADDRESS.code.length);
             
             testMode = TestMode.JSON_RPC;
-        }
-    }
-
-    function assignAccountIdsToEVMAddressesForNonFork(address firstAddress) internal {
-        if (address(loader) != address(0)) {
-            loader.assignEvmAccountAddress(firstAddress, 1);
-        }
-    }
-
-    function assignAccountIdsToEVMAddressesForNonFork(address firstAddress, address secondAddress) internal {
-        if (address(loader) != address(0)) {
-            loader.assignEvmAccountAddress(firstAddress, 1);
-            loader.assignEvmAccountAddress(secondAddress, 2);
         }
     }
 }

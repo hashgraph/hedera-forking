@@ -57,8 +57,6 @@ contract TokenTest is Test, TestSetup, IERC20Events {
         address alice = makeAddr("alice");
         address bob = makeAddr("bob");
 
-        assignAccountIdsToEVMAddressesForNonFork(alice, bob);
-
         assertEq(IERC20(USDC).balanceOf(bob), 0);
 
         deal(USDC, alice, 1000 * 10e8);
@@ -103,8 +101,6 @@ contract TokenTest is Test, TestSetup, IERC20Events {
         // https://hashscan.io/testnet/account/0.0.4233295
         address owner = address(0x000000000000000000000000000000000040984F);
         address spender = makeAddr("alice");
-
-        assignAccountIdsToEVMAddressesForNonFork(spender);
 
         assertEq(IERC20(USDC).allowance(owner, spender), 0);
     }
@@ -177,8 +173,6 @@ contract TokenTest is Test, TestSetup, IERC20Events {
         address alice = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
         address bob = makeAddr("bob");
         address charlie = makeAddr("charlie");
-
-        assignAccountIdsToEVMAddressesForNonFork(bob, charlie);
 
         uint256 allowanceAmount = 10_000000;
         uint256 transferAmount = 4_000000;

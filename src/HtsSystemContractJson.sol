@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {Vm} from "forge-std/Vm.sol";
-import {HtsSystemContract} from "./HtsSystemContract.sol";
+import {HtsSystemContract, HTS_ADDRESS} from "./HtsSystemContract.sol";
 import {IERC20} from "./IERC20.sol";
 import {IMirrorNode} from "./IMirrorNode.sol";
 import {storeString} from "./StrStore.sol";
