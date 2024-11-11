@@ -7,11 +7,10 @@ import {CommonBase} from "forge-std/Base.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
 import {IERC20} from "../../src/IERC20.sol";
 import {HtsSystemContract} from "../../src/HtsSystemContract.sol";
-import {HVM} from "../../src/HVM.sol";
+import {storeString} from "../../src/StrStore.sol";
 
 contract MocksToStorageLoader is CommonBase, StdCheats {
     using stdStorage for StdStorage;
-    using HVM for *;
 
     address HTS;
 
@@ -57,8 +56,8 @@ contract MocksToStorageLoader is CommonBase, StdCheats {
             .sig(IERC20.totalSupply.selector)
             .checked_write(totalSupply);
 
-        HVM.storeString(tokenAddress, HVM.getSlot("name"), name);
-        HVM.storeString(tokenAddress, HVM.getSlot("symbol"), symbol);
+        storeString(tokenAddress, 0, name);
+        storeString(tokenAddress, 1, symbol);
     }
 
     function _loadAllowancesOfAnAccount(address tokenAddress, string memory tokenSymbol, address ownerEVMAddress, address spenderEVMAddress) private {

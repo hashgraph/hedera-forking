@@ -4,8 +4,8 @@ pragma solidity ^0.8.0;
 import {Vm} from "forge-std/Vm.sol";
 import {HtsSystemContract} from "./HtsSystemContract.sol";
 import {IERC20} from "./IERC20.sol";
-import {MirrorNodeLib} from "./MirrorNodeLib.sol";
-import {HVM} from "./HVM.sol";
+import "./MirrorNode.sol" as MirrorNode;
+import {storeString} from "./StrStore.sol";
 
 contract HtsSystemContractFFI is HtsSystemContract {
     Vm private constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
@@ -69,29 +69,40 @@ contract HtsSystemContractFFI is HtsSystemContract {
     function _initializeTokenData() private {
         if (initialized) return;
         
-        string memory json = MirrorNodeLib.getTokenData();
-        string memory tokenName = abi.decode(vm.parseJson(json, ".name"), (string));
-        string memory tokenSymbol = abi.decode(vm.parseJson(json, ".symbol"), (string));
-        uint256 totalSupply = vm.parseUint(abi.decode(vm.parseJson(json, ".total_supply"), (string)));
-        uint256 decimals = uint8(vm.parseUint(abi.decode(vm.parseJson(json, ".decimals"), (string))));
-        HVM.storeString(address(this), HVM.getSlot("name"), tokenName);
-        HVM.storeString(address(this), HVM.getSlot("symbol"), tokenSymbol);
-        vm.store(address(this), bytes32(HVM.getSlot("decimals")), bytes32(decimals));
-        vm.store(address(this), bytes32(HVM.getSlot("totalSupply")), bytes32(totalSupply));
-        vm.store(address(this), bytes32(HVM.getSlot("initialized")), bytes32(uint256(1)));
+        bytes32 slot;
+        string memory json = MirrorNode.getTokenData(address(this));
+
+        assembly { slot := name.slot }
+        string memory name_ = abi.decode(vm.parseJson(json, ".name"), (string));
+        storeString(address(this), uint256(slot), name_);
+
+        assembly { slot := symbol.slot }
+        string memory symbol_ = abi.decode(vm.parseJson(json, ".symbol"), (string));
+        storeString(address(this), uint256(slot), symbol_);
+
+        assembly { slot := decimals.slot }
+        uint256 decimals_ = uint8(vm.parseUint(abi.decode(vm.parseJson(json, ".decimals"), (string))));
+        vm.store(address(this), slot, bytes32(decimals_));
+
+        assembly { slot := totalSupply.slot }
+        uint256 totalSupply_ = vm.parseUint(abi.decode(vm.parseJson(json, ".total_supply"), (string)));
+        vm.store(address(this), slot, bytes32(totalSupply_));
+
+        assembly { slot := initialized.slot }
+        vm.store(address(this), slot, bytes32(uint256(1)));
     }
 
     function _initBalance(address account) private  {
         bytes32 slot = super._balanceOfSlot(account);
         if (vm.load(_scratchAddr(), slot) == bytes32(0)) {
-            _setValue(slot, bytes32(MirrorNodeLib.getBalance(account)));
+            _setValue(slot, bytes32(MirrorNode.getBalance(address(this), account)));
         }
     }
 
     function _initAllowance(address owner, address spender) private  {
         bytes32 slot = super._allowanceSlot(owner, spender);
         if (vm.load(_scratchAddr(), slot) == bytes32(0)) {
-            _setValue(slot, bytes32(MirrorNodeLib.getAllowance(owner, spender)));
+            _setValue(slot, bytes32(MirrorNode.getAllowance(address(this), owner, spender)));
         }
     }
 

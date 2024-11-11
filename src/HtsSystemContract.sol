@@ -10,10 +10,10 @@ contract HtsSystemContract is IERC20Events {
 
     // All ERC20 properties are accessed with a `delegatecall` from the Token Proxy.
     // See `__redirectForToken` for more details.
-    string private name;
-    string private symbol;
-    uint8 private decimals;
-    uint256 private totalSupply;
+    string internal name;
+    string internal symbol;
+    uint8 internal decimals;
+    uint256 internal totalSupply;
 
     /**
      * @dev Prevents delegatecall into the modified method.
