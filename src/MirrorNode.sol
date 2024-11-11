@@ -74,7 +74,7 @@ function _getAccountId(address account) returns (uint32) {
     (uint256 status, bytes memory json) = Surl.get(string.concat(
         _mirrorNodeUrl(),
         "accounts/",
-        _vm.toLowercase(_vm.toString(account))
+        _vm.toString(account)
     ));
     if (status != 200) {
         return 0;
