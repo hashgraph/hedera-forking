@@ -7,8 +7,12 @@ import {TestSetup} from "./lib/TestSetup.sol";
 
 contract HTSTest is Test, TestSetup {
 
+    address private unknownUser;
+
     function setUp() external {
         setUpMockStorageForNonFork();
+
+        unknownUser = makeAddr("unknown-user");
     }
 
     function test_HTS_should_revert_when_not_enough_calldata() external {
@@ -30,15 +34,19 @@ contract HTSTest is Test, TestSetup {
     }
 
     function test_HTS_getAccountId_should_return_account_number() view external {
-        // In FFI mode, `getAccountId` is not needed, so we can omit this test.
-        if (testMode != TestMode.JSON_RPC) {
-            return;
-        }
-
         // https://hashscan.io/testnet/account/0.0.1421
         address alice = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
         uint32 accountId = HtsSystemContract(HTS_ADDRESS).getAccountId(alice);
-        assertEq(accountId, 1421);
+        assertEq(accountId, testMode != TestMode.JSON_RPC 
+            ? uint32(bytes4(keccak256(abi.encodePacked(alice))))
+            : 1421
+        );
+
+        accountId = HtsSystemContract(HTS_ADDRESS).getAccountId(unknownUser);
+        assertEq(accountId, testMode != TestMode.JSON_RPC 
+            ? uint32(bytes4(keccak256(abi.encodePacked(unknownUser))))
+            : uint32(uint160(unknownUser))
+        );
     }
 
     function test_HTS_should_revert_when_delegatecall_getAccountId() external {
