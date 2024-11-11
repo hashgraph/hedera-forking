@@ -90,23 +90,15 @@ contract HtsSystemContractFFI is HtsSystemContract {
         if (initialized) {
             return;
         }
-        // TODO: Avoid making many requests to the Mirror Node
-        HVM.storeString(address(this), HVM.getSlot("name"), MirrorNodeLib.getTokenStringData("name"));
-        HVM.storeString(
-            address(this),
-            HVM.getSlot("symbol"),
-            MirrorNodeLib.getTokenStringData("symbol")
-        );
-        vm.store(
-            address(this),
-            bytes32(HVM.getSlot("decimals")),
-            bytes32(vm.parseUint(MirrorNodeLib.getTokenStringData("decimals")))
-        );
-        vm.store(
-            address(this),
-            bytes32(HVM.getSlot("totalSupply")),
-            bytes32(vm.parseUint(MirrorNodeLib.getTokenStringData("total_supply")))
-        );
+        string memory json = string(MirrorNodeLib.getTokenData());
+        string memory tokenName = abi.decode(vm.parseJson(json, string(abi.encodePacked(".", "name"))), (string));
+        string memory tokenSymbol = abi.decode(vm.parseJson(json, string(abi.encodePacked(".", "symbol"))), (string));
+        uint256 totalSupply = vm.parseUint(abi.decode(vm.parseJson(json, ".total_supply"), (string)));
+        uint256 decimals = uint8(vm.parseUint(abi.decode(vm.parseJson(json, ".decimals"), (string))));
+        HVM.storeString(address(this), HVM.getSlot("name"), tokenName);
+        HVM.storeString(address(this), HVM.getSlot("symbol"), tokenSymbol);
+        vm.store(address(this), bytes32(HVM.getSlot("decimals")), bytes32(decimals));
+        vm.store(address(this), bytes32(HVM.getSlot("totalSupply")), bytes32(totalSupply));
         vm.store(address(this), bytes32(HVM.getSlot("initialized")), bytes32(uint256(1)));
     }
 

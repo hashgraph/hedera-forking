@@ -9,15 +9,14 @@ library MirrorNodeLib {
 
     Vm internal constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
-    function getTokenStringData(string memory field) internal returns (string memory) {
+    function getTokenData() internal returns (string memory) {
         (uint256 status, bytes memory data) = string(abi.encodePacked(
             _mirrorNodeUrl(),
             "tokens/0.0.",
             vm.toString(uint160(address(this)))
         )).get();
         require(status == 200, "Failed to get token data from the Hedera MirrorNode");
-        string memory json = string(data);
-        return abi.decode(vm.parseJson(json, string(abi.encodePacked(".", field))), (string));
+        return string(data);
     }
 
     function getAllowance(address owner, address spender) internal returns (uint256) {
