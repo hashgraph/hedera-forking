@@ -10,8 +10,8 @@ contract HtsSystemContract is IERC20Events {
 
     // All ERC20 properties are accessed with a `delegatecall` from the Token Proxy.
     // See `__redirectForToken` for more details.
-    string internal name;
-    string internal symbol;
+    string private name;
+    string private symbol;
     uint8 private decimals;
     uint256 private totalSupply;
 
@@ -37,9 +37,7 @@ contract HtsSystemContract is IERC20Events {
         bytes4 selector = 0xe0b490f7;
         uint64 pad = 0x0;
         uint256 slot = uint256(bytes32(abi.encodePacked(selector, pad, account)));
-        assembly {
-            accountId := sload(slot)
-        }
+        assembly { accountId := sload(slot) }
     }
 
     /**
@@ -185,19 +183,19 @@ contract HtsSystemContract is IERC20Events {
         revert ("redirectForToken: not supported");
     }
 
-    function _balanceOfSlot(address account) internal view returns (uint256 slot) {
+    function _balanceOfSlot(address account) internal view returns (bytes32) {
         bytes4 selector = IERC20.balanceOf.selector;
         uint192 pad = 0x0;
         uint32 accountId = HtsSystemContract(HTS_ADDRESS).getAccountId(account);
-        slot = uint256(bytes32(abi.encodePacked(selector, pad, accountId)));
+        return bytes32(abi.encodePacked(selector, pad, accountId));
     }
 
-    function _allowanceSlot(address owner, address spender) internal view returns (uint256 slot) {
+    function _allowanceSlot(address owner, address spender) internal view returns (bytes32) {
         bytes4 selector = IERC20.allowance.selector;
         uint160 pad = 0x0;
         uint32 ownerId = HtsSystemContract(HTS_ADDRESS).getAccountId(owner);
         uint32 spenderId = HtsSystemContract(HTS_ADDRESS).getAccountId(spender);
-        slot = uint256(bytes32(abi.encodePacked(selector, pad, spenderId, ownerId)));
+        return bytes32(abi.encodePacked(selector, pad, spenderId, ownerId));
     }
 
     function _isAssociatedSlot(address account) internal view returns (uint256 slot) {
@@ -208,30 +206,26 @@ contract HtsSystemContract is IERC20Events {
     }
 
     function __balanceOf(address account) private view returns (uint256 amount) {
-        uint256 slot = _balanceOfSlot(account);
-        assembly {
-            amount := sload(slot)
-        }
+        bytes32 slot = _balanceOfSlot(account);
+        assembly { amount := sload(slot) }
     }
 
     function __allowance(address owner, address spender) private view returns (uint256 amount) {
-        uint256 slot = _allowanceSlot(owner, spender);
-        assembly {
-            amount := sload(slot)
-        }
+        bytes32 slot = _allowanceSlot(owner, spender);
+        assembly { amount := sload(slot) }
     }
 
     function _transfer(address from, address to, uint256 amount) private {
         require(from != address(0), "hts: invalid sender");
         require(to != address(0), "hts: invalid receiver");
 
-        uint256 fromSlot = _balanceOfSlot(from);
+        bytes32 fromSlot = _balanceOfSlot(from);
         uint256 fromBalance;
         assembly { fromBalance := sload(fromSlot) }
         require(fromBalance >= amount, "_transfer: insufficient balance");
         assembly { sstore(fromSlot, sub(fromBalance, amount)) }
 
-        uint256 toSlot = _balanceOfSlot(to);
+        bytes32 toSlot = _balanceOfSlot(to);
         uint256 toBalance;
         assembly { toBalance := sload(toSlot) }
         // Solidity's checked arithmetic will revert if this overflows
@@ -245,10 +239,8 @@ contract HtsSystemContract is IERC20Events {
     function _approve(address owner, address spender, uint256 amount) private {
         require(owner != address(0), "_approve: invalid owner");
         require(spender != address(0), "_approve: invalid spender");
-        uint256 allowanceSlot = _allowanceSlot(owner, spender);
-        assembly {
-            sstore(allowanceSlot, amount)
-        }
+        bytes32 allowanceSlot = _allowanceSlot(owner, spender);
+        assembly { sstore(allowanceSlot, amount) }
     }
 
     /**
