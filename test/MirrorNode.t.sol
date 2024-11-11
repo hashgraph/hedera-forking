@@ -24,6 +24,8 @@ contract MirrorNodeTest is Test {
     }
 
     function test_get_balance_for_unknown_account() external {
+        console.log("%s", vm.envString("PATH"));
+
         vm.skip(_skip);
         uint amount = MirrorNode.getBalance(USDC, makeAddr("user"));
         assertEq(amount, 0);
