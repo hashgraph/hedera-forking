@@ -2,10 +2,7 @@
 
 # Foundry cache and compiler files
 /cache/
-/out/*
-
-# HTS compiler output needed for `npm` package
-!/out/HtsSystemContract.sol/
+/out/
 
 # Contains Mirror Node request logs created when mocking `curl`
 /scripts/curl.log
