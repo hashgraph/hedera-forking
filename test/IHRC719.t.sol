@@ -12,38 +12,38 @@ contract IHRC719TokenAssociationTest is Test, TestSetup {
     }
 
     function test_IHRC719_isAssociated() external {
-        address msgSender = makeAddr("msgSender");
-        assignAccountIdsToEVMAddressesForNonFork(msgSender);
+        address alice = makeAddr("alice");
+        assignAccountIdsToEVMAddressesForNonFork(alice);
 
-        vm.prank(msgSender);
+        vm.prank(alice);
         assertEq(IHRC719(USDC).isAssociated(), false);
     }
 
     function test_IHRC719_associate() external {
-        address msgSender = makeAddr("msgSender");
-        assignAccountIdsToEVMAddressesForNonFork(msgSender);
+        address alice = makeAddr("alice");
+        assignAccountIdsToEVMAddressesForNonFork(alice);
 
-        vm.startPrank(msgSender);
+        vm.startPrank(alice);
         assertEq(IHRC719(USDC).associate(), 1);
         assertEq(IHRC719(USDC).isAssociated(), true);
         vm.stopPrank();
     }
 
     function test_IHRC719_dissociate() external {
-        address msgSender = makeAddr("msgSender");
-        assignAccountIdsToEVMAddressesForNonFork(msgSender);
+        address alice = makeAddr("alice");
+        assignAccountIdsToEVMAddressesForNonFork(alice);
 
-        vm.startPrank(msgSender);
+        vm.startPrank(alice);
         assertEq(IHRC719(USDC).dissociate(), 1);
         assertEq(IHRC719(USDC).isAssociated(), false);
         vm.stopPrank();
     }
 
      function test_IHRC719_associate_then_dissociate() external {
-        address msgSender = makeAddr("msgSender");
-        assignAccountIdsToEVMAddressesForNonFork(msgSender);
+        address alice = makeAddr("alice");
+        assignAccountIdsToEVMAddressesForNonFork(alice);
 
-        vm.startPrank(msgSender);
+        vm.startPrank(alice);
         assertEq(IHRC719(USDC).associate(), 1);
         assertEq(IHRC719(USDC).isAssociated(), true);
         assertEq(IHRC719(USDC).dissociate(), 1);
