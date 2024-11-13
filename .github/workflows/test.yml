@@ -164,6 +164,9 @@ jobs:
         run: |
           forge test -vvv --fork-url https://testnet.hashio.io/api --chain 296 --no-storage-caching
 
+      - name: Show Mocked curl Requests
+        run: cat scripts/curl.log
+
   sol-tests-json-rpc-mock:
     name: 'Forge tests w/RPC mock server'
     runs-on: smart-contracts-linux-medium
