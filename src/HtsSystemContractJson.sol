@@ -28,7 +28,7 @@ contract HtsSystemContractJson is HtsSystemContract {
 
     // For testing, we support accounts created with `makeAddr`. These accounts will not exist on the mirror node,
     // so we calculate a deterministic (but unique) ID at runtime as a fallback.
-    function getAccountId(address account) htsCall public view override returns (uint32) {
+    function getAccountId(address account) htsCall external view override returns (uint32) {
         return uint32(bytes4(keccak256(abi.encodePacked(account))));
     }
 

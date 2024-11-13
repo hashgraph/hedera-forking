@@ -31,7 +31,7 @@ contract HtsSystemContract is IERC20Events {
      * See https://docs.hedera.com/hedera/core-concepts/accounts/account-properties
      * for more info on account properties.
      */
-    function getAccountId(address account) htsCall public virtual view returns (uint32 accountId) {
+    function getAccountId(address account) htsCall external virtual view returns (uint32 accountId) {
         bytes4 selector = this.getAccountId.selector;
         uint64 pad = 0x0;
         bytes32 slot = bytes32(abi.encodePacked(selector, pad, account));
