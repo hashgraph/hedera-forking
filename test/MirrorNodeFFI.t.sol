@@ -30,20 +30,22 @@ contract MirrorNodeFFITest is Test {
         }
     }
 
-    function test_revert_when_get_token_data_for_invalid_token_address() external {
+    modifier nonFork() {
         vm.skip(_skip);
+        _;
+    }
+
+    function test_revert_when_get_token_data_for_invalid_token_address() nonFork external {
         vm.expectRevert(bytes("Invalid token address"));
         _mirrorNode.getTokenData(makeAddr("invalid-token-address"));
     }
 
-    function test_revert_when_get_token_data_for_unknown_token() external {
-        vm.skip(_skip);
+    function test_revert_when_get_token_data_for_unknown_token() nonFork external {
         vm.expectRevert(bytes("Status not OK"));
         _mirrorNode.getTokenData(address(0x12345678));
     }
 
-    function test_get_data_for_existing_token() external {
-        vm.skip(_skip);
+    function test_get_data_for_existing_token() nonFork external {
         string memory json = _mirrorNode.getTokenData(USDC);
         assertEq(vm.parseJsonString(json, ".name"), "USD Coin");
         assertEq(vm.parseJsonString(json, ".symbol"), "USDC");
@@ -51,57 +53,48 @@ contract MirrorNodeFFITest is Test {
         assertEq(vm.parseJsonUint(json, ".total_supply"), 10000000005000000);
     }
 
-    function test_revert_when_get_balance_for_invalid_token_address() external {
-        vm.skip(_skip);
+    function test_revert_when_get_balance_for_invalid_token_address() nonFork external {
         vm.expectRevert(bytes("Invalid token address"));
         _mirrorNode.getBalance(makeAddr("invalid-token-address"), makeAddr("account"));
     }
 
-    function test_get_balance_for_unknown_account() external {
-        vm.skip(_skip);
+    function test_get_balance_for_unknown_account() nonFork external {
         vm.expectRevert(bytes("Account not found"));
         _mirrorNode.getBalance(address(0x12345678), makeAddr("account"));
     }
 
-    function test_revert_when_get_balance_for_unknown_token() external {
-        vm.skip(_skip);
+    function test_revert_when_get_balance_for_unknown_token() nonFork external {
         string memory json = _mirrorNode.getBalance(address(0x12345678), alice);
         assert(!vm.keyExistsJson(json, ".balances[0].balance"));
     }
 
-    function test_get_balance_for_existing_account() external {
-        vm.skip(_skip);
+    function test_get_balance_for_existing_account() nonFork external {
         string memory json = _mirrorNode.getBalance(USDC, alice);
         uint256 amount = vm.parseJsonUint(json, ".balances[0].balance");
         assertEq(amount, 49_300_000);
     }
 
-    function test_revert_when_get_allowance_for_invalid_token_address() external {
-        vm.skip(_skip);
+    function test_revert_when_get_allowance_for_invalid_token_address() nonFork external {
         vm.expectRevert(bytes("Invalid token address"));
         _mirrorNode.getAllowance(makeAddr("invalid-token-address"), makeAddr("owner"), makeAddr("spender"));
     }
 
-    function test_revert_when_get_allowance_for_unknown_owner() external {
-        vm.skip(_skip);
+    function test_revert_when_get_allowance_for_unknown_owner() nonFork external {
         vm.expectRevert(bytes("Account not found"));
         _mirrorNode.getAllowance(address(0x12345678), makeAddr("owner"), makeAddr("spender"));
     }
 
-    function test_revert_when_get_allowance_for_unknown_spender() external {
-        vm.skip(_skip);
+    function test_revert_when_get_allowance_for_unknown_spender() nonFork external {
         vm.expectRevert(bytes("Account not found"));
         _mirrorNode.getAllowance(address(0x12345678), alice, makeAddr("spender"));
     }
 
-    function test_get_allowance_for_unknown_token() external {
-        vm.skip(_skip);
+    function test_get_allowance_for_unknown_token() nonFork external {
         string memory json = _mirrorNode.getAllowance(address(0x12345678), alice, alice);
         assert(!vm.keyExistsJson(json, ".allowances[0].amount"));
     }
 
-    function test_get_allowance() external {
-        vm.skip(_skip);
+    function test_get_allowance() nonFork external {
         // https://hashscan.io/testnet/account/0.0.4233295
         address owner = address(0x000000000000000000000000000000000040984F);
         // https://hashscan.io/testnet/account/0.0.1335
