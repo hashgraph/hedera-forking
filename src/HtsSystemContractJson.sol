@@ -34,38 +34,6 @@ contract HtsSystemContractJson is HtsSystemContract {
 
     function __redirectForToken() internal override returns (bytes memory) {
         HtsSystemContractJson(HTS_ADDRESS).allowCheatcodes(address(this));
-        bytes4 selector = bytes4(msg.data[24:28]);
-        if (selector == IERC20.balanceOf.selector && msg.data.length >= 60) {
-            // We have to always read from this memory slot in order to make deal work correctly.
-            // bytes memory balance = super.__redirectForToken();
-            address account = address(bytes20(msg.data[40:60]));
-            _initBalance(account);
-            return super.__redirectForToken();
-        }
-        _initTokenData();
-        if (selector == IERC20.transfer.selector && msg.data.length >= 92) {
-            address from = msg.sender;
-            address to = address(bytes20(msg.data[40:60]));
-            _initBalance(from);
-            _initBalance(to);
-        } else if (selector == IERC20.transferFrom.selector && msg.data.length >= 124) {
-            address from = address(bytes20(msg.data[40:60]));
-            address to = address(bytes20(msg.data[72:92]));
-            address spender = msg.sender;
-            _initBalance(from);
-            _initBalance(to);
-            if (from != spender) {
-                _initAllowance(from, spender);
-            }
-        } else if (selector == IERC20.allowance.selector && msg.data.length >= 92) {
-            address owner = address(bytes20(msg.data[40:60]));
-            address spender = address(bytes20(msg.data[72:92]));
-            _initAllowance(owner, spender);
-        } else if (selector == IERC20.approve.selector && msg.data.length >= 92) {
-            address from = msg.sender;
-            address to = address(bytes20(msg.data[40:60]));
-            _initAllowance(from, to);
-        }
         return super.__redirectForToken();
     }
 
@@ -78,7 +46,7 @@ contract HtsSystemContractJson is HtsSystemContract {
     /**
      * @dev Reading Smart Contract's data into it's storage directly from the MirrorNode.
      */
-    function _initTokenData() private {
+    function _initTokenData() internal override {
         if (initialized) return;
         
         bytes32 slot;
@@ -100,20 +68,22 @@ contract HtsSystemContractJson is HtsSystemContract {
         vm.store(address(this), slot, bytes32(uint256(1)));
     }
 
-    function _initBalance(address account) private  {
+    function _balanceOfSlot(address account) internal override returns (bytes32) {
         bytes32 slot = super._balanceOfSlot(account);
         if (vm.load(_scratchAddr(), slot) == bytes32(0)) {
             uint256 amount = mirrorNode().getBalance(address(this), account);
             _setValue(slot, bytes32(amount));
         }
+        return slot;
     }
 
-    function _initAllowance(address owner, address spender) private  {
+    function _allowanceSlot(address owner, address spender) internal override returns (bytes32) {
         bytes32 slot = super._allowanceSlot(owner, spender);
         if (vm.load(_scratchAddr(), slot) == bytes32(0)) {
             uint256 amount = mirrorNode().getAllowance(address(this), owner, spender);
             _setValue(slot, bytes32(amount));
         }
+        return slot;
     }
 
     function _setValue(bytes32 slot, bytes32 value) private {
