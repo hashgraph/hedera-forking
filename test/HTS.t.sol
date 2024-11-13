@@ -5,8 +5,12 @@ import {Test} from "forge-std/Test.sol";
 import {TestSetup} from "./lib/TestSetup.sol";
 import {HtsSystemContract} from "../src/HtsSystemContract.sol";
 import {IHederaTokenService} from "../src/IHederaTokenService.sol";
+import {HVM} from "../src/HVM.sol";
+import {MirrorNodeLib} from "../src/MirrorNodeLib.sol";
+import {HtsSystemContractFFI} from "../src/HtsSystemContractFFI.sol";
 
 contract HTSTest is Test, TestSetup {
+    using HVM for *;
 
     function setUp() external {
         setUpMockStorageForNonFork();
@@ -50,33 +54,10 @@ contract HTSTest is Test, TestSetup {
 
     function test_mintToken_should_succeed_with_valid_input() external {
         address token = USDC;
-        address treasury = USDC_TREASURY;
         int64 amount = 1000;
         int64 initialTotalSupply = 0;
         bytes[] memory metadata = new bytes[](0);
-        IHederaTokenService.TokenInfo memory tokenInfo = IHederaTokenService.TokenInfo(
-            IHederaTokenService.HederaToken(
-                "USDC",
-                "USDC",
-                treasury,
-                "",
-                false,
-                initialTotalSupply + amount,
-                false,
-                new IHederaTokenService.TokenKey[](0),
-                IHederaTokenService.Expiry(0, address(0), 0)
-            ),
-            initialTotalSupply,
-            false,
-            false,
-            false,
-            new IHederaTokenService.FixedFee[](0),
-            new IHederaTokenService.FractionalFee[](0),
-            new IHederaTokenService.RoyaltyFee[](0),
-            ""
-        );
 
-        vm.mockCall(HTS, abi.encodeWithSelector(HtsSystemContract._mockTokenInfo.selector), abi.encode(tokenInfo));
         (int64 responseCode, int64 newTotalSupply, int64[] memory serialNumbers) = HtsSystemContract(HTS).mintToken(token, amount, metadata);
         assertEq(responseCode, 22);
         assertEq(serialNumbers.length, 0);
@@ -87,30 +68,13 @@ contract HTSTest is Test, TestSetup {
         address token = USDC;
         int64 amount = 1000;
         bytes[] memory metadata = new bytes[](0);
-        int64 totalSupply = 10000000005000000;
-        IHederaTokenService.TokenInfo memory tokenInfo = IHederaTokenService.TokenInfo(
-            IHederaTokenService.HederaToken(
-                "USDC",
-                "USDC",
-                address(0),
-                "",
-                false,
-                totalSupply + amount,
-                false,
-                new IHederaTokenService.TokenKey[](0),
-                IHederaTokenService.Expiry(0, address(0), 0)
-            ),
-            totalSupply,
-            false,
-            false,
-            false,
-            new IHederaTokenService.FixedFee[](0),
-            new IHederaTokenService.FractionalFee[](0),
-            new IHederaTokenService.RoyaltyFee[](0),
-            ""
-        );
 
-        vm.mockCall(HTS, abi.encodeWithSelector(HtsSystemContract._mockTokenInfo.selector), abi.encode(tokenInfo));
+        if (HTS.code.length >= 1) {
+            string memory accountId = string.concat("0.0.", vm.toString(USDC_TREASURY));
+            vm.mockCall(HTS, abi.encodeWithSelector(HtsSystemContractFFI.getAccountAddress.selector, accountId), abi.encode(address(0)));
+        } else {
+            HVM.storeString(USDC, HVM.getSlot("treasuryAccountId"), "0.0.0");
+        }
 
         vm.expectRevert(bytes("mintToken: invalid account"));
         HtsSystemContract(HTS).mintToken(token, amount, metadata);
@@ -136,38 +100,14 @@ contract HTSTest is Test, TestSetup {
 
     function test_burnToken_should_succeed_with_valid_input() external {
         address token = MFCT;
-        address treasury = MFCT_TREASURY;
         int64 amount = 1000;
         int64 initialTotalSupply = 0;
-        IHederaTokenService.TokenInfo memory tokenInfo = IHederaTokenService.TokenInfo(
-            IHederaTokenService.HederaToken(
-                "MFCT",
-                "MFCT",
-                treasury,
-                "",
-                false,
-                initialTotalSupply + amount,
-                false,
-                new IHederaTokenService.TokenKey[](0),
-                IHederaTokenService.Expiry(0, address(0), 0)
-            ),
-            initialTotalSupply,
-            false,
-            false,
-            false,
-            new IHederaTokenService.FixedFee[](0),
-            new IHederaTokenService.FractionalFee[](0),
-            new IHederaTokenService.RoyaltyFee[](0),
-            ""
-        );
 
-        vm.mockCall(HTS, abi.encodeWithSelector(HtsSystemContract._mockTokenInfo.selector), abi.encode(tokenInfo));
         (int64 responseCodeMint, int64 newTotalSupplyAfterMint, int64[] memory serialNumbers) = HtsSystemContract(HTS).mintToken(token, amount, new bytes[](0));
         assertEq(responseCodeMint, 22);
         assertEq(serialNumbers.length, 0);
         assertEq(newTotalSupplyAfterMint, initialTotalSupply + amount);
 
-        vm.mockCall(HTS, abi.encodeWithSelector(HtsSystemContract._mockTokenInfo.selector), abi.encode(tokenInfo));
         (int64 responseCodeBurn, int64 newTotalSupplyAfterBurn) = HtsSystemContract(HTS).burnToken(token, amount, serialNumbers);
         assertEq(responseCodeBurn, 22);
         assertEq(newTotalSupplyAfterBurn, initialTotalSupply);
@@ -176,32 +116,14 @@ contract HTSTest is Test, TestSetup {
     function test_burnToken_should_revert_with_invalid_treasureAccount() external {
         address token = MFCT;
         int64 amount = 1000;
-        int64 initialTotalSupply = 0;
         int64[] memory serialNumbers = new int64[](0);
-        IHederaTokenService.TokenInfo memory tokenInfo = IHederaTokenService.TokenInfo(
-            IHederaTokenService.HederaToken(
-                "MFCT",
-                "MFCT",
-                address(0),
-                "",
-                false,
-                initialTotalSupply + amount,
-                false,
-                new IHederaTokenService.TokenKey[](0),
-                IHederaTokenService.Expiry(0, address(0), 0)
-            ),
-            initialTotalSupply,
-            false,
-            false,
-            false,
-            new IHederaTokenService.FixedFee[](0),
-            new IHederaTokenService.FractionalFee[](0),
-            new IHederaTokenService.RoyaltyFee[](0),
-            ""
-        );
 
-        vm.mockCall(HTS, abi.encodeWithSelector(HtsSystemContract._mockTokenInfo.selector), abi.encode(tokenInfo));
-
+        if (HTS.code.length >= 1) {
+            string memory accountId = string(abi.encodePacked("0.0.", vm.toString(MFCT_TREASURY)));
+            vm.mockCall(HTS, abi.encodeWithSelector(HtsSystemContractFFI.getAccountAddress.selector, accountId), abi.encode(address(0)));
+        } else {
+            HVM.storeString(MFCT, HVM.getSlot("treasuryAccountId"), "0.0.0");
+        }
         vm.expectRevert(bytes("burnToken: invalid account"));
         HtsSystemContract(HTS).burnToken(token, amount, serialNumbers);
     }

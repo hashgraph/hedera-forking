@@ -82,13 +82,13 @@ contract TokenTest is Test, TestSetup, IERC20Events {
         address alice = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
         uint256 balance = IERC20(USDC).balanceOf(alice);
         console.log("alice's balance %s", balance);
-        assertEq(balance, 49_300000);
+        assertEq(balance, 54300000);
 
         // https://hashscan.io/testnet/account/0.0.2183
         address bob = 0x0000000000000000000000000000000000000887;
         balance = IERC20(USDC).balanceOf(bob);
         console.log("bob's balance %s", balance);
-        assertEq(balance, 370_000000);
+        assertEq(balance, 1958590000);
     }
 
     function test_ERC20_allowance_from_remote() view external {
@@ -165,11 +165,11 @@ contract TokenTest is Test, TestSetup, IERC20Events {
         address from = makeAddr("alice");
         address to = makeAddr("bob");
         vm.prank(owner);
-        IERC20(USDC).approve(from, 70_000000);
+        IERC20(USDC).approve(from, 60_000_000);
 
         vm.expectRevert(bytes("_transfer: insufficient balance"));
         vm.prank(from);
-        IERC20(USDC).transferFrom(owner, to, 50_000000);
+        IERC20(USDC).transferFrom(owner, to, 60_000_000);
     }
 
     function test_ERC20_transferFrom_should_transfer_and_spend_allowance() external {
@@ -186,7 +186,7 @@ contract TokenTest is Test, TestSetup, IERC20Events {
         vm.prank(alice);
         IERC20(USDC).approve(bob, allowanceAmount);
 
-        assertEq(IERC20(USDC).balanceOf(alice), 49_300000);
+        assertEq(IERC20(USDC).balanceOf(alice), 54300000);
         assertEq(IERC20(USDC).balanceOf(bob), 0);
         assertEq(IERC20(USDC).balanceOf(charlie), 0);
 
@@ -195,7 +195,7 @@ contract TokenTest is Test, TestSetup, IERC20Events {
         emit Transfer(alice, charlie, transferAmount);
         IERC20(USDC).transferFrom(alice, charlie, transferAmount);
 
-        assertEq(IERC20(USDC).balanceOf(alice), 49_300000 - 4_000000);
+        assertEq(IERC20(USDC).balanceOf(alice), 54300000 - 4000000);
         assertEq(IERC20(USDC).balanceOf(bob), 0);
         assertEq(IERC20(USDC).balanceOf(charlie), transferAmount);
         assertEq(IERC20(USDC).allowance(alice, bob), allowanceAmount - transferAmount);

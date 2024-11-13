@@ -18,14 +18,14 @@ abstract contract TestSetup is StdCheats {
      * https://testnet.mirrornode.hedera.com/api/v1/tokens/0.0.429274
      */
     address internal USDC = 0x0000000000000000000000000000000000068cDa;
-    address internal USDC_TREASURY = 0x0000000000000000000000000000000000001438;
+    uint32 internal USDC_TREASURY = 5176;
 
     /**
      * https://hashscan.io/testnet/token/0.0.4730999
      * https://testnet.mirrornode.hedera.com/api/v1/tokens/0.0.4730999
      */
     address internal MFCT = 0x0000000000000000000000000000000000483077;
-    address internal MFCT_TREASURY = 0x000000000000000000000000000000000028BC6B;
+    uint32 internal MFCT_TREASURY = 2669675;
 
     /**
      * 3 test modes.

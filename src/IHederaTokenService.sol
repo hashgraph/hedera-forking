@@ -204,6 +204,12 @@ interface IHederaTokenService {
         address feeCollector;
     }
 
+    /// Query token info
+    /// @param token The token address to check
+    /// @return responseCode The response code for the status of the request. SUCCESS is 22.
+    /// @return tokenInfo TokenInfo info for `token`
+    function getTokenInfo(address token) external returns (int64 responseCode, TokenInfo memory tokenInfo);
+
     function mintToken(address token, int64 amount, bytes[] memory metadata) external returns (
         int64 responseCode,
         int64 newTotalSupply,

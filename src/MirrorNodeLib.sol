@@ -90,6 +90,24 @@ library MirrorNodeLib {
         );
     }
 
+    function getAccountAddress(string memory accountId) internal returns (address) {
+        if (bytes(accountId).length == 0) {
+            return address(0);
+        }
+
+        string memory accountUrl = string(abi.encodePacked(
+            _mirrorNodeUrl(),
+            "accounts/",
+            accountId
+        ));
+        (uint256 accountStatusCode, bytes memory accountJson) = accountUrl.get();
+        if (accountStatusCode != 200) {
+            return address(0);
+        }
+
+        return abi.decode(vm.parseJson(string(accountJson), ".evm_address"), (address));
+    }
+
     function _mirrorNodeUrl() private view returns (string memory) {
         if (block.chainid == 295) {
             return "https://mainnet-public.mirrornode.hedera.com/api/v1/";

@@ -9,12 +9,76 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
 
     address internal constant HTS_ADDRESS = address(0x167);
 
+    struct IKey {
+        string _type;
+        string key;
+    }
+
+    struct IFixedFee {
+        bool allCollectorsAreExempt;
+        int64 amount;
+        string collectorAccountId;
+        string denominatingTokenId;
+    }
+
+    struct IFractionalAmount {
+        int64 numerator;
+        int64 denominator;
+    }
+
+    struct IFractionalFee {
+        bool allCollectorsAreExempt;
+        IFractionalAmount amount;
+        string collectorAccountId;
+        string denominatingTokenId;
+        int64 maximum;
+        int64 minimum;
+        bool netOfTransfers;
+    }
+
+    struct IRoyaltyFee {
+        bool allCollectorsAreExempt;
+        IFractionalAmount amount;
+        string collectorAccountId;
+        IFallbackFee fallbackFee;
+    }
+
+    struct IFallbackFee {
+        int64 amount;
+        string denominatingTokenId;
+    }
+
+    struct ICustomFees {
+        string createdTimestamp;
+        IFixedFee[] fixedFees;
+        IFractionalFee[] fractionalFees;
+        IRoyaltyFee[] royaltyFees;
+    }
+
     // All ERC20 properties are accessed with a `delegatecall` from the Token Proxy.
     // See `__redirectForToken` for more details.
     string internal name;
     string internal symbol;
     uint8 private decimals;
     uint256 private totalSupply;
+    uint256 private maxSupply;
+    bool private freezeDefault;
+    string private supplyType;
+    string private pauseStatus;
+    IKey private adminKey;
+    IKey private feeScheduleKey;
+    IKey private freezeKey;
+    IKey private kycKey;
+    IKey private pauseKey;
+    IKey private supplyKey;
+    IKey private wipeKey;
+    int64 private expiryTimestamp;
+    string private autoRenewAccount;
+    int64 private autoRenewPeriod;
+    ICustomFees private customFees;
+    bool private deleted;
+    string private memo;
+    string private treasuryAccountId;
 
     /**
      * @dev Prevents delegatecall into the modified method.
@@ -43,27 +107,129 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
         }
     }
 
-    function _mockTokenInfo() public view returns (IHederaTokenService.TokenInfo memory tokenInfo) {
-        tokenInfo = IHederaTokenService.TokenInfo(
-            IHederaTokenService.HederaToken(
-                "",
-                "",
-                address(0),
-                "",
-                false,
-                0,
-                false,
-                new IHederaTokenService.TokenKey[](0),
-                IHederaTokenService.Expiry(0, address(0), 0)
+    function getAccountAddress(string memory accountId) htsCall public virtual returns (address evm_address) {
+        if (bytes(accountId).length < 4) {
+            return address(0);
+        }
+        // ignore the first 4 characters ("0.0.") to get the account number string
+        bytes memory accountIdBytes = bytes(accountId);
+        bytes memory accountNumBytes = new bytes(accountIdBytes.length - 4);
+        for (uint i = 0; i < accountNumBytes.length; i++) {
+            accountNumBytes[i] = accountIdBytes[i + 4];
+        }
+        uint32 accountNum = uint32(_parseUint(string(accountNumBytes)));
+
+        bytes4 selector = this.getAccountAddress.selector;
+        uint192 pad = 0x0;
+        uint256 slot = uint256(bytes32(abi.encodePacked(selector, pad, accountNum)));
+        assembly {
+            evm_address := sload(slot)
+        }
+    }
+
+    function _tokenInfo() public returns (TokenInfo memory tokenInfo) {
+        FixedFee[] memory fixedFees = new FixedFee[](customFees.fixedFees.length);
+        for (uint256 i = 0; i < customFees.fixedFees.length; i++) {
+            IFixedFee memory fixedFee = customFees.fixedFees[i];
+
+            address denominatingToken = HtsSystemContract(HTS_ADDRESS).getAccountAddress(fixedFee.denominatingTokenId);
+            address collectorAccount = HtsSystemContract(HTS_ADDRESS).getAccountAddress(fixedFee.collectorAccountId);
+
+            fixedFees[i] = FixedFee(
+                fixedFee.amount,
+                denominatingToken,
+                denominatingToken == address(0),
+                denominatingToken == address(this),
+                collectorAccount
+            );
+        }
+
+        FractionalFee[] memory fractionalFees = new FractionalFee[](customFees.fractionalFees.length);
+        for (uint256 i = 0; i < customFees.fractionalFees.length; i++) {
+            IFractionalFee memory fractionalFee = customFees.fractionalFees[i];
+
+            address denominatingToken = HtsSystemContract(HTS_ADDRESS).getAccountAddress(fractionalFee.denominatingTokenId);
+
+            fractionalFees[i] = FractionalFee(
+                fractionalFee.amount.numerator,
+                fractionalFee.amount.denominator,
+                fractionalFee.maximum,
+                fractionalFee.minimum,
+                fractionalFee.netOfTransfers,
+                denominatingToken
+            );
+        }
+
+        RoyaltyFee[] memory royaltyFees = new RoyaltyFee[](customFees.royaltyFees.length);
+        for (uint256 i = 0; i < customFees.royaltyFees.length; i++) {
+            IRoyaltyFee memory royaltyFee = customFees.royaltyFees[i];
+
+            address collectorAccount = HtsSystemContract(HTS_ADDRESS).getAccountAddress(royaltyFee.collectorAccountId);
+
+            royaltyFees[i] = RoyaltyFee(
+                royaltyFee.amount.numerator,
+                royaltyFee.amount.denominator,
+                royaltyFee.fallbackFee.amount,
+                HtsSystemContract(HTS_ADDRESS).getAccountAddress(royaltyFee.fallbackFee.denominatingTokenId),
+                collectorAccount == address(0),
+                collectorAccount
+            );
+        }
+
+        TokenKey[] memory tokenKeys = new TokenKey[](7);
+        tokenKeys[0] = _createTokenKey(adminKey, 0x1);
+        tokenKeys[1] = _createTokenKey(kycKey, 0x2);
+        tokenKeys[2] = _createTokenKey(freezeKey, 0x4);
+        tokenKeys[3] = _createTokenKey(wipeKey, 0x8);
+        tokenKeys[4] = _createTokenKey(supplyKey, 0x10);
+        tokenKeys[5] = _createTokenKey(feeScheduleKey, 0x20);
+        tokenKeys[6] = _createTokenKey(pauseKey, 0x40);
+
+        // Add detailed checks and logging
+        require(maxSupply <= type(uint64).max, "_tokenInfo: maxSupply exceeds uint64 max");
+        require(totalSupply <= type(uint64).max, "_tokenInfo: totalSupply exceeds uint64 max");
+
+        int64 maxSupplyInt64 = int64(uint64(maxSupply));
+        int64 totalSupplyInt64 = int64(uint64(totalSupply));
+        require(maxSupplyInt64 >= 0, "_tokenInfo: maxSupply overflow");
+        require(totalSupplyInt64 >= 0, "_tokenInfo: totalSupply overflow");
+
+        address treasury = HtsSystemContract(HTS_ADDRESS).getAccountAddress(treasuryAccountId);
+        address autoRenew = HtsSystemContract(HTS_ADDRESS).getAccountAddress(autoRenewAccount);
+
+        tokenInfo = TokenInfo(
+            HederaToken(
+                name,
+                symbol,
+                treasury,
+                memo,
+                _compare(supplyType, "FINITE") == 0,
+                maxSupplyInt64,
+                freezeDefault,
+                tokenKeys,
+                Expiry(expiryTimestamp, autoRenew, autoRenewPeriod)
             ),
-            int64(uint64(totalSupply)),
+            totalSupplyInt64,
+            deleted,
             false,
-            false,
-            false,
-            new IHederaTokenService.FixedFee[](0),
-            new IHederaTokenService.FractionalFee[](0),
-            new IHederaTokenService.RoyaltyFee[](0),
-            ""
+            _compare(pauseStatus, "PAUSED") == 0,
+            fixedFees,
+            fractionalFees,
+            royaltyFees,
+            "0x00"
+        );
+    }
+
+    function _createTokenKey(IKey memory key, uint8 keyType) public pure returns (TokenKey memory) {
+        return TokenKey(
+            keyType,
+            KeyValue(
+                false,
+                address(0),
+                _compare(key._type, "ED25519") == 0 ? bytes(key.key) : new bytes(0),
+                _compare(key._type, "ECDSA_SECP256K1") == 0 ? bytes(key.key) : new bytes(0),
+                address(0)
+            )
         );
     }
 
@@ -86,7 +252,12 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
         require(token != address(0), "mintToken: invalid token");
         require(amount > 0, "mintToken: invalid amount");
 
-        IHederaTokenService.TokenInfo memory tokenInfo = this._mockTokenInfo();
+        (bool success, bytes memory data) = token.staticcall(
+            abi.encodeWithSelector(this.getTokenInfo.selector, token)
+        );
+        require(success, "Failed to get token info");
+        IHederaTokenService.TokenInfo memory tokenInfo = abi.decode(data, (TokenInfo));
+
         address treasuryAccount = tokenInfo.token.treasury;
         require(treasuryAccount != address(0), "mintToken: invalid account");
 
@@ -114,7 +285,12 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
         require(token != address(0), "burnToken: invalid token");
         require(amount > 0, "burnToken: invalid amount");
 
-        IHederaTokenService.TokenInfo memory tokenInfo = this._mockTokenInfo();
+        (bool success, bytes memory data) = token.staticcall(
+            abi.encodeWithSelector(this.getTokenInfo.selector, token)
+        );
+        require(success, "Failed to get token info");
+        IHederaTokenService.TokenInfo memory tokenInfo = abi.decode(data, (TokenInfo));
+
         address treasuryAccount = tokenInfo.token.treasury;
         require(treasuryAccount != address(0), "burnToken: invalid account");
 
@@ -123,6 +299,17 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
         responseCode = 22; // HederaResponseCodes.SUCCESS
         newTotalSupply = int64(uint64(totalSupply));
         require(newTotalSupply >= 0, "burnToken: invalid total supply");
+    }
+
+    function getTokenInfo(address token) external view returns (int64 responseCode, TokenInfo memory tokenInfo) {
+        require(token != address(0), "getTokenInfo: invalid token");
+
+        (bool success, bytes memory data) = token.staticcall(
+            abi.encodeWithSelector(this.getTokenInfo.selector, token)
+        );
+        require(success, "Failed to get token info");
+        tokenInfo = abi.decode(data, (TokenInfo));
+        responseCode = 22; // HederaResponseCodes.SUCCESS
     }
 
     /**
@@ -264,6 +451,9 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
                 res := sload(slot)
             }
             return abi.encode(res);
+        } else if (selector == this.getTokenInfo.selector) {
+            require(msg.data.length >= 28, "getTokenInfo: Not enough calldata");
+            return abi.encode(_tokenInfo());
         }
         revert ("redirectForToken: not supported");
     }
@@ -356,5 +546,44 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
                 _approve(owner, spender, currentAllowance - amount);
             }
         }
+    }
+
+    function _compare(string memory _a, string memory _b) public pure returns (int) {
+        bytes memory a = bytes(_a);
+        bytes memory b = bytes(_b);
+        uint minLength = a.length;
+        if (b.length < minLength) minLength = b.length;
+
+        uint i = 0;
+        while (i + 32 <= minLength) {
+            bytes32 aPart;
+            bytes32 bPart;
+            assembly {
+                aPart := mload(add(a, add(32, i)))
+                bPart := mload(add(b, add(32, i)))
+            }
+            if (aPart < bPart) return -1;
+            else if (aPart > bPart) return 1;
+            i += 32;
+        }
+
+        for (; i < minLength; i++) {
+            if (a[i] < b[i]) return -1;
+            else if (a[i] > b[i]) return 1;
+        }
+
+        if (a.length < b.length) return -1;
+        else if (a.length > b.length) return 1;
+        else return 0;
+    }
+
+    function _parseUint(string memory numString) public pure returns (uint) {
+        uint val = 0;
+        bytes memory stringBytes = bytes(numString);
+        for (uint i = 0; i < stringBytes.length; i++) {
+            require(uint8(stringBytes[i]) >= 48 && uint8(stringBytes[i]) <= 57, "parseUint: invalid string");
+            val = val * 10 + (uint8(stringBytes[i]) - 48);
+        }
+        return val;
     }
 }

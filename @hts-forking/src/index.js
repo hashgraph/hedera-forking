@@ -18,7 +18,7 @@
 
 const { strict: assert } = require('assert');
 const { keccak256 } = require('ethers');
-const { ZERO_HEX_32_BYTE, toIntHex256, toSnakeCase } = require('./utils');
+const { ZERO_HEX_20_BYTE, ZERO_HEX_32_BYTE, toIntHex256, toSnakeCase } = require('./utils');
 
 const hts = require('../resources/HtsSystemContract.json');
 
@@ -122,7 +122,7 @@ module.exports = {
         if (address === module.exports.HTSAddress) {
             // Encoded `address(0x167).getAccountId(address)` slot
             // slot(256) = `getAccountId`selector(32) + padding(64) + address(160)
-            if (nrequestedSlot >> 160n === 0xe0b490f7_0000_0000_0000_0000n) {
+            if (nrequestedSlot >> 224n === 0xe0b490f7n) {
                 const encodedAddress = requestedSlot.slice(-40);
                 const account = await mirrorNodeClient.getAccount(encodedAddress);
                 if (account === null)
@@ -149,7 +149,25 @@ module.exports = {
                 );
             }
 
-            return rtrace(ZERO_HEX_32_BYTE, `Requested slot for 0x167 matches field, not found`);
+            // Encoded `address(0x167).getAccountAddress(string)` slot
+            // slot(256) = `getAccountAddress`selector(32) + padding(192) + uint(32)
+            if (nrequestedSlot >> 224n === 0x615deb16n) {
+                const accountNum = parseInt(requestedSlot.slice(-8), 16);
+                const accountId = `0.0.${accountNum}`;
+                const account = await mirrorNodeClient.getAccount(accountId);
+                if (account === null)
+                    return rtrace(
+                        ZERO_HEX_20_BYTE,
+                        `Requested account id to EVM address, but account with id '${accountId}' not found`
+                    );
+
+                return rtrace(
+                    account.evm_address,
+                    `Requested account id to EVM address, and slot matches \`getAccountAddress\``
+                );
+            }
+
+            return rtrace(ZERO_HEX_20_BYTE, `Requested slot for 0x167 matches field, not found`);
         }
 
         const tokenId = `0.0.${parseInt(address, 16)}`;

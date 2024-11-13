@@ -89,6 +89,7 @@ interface IMirrorNodeClient {
         requestIdPrefix?: string
     ): Promise<{
         account: string;
+        evm_address: string;
     } | null>;
 }
 
