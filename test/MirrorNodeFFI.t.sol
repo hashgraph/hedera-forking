@@ -37,16 +37,16 @@ contract MirrorNodeFFITest is Test {
 
     function test_revert_when_get_token_data_for_invalid_token_address() nonFork external {
         vm.expectRevert(bytes("Invalid token address"));
-        _mirrorNode.getTokenData(makeAddr("invalid-token-address"));
+        _mirrorNode.fetchTokenData(makeAddr("invalid-token-address"));
     }
 
     function test_revert_when_get_token_data_for_unknown_token() nonFork external {
         vm.expectRevert(bytes("Status not OK"));
-        _mirrorNode.getTokenData(address(0x12345678));
+        _mirrorNode.fetchTokenData(address(0x12345678));
     }
 
     function test_get_data_for_existing_token() nonFork external {
-        string memory json = _mirrorNode.getTokenData(USDC);
+        string memory json = _mirrorNode.fetchTokenData(USDC);
         assertEq(vm.parseJsonString(json, ".name"), "USD Coin");
         assertEq(vm.parseJsonString(json, ".symbol"), "USDC");
         assertEq(vm.parseJsonUint(json, ".decimals"), 6);
@@ -55,43 +55,41 @@ contract MirrorNodeFFITest is Test {
 
     function test_revert_when_get_balance_for_invalid_token_address() nonFork external {
         vm.expectRevert(bytes("Invalid token address"));
-        _mirrorNode.getBalance(makeAddr("invalid-token-address"), makeAddr("account"));
+        _mirrorNode.fetchBalance(makeAddr("invalid-token-address"), 1234);
     }
 
     function test_get_balance_for_unknown_account() nonFork external {
-        vm.expectRevert(bytes("Account not found"));
-        _mirrorNode.getBalance(address(0x12345678), makeAddr("account"));
+        uint256 amount = _mirrorNode.getBalance(address(0x12345678), makeAddr("account"));
+        assertEq(amount, 0);
     }
 
     function test_revert_when_get_balance_for_unknown_token() nonFork external {
-        string memory json = _mirrorNode.getBalance(address(0x12345678), alice);
-        assert(!vm.keyExistsJson(json, ".balances[0].balance"));
+        uint256 amount = _mirrorNode.getBalance(address(0x12345678), alice);
+        assertEq(amount, 0);
     }
 
     function test_get_balance_for_existing_account() nonFork external {
-        string memory json = _mirrorNode.getBalance(USDC, alice);
-        uint256 amount = vm.parseJsonUint(json, ".balances[0].balance");
+        uint256 amount = _mirrorNode.getBalance(USDC, alice);
         assertEq(amount, 49_300_000);
     }
 
     function test_revert_when_get_allowance_for_invalid_token_address() nonFork external {
         vm.expectRevert(bytes("Invalid token address"));
-        _mirrorNode.getAllowance(makeAddr("invalid-token-address"), makeAddr("owner"), makeAddr("spender"));
+        _mirrorNode.fetchAllowance(makeAddr("invalid-token-address"), 1234, 5678);
     }
 
     function test_revert_when_get_allowance_for_unknown_owner() nonFork external {
-        vm.expectRevert(bytes("Account not found"));
-        _mirrorNode.getAllowance(address(0x12345678), makeAddr("owner"), makeAddr("spender"));
+        uint256 amount = _mirrorNode.getAllowance(address(0x12345678), makeAddr("owner"), makeAddr("spender"));
+        assertEq(amount, 0);
     }
 
     function test_revert_when_get_allowance_for_unknown_spender() nonFork external {
-        vm.expectRevert(bytes("Account not found"));
-        _mirrorNode.getAllowance(address(0x12345678), alice, makeAddr("spender"));
+        uint256 amount = _mirrorNode.getAllowance(address(0x12345678), alice, makeAddr("spender"));
+        assertEq(amount, 0);
     }
 
     function test_get_allowance_for_unknown_token() nonFork external {
-        string memory json = _mirrorNode.getAllowance(address(0x12345678), alice, alice);
-        assert(!vm.keyExistsJson(json, ".allowances[0].amount"));
+        assertEq(_mirrorNode.getAllowance(address(0x12345678), alice, alice), 0);
     }
 
     function test_get_allowance() nonFork external {
@@ -99,8 +97,7 @@ contract MirrorNodeFFITest is Test {
         address owner = address(0x000000000000000000000000000000000040984F);
         // https://hashscan.io/testnet/account/0.0.1335
         address spender = 0x0000000000000000000000000000000000000537;
-        string memory json = _mirrorNode.getAllowance(address(USDC), owner, spender);
-        uint256 amount = vm.parseJsonUint(json, ".allowances[0].amount");
+        uint256 amount = _mirrorNode.getAllowance(address(USDC), owner, spender);
         assertEq(amount, 5_000_000);
     }
 }

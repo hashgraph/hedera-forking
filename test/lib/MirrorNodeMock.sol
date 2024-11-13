@@ -2,11 +2,9 @@
 pragma solidity ^0.8.0;
 
 import {Vm} from "forge-std/Vm.sol";
-import {IMirrorNode} from "../../src/IMirrorNode.sol";
+import {MirrorNode} from "../../src/MirrorNode.sol";
 
-contract MirrorNodeMock is IMirrorNode {
-
-    Vm private constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
+contract MirrorNodeMock is MirrorNode {
 
     mapping (address => string) private _symbolOf;
 
@@ -20,36 +18,29 @@ contract MirrorNodeMock is IMirrorNode {
         _symbolOf[token] = symbol;
     }
 
-    function getTokenData(address token) external view returns (string memory) {
+    function fetchTokenData(address token) isValid(token) external override view returns (string memory) {
         string memory symbol = _symbolOf[token];
         string memory path = string.concat("./@hts-forking/test/data/", symbol, "/getToken.json");
         return vm.readFile(path);
     }
 
-    function getBalance(address token, address account) external returns (string memory) {
+    function fetchBalance(address token, uint32 accountNum) isValid(token) external override view returns (string memory) {
         string memory symbol = _symbolOf[token];
-        string memory accountId = vm.toString(_getAccountId(account));
+        string memory accountId = vm.toString(accountNum);
         string memory path = string.concat("./@hts-forking/test/data/", symbol, "/getBalanceOfToken_0.0.", accountId, ".json");
         return vm.readFile(path);
     }
 
-    function getAllowance(address token, address owner, address spender) external returns (string memory) {
+    function fetchAllowance(address token, uint32 ownerNum, uint32 spenderNum) isValid(token) external override view returns (string memory) {
         string memory symbol = _symbolOf[token];
-        string memory ownerId = vm.toString(_getAccountId(owner));
-        string memory spenderId = vm.toString(_getAccountId(spender));
+        string memory ownerId = vm.toString(ownerNum);
+        string memory spenderId = vm.toString(spenderNum);
         string memory path = string.concat("./@hts-forking/test/data/", symbol, "/getAllowanceForToken_0.0.", ownerId, "_0.0.", spenderId, ".json");
         return vm.readFile(path);
     }
 
-    function _getAccountId(address account) private returns (uint32) {
+    function fetchAccount(address account) external override view returns (string memory) {
         string memory path = string.concat("./@hts-forking/test/data/getAccount_", vm.toLowercase(vm.toString(account)), ".json");
-        uint256 accountId;
-        if (vm.isFile(path)) {
-            string memory json = vm.readFile(path);
-            accountId = vm.parseUint(vm.replace(vm.parseJsonString(json, ".account"), "0.0.", ""));
-        } else {
-            accountId = uint160(account);
-        }
-        return uint32(accountId);
+        return vm.readFile(path);
     }
 }

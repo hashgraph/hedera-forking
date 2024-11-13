@@ -4,17 +4,17 @@ pragma solidity ^0.8.0;
 import {Vm} from "forge-std/Vm.sol";
 import {HtsSystemContract, HTS_ADDRESS} from "./HtsSystemContract.sol";
 import {IERC20} from "./IERC20.sol";
-import {IMirrorNode} from "./IMirrorNode.sol";
+import {MirrorNode} from "./MirrorNode.sol";
 import {storeString} from "./StrStore.sol";
 
 contract HtsSystemContractJson is HtsSystemContract {
     Vm private constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
-    IMirrorNode private _mirrorNode;
+    MirrorNode private _mirrorNode;
 
     bool private initialized;
 
-    function setMirrorNodeProvider(IMirrorNode mirrorNode_) htsCall external {
+    function setMirrorNodeProvider(MirrorNode mirrorNode_) htsCall external {
         _mirrorNode = mirrorNode_;
     }
 
@@ -69,10 +69,10 @@ contract HtsSystemContractJson is HtsSystemContract {
         return super.__redirectForToken();
     }
 
-    function mirrorNode() private view returns (IMirrorNode) {
+    function mirrorNode() private view returns (MirrorNode) {
         bytes32 slot;
         assembly { slot := _mirrorNode.slot }
-        return IMirrorNode(address(uint160(uint256(vm.load(HTS_ADDRESS, slot)))));
+        return MirrorNode(address(uint160(uint256(vm.load(HTS_ADDRESS, slot)))));
     }
 
     /**
@@ -82,7 +82,7 @@ contract HtsSystemContractJson is HtsSystemContract {
         if (initialized) return;
         
         bytes32 slot;
-        string memory json = mirrorNode().getTokenData(address(this));
+        string memory json = mirrorNode().fetchTokenData(address(this));
 
         assembly { slot := name.slot }
         storeString(address(this), uint256(slot), vm.parseJsonString(json, ".name"));
@@ -103,12 +103,7 @@ contract HtsSystemContractJson is HtsSystemContract {
     function _initBalance(address account) private  {
         bytes32 slot = super._balanceOfSlot(account);
         if (vm.load(_scratchAddr(), slot) == bytes32(0)) {
-            uint256 amount = 0;
-            try mirrorNode().getBalance(address(this), account) returns (string memory json) {
-                if (vm.keyExistsJson(json, ".balances[0].balance")) {
-                    amount = vm.parseJsonUint(json, ".balances[0].balance");
-                }
-            } catch {}
+            uint256 amount = mirrorNode().getBalance(address(this), account);
             _setValue(slot, bytes32(amount));
         }
     }
@@ -116,12 +111,7 @@ contract HtsSystemContractJson is HtsSystemContract {
     function _initAllowance(address owner, address spender) private  {
         bytes32 slot = super._allowanceSlot(owner, spender);
         if (vm.load(_scratchAddr(), slot) == bytes32(0)) {
-            uint256 amount = 0;
-            try mirrorNode().getAllowance(address(this), owner, spender) returns (string memory json) {
-                if (vm.keyExistsJson(json, ".allowances[0].amount")) {
-                    amount = vm.parseJsonUint(json, ".allowances[0].amount");
-                }
-            } catch {}
+            uint256 amount = mirrorNode().getAllowance(address(this), owner, spender);
             _setValue(slot, bytes32(amount));
         }
     }
