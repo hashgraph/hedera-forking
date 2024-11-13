@@ -251,6 +251,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
     ) {
         require(token != address(0), "mintToken: invalid token");
         require(amount > 0, "mintToken: invalid amount");
+        require(serialNumbers.length == 0, "burnToken: invalid serial numbers");
 
         (bool success, bytes memory data) = token.staticcall(
             abi.encodeWithSelector(this.getTokenInfo.selector, token)
@@ -284,6 +285,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
     ) {
         require(token != address(0), "burnToken: invalid token");
         require(amount > 0, "burnToken: invalid amount");
+        require(serialNumbers.length == 0, "burnToken: invalid serial numbers");
 
         (bool success, bytes memory data) = token.staticcall(
             abi.encodeWithSelector(this.getTokenInfo.selector, token)
