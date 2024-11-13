@@ -11,9 +11,6 @@ contract MirrorNodeFFITest is Test {
     // https://hashscan.io/testnet/account/0.0.1421
     address private constant alice = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
 
-    // https://hashscan.io/testnet/account/0.0.1335
-    address private constant bob = 0x0000000000000000000000000000000000000537;
-
     MirrorNodeFFI private _mirrorNode;
 
     bool private _skip;
@@ -68,14 +65,14 @@ contract MirrorNodeFFITest is Test {
 
     function test_revert_when_get_balance_for_unknown_token() external {
         vm.skip(_skip);
-        vm.expectRevert(bytes("Status not OK"));
-        _mirrorNode.getBalance(address(0x12345678), alice);
+        string memory json = _mirrorNode.getBalance(address(0x12345678), alice);
+        assert(!vm.keyExistsJson(json, ".balances[0].balance"));
     }
 
     function test_get_balance_for_existing_account() external {
         vm.skip(_skip);
         string memory json = _mirrorNode.getBalance(USDC, alice);
-        uint256 amount = abi.decode(vm.parseJson(json, ".balances[0].balance"), (uint256));
+        uint256 amount = vm.parseJsonUint(json, ".balances[0].balance");
         assertEq(amount, 49_300_000);
     }
 
@@ -85,4 +82,32 @@ contract MirrorNodeFFITest is Test {
         _mirrorNode.getAllowance(makeAddr("invalid-token-address"), makeAddr("owner"), makeAddr("spender"));
     }
 
+    function test_revert_when_get_allowance_for_unknown_owner() external {
+        vm.skip(_skip);
+        vm.expectRevert(bytes("Account not found"));
+        _mirrorNode.getAllowance(address(0x12345678), makeAddr("owner"), makeAddr("spender"));
+    }
+
+    function test_revert_when_get_allowance_for_unknown_spender() external {
+        vm.skip(_skip);
+        vm.expectRevert(bytes("Account not found"));
+        _mirrorNode.getAllowance(address(0x12345678), alice, makeAddr("spender"));
+    }
+
+    function test_get_allowance_for_unknown_token() external {
+        vm.skip(_skip);
+        string memory json = _mirrorNode.getAllowance(address(0x12345678), alice, alice);
+        assert(!vm.keyExistsJson(json, ".allowances[0].amount"));
+    }
+
+    function test_get_allowance() external {
+        vm.skip(_skip);
+        // https://hashscan.io/testnet/account/0.0.4233295
+        address owner = address(0x000000000000000000000000000000000040984F);
+        // https://hashscan.io/testnet/account/0.0.1335
+        address spender = 0x0000000000000000000000000000000000000537;
+        string memory json = _mirrorNode.getAllowance(address(USDC), owner, spender);
+        uint256 amount = vm.parseJsonUint(json, ".allowances[0].amount");
+        assertEq(amount, 5_000_000);
+    }
 }

@@ -46,7 +46,7 @@ contract MirrorNodeMock is IMirrorNode {
         uint256 accountId;
         if (vm.isFile(path)) {
             string memory json = vm.readFile(path);
-            accountId = vm.parseUint(vm.replace(abi.decode(vm.parseJson(json, ".account"), (string)), "0.0.", ""));
+            accountId = vm.parseUint(vm.replace(vm.parseJsonString(json, ".account"), "0.0.", ""));
         } else {
             accountId = uint160(account);
         }

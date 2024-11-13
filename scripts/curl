@@ -33,7 +33,8 @@ for (const [re, fn] of /** @type {const} */([
     [/^tokens\/([\w.]+)\/balances$/, tokenId => {
         assert(typeof tokenId === 'string');
         const token = tokens[tokenId];
-        if (token === undefined) return undefined;
+        if (token === undefined)
+            return { timestamp: null, balances: [], links: { next: null } };
 
         const accountId = searchParams.get('account.id');
         assert(accountId !== null);
@@ -59,7 +60,8 @@ for (const [re, fn] of /** @type {const} */([
         assert(spenderId !== null);
 
         const token = tokens[tokenId];
-        assert(token !== undefined);
+        if (token === undefined)
+            return { allowances: [], links: { next: null } };
 
         try {
             return require(`../@hts-forking/test/data/${token.symbol}/getAllowanceForToken_${accountId}_${spenderId}.json`);

@@ -10,8 +10,17 @@ contract MirrorNodeFFI is IMirrorNode {
 
     Vm private constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
-    function getTokenData(address token) external returns (string memory) {
+    /**
+     * @dev Requires that `token` address is a valid HTS token address.
+     * That is, that is no greater than MAX value of `uint32`.
+     * Technically, AccountNum is 64 bits, but here constraint them to 32 bits.
+     */
+    modifier isValid(address token) {
         require((uint160(token) >> 32) == 0, "Invalid token address");
+        _;
+    }
+
+    function getTokenData(address token) isValid(token) external returns (string memory) {
         (uint256 status, bytes memory json) = Surl.get(string.concat(
             _mirrorNodeUrl(),
             "tokens/0.0.",
@@ -21,23 +30,19 @@ contract MirrorNodeFFI is IMirrorNode {
         return string(json);
     }
 
-    function getBalance(address token, address account) external returns (string memory) {
-        require((uint160(token) >> 32) == 0, "Invalid token address");
-        uint32 accountId = _getAccountIdCached(account);
-        require(accountId != 0, "Account not found");
+    function getBalance(address token, address account) isValid(token) external returns (string memory) {
         (uint256 status, bytes memory json) = Surl.get(string.concat(
             _mirrorNodeUrl(),
             "tokens/0.0.",
             vm.toString(uint160(token)),
             "/balances?account.id=0.0.",
-            vm.toString(accountId)
+            vm.toString(_getAccountIdCached(account))
         ));
         require(status == 200, "Status not OK");
         return string(json);
     }
 
-    function getAllowance(address token, address owner, address spender) external returns (string memory) {
-        require((uint160(token) >> 32) == 0, "Invalid token address");
+    function getAllowance(address token, address owner, address spender) isValid(token) external returns (string memory) {
         (uint256 status, bytes memory json) = Surl.get(string.concat(
             _mirrorNodeUrl(),
             "accounts/0.0.",
@@ -61,6 +66,7 @@ contract MirrorNodeFFI is IMirrorNode {
             return uint32(uint256(vm.load(HTS_ADDRESS, cachedValueSlot)));
         }
         uint32 accountId = _getAccountId(account);
+        require(accountId != 0, "Account not found");
         vm.store(HTS_ADDRESS, bytes32(cachedValueSlot), bytes32(uint256(accountId)));
         vm.store(HTS_ADDRESS, bytes32(cacheStatusSlot), bytes32(uint256(1)));
         return accountId;
