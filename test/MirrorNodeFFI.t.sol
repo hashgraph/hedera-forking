@@ -22,6 +22,7 @@ contract MirrorNodeFFITest is Test {
         } catch {
             _skip = false;
             vm.chainId(296);
+            vm.roll(8535327);
 
             string memory PATH = vm.envString("PATH");
             vm.setEnv("PATH", string.concat("./scripts:", PATH));
@@ -41,7 +42,7 @@ contract MirrorNodeFFITest is Test {
     }
 
     function test_revert_when_get_token_data_for_unknown_token() nonFork external {
-        vm.expectRevert(bytes("Status not OK"));
+        vm.expectRevert(bytes('{"_status":{"messages":[{"message":"Not found"}]}}'));
         _mirrorNode.fetchTokenData(address(0x12345678));
     }
 
