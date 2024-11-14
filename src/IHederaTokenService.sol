@@ -210,6 +210,17 @@ interface IHederaTokenService {
     /// @return tokenInfo TokenInfo info for `token`
     function getTokenInfo(address token) external returns (int64 responseCode, TokenInfo memory tokenInfo);
 
+    /// Mints an amount of the token to the defined treasury account
+    /// @param token The token for which to mint tokens. If token does not exist, transaction results in
+    ///              INVALID_TOKEN_ID
+    /// @param amount Applicable to tokens of type FUNGIBLE_COMMON. The amount to mint to the Treasury Account.
+    ///               Amount must be a positive non-zero number represented in the lowest denomination of the
+    ///               token. The new supply must be lower than 2^63.
+    /// @param metadata Applicable to tokens of type NON_FUNGIBLE_UNIQUE. A list of metadata that are being created.
+    ///                 Maximum allowed size of each metadata is 100 bytes
+    /// @return responseCode The response code for the status of the request. SUCCESS is 22.
+    /// @return newTotalSupply The new supply of tokens. For NFTs it is the total count of NFTs
+    /// @return serialNumbers If the token is an NFT the newly generate serial numbers, othersise empty.
     function mintToken(address token, int64 amount, bytes[] memory metadata) external returns (
         int64 responseCode,
         int64 newTotalSupply,

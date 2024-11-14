@@ -108,6 +108,11 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
         }
     }
 
+    /**
+     * Returns the EVM address of the account with the given `accountId`.
+     * @param accountId - a string in the format "shard.realm.num".
+     * @return evm_address - the EVM address of the account.
+     */
     function getAccountAddress(string memory accountId) htsCall public virtual returns (address evm_address) {
         if (bytes(accountId).length < 4) {
             return address(0);
@@ -128,110 +133,19 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
         }
     }
 
-    function _tokenInfo() internal returns (TokenInfo memory tokenInfo) {
-        FixedFee[] memory fixedFees = new FixedFee[](customFees.fixedFees.length);
-        for (uint256 i = 0; i < customFees.fixedFees.length; i++) {
-            IFixedFee memory fixedFee = customFees.fixedFees[i];
+    /// Query token info
+    /// @param token The token address to check
+    /// @return responseCode The response code for the status of the request. SUCCESS is 22.
+    /// @return tokenInfo TokenInfo info for `token`
+    function getTokenInfo(address token) external view returns (int64 responseCode, TokenInfo memory tokenInfo) {
+        require(token != address(0), "getTokenInfo: invalid token");
 
-            address denominatingToken = HtsSystemContract(HTS_ADDRESS).getAccountAddress(fixedFee.denominatingTokenId);
-            address collectorAccount = HtsSystemContract(HTS_ADDRESS).getAccountAddress(fixedFee.collectorAccountId);
-
-            fixedFees[i] = FixedFee(
-                fixedFee.amount,
-                denominatingToken,
-                denominatingToken == address(0),
-                denominatingToken == address(this),
-                collectorAccount
-            );
-        }
-
-        FractionalFee[] memory fractionalFees = new FractionalFee[](customFees.fractionalFees.length);
-        for (uint256 i = 0; i < customFees.fractionalFees.length; i++) {
-            IFractionalFee memory fractionalFee = customFees.fractionalFees[i];
-
-            address denominatingToken = HtsSystemContract(HTS_ADDRESS).getAccountAddress(fractionalFee.denominatingTokenId);
-
-            fractionalFees[i] = FractionalFee(
-                fractionalFee.amount.numerator,
-                fractionalFee.amount.denominator,
-                fractionalFee.maximum,
-                fractionalFee.minimum,
-                fractionalFee.netOfTransfers,
-                denominatingToken
-            );
-        }
-
-        RoyaltyFee[] memory royaltyFees = new RoyaltyFee[](customFees.royaltyFees.length);
-        for (uint256 i = 0; i < customFees.royaltyFees.length; i++) {
-            IRoyaltyFee memory royaltyFee = customFees.royaltyFees[i];
-
-            address collectorAccount = HtsSystemContract(HTS_ADDRESS).getAccountAddress(royaltyFee.collectorAccountId);
-
-            royaltyFees[i] = RoyaltyFee(
-                royaltyFee.amount.numerator,
-                royaltyFee.amount.denominator,
-                royaltyFee.fallbackFee.amount,
-                HtsSystemContract(HTS_ADDRESS).getAccountAddress(royaltyFee.fallbackFee.denominatingTokenId),
-                collectorAccount == address(0),
-                collectorAccount
-            );
-        }
-
-        TokenKey[] memory tokenKeys = new TokenKey[](7);
-        tokenKeys[0] = _createTokenKey(adminKey, 0x1);
-        tokenKeys[1] = _createTokenKey(kycKey, 0x2);
-        tokenKeys[2] = _createTokenKey(freezeKey, 0x4);
-        tokenKeys[3] = _createTokenKey(wipeKey, 0x8);
-        tokenKeys[4] = _createTokenKey(supplyKey, 0x10);
-        tokenKeys[5] = _createTokenKey(feeScheduleKey, 0x20);
-        tokenKeys[6] = _createTokenKey(pauseKey, 0x40);
-
-        // Add detailed checks and logging
-        require(maxSupply <= type(uint64).max, "_tokenInfo: maxSupply exceeds uint64 max");
-        require(totalSupply <= type(uint64).max, "_tokenInfo: totalSupply exceeds uint64 max");
-
-        int64 maxSupplyInt64 = int64(uint64(maxSupply));
-        int64 totalSupplyInt64 = int64(uint64(totalSupply));
-        require(maxSupplyInt64 >= 0, "_tokenInfo: maxSupply overflow");
-        require(totalSupplyInt64 >= 0, "_tokenInfo: totalSupply overflow");
-
-        address treasury = HtsSystemContract(HTS_ADDRESS).getAccountAddress(treasuryAccountId);
-        address autoRenew = HtsSystemContract(HTS_ADDRESS).getAccountAddress(autoRenewAccount);
-
-        tokenInfo = TokenInfo(
-            HederaToken(
-                name,
-                symbol,
-                treasury,
-                memo,
-                StringUtils.compare(supplyType, "FINITE") == 0,
-                maxSupplyInt64,
-                freezeDefault,
-                tokenKeys,
-                Expiry(expiryTimestamp, autoRenew, autoRenewPeriod)
-            ),
-            totalSupplyInt64,
-            deleted,
-            false,
-            StringUtils.compare(pauseStatus, "PAUSED") == 0,
-            fixedFees,
-            fractionalFees,
-            royaltyFees,
-            "0x00"
+        (bool success, bytes memory data) = token.staticcall(
+            abi.encodeWithSelector(this.getTokenInfo.selector, token)
         );
-    }
-
-    function _createTokenKey(IKey memory key, uint8 keyType) public pure returns (TokenKey memory) {
-        return TokenKey(
-            keyType,
-            KeyValue(
-                false,
-                address(0),
-                StringUtils.compare(key._type, "ED25519") == 0 ? bytes(key.key) : new bytes(0),
-                StringUtils.compare(key._type, "ECDSA_SECP256K1") == 0 ? bytes(key.key) : new bytes(0),
-                address(0)
-            )
-        );
+        require(success, "Failed to get token info");
+        tokenInfo = abi.decode(data, (TokenInfo));
+        responseCode = 22; // HederaResponseCodes.SUCCESS
     }
 
     /// Mints an amount of the token to the defined treasury account
@@ -302,17 +216,6 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
         responseCode = 22; // HederaResponseCodes.SUCCESS
         newTotalSupply = int64(uint64(totalSupply));
         require(newTotalSupply >= 0, "burnToken: invalid total supply");
-    }
-
-    function getTokenInfo(address token) external view returns (int64 responseCode, TokenInfo memory tokenInfo) {
-        require(token != address(0), "getTokenInfo: invalid token");
-
-        (bool success, bytes memory data) = token.staticcall(
-            abi.encodeWithSelector(this.getTokenInfo.selector, token)
-        );
-        require(success, "Failed to get token info");
-        tokenInfo = abi.decode(data, (TokenInfo));
-        responseCode = 22; // HederaResponseCodes.SUCCESS
     }
 
     /**
@@ -549,5 +452,111 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
                 _approve(owner, spender, currentAllowance - amount);
             }
         }
+    }
+
+    function _tokenInfo() internal returns (TokenInfo memory tokenInfo) {
+        FixedFee[] memory fixedFees = new FixedFee[](customFees.fixedFees.length);
+        for (uint256 i = 0; i < customFees.fixedFees.length; i++) {
+            IFixedFee memory fixedFee = customFees.fixedFees[i];
+
+            address denominatingToken = HtsSystemContract(HTS_ADDRESS).getAccountAddress(fixedFee.denominatingTokenId);
+            address collectorAccount = HtsSystemContract(HTS_ADDRESS).getAccountAddress(fixedFee.collectorAccountId);
+
+            fixedFees[i] = FixedFee(
+                fixedFee.amount,
+                denominatingToken,
+                denominatingToken == address(0),
+                denominatingToken == address(this),
+                collectorAccount
+            );
+        }
+
+        FractionalFee[] memory fractionalFees = new FractionalFee[](customFees.fractionalFees.length);
+        for (uint256 i = 0; i < customFees.fractionalFees.length; i++) {
+            IFractionalFee memory fractionalFee = customFees.fractionalFees[i];
+
+            address denominatingToken = HtsSystemContract(HTS_ADDRESS).getAccountAddress(fractionalFee.denominatingTokenId);
+
+            fractionalFees[i] = FractionalFee(
+                fractionalFee.amount.numerator,
+                fractionalFee.amount.denominator,
+                fractionalFee.maximum,
+                fractionalFee.minimum,
+                fractionalFee.netOfTransfers,
+                denominatingToken
+            );
+        }
+
+        RoyaltyFee[] memory royaltyFees = new RoyaltyFee[](customFees.royaltyFees.length);
+        for (uint256 i = 0; i < customFees.royaltyFees.length; i++) {
+            IRoyaltyFee memory royaltyFee = customFees.royaltyFees[i];
+
+            address collectorAccount = HtsSystemContract(HTS_ADDRESS).getAccountAddress(royaltyFee.collectorAccountId);
+
+            royaltyFees[i] = RoyaltyFee(
+                royaltyFee.amount.numerator,
+                royaltyFee.amount.denominator,
+                royaltyFee.fallbackFee.amount,
+                HtsSystemContract(HTS_ADDRESS).getAccountAddress(royaltyFee.fallbackFee.denominatingTokenId),
+                collectorAccount == address(0),
+                collectorAccount
+            );
+        }
+
+        TokenKey[] memory tokenKeys = new TokenKey[](7);
+        tokenKeys[0] = _createTokenKey(adminKey, 0x1);
+        tokenKeys[1] = _createTokenKey(kycKey, 0x2);
+        tokenKeys[2] = _createTokenKey(freezeKey, 0x4);
+        tokenKeys[3] = _createTokenKey(wipeKey, 0x8);
+        tokenKeys[4] = _createTokenKey(supplyKey, 0x10);
+        tokenKeys[5] = _createTokenKey(feeScheduleKey, 0x20);
+        tokenKeys[6] = _createTokenKey(pauseKey, 0x40);
+
+        // Add detailed checks and logging
+        require(maxSupply <= type(uint64).max, "_tokenInfo: maxSupply exceeds uint64 max");
+        require(totalSupply <= type(uint64).max, "_tokenInfo: totalSupply exceeds uint64 max");
+
+        int64 maxSupplyInt64 = int64(uint64(maxSupply));
+        int64 totalSupplyInt64 = int64(uint64(totalSupply));
+        require(maxSupplyInt64 >= 0, "_tokenInfo: maxSupply overflow");
+        require(totalSupplyInt64 >= 0, "_tokenInfo: totalSupply overflow");
+
+        address treasury = HtsSystemContract(HTS_ADDRESS).getAccountAddress(treasuryAccountId);
+        address autoRenew = HtsSystemContract(HTS_ADDRESS).getAccountAddress(autoRenewAccount);
+
+        tokenInfo = TokenInfo(
+            HederaToken(
+                name,
+                symbol,
+                treasury,
+                memo,
+                StringUtils.compare(supplyType, "FINITE") == 0,
+                maxSupplyInt64,
+                freezeDefault,
+                tokenKeys,
+                Expiry(expiryTimestamp, autoRenew, autoRenewPeriod)
+            ),
+            totalSupplyInt64,
+            deleted,
+            false,
+            StringUtils.compare(pauseStatus, "PAUSED") == 0,
+            fixedFees,
+            fractionalFees,
+            royaltyFees,
+            "0x00"
+        );
+    }
+
+    function _createTokenKey(IKey memory key, uint8 keyType) internal pure returns (TokenKey memory) {
+        return TokenKey(
+            keyType,
+            KeyValue(
+                false,
+                address(0),
+                StringUtils.compare(key._type, "ED25519") == 0 ? bytes(key.key) : new bytes(0),
+                StringUtils.compare(key._type, "ECDSA_SECP256K1") == 0 ? bytes(key.key) : new bytes(0),
+                address(0)
+            )
+        );
     }
 }
