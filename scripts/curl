@@ -24,7 +24,6 @@ const { endpoint, searchParams } = function () {
 
 for (const [re, fn] of /** @type {const} */([
     [/^blocks\/([0-9]{1,10})$/, blockNumber => {
-        assert(typeof blockNumber === 'string');
         return require(`./blocks_${blockNumber}.json`);
     }],
     [/^tokens\/([\w.]+)$/, tokenId => {
