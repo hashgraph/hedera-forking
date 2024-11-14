@@ -23,6 +23,10 @@ const { endpoint, searchParams } = function () {
 }();
 
 for (const [re, fn] of /** @type {const} */([
+    [/^blocks\/([0-9]{1,10})$/, blockNumber => {
+        assert(typeof blockNumber === 'string');
+        return require(`./blocks_${blockNumber}.json`);
+    }],
     [/^tokens\/([\w.]+)$/, tokenId => {
         assert(typeof tokenId === 'string');
         const token = tokens[tokenId];
@@ -38,6 +42,8 @@ for (const [re, fn] of /** @type {const} */([
 
         const accountId = searchParams.get('account.id');
         assert(accountId !== null);
+        const timestamp = searchParams.get('timestamp');
+        assert(timestamp !== null);
 
         return require(`../@hts-forking/test/data/${token.symbol}/getBalanceOfToken_${accountId}.json`);
     }],
