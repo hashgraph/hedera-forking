@@ -52,6 +52,49 @@ contract HTSTest is Test, TestSetup {
         assertTrue(revertsAsExpected, "expectRevert: call did not revert");
     }
 
+    function test_HTS_getAccountAddress_should_return_account_address() external {
+        // https://hashscan.io/testnet/account/0.0.5176
+        string memory accountId = string.concat("0.0.", vm.toString(MFCT_TREASURY));
+        address accountAddress = HtsSystemContract(HTS).getAccountAddress(accountId);
+        assertEq(accountAddress, address(0xa3612A87022a4706FC9452C50abd2703ac4Fd7d9));
+    }
+
+    function test_HTS_getAccountAddress_should_revert_when_delegatecall() external {
+        vm.expectRevert(bytes("htsCall: delegated call"));
+        (bool revertsAsExpected, ) = HTS.delegatecall(abi.encodeWithSelector(HtsSystemContract.getAccountAddress.selector, string.concat("0.0.", vm.toString(USDC_TREASURY))));
+        assertTrue(revertsAsExpected, "expectRevert: call did not revert");
+    }
+
+    function test_HTS_getTokenInfo_should_return_token_info_for_valid_token() view external {
+        address token = USDC;
+        (int64 responseCode, HtsSystemContract.TokenInfo memory tokenInfo) = HtsSystemContract(HTS).getTokenInfo(token);
+        assertEq(responseCode, 22);
+        assertEq(tokenInfo.token.treasury, address(uint160(USDC_TREASURY)));
+    }
+
+    function test_HTS_getTokenInfo_should_revert_for_invalid_token() external {
+        address token = address(0);
+        vm.expectRevert(bytes("getTokenInfo: invalid token"));
+        HtsSystemContract(HTS).getTokenInfo(token);
+    }
+
+    function test_HTS_getTokenInfo_should_revert_when_staticcall_fails() external {
+        address token = USDC;
+        vm.mockCallRevert(
+            token,
+            abi.encodeWithSelector(HtsSystemContract.getTokenInfo.selector, token),
+            abi.encode("some error occurring during the call")
+        );
+        vm.expectRevert(bytes("Failed to get token info"));
+        HtsSystemContract(HTS).getTokenInfo(token);
+    }
+
+    function test_HTS_getTokenInfo_should_revert_when_delegatecall() external {
+        vm.expectRevert(bytes("htsCall: delegated call"));
+        (bool revertsAsExpected, ) = HTS.delegatecall(abi.encodeWithSelector(HtsSystemContract.getTokenInfo.selector, address(this)));
+        assertTrue(revertsAsExpected, "expectRevert: call did not revert");
+    }
+
     function test_mintToken_should_succeed_with_valid_input() external {
         address token = USDC;
         int64 amount = 1000;
@@ -144,5 +187,18 @@ contract HTSTest is Test, TestSetup {
 
         vm.expectRevert(bytes("burnToken: invalid amount"));
         HtsSystemContract(HTS).burnToken(token, amount, serialNumbers);
+    }
+
+    function _emptyTokenInfo() internal pure returns (IHederaTokenService.TokenInfo memory) {
+        return IHederaTokenService.TokenInfo(
+            IHederaTokenService.HederaToken("", "", address(0), "", false, 0, false, new IHederaTokenService.TokenKey[](0), IHederaTokenService.Expiry(0, address(0), 0)),
+            0,
+            false,
+            false,
+            false,
+            new IHederaTokenService.FixedFee[](0),
+            new IHederaTokenService.FractionalFee[](0),
+            new IHederaTokenService.RoyaltyFee[](0),
+            "");
     }
 }

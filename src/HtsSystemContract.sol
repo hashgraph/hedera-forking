@@ -137,7 +137,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
     /// @param token The token address to check
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
     /// @return tokenInfo TokenInfo info for `token`
-    function getTokenInfo(address token) external view returns (int64 responseCode, TokenInfo memory tokenInfo) {
+    function getTokenInfo(address token) htsCall public view returns (int64 responseCode, TokenInfo memory tokenInfo) {
         require(token != address(0), "getTokenInfo: invalid token");
 
         (bool success, bytes memory data) = token.staticcall(
@@ -166,13 +166,10 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
     ) {
         require(token != address(0), "mintToken: invalid token");
         require(amount > 0, "mintToken: invalid amount");
-        require(metadata.length == 0, "burnToken: invalid serial numbers");
+        require(metadata.length == 0, "mintToken: invalid metadata");
 
-        (bool success, bytes memory data) = token.staticcall(
-            abi.encodeWithSelector(this.getTokenInfo.selector, token)
-        );
-        require(success, "Failed to get token info");
-        IHederaTokenService.TokenInfo memory tokenInfo = abi.decode(data, (TokenInfo));
+        (int64 getTokenInfoResponseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
+        require(getTokenInfoResponseCode == 22, "burnToken: invalid token");
 
         address treasuryAccount = tokenInfo.token.treasury;
         require(treasuryAccount != address(0), "mintToken: invalid account");
@@ -202,11 +199,8 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
         require(amount > 0, "burnToken: invalid amount");
         require(serialNumbers.length == 0, "burnToken: invalid serial numbers");
 
-        (bool success, bytes memory data) = token.staticcall(
-            abi.encodeWithSelector(this.getTokenInfo.selector, token)
-        );
-        require(success, "Failed to get token info");
-        IHederaTokenService.TokenInfo memory tokenInfo = abi.decode(data, (TokenInfo));
+        (int64 getTokenInfoResponseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
+        require(getTokenInfoResponseCode == 22, "burnToken: invalid token");
 
         address treasuryAccount = tokenInfo.token.treasury;
         require(treasuryAccount != address(0), "burnToken: invalid account");
