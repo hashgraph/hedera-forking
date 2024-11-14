@@ -129,92 +129,243 @@ contract HtsSystemContractFFI is HtsSystemContract {
     }
 
     function _loadBasicTokenData(address tokenAddress, string memory json) private {
-        HVM.storeString(tokenAddress, HVM.getSlot("name"), abi.decode(vm.parseJson(json, ".name"), (string)));
-        HVM.storeString(tokenAddress, HVM.getSlot("symbol"), abi.decode(vm.parseJson(json, ".symbol"), (string)));
-        HVM.storeUint(tokenAddress, HVM.getSlot("decimals"), vm.parseUint(abi.decode(vm.parseJson(json, ".decimals"), (string))));
-        HVM.storeUint(tokenAddress, HVM.getSlot("totalSupply"), vm.parseUint(abi.decode(vm.parseJson(json, ".total_supply"), (string))));
-        HVM.storeUint(tokenAddress, HVM.getSlot("maxSupply"), vm.parseUint(abi.decode(vm.parseJson(json, ".max_supply"), (string))));
-        HVM.storeBool(tokenAddress, HVM.getSlot("freezeDefault"), abi.decode(vm.parseJson(json, ".freeze_default"), (bool)));
-        HVM.storeString(tokenAddress, HVM.getSlot("supplyType"), abi.decode(vm.parseJson(json, ".supply_type"), (string)));
-        HVM.storeString(tokenAddress, HVM.getSlot("pauseStatus"), abi.decode(vm.parseJson(json, ".pause_status"), (string)));
-        HVM.storeInt64(tokenAddress, HVM.getSlot("expiryTimestamp"), abi.decode(vm.parseJson(json, ".expiry_timestamp"), (int64)));
-        HVM.storeString(tokenAddress, HVM.getSlot("autoRenewAccount"), abi.decode(vm.parseJson(json, ".auto_renew_account"), (string)));
-        HVM.storeInt64(tokenAddress, HVM.getSlot("autoRenewPeriod"), abi.decode(vm.parseJson(json, ".auto_renew_period"), (int64)));
-        HVM.storeBool(tokenAddress, HVM.getSlot("deleted"), abi.decode(vm.parseJson(json, ".deleted"), (bool)));
-        HVM.storeString(tokenAddress, HVM.getSlot("memo"), abi.decode(vm.parseJson(json, ".memo"), (string)));
-        HVM.storeString(tokenAddress, HVM.getSlot("treasuryAccountId"), abi.decode(vm.parseJson(json, ".treasury_account_id"), (string)));
+        bytes32 slot;
+
+        assembly { slot := name.slot }
+        try vm.parseJsonString(json, ".name") returns (string memory name) {
+            HVM.storeString(tokenAddress, uint256(slot), name);
+        } catch {
+            // Do nothing
+        }
+
+        assembly { slot := symbol.slot }
+        try vm.parseJsonString(json, ".symbol") returns (string memory symbol) {
+            HVM.storeString(tokenAddress, uint256(slot), symbol);
+        } catch {
+            // Do nothing
+        }
+
+        assembly { slot := decimals.slot }
+        try vm.parseJsonUint(json, ".decimals") returns (uint256 decimals) {
+            HVM.storeUint(tokenAddress, uint256(slot), decimals);
+        } catch {
+            // Do nothing
+        }
+
+        assembly { slot := totalSupply.slot }
+        try vm.parseJsonUint(json, ".total_supply") returns (uint256 totalSupply) {
+            HVM.storeUint(tokenAddress, uint256(slot), totalSupply);
+        } catch {
+            // Do nothing
+        }
+
+        assembly { slot := maxSupply.slot }
+        try vm.parseJsonUint(json, ".max_supply") returns (uint256 maxSupply) {
+            HVM.storeUint(tokenAddress, uint256(slot), maxSupply);
+        } catch {
+            // Do nothing
+        }
+
+        assembly { slot := freezeDefault.slot }
+        try vm.parseJsonBool(json, ".freeze_default") returns (bool freezeDefault) {
+            HVM.storeBool(tokenAddress, uint256(slot), freezeDefault);
+        } catch {
+            // Do nothing
+        }
+
+        assembly { slot := supplyType.slot }
+        try vm.parseJsonString(json, ".supply_type") returns (string memory supplyType) {
+            HVM.storeString(tokenAddress, uint256(slot), supplyType);
+        } catch {
+            // Do nothing
+        }
+
+        assembly { slot := pauseStatus.slot }
+        try vm.parseJsonString(json, ".pause_status") returns (string memory pauseStatus) {
+            HVM.storeString(tokenAddress, uint256(slot), pauseStatus);
+        } catch {
+            // Do nothing
+        }
+
+        assembly { slot := expiryTimestamp.slot }
+        try vm.parseJsonInt(json, ".expiry_timestamp") returns (int256 expiry) {
+            HVM.storeInt64(tokenAddress, uint256(slot), int64(expiry));
+        } catch {
+            // Do nothing
+        }
+
+        assembly { slot := autoRenewAccount.slot }
+        try vm.parseJsonString(json, ".auto_renew_account") returns (string memory autoRenewAccount) {
+            HVM.storeString(tokenAddress, uint256(slot), autoRenewAccount);
+        } catch {
+            // Do nothing
+        }
+
+        assembly { slot := autoRenewPeriod.slot }
+        try vm.parseJsonInt(json, ".auto_renew_period") returns (int256 autoRenewPeriod) {
+            HVM.storeInt64(tokenAddress, uint256(slot), int64(autoRenewPeriod));
+        } catch {
+            // Do nothing
+        }
+
+        assembly { slot := deleted.slot }
+        try vm.parseJsonBool(json, ".deleted") returns (bool deleted) {
+            HVM.storeBool(tokenAddress, uint256(slot), deleted);
+        } catch {
+            // Do nothing
+        }
+
+        assembly { slot := memo.slot }
+        try vm.parseJsonString(json, ".memo") returns (string memory memo) {
+            HVM.storeString(tokenAddress, uint256(slot), memo);
+        } catch {
+            // Do nothing
+        }
+
+        assembly { slot := treasuryAccountId.slot }
+        try vm.parseJsonString(json, ".treasury_account_id") returns (string memory treasuryAccountId) {
+            HVM.storeString(tokenAddress, uint256(slot), treasuryAccountId);
+        } catch {
+            // Do nothing
+        }
     }
 
     function _loadTokenKeys(address tokenAddress, string memory json) private {
         if (vm.keyExistsJson(json, ".admin_key")) {
-            bytes memory encodedData = vm.parseJson(json, ".admin_key");
-            if (keccak256(encodedData) != keccak256(abi.encodePacked(bytes32(0)))) {
-                HtsSystemContract.IKey memory adminKey = abi.decode(encodedData, (HtsSystemContract.IKey));
-                HVM.storeString(tokenAddress, HVM.getSlot("adminKey"), adminKey._type);
-                HVM.storeString(tokenAddress, HVM.getSlot("adminKey") + 1, adminKey.key);
+            try vm.parseJson(json, ".admin_key") returns (bytes memory keyBytes) {
+                if (keccak256(keyBytes) != keccak256(abi.encodePacked(bytes32(0)))) {
+                    bytes32 slot;
+                    assembly { slot := adminKey.slot }
+                    IKey memory key = abi.decode(keyBytes, (IKey));
+                    HVM.storeString(tokenAddress, uint256(slot), key._type);
+                    HVM.storeString(tokenAddress, uint256(slot) + 1, key.key);
+                }
+            } catch {
+                // Do nothing
             }
         }
         if (vm.keyExistsJson(json, ".fee_schedule_key")) {
-            bytes memory encodedData = vm.parseJson(json, ".fee_schedule_key");
-            if (keccak256(encodedData) != keccak256(abi.encodePacked(bytes32(0)))) {
-                HtsSystemContract.IKey memory feeScheduleKey = abi.decode(encodedData, (HtsSystemContract.IKey));
-                HVM.storeString(tokenAddress, HVM.getSlot("feeScheduleKey"), feeScheduleKey._type);
-                HVM.storeString(tokenAddress, HVM.getSlot("feeScheduleKey") + 1, feeScheduleKey.key);
+            try vm.parseJson(json, ".fee_schedule_key") returns (bytes memory keyBytes) {
+                if (keccak256(keyBytes) != keccak256(abi.encodePacked(bytes32(0)))) {
+                    bytes32 slot;
+                    assembly { slot := feeScheduleKey.slot }
+                    IKey memory key = abi.decode(keyBytes, (IKey));
+                    HVM.storeString(tokenAddress, uint256(slot), key._type);
+                    HVM.storeString(tokenAddress, uint256(slot) + 1, key.key);
+                }
+            } catch {
+                // Do nothing
             }
         }
         if (vm.keyExistsJson(json, ".freeze_key")) {
-            bytes memory encodedData = vm.parseJson(json, ".freeze_key");
-            if (keccak256(encodedData) != keccak256(abi.encodePacked(bytes32(0)))) {
-                HtsSystemContract.IKey memory freezeKey = abi.decode(encodedData, (HtsSystemContract.IKey));
-                HVM.storeString(tokenAddress, HVM.getSlot("freezeKey"), freezeKey._type);
-                HVM.storeString(tokenAddress, HVM.getSlot("freezeKey") + 1, freezeKey.key);
+            try vm.parseJson(json, ".freeze_key") returns (bytes memory keyBytes) {
+                if (keccak256(keyBytes) != keccak256(abi.encodePacked(bytes32(0)))) {
+                    bytes32 slot;
+                    assembly { slot := freezeKey.slot }
+                    IKey memory key = abi.decode(keyBytes, (IKey));
+                    HVM.storeString(tokenAddress, uint256(slot), key._type);
+                    HVM.storeString(tokenAddress, uint256(slot) + 1, key.key);
+                }
+            } catch {
+                // Do nothing
             }
         }
         if (vm.keyExistsJson(json, ".kyc_key")) {
-            bytes memory encodedData = vm.parseJson(json, ".kyc_key");
-            if (keccak256(encodedData) != keccak256(abi.encodePacked(bytes32(0)))) {
-                HtsSystemContract.IKey memory kycKey = abi.decode(encodedData, (HtsSystemContract.IKey));
-                HVM.storeString(tokenAddress, HVM.getSlot("kycKey"), kycKey._type);
-                HVM.storeString(tokenAddress, HVM.getSlot("kycKey") + 1, kycKey.key);
+            try vm.parseJson(json, ".kyc_key") returns (bytes memory keyBytes) {
+                if (keccak256(keyBytes) != keccak256(abi.encodePacked(bytes32(0)))) {
+                    bytes32 slot;
+                    assembly { slot := kycKey.slot }
+                    IKey memory key = abi.decode(keyBytes, (IKey));
+                    HVM.storeString(tokenAddress, uint256(slot), key._type);
+                    HVM.storeString(tokenAddress, uint256(slot) + 1, key.key);
+                }
+            } catch {
+                // Do nothing
             }
         }
         if (vm.keyExistsJson(json, ".pause_key")) {
-            bytes memory encodedData = vm.parseJson(json, ".pause_key");
-            if (keccak256(encodedData) != keccak256(abi.encodePacked(bytes32(0)))) {
-                HtsSystemContract.IKey memory pauseKey = abi.decode(encodedData, (HtsSystemContract.IKey));
-                HVM.storeString(tokenAddress, HVM.getSlot("pauseKey"), pauseKey._type);
-                HVM.storeString(tokenAddress, HVM.getSlot("pauseKey") + 1, pauseKey.key);
+            try vm.parseJson(json, ".pause_key") returns (bytes memory keyBytes) {
+                if (keccak256(keyBytes) != keccak256(abi.encodePacked(bytes32(0)))) {
+                    bytes32 slot;
+                    assembly { slot := pauseKey.slot }
+                    IKey memory key = abi.decode(keyBytes, (IKey));
+                    HVM.storeString(tokenAddress, uint256(slot), key._type);
+                    HVM.storeString(tokenAddress, uint256(slot) + 1, key.key);
+                }
+            } catch {
+                // Do nothing
             }
         }
         if (vm.keyExistsJson(json, ".supply_key")) {
-            bytes memory encodedData = vm.parseJson(json, ".supply_key");
-            if (keccak256(encodedData) != keccak256(abi.encodePacked(bytes32(0)))) {
-                HtsSystemContract.IKey memory supplyKey = abi.decode(encodedData, (HtsSystemContract.IKey));
-                HVM.storeString(tokenAddress, HVM.getSlot("supplyKey"), supplyKey._type);
-                HVM.storeString(tokenAddress, HVM.getSlot("supplyKey") + 1, supplyKey.key);
+            try vm.parseJson(json, ".supply_key") returns (bytes memory keyBytes) {
+                if (keccak256(keyBytes) != keccak256(abi.encodePacked(bytes32(0)))) {
+                    bytes32 slot;
+                    assembly { slot := supplyKey.slot }
+                    IKey memory key = abi.decode(keyBytes, (IKey));
+                    HVM.storeString(tokenAddress, uint256(slot), key._type);
+                    HVM.storeString(tokenAddress, uint256(slot) + 1, key.key);
+                }
+            } catch {
+                // Do nothing
             }
         }
         if (vm.keyExistsJson(json, ".wipe_key")) {
-            bytes memory encodedData = vm.parseJson(json, ".wipe_key");
-            if (keccak256(encodedData) != keccak256(abi.encodePacked(bytes32(0)))) {
-                HtsSystemContract.IKey memory wipeKey = abi.decode(encodedData, (HtsSystemContract.IKey));
-                HVM.storeString(tokenAddress, HVM.getSlot("wipeKey"), wipeKey._type);
-                HVM.storeString(tokenAddress, HVM.getSlot("wipeKey") + 1, wipeKey.key);
+            try vm.parseJson(json, ".wipe_key") returns (bytes memory keyBytes) {
+                if (keccak256(keyBytes) != keccak256(abi.encodePacked(bytes32(0)))) {
+                    bytes32 slot;
+                    assembly { slot := wipeKey.slot }
+                    IKey memory key = abi.decode(keyBytes, (IKey));
+                    HVM.storeString(tokenAddress, uint256(slot), key._type);
+                    HVM.storeString(tokenAddress, uint256(slot) + 1, key.key);
+                }
+            } catch {
+                // Do nothing
             }
         }
     }
 
     function _loadCustomFees(address tokenAddress, string memory json) private {
-        string memory createdTimestamp = abi.decode(vm.parseJson(json, ".custom_fees.created_timestamp"), (string));
-        HVM.storeString(tokenAddress, HVM.getSlot("customFees"), createdTimestamp);
-        _loadFixedFees(tokenAddress, new HtsSystemContract.IFixedFee[](0), HVM.getSlot("customFees") + 1);
-        _loadFractionalFees(tokenAddress, new HtsSystemContract.IFractionalFee[](0), HVM.getSlot("customFees") + 2);
-        _loadRoyaltyFees(tokenAddress, new HtsSystemContract.IRoyaltyFee[](0), HVM.getSlot("customFees") + 3);
+        bytes32 slot;
+        assembly { slot := customFees.slot }
+
+        HVM.storeString(tokenAddress, uint256(slot), vm.parseJsonString(json, ".custom_fees.created_timestamp"));
+        slot = bytes32(uint256(slot) + 1);
+
+        try vm.parseJson(json, ".custom_fees.fixed_fees") returns (bytes memory fixedFeesBytes) {
+            if (fixedFeesBytes.length == 0) {
+                return;
+            }
+            IFixedFee[] memory fixedFees = abi.decode(fixedFeesBytes, (IFixedFee[]));
+            _loadFixedFees(tokenAddress, fixedFees, uint256(slot));
+            slot = bytes32(uint256(slot) + fixedFees.length * 4);
+        } catch {
+            // Do nothing
+        }
+        try vm.parseJson(json, ".custom_fees.fractional_fees") returns (bytes memory fractionalFeesBytes) {
+            if (fractionalFeesBytes.length == 0) {
+                return;
+            }
+            IFractionalFee[] memory fractionalFees = abi.decode(fractionalFeesBytes, (IFractionalFee[]));
+            _loadFractionalFees(tokenAddress, fractionalFees, uint256(slot));
+            slot = bytes32(uint256(slot) + fractionalFees.length > 0 ? fractionalFees.length * 8 : 1);
+        } catch {
+            // Do nothing
+        }
+        try vm.parseJson(json, ".custom_fees.royalty_fees") returns (bytes memory royaltyFeesBytes) {
+            if (royaltyFeesBytes.length == 0) {
+                return;
+            }
+            IRoyaltyFee[] memory royaltyFees = abi.decode(royaltyFeesBytes, (IRoyaltyFee[]));
+            _loadRoyaltyFees(tokenAddress, royaltyFees, uint256(slot));
+            slot = bytes32(uint256(slot) + royaltyFees.length > 0 ? royaltyFees.length * 6 : 1);
+        } catch {
+            // Do nothing
+        }
     }
 
-    function _loadFixedFees(address tokenAddress, HtsSystemContract.IFixedFee[] memory fixedFees, uint256 startingSlot) private {
+    function _loadFixedFees(address tokenAddress, IFixedFee[] memory fixedFees, uint256 startingSlot) private {
         for (uint i = 0; i < fixedFees.length; i++) {
-            HtsSystemContract.IFixedFee memory fixedFee = fixedFees[i];
+            IFixedFee memory fixedFee = fixedFees[i];
             uint slot = startingSlot + i * 4;
             HVM.storeBool(tokenAddress, slot, fixedFee.allCollectorsAreExempt);
             HVM.storeInt64(tokenAddress, slot + 1, fixedFee.amount);
@@ -223,9 +374,9 @@ contract HtsSystemContractFFI is HtsSystemContract {
         }
     }
 
-    function _loadFractionalFees(address tokenAddress, HtsSystemContract.IFractionalFee[] memory fractionalFees, uint256 startingSlot) private {
+    function _loadFractionalFees(address tokenAddress, IFractionalFee[] memory fractionalFees, uint256 startingSlot) private {
         for (uint i = 0; i < fractionalFees.length; i++) {
-            HtsSystemContract.IFractionalFee memory fractionalFee = fractionalFees[i];
+            IFractionalFee memory fractionalFee = fractionalFees[i];
             uint slot = startingSlot + i * 8;
             HVM.storeBool(tokenAddress, slot, fractionalFee.allCollectorsAreExempt);
             HVM.storeInt64(tokenAddress, slot + 1, fractionalFee.amount.numerator);
@@ -238,9 +389,9 @@ contract HtsSystemContractFFI is HtsSystemContract {
         }
     }
 
-    function _loadRoyaltyFees(address tokenAddress, HtsSystemContract.IRoyaltyFee[] memory royaltyFees, uint256 startingSlot) private {
+    function _loadRoyaltyFees(address tokenAddress, IRoyaltyFee[] memory royaltyFees, uint256 startingSlot) private {
         for (uint i = 0; i < royaltyFees.length; i++) {
-            HtsSystemContract.IRoyaltyFee memory royaltyFee = royaltyFees[i];
+            IRoyaltyFee memory royaltyFee = royaltyFees[i];
             uint slot = startingSlot + i * 6;
             HVM.storeBool(tokenAddress, slot, royaltyFee.allCollectorsAreExempt);
             HVM.storeInt64(tokenAddress, slot + 1, royaltyFee.amount.numerator);

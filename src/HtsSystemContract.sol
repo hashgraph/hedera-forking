@@ -60,26 +60,26 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
     // See `__redirectForToken` for more details.
     string internal name;
     string internal symbol;
-    uint8 private decimals;
-    uint256 private totalSupply;
-    uint256 private maxSupply;
-    bool private freezeDefault;
-    string private supplyType;
-    string private pauseStatus;
-    IKey private adminKey;
-    IKey private feeScheduleKey;
-    IKey private freezeKey;
-    IKey private kycKey;
-    IKey private pauseKey;
-    IKey private supplyKey;
-    IKey private wipeKey;
-    int64 private expiryTimestamp;
-    string private autoRenewAccount;
-    int64 private autoRenewPeriod;
-    ICustomFees private customFees;
-    bool private deleted;
-    string private memo;
-    string private treasuryAccountId;
+    uint8 internal decimals;
+    uint256 internal totalSupply;
+    uint256 internal maxSupply;
+    bool internal freezeDefault;
+    string internal supplyType;
+    string internal pauseStatus;
+    IKey internal adminKey;
+    IKey internal feeScheduleKey;
+    IKey internal freezeKey;
+    IKey internal kycKey;
+    IKey internal pauseKey;
+    IKey internal supplyKey;
+    IKey internal wipeKey;
+    int64 internal expiryTimestamp;
+    string internal autoRenewAccount;
+    int64 internal autoRenewPeriod;
+    ICustomFees internal customFees;
+    bool internal deleted;
+    string internal memo;
+    string internal treasuryAccountId;
 
     /**
      * @dev Prevents delegatecall into the modified method.
