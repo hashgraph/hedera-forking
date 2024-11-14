@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import {IERC20Events, IERC20} from "./IERC20.sol";
 import {IHederaTokenService} from "./IHederaTokenService.sol";
 import {IHRC719} from "./IHRC719.sol";
+import {StringUtils} from "./StringUtils.sol";
 
 contract HtsSystemContract is IHederaTokenService, IERC20Events {
 
@@ -117,7 +118,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
         for (uint i = 0; i < accountNumBytes.length; i++) {
             accountNumBytes[i] = accountIdBytes[i + 4];
         }
-        uint32 accountNum = uint32(_parseUint(string(accountNumBytes)));
+        uint32 accountNum = uint32(StringUtils.parseUint(string(accountNumBytes)));
 
         bytes4 selector = this.getAccountAddress.selector;
         uint192 pad = 0x0;
@@ -127,7 +128,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
         }
     }
 
-    function _tokenInfo() public returns (TokenInfo memory tokenInfo) {
+    function _tokenInfo() internal returns (TokenInfo memory tokenInfo) {
         FixedFee[] memory fixedFees = new FixedFee[](customFees.fixedFees.length);
         for (uint256 i = 0; i < customFees.fixedFees.length; i++) {
             IFixedFee memory fixedFee = customFees.fixedFees[i];
@@ -203,7 +204,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
                 symbol,
                 treasury,
                 memo,
-                _compare(supplyType, "FINITE") == 0,
+                StringUtils.compare(supplyType, "FINITE") == 0,
                 maxSupplyInt64,
                 freezeDefault,
                 tokenKeys,
@@ -212,7 +213,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
             totalSupplyInt64,
             deleted,
             false,
-            _compare(pauseStatus, "PAUSED") == 0,
+            StringUtils.compare(pauseStatus, "PAUSED") == 0,
             fixedFees,
             fractionalFees,
             royaltyFees,
@@ -226,8 +227,8 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
             KeyValue(
                 false,
                 address(0),
-                _compare(key._type, "ED25519") == 0 ? bytes(key.key) : new bytes(0),
-                _compare(key._type, "ECDSA_SECP256K1") == 0 ? bytes(key.key) : new bytes(0),
+                StringUtils.compare(key._type, "ED25519") == 0 ? bytes(key.key) : new bytes(0),
+                StringUtils.compare(key._type, "ECDSA_SECP256K1") == 0 ? bytes(key.key) : new bytes(0),
                 address(0)
             )
         );
@@ -548,44 +549,5 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
                 _approve(owner, spender, currentAllowance - amount);
             }
         }
-    }
-
-    function _compare(string memory _a, string memory _b) public pure returns (int) {
-        bytes memory a = bytes(_a);
-        bytes memory b = bytes(_b);
-        uint minLength = a.length;
-        if (b.length < minLength) minLength = b.length;
-
-        uint i = 0;
-        while (i + 32 <= minLength) {
-            bytes32 aPart;
-            bytes32 bPart;
-            assembly {
-                aPart := mload(add(a, add(32, i)))
-                bPart := mload(add(b, add(32, i)))
-            }
-            if (aPart < bPart) return -1;
-            else if (aPart > bPart) return 1;
-            i += 32;
-        }
-
-        for (; i < minLength; i++) {
-            if (a[i] < b[i]) return -1;
-            else if (a[i] > b[i]) return 1;
-        }
-
-        if (a.length < b.length) return -1;
-        else if (a.length > b.length) return 1;
-        else return 0;
-    }
-
-    function _parseUint(string memory numString) public pure returns (uint) {
-        uint val = 0;
-        bytes memory stringBytes = bytes(numString);
-        for (uint i = 0; i < stringBytes.length; i++) {
-            require(uint8(stringBytes[i]) >= 48 && uint8(stringBytes[i]) <= 57, "parseUint: invalid string");
-            val = val * 10 + (uint8(stringBytes[i]) - 48);
-        }
-        return val;
     }
 }
