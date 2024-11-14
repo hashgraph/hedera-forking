@@ -169,7 +169,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
         require(metadata.length == 0, "mintToken: invalid metadata");
 
         (int64 getTokenInfoResponseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
-        require(getTokenInfoResponseCode == 22, "burnToken: invalid token");
+        require(getTokenInfoResponseCode == 22, "mintToken: invalid token");
 
         address treasuryAccount = tokenInfo.token.treasury;
         require(treasuryAccount != address(0), "mintToken: invalid account");
