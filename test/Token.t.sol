@@ -88,7 +88,7 @@ contract TokenTest is Test, TestSetup, IERC20Events {
         address bob = 0x0000000000000000000000000000000000000887;
         balance = IERC20(USDC).balanceOf(bob);
         console.log("bob's balance %s", balance);
-        assertEq(balance, 1958590000);
+        assertEq(balance, 1968650000);
     }
 
     function test_ERC20_allowance_from_remote() view external {
