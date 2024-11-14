@@ -55,7 +55,8 @@ contract MirrorNodeFFI is MirrorNode {
     function fetchAccount(address account) external override returns (string memory) {
         return _get(string.concat(
             "accounts/",
-            vm.toString(account)
+            vm.toString(account),
+            "?transactions=false"
         ));
     }
 
