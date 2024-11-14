@@ -118,12 +118,8 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
             return address(0);
         }
         // ignore the first 4 characters ("0.0.") to get the account number string
-        bytes memory accountIdBytes = bytes(accountId);
-        bytes memory accountNumBytes = new bytes(accountIdBytes.length - 4);
-        for (uint i = 0; i < accountNumBytes.length; i++) {
-            accountNumBytes[i] = accountIdBytes[i + 4];
-        }
-        uint32 accountNum = uint32(StringUtils.parseUint(string(accountNumBytes)));
+        string memory accountNumStr = StringUtils.slice(4, bytes(accountId).length, accountId);
+        uint32 accountNum = uint32(StringUtils.parseUint(accountNumStr));
 
         bytes4 selector = this.getAccountAddress.selector;
         uint192 pad = 0x0;
