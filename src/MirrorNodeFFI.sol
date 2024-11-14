@@ -83,7 +83,7 @@ contract MirrorNodeFFI is MirrorNode {
     /**
      * @dev Sends the request specified by `endpoint` to the currently selected Mirror Node.
      *
-     * This method caches a successful response in its own storage.
+     * This method caches a successful (`200`) or not found (`404`) response in its own storage.
      * This is specially helpful when requesting block information.
      */
     function _get(string memory endpoint) private returns (string memory json) {
@@ -91,7 +91,7 @@ contract MirrorNodeFFI is MirrorNode {
         if (bytes(json).length == 0) {
             (uint256 status, bytes memory result) = Surl.get(string.concat(_mirrorNodeUrl(), endpoint));
             json = string(result);
-            require(status == 200, json);
+            require(status == 200 || status == 404, json);
 
             // `_responses[endpoint] = json;`
             // To avoid `EvmError: StateChangeDuringStaticCall`

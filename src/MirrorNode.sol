@@ -7,9 +7,6 @@ abstract contract MirrorNode {
 
     Vm internal constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
-    mapping (address account => bool stored) _statusOf;
-    mapping (address account => uint32 accountNum) _accountNumOf;
-
     /**
      * @dev Requires that `token` address is a valid HTS token address.
      * That is, that is no greater than MAX value of `uint32`.
@@ -60,22 +57,12 @@ abstract contract MirrorNode {
             return uint32(uint160(account));
         }
 
-        if (_statusOf[account]) return _accountNumOf[account];
-
-        uint32 accountNum;
         try this.fetchAccount(account) returns (string memory json) {
-            accountNum = uint32(vm.parseUint(vm.replace(vm.parseJsonString(json, ".account"), "0.0.", "")));
-            require(accountNum != 0, "Account num must be a positive integer");
-        } catch {
-            accountNum = 0;
-        }
+            if (vm.keyExistsJson(json, ".account")) {
+                return uint32(vm.parseUint(vm.replace(vm.parseJsonString(json, ".account"), "0.0.", "")));
+            }
+        } catch {}
 
-        // Uses `vm.store` to avoid `EvmError: StateChangeDuringStaticCall`
-        uint256 slot;
-        assembly { slot := _statusOf.slot }
-        vm.store(address(this), keccak256(abi.encode(account, slot)), bytes32(uint256(1)));
-        assembly { slot := _accountNumOf.slot }
-        vm.store(address(this), keccak256(abi.encode(account, slot)), bytes32(uint256(accountNum)));
-        return accountNum;
+        return 0;
     }
 }
