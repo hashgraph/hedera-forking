@@ -81,6 +81,11 @@ library HVM {
         vm.store(target, bytes32(slot), uintData);
     }
 
+    function storeInt64(address target, uint256 slot, int64 value) internal {
+        bytes32 intData = bytes32(uint256(uint64(value)));
+        vm.store(target, bytes32(slot), intData);
+    }
+
     function storeBool(address target, uint256 slot, bool value) internal {
         bytes32 boolData = value ? bytes32(uint256(1)) : bytes32(uint256(0));
         vm.store(target, bytes32(slot), boolData);

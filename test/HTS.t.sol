@@ -69,7 +69,25 @@ contract HTSTest is Test, TestSetup {
         address token = USDC;
         (int64 responseCode, HtsSystemContract.TokenInfo memory tokenInfo) = HtsSystemContract(HTS).getTokenInfo(token);
         assertEq(responseCode, 22);
+        assertEq(tokenInfo.token.name, "USD Coin");
+        assertEq(tokenInfo.token.symbol, "USDC");
         assertEq(tokenInfo.token.treasury, address(uint160(USDC_TREASURY)));
+        assertEq(tokenInfo.token.memo, "USDC HBAR");
+        assertEq(tokenInfo.token.tokenSupplyType, false);
+        assertEq(tokenInfo.token.maxSupply, 0);
+        assertEq(tokenInfo.token.freezeDefault, false);
+        assertEq(tokenInfo.token.tokenKeys.length, 7);
+        assertEq(tokenInfo.token.expiry.second, 1706825707000718075);
+        assertEq(tokenInfo.token.expiry.autoRenewAccount, address(0));
+        assertEq(tokenInfo.token.expiry.autoRenewPeriod, 0);
+        assertEq(tokenInfo.totalSupply, 10000000005000000);
+        assertEq(tokenInfo.deleted, false);
+        assertEq(tokenInfo.defaultKycStatus, false);
+        assertEq(tokenInfo.pauseStatus, false);
+        assertEq(tokenInfo.fixedFees.length, 0);
+        assertEq(tokenInfo.fractionalFees.length, 0);
+        assertEq(tokenInfo.royaltyFees.length, 0);
+        assertEq(tokenInfo.ledgerId, testMode == TestMode.FFI ? "0x01" : "0x00");
     }
 
     function test_HTS_getTokenInfo_should_revert_for_invalid_token() external {

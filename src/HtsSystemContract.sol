@@ -533,19 +533,29 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
             fixedFees,
             fractionalFees,
             royaltyFees,
-            "0x00"
+            _ledgerId()
         );
     }
 
+    function _ledgerId() internal view returns (string memory) {
+        if (block.chainid == 295) return "0x00"; // Mainnet
+        if (block.chainid == 296) return "0x01"; // Testnet
+        if (block.chainid == 297) return "0x02"; // Previewnet
+        return "0x00"; // Default to Mainnet
+    }
+
     function _createTokenKey(IKey memory key, uint8 keyType) internal pure returns (TokenKey memory) {
+        bool inheritAccountKey = false;
+        address contractId = address(0);
+        address delegatableContractId = address(0);
         return TokenKey(
             keyType,
             KeyValue(
-                false,
-                address(0),
+                inheritAccountKey,
+                contractId,
                 StringUtils.compare(key._type, "ED25519") == 0 ? bytes(key.key) : new bytes(0),
                 StringUtils.compare(key._type, "ECDSA_SECP256K1") == 0 ? bytes(key.key) : new bytes(0),
-                address(0)
+                delegatableContractId
             )
         );
     }

@@ -70,9 +70,9 @@ contract MocksToStorageLoader is CommonBase, StdCheats {
         HVM.storeBool(tokenAddress, HVM.getSlot("freezeDefault"), abi.decode(vm.parseJson(json, ".freeze_default"), (bool)));
         HVM.storeString(tokenAddress, HVM.getSlot("supplyType"), abi.decode(vm.parseJson(json, ".supply_type"), (string)));
         HVM.storeString(tokenAddress, HVM.getSlot("pauseStatus"), abi.decode(vm.parseJson(json, ".pause_status"), (string)));
-        HVM.storeUint(tokenAddress, HVM.getSlot("expiryTimestamp"), abi.decode(vm.parseJson(json, ".expiry_timestamp"), (uint)));
+        HVM.storeInt64(tokenAddress, HVM.getSlot("expiryTimestamp"), abi.decode(vm.parseJson(json, ".expiry_timestamp"), (int64)));
         HVM.storeString(tokenAddress, HVM.getSlot("autoRenewAccount"), abi.decode(vm.parseJson(json, ".auto_renew_account"), (string)));
-        HVM.storeUint(tokenAddress, HVM.getSlot("autoRenewPeriod"), abi.decode(vm.parseJson(json, ".auto_renew_period"), (uint)));
+        HVM.storeInt64(tokenAddress, HVM.getSlot("autoRenewPeriod"), abi.decode(vm.parseJson(json, ".auto_renew_period"), (int64)));
         HVM.storeBool(tokenAddress, HVM.getSlot("deleted"), abi.decode(vm.parseJson(json, ".deleted"), (bool)));
         HVM.storeString(tokenAddress, HVM.getSlot("memo"), abi.decode(vm.parseJson(json, ".memo"), (string)));
         HVM.storeString(tokenAddress, HVM.getSlot("treasuryAccountId"), abi.decode(vm.parseJson(json, ".treasury_account_id"), (string)));
@@ -150,7 +150,7 @@ contract MocksToStorageLoader is CommonBase, StdCheats {
             HtsSystemContract.IFixedFee memory fixedFee = fixedFees[i];
             uint slot = startingSlot + i * 4;
             HVM.storeBool(tokenAddress, slot, fixedFee.allCollectorsAreExempt);
-            HVM.storeUint(tokenAddress, slot + 1, uint256(uint64(fixedFee.amount)));
+            HVM.storeInt64(tokenAddress, slot + 1, fixedFee.amount);
             HVM.storeString(tokenAddress, slot + 2, fixedFee.collectorAccountId);
             HVM.storeString(tokenAddress, slot + 3, fixedFee.denominatingTokenId);
         }
@@ -161,12 +161,12 @@ contract MocksToStorageLoader is CommonBase, StdCheats {
             HtsSystemContract.IFractionalFee memory fractionalFee = fractionalFees[i];
             uint slot = startingSlot + i * 8;
             HVM.storeBool(tokenAddress, slot, fractionalFee.allCollectorsAreExempt);
-            HVM.storeUint(tokenAddress, slot + 1, uint256(uint64(fractionalFee.amount.numerator)));
-            HVM.storeUint(tokenAddress, slot + 2, uint256(uint64(fractionalFee.amount.denominator)));
+            HVM.storeInt64(tokenAddress, slot + 1,fractionalFee.amount.numerator);
+            HVM.storeInt64(tokenAddress, slot + 2, fractionalFee.amount.denominator);
             HVM.storeString(tokenAddress, slot + 3, fractionalFee.collectorAccountId);
             HVM.storeString(tokenAddress, slot + 4, fractionalFee.denominatingTokenId);
-            HVM.storeUint(tokenAddress, slot + 5, uint256(uint64(fractionalFee.maximum)));
-            HVM.storeUint(tokenAddress, slot + 6, uint256(uint64(fractionalFee.minimum)));
+            HVM.storeInt64(tokenAddress, slot + 5, fractionalFee.maximum);
+            HVM.storeInt64(tokenAddress, slot + 6, fractionalFee.minimum);
             HVM.storeBool(tokenAddress, slot + 7, fractionalFee.netOfTransfers);
         }
     }
@@ -176,10 +176,10 @@ contract MocksToStorageLoader is CommonBase, StdCheats {
             HtsSystemContract.IRoyaltyFee memory royaltyFee = royaltyFees[i];
             uint slot = startingSlot + i * 6;
             HVM.storeBool(tokenAddress, slot, royaltyFee.allCollectorsAreExempt);
-            HVM.storeUint(tokenAddress, slot + 1, uint256(uint64(royaltyFee.amount.numerator)));
-            HVM.storeUint(tokenAddress, slot + 2, uint256(uint64(royaltyFee.amount.denominator)));
+            HVM.storeInt64(tokenAddress, slot + 1, royaltyFee.amount.numerator);
+            HVM.storeInt64(tokenAddress, slot + 2, royaltyFee.amount.denominator);
             HVM.storeString(tokenAddress, slot + 3, royaltyFee.collectorAccountId);
-            HVM.storeUint(tokenAddress, slot + 4, uint256(uint64(royaltyFee.fallbackFee.amount)));
+            HVM.storeInt64(tokenAddress, slot + 4, royaltyFee.fallbackFee.amount);
             HVM.storeString(tokenAddress, slot + 5, royaltyFee.fallbackFee.denominatingTokenId);
         }
     }
