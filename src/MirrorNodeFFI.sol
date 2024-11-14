@@ -44,11 +44,22 @@ contract MirrorNodeFFI is MirrorNode {
         return string(json);
     }
 
+
     function fetchAccount(address account) external override returns (string memory) {
         (uint256 status, bytes memory json) = Surl.get(string.concat(
             _mirrorNodeUrl(),
             "accounts/",
             vm.toString(account)
+        ));
+        require(status == 200);
+        return string(json);
+    }
+
+    function fetchAccount(string memory idOrAliasOrEvmAddress) external override returns (string memory) {
+        (uint256 status, bytes memory json) = Surl.get(string.concat(
+            _mirrorNodeUrl(),
+            "accounts/",
+            idOrAliasOrEvmAddress
         ));
         require(status == 200);
         return string(json);

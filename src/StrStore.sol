@@ -8,6 +8,12 @@ Vm constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 function storeString(address target, uint256 slot, string memory strvalue) {
     bytes memory value = bytes(strvalue);
     uint256 length = value.length;
+
+    if (length == 0) {
+        vm.store(target, bytes32(slot), bytes32(0));
+        return;
+    }
+
     if (length <= 31) {
         bytes32 slotValue = bytes32(value) | bytes32(length * 2);
         vm.store(target, bytes32(slot), slotValue);
@@ -32,4 +38,24 @@ function storeString(address target, uint256 slot, string memory strvalue) {
 
         vm.store(target, bytes32(uint256(baseSlot) + i), chunk);
     }
+}
+
+function storeUint(address target, uint256 slot, uint256 value) {
+    bytes32 uintData = bytes32(value);
+    vm.store(target, bytes32(slot), uintData);
+}
+
+function storeInt64(address target, uint256 slot, int64 value) {
+    bytes32 intData = bytes32(uint256(uint64(value)));
+    vm.store(target, bytes32(slot), intData);
+}
+
+function storeBool(address target, uint256 slot, bool value) {
+    bytes32 boolData = value ? bytes32(uint256(1)) : bytes32(uint256(0));
+    vm.store(target, bytes32(slot), boolData);
+}
+
+function storeAddress(address target, uint256 slot, address value) {
+    bytes32 addressData = bytes32(uint256(uint160(value)));
+    vm.store(target, bytes32(slot), addressData);
 }

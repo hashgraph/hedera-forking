@@ -3,10 +3,12 @@ pragma solidity ^0.8.0;
 
 import {IERC20Events, IERC20} from "./IERC20.sol";
 import {IHRC719} from "./IHRC719.sol";
+import {IHederaTokenService} from "./IHederaTokenService.sol";
+import {parseUint, slice} from "./StrUtils.sol";
 
 address constant HTS_ADDRESS = address(0x167);
 
-contract HtsSystemContract is IERC20Events {
+contract HtsSystemContract is IHederaTokenService, IERC20Events {
 
     // All ERC20 properties are accessed with a `delegatecall` from the Token Proxy.
     // See `__redirectForToken` for more details.
@@ -36,6 +38,43 @@ contract HtsSystemContract is IERC20Events {
         uint64 pad = 0x0;
         bytes32 slot = bytes32(abi.encodePacked(selector, pad, account));
         assembly { accountId := sload(slot) }
+    }
+
+    /**
+     * Returns the EVM address of the account with the given `accountId`.
+     * @param accountId - a string in the format "shard.realm.num".
+     * @return evm_address - the EVM address of the account.
+     */
+    function getAccountAddress(string memory accountId) htsCall public virtual returns (address evm_address) {
+        if (bytes(accountId).length < 4) {
+            return address(0);
+        }
+        // ignore the first 4 characters ("0.0.") to get the account number string
+        string memory accountNumStr = slice(4, bytes(accountId).length, accountId);
+        uint32 accountNum = uint32(parseUint(accountNumStr));
+
+        bytes4 selector = this.getAccountAddress.selector;
+        uint192 pad = 0x0;
+        uint256 slot = uint256(bytes32(abi.encodePacked(selector, pad, accountNum)));
+        assembly {
+            evm_address := sload(slot)
+        }
+    }
+
+    /**
+     * Query token info
+     * @param token - The token address to check
+     * @return responseCode - the response code for the status of the request. SUCCESS is `22`.
+     * @return tokenInfo - token info for `token`
+     */
+    function getTokenInfo(address token) external virtual returns (int64 responseCode, TokenInfo memory tokenInfo) {
+        bytes4 selector = this.getTokenInfo.selector;
+        uint160 pad = 0x0;
+        bytes32 slot = bytes32(abi.encodePacked(selector, pad, token));
+        assembly {
+            responseCode := 22
+            tokenInfo := sload(slot)
+        }
     }
 
     /**

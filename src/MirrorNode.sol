@@ -2,13 +2,16 @@
 pragma solidity ^0.8.0;
 
 import {Vm} from "forge-std/Vm.sol";
+import {IMirrorNode} from "./IMirrorNode.sol";
+import {storeAddress, storeBool} from "./StrStore.sol";
 
-abstract contract MirrorNode {
+abstract contract MirrorNode is IMirrorNode {
 
     Vm internal constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
     mapping (address account => bool stored) _statusOf;
     mapping (address account => uint32 accountNum) _accountNumOf;
+    mapping (uint32 accountNum => address account) _accountAddressOf;
 
     /**
      * @dev Requires that `token` address is a valid HTS token address.
@@ -27,6 +30,8 @@ abstract contract MirrorNode {
     function fetchAllowance(address token, uint32 ownerNum, uint32 spenderNum) external virtual returns (string memory json);
 
     function fetchAccount(address account) external virtual returns (string memory json);
+
+    function fetchAccount(string memory account) external virtual returns (string memory json);
 
     function getBalance(address token, address account) external returns (uint256) {
         uint32 accountNum = _getAccountNum(account);
