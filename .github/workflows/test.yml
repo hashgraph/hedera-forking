@@ -162,7 +162,7 @@ jobs:
 
       - name: Run Forge tests using JSON-RPC Mainnet and Testnet servers (with forking)
         run: |
-          forge test -vvv --fork-url https://testnet.hashio.io/api --chain 296 --no-storage-caching
+          forge test -vvv --fork-url https://testnet.hashio.io/api --fork-block-number 8535327
 
       - name: Show Mocked curl Requests
         run: cat scripts/curl.log
