@@ -34,24 +34,8 @@ contract HtsSystemContractJson is HtsSystemContract {
         return uint32(bytes4(keccak256(abi.encodePacked(account))));
     }
 
-    // For testing, we support accounts created with `makeAddr`. These accounts will not exist on the mirror node,
-    // so we calculate a deterministic (but unique) address at runtime as a fallback.
-    function getAccountAddress(string memory accountId) htsCall public override returns (address) {
-        string memory json = mirrorNode().fetchAccount(accountId);
-        if (vm.keyExistsJson(json, ".evm_address")) {
-            return vm.parseJsonAddress(json, ".evm_address");
-        }
-
-        // ignore the first 4 characters ("0.0.") to get the account number string
-        require(bytes(accountId).length > 4, "Invalid account ID, needs to be in the format '0.0.<account_number>'");
-        string memory accountNumStr = slice(4, bytes(accountId).length, accountId);
-        uint32 accountNum = uint32(parseUint(accountNumStr));
-
-        // generate a deterministic address based on the account number as a fallback
-        return address(uint160(accountNum));
-    }
-
     function getTokenInfo(address token) htsCall external override returns (int64 responseCode, TokenInfo memory tokenInfo) {
+        require(token != address(0), "getTokenInfo: invalid token");
         string memory json = mirrorNode().fetchTokenData(token);
         tokenInfo = _getTokenInfo(json);
         responseCode = 22; // SUCCESS
@@ -131,8 +115,8 @@ contract HtsSystemContractJson is HtsSystemContract {
             FixedFee[] memory fixedFees = new FixedFee[](fees.length);
             for (uint i = 0; i < fees.length; i++) {
                 IMirrorNode.FixedFee memory fee = fees[i];
-                address denominatingToken = HtsSystemContract(HTS_ADDRESS).getAccountAddress(fee.denominating_token_id);
-                address collectorAccount = HtsSystemContract(HTS_ADDRESS).getAccountAddress(fee.collector_account_id);
+                address denominatingToken = _getAccountAddress(fee.denominating_token_id);
+                address collectorAccount = _getAccountAddress(fee.collector_account_id);
                 fixedFees[i] = FixedFee(
                     fee.amount,
                     denominatingToken,
@@ -146,6 +130,21 @@ contract HtsSystemContractJson is HtsSystemContract {
             // Do nothing
             return new FixedFee[](0);
         }
+    }
+
+    function _getAccountAddress(string memory accountId) private returns (address) {
+        string memory json = mirrorNode().fetchAccount(accountId);
+        if (vm.keyExistsJson(json, ".evm_address")) {
+            return vm.parseJsonAddress(json, ".evm_address");
+        }
+
+        // ignore the first 4 characters ("0.0.") to get the account number string
+        require(bytes(accountId).length > 4, "Invalid account ID, needs to be in the format '0.0.<account_number>'");
+        string memory accountNumStr = slice(4, bytes(accountId).length, accountId);
+        uint32 accountNum = uint32(parseUint(accountNumStr));
+
+        // generate a deterministic address based on the account number as a fallback
+        return address(uint160(accountNum));
     }
 
     function _getFractionalFees(string memory json) private returns (FractionalFee[] memory) {
@@ -163,7 +162,7 @@ contract HtsSystemContractJson is HtsSystemContract {
                     fee.maximum,
                     fee.minimum,
                     fee.net_of_transfers,
-                    HtsSystemContract(HTS_ADDRESS).getAccountAddress(fee.denominating_token_id)
+                    _getAccountAddress(fee.denominating_token_id)
                 );
             }
             return fractionalFees;
@@ -182,8 +181,8 @@ contract HtsSystemContractJson is HtsSystemContract {
             RoyaltyFee[] memory royaltyFees = new RoyaltyFee[](fees.length);
             for (uint i = 0; i < fees.length; i++) {
                 IMirrorNode.RoyaltyFee memory fee = fees[i];
-                address collectorAccount = HtsSystemContract(HTS_ADDRESS).getAccountAddress(fee.collector_account_id);
-                address tokenId = HtsSystemContract(HTS_ADDRESS).getAccountAddress(fee.fallback_fee.denominating_token_id);
+                address collectorAccount = _getAccountAddress(fee.collector_account_id);
+                address tokenId = _getAccountAddress(fee.fallback_fee.denominating_token_id);
                 royaltyFees[i] = RoyaltyFee(
                     fee.amount.numerator,
                     fee.amount.denominator,
@@ -215,8 +214,9 @@ contract HtsSystemContractJson is HtsSystemContract {
         }
 
         try vm.parseJsonString(json, ".treasury_account_id") returns (string memory treasuryAccountId) {
-            address treasury = HtsSystemContract(HTS_ADDRESS).getAccountAddress(treasuryAccountId);
-            token.treasury = treasury;
+            if (keccak256(bytes(treasuryAccountId)) != keccak256(bytes("null"))) {
+                token.treasury =  _getAccountAddress(treasuryAccountId);
+            }
         } catch {
             // Do nothing
         }
@@ -245,14 +245,16 @@ contract HtsSystemContractJson is HtsSystemContract {
             // Do nothing
         }
 
-        try vm.parseJsonInt(json, ".expiry_timestamp") returns (int256 expiry) {
-            token.expiry.second = int64(expiry);
+        try vm.parseJson(json, ".expiry_timestamp") returns (bytes memory expiryBytes) {
+            token.expiry.second = abi.decode(expiryBytes, (int64));
         } catch {
             // Do nothing
         }
 
         try vm.parseJsonString(json, ".auto_renew_account") returns (string memory autoRenewAccount) {
-            token.expiry.autoRenewAccount = HtsSystemContract(HTS_ADDRESS).getAccountAddress(autoRenewAccount);
+            if (keccak256(bytes(autoRenewAccount)) != keccak256(bytes("null"))) {
+                token.expiry.autoRenewAccount = _getAccountAddress(autoRenewAccount);
+            }
         } catch {
             // Do nothing
         }
