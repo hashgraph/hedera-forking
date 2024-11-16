@@ -28,23 +28,18 @@ interface IMirrorNodeClient {
      * This method should call the Mirror Node API endpoint `GET /api/v1/tokens/{tokenId}`.
      *
      * @param tokenId
-     * @param requestIdPrefix The formatted `requestId` as a prefix for logging purposes.
      */
-    getTokenById(
-        tokenId: string,
-        requestIdPrefix?: string
-    ): Promise<Record<string, unknown> | null>;
+    getTokenById(tokenId: string): Promise<Record<string, unknown> | null>;
 
     /**
      *
      * @param tokenId
      * @param accountId
-     * @param requestIdPrefix
      */
     getBalanceOfToken(
         tokenId: string,
         accountId: string,
-        requestIdPrefix?: string
+        blockNumber: number
     ): Promise<{
         balances: {
             balance: number;
@@ -57,13 +52,11 @@ interface IMirrorNodeClient {
      * @param accountId Account alias or account id or evm address.
      * @param tokenId The ID of the token to return information for.
      * @param spenderId The ID of the spender to return information for.
-     * @param requestIdPrefix
      */
     getAllowanceForToken(
         accountId: string,
         tokenId: string,
-        spenderId: string,
-        requestIdPrefix?: string
+        spenderId: string
     ): Promise<{
         allowances: {
             amount: number;
@@ -82,12 +75,8 @@ interface IMirrorNodeClient {
      * This method should call the Mirror Node API endpoint `GET /api/v1/accounts/{idOrAliasOrEvmAddress}`.
      *
      * @param idOrAliasOrEvmAddress
-     * @param requestIdPrefix
      */
-    getAccount(
-        idOrAliasOrEvmAddress: string,
-        requestIdPrefix?: string
-    ): Promise<{
+    getAccount(idOrAliasOrEvmAddress: string): Promise<{
         account: string;
     } | null>;
 }
@@ -145,14 +134,12 @@ export function getHtsCode(): string;
  *
  * @param address
  * @param slot
+ * @param blockNumber
  * @param mirrorNodeClient
- * @param logger
- * @param requestIdPrefix A prefix ID to identify the request in the logs.
  */
 export function getHtsStorageAt(
     address: string,
     slot: string,
-    mirrorNodeClient: IMirrorNodeClient,
-    logger: { trace: (msg: string) => void },
-    requestIdPrefix?: string
+    blockNumber: number,
+    mirrorNodeClient: IMirrorNodeClient
 ): Promise<string | null>;
