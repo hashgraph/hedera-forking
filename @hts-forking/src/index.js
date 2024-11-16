@@ -75,7 +75,7 @@ const LONG_ZERO_PREFIX = '0x000000000000';
 
 function getHIP719Code(/** @type {string} */ address) {
     const PLACEHOLDER = 'fefefefefefefefefefefefefefefefefefefefe';
-    assert(/^0[xX][0-9a-fA-F]{40}$/.test(address), 'address must be a valid Ethereum address');
+    assert(/^0[xX][0-9a-fA-F]{40}$/.test(address), 'Address must be a valid EVM address');
     return require('./HIP719.bytecode.json').replace(PLACEHOLDER, address.slice(2));
 }
 
@@ -116,22 +116,12 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
                     `Requested address to account id, but address \`${encodedAddress}\` not found, use suffix as slot`
                 );
 
-            const [shardNum, realmNum, accountId] = account.account.split('.');
+            const [shardNum, realmNum, accountNum] = account.account.split('.');
             if (shardNum !== '0')
-                return ret(
-                    ZERO_HEX_32_BYTE,
-                    `Requested address to account id, but shardNum in \`${account.account}\` is not zero`
-                );
+                return ret(ZERO_HEX_32_BYTE, `shardNum in \`${account.account}\` is not zero`);
             if (realmNum !== '0')
-                return ret(
-                    ZERO_HEX_32_BYTE,
-                    `Requested address to account id, but realmNum in \`${account.account}\` is not zero`
-                );
-
-            return ret(
-                `0x${toIntHex256(accountId)}`,
-                `Requested address to account id, and slot matches \`getAccountId\``
-            );
+                return ret(ZERO_HEX_32_BYTE, `realmNum in \`${account.account}\` is not zero`);
+            return ret(`0x${toIntHex256(accountNum)}`, 'address to accountNum');
         }
 
         return ret(ZERO_HEX_32_BYTE, `Requested slot for 0x167 matches field, not found`);
@@ -155,10 +145,7 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
         if (balances.length === 0) return ret(ZERO_HEX_32_BYTE, 'Balance not found');
 
         const value = balances[0].balance;
-        return ret(
-            `0x${value.toString(16).padStart(64, '0')}`,
-            `Requested slot matches \`${tokenId}.balanceOf(${accountId})\``
-        );
+        return ret(`0x${value.toString(16).padStart(64, '0')}`, `${tokenId} balance ${accountId}`);
     }
 
     // Encoded `address(tokenId).allowance(owner, spender)` slot
@@ -173,14 +160,11 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
         )) ?? { allowances: [] };
 
         if (allowances.length === 0)
-            return ret(
-                ZERO_HEX_32_BYTE,
-                `Allowance of token ${tokenId} from ${ownerId} assigned to ${spenderId} not found`
-            );
+            return ret(ZERO_HEX_32_BYTE, `${tokenId}.allowance(${ownerId},${spenderId}) not found`);
         const value = allowances[0].amount;
         return ret(
             `0x${value.toString(16).padStart(64, '0')}`,
-            `Requested slot matches \`${tokenId}.allowance(${ownerId}, ${spenderId})\``
+            `Requested slot matches ${tokenId}.allowance(${ownerId},${spenderId})`
         );
     }
 
@@ -188,25 +172,16 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
     if (keccakedSlot !== null) {
         const tokenData = await mirrorNodeClient.getTokenById(tokenId);
         if (tokenData === null)
-            return ret(
-                ZERO_HEX_32_BYTE,
-                `Requested slot matches keccaked slot but token was not found`
-            );
+            return ret(ZERO_HEX_32_BYTE, `Slot matches keccaked slot but token was not found`);
 
         const offset = keccakedSlot.offset;
         const label = keccakedSlot.slot.label;
         const value = tokenData[toSnakeCase(label)];
         if (typeof value !== 'string')
-            return ret(
-                ZERO_HEX_32_BYTE,
-                `Requested slot matches keccaked slot but its field \`${label}\` was not found in token or it is not a string`
-            );
+            return ret(ZERO_HEX_32_BYTE, `Slot is keccaked slot but field ${label} was not found`);
         const hexStr = Buffer.from(value).toString('hex');
         const kecRes = hexStr.substring(offset * 64, (offset + 1) * 64).padEnd(64, '0');
-        return ret(
-            `0x${kecRes}`,
-            `Get storage ${address} slot: ${requestedSlot}, result: ${kecRes}`
-        );
+        return ret(`0x${kecRes}`, `Get storage ${address} slot:${requestedSlot}, result:${kecRes}`);
     }
     const slot = _slotMap.get(nrequestedSlot);
     if (slot === undefined)
@@ -214,22 +189,13 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
 
     const tokenResult = await mirrorNodeClient.getTokenById(tokenId);
     if (tokenResult === null)
-        return ret(
-            ZERO_HEX_32_BYTE,
-            `Requested slot matches ${slot.label} field, but token was not found`
-        );
+        return ret(ZERO_HEX_32_BYTE, `Slot matches ${slot.label} field, but token was not found`);
 
     const value = tokenResult[toSnakeCase(slot.label)];
     if (_typeConverter[slot.type] === undefined || !value || typeof value !== 'string')
-        return ret(
-            ZERO_HEX_32_BYTE,
-            `Requested slot matches ${slot.label} field, but it is not supported`
-        );
+        return ret(ZERO_HEX_32_BYTE, `Slot matches ${slot.label} field, but it is not supported`);
 
-    return ret(
-        `0x${_typeConverter[slot.type](value)}`,
-        `Requested slot matches \`${slot.label}\` field (type=\`${slot.type}\`)`
-    );
+    return ret(`0x${_typeConverter[slot.type](value)}`, `Slot matches ${slot.label}: ${slot.type}`);
 }
 
 module.exports = { HTSAddress, LONG_ZERO_PREFIX, getHIP719Code, getHtsCode, getHtsStorageAt };
