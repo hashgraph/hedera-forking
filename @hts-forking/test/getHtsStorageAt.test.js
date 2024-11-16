@@ -23,6 +23,7 @@ const { keccak256, id } = require('ethers');
 const { HTSAddress, LONG_ZERO_PREFIX, getHtsStorageAt } = require('@hashgraph/hts-forking');
 const utils = require('../src/utils');
 const { tokens } = require('../test/data');
+const { storageLayout } = require('../resources/HtsSystemContract.json');
 
 /** @import { IMirrorNodeClient } from '@hashgraph/hts-forking' */
 
@@ -51,15 +52,10 @@ describe('::getHtsStorageAt', function () {
         },
     };
 
-    const slotsByLabel = (function (
-        /**@type{{[label: string]: string}}*/ slotsByLabel,
-        { storageLayout }
-    ) {
-        for (const slot of storageLayout.storage) {
-            slotsByLabel[slot.label] = slot.slot;
-        }
-        return slotsByLabel;
-    })({}, require('../resources/HtsSystemContract.json'));
+    const slotsByLabel = storageLayout.storage.reduce(
+        (slotsByLabel, slot) => ((slotsByLabel[slot.label] = slot.slot), slotsByLabel),
+        /**@type{{[label: string]: string}}*/ ({})
+    );
 
     it(`should return \`null\` when \`address\` does not start with \`LONG_ZERO_PREFIX\` (${LONG_ZERO_PREFIX})`, async function () {
         const result = await _getHtsStorageAt(
@@ -71,12 +67,8 @@ describe('::getHtsStorageAt', function () {
     });
 
     it(`should return \`ZERO_HEX_32_BYTE\` when slot does not correspond to any field`, async function () {
-        // Slot `0x100` should not be present in `HtsSystemContract`
-        const result = await _getHtsStorageAt(
-            `${LONG_ZERO_PREFIX}1`,
-            '0x100',
-            baseMirrorNodeClient
-        );
+        // Slot `0xff` should not be present in `HtsSystemContract`
+        const result = await _getHtsStorageAt(`${LONG_ZERO_PREFIX}1`, '0xff', baseMirrorNodeClient);
         expect(result).to.be.equal(utils.ZERO_HEX_32_BYTE);
     });
 
