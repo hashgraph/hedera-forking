@@ -20,34 +20,22 @@ const { strict: assert } = require('assert');
 const { expect, config } = require('chai');
 const { keccak256, id } = require('ethers');
 
-const {
-    getHtsStorageAt: _getHtsStorageAt,
-    HTSAddress,
-    LONG_ZERO_PREFIX,
-} = require('@hashgraph/hts-forking');
+const { HTSAddress, LONG_ZERO_PREFIX, getHtsStorageAt } = require('@hashgraph/hts-forking');
 const utils = require('../src/utils');
 const { tokens } = require('../test/data');
+
+/** @import { IMirrorNodeClient } from '@hashgraph/hts-forking' */
 
 config.truncateThreshold = 0;
 
 describe('::getHtsStorageAt', function () {
     /**
-     * Enable test `logger` for `getHtsStorageAt` by setting the `TRACE` environment variable.
-     *
-     * When `TRACE` is set, `trace` logger will be enabled using a sequential `requestId`.
-     *
-     * @type {(address: string, slot: string, mirrorNodeClient: import('@hashgraph/hts-forking').IMirrorNodeClient) => Promise<string | null>}
+     * @type {(address: string, slot: string, mirrorNodeClient: IMirrorNodeClient) => Promise<string | null>}
      */
-    const getHtsStorageAt = (function () {
-        const logger = process.env['TRACE']
-            ? { trace: (/**@type{unknown}*/ msg) => console.log(`TRACE ${msg}`) }
-            : { trace: () => undefined };
-        let reqId = 1;
-        return (address, slot, mirrorNodeClient) =>
-            _getHtsStorageAt(address, slot, mirrorNodeClient, logger, `[Req ID: ${reqId++}]`);
-    })();
+    const _getHtsStorageAt = (address, slot, mirrorNodeClient) =>
+        getHtsStorageAt(address, slot, 0, mirrorNodeClient);
 
-    /** @type {import('@hashgraph/hts-forking').IMirrorNodeClient} */
+    /** @type {IMirrorNodeClient} */
     const baseMirrorNodeClient = {
         getTokenById(_tokenId) {
             throw Error('Not implemented');
@@ -74,7 +62,7 @@ describe('::getHtsStorageAt', function () {
     })({}, require('../resources/HtsSystemContract.json'));
 
     it(`should return \`null\` when \`address\` does not start with \`LONG_ZERO_PREFIX\` (${LONG_ZERO_PREFIX})`, async function () {
-        const result = await getHtsStorageAt(
+        const result = await _getHtsStorageAt(
             '0x4e59b44847b379578588920ca78fbf26c0b4956c',
             '0x0',
             baseMirrorNodeClient
@@ -84,14 +72,18 @@ describe('::getHtsStorageAt', function () {
 
     it(`should return \`ZERO_HEX_32_BYTE\` when slot does not correspond to any field`, async function () {
         // Slot `0x100` should not be present in `HtsSystemContract`
-        const result = await getHtsStorageAt(`${LONG_ZERO_PREFIX}1`, '0x100', baseMirrorNodeClient);
+        const result = await _getHtsStorageAt(
+            `${LONG_ZERO_PREFIX}1`,
+            '0x100',
+            baseMirrorNodeClient
+        );
         expect(result).to.be.equal(utils.ZERO_HEX_32_BYTE);
     });
 
     it(`should return \`ZERO_HEX_32_BYTE\` when \`address\` is not found for a non-keccaked slot`, async function () {
-        /** @type{import('@hashgraph/hts-forking').IMirrorNodeClient} */
+        /** @type{IMirrorNodeClient} */
         const mirrorNodeClient = { ...baseMirrorNodeClient, getTokenById: async _tokenId => null };
-        const result = await getHtsStorageAt(
+        const result = await _getHtsStorageAt(
             '0x0000000000000000000000000000000000000001',
             '0x0',
             mirrorNodeClient
@@ -103,12 +95,12 @@ describe('::getHtsStorageAt', function () {
         const slot = slotsByLabel[name];
         it(`should return \`ZERO_HEX_32_BYTE\` when \`address\` is not found for the keccaked slot of \`${slot}\` for field \`${name}\``, async function () {
             const keccakedSlot = keccak256('0x' + utils.toIntHex256(slot));
-            /** @type{import('@hashgraph/hts-forking').IMirrorNodeClient} */
+            /** @type{IMirrorNodeClient} */
             const mirrorNodeClient = {
                 ...baseMirrorNodeClient,
                 getTokenById: async _tokenId => null,
             };
-            const result = await getHtsStorageAt(
+            const result = await _getHtsStorageAt(
                 '0x0000000000000000000000000000000000000001',
                 keccakedSlot,
                 mirrorNodeClient
@@ -120,30 +112,30 @@ describe('::getHtsStorageAt', function () {
     describe('`getAccountId` mapping on `0x167`', function () {
         it(`should return \`ZERO_HEX_32_BYTE\` on \`0x167\` when slot does not match \`getAccountId\``, async function () {
             const slot = '0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15';
-            const result = await getHtsStorageAt(HTSAddress, slot, baseMirrorNodeClient);
+            const result = await _getHtsStorageAt(HTSAddress, slot, baseMirrorNodeClient);
             expect(result).to.be.equal(utils.ZERO_HEX_32_BYTE);
         });
 
         it(`should return address' suffix on \`0x167\` when accountId does not exist`, async function () {
-            /** @type{import('@hashgraph/hts-forking').IMirrorNodeClient} */
+            /** @type{IMirrorNodeClient} */
             const mirrorNodeClient = {
                 ...baseMirrorNodeClient,
                 getAccount: async _address => null,
             };
             const slot = '0xe0b490f700000000000000004D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15';
-            const result = await getHtsStorageAt(HTSAddress, slot, mirrorNodeClient);
+            const result = await _getHtsStorageAt(HTSAddress, slot, mirrorNodeClient);
             expect(result).to.be.equal(`0x${slot.slice(-8).padStart(64, '0')}`);
         });
 
         ['1.0.1421', '0.1.1421'].forEach(accountId => {
             it(`should return \`ZERO_HEX_32_BYTE\` on \`0x167\` when slot matches \`getAccountId\` but \`${accountId}\`'s shard|realm is not zero`, async function () {
-                /** @type{import('@hashgraph/hts-forking').IMirrorNodeClient} */
+                /** @type{IMirrorNodeClient} */
                 const mirrorNodeClient = {
                     ...baseMirrorNodeClient,
                     getAccount: async _address => ({ account: accountId }),
                 };
                 const slot = '0xe0b490f700000000000000004D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15';
-                const result = await getHtsStorageAt(HTSAddress, slot, mirrorNodeClient);
+                const result = await _getHtsStorageAt(HTSAddress, slot, mirrorNodeClient);
                 expect(result).to.be.equal(utils.ZERO_HEX_32_BYTE);
             });
         });
@@ -159,7 +151,7 @@ describe('::getHtsStorageAt', function () {
             };
 
             const slot = '0xe0b490f700000000000000004D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15';
-            const result = await getHtsStorageAt(HTSAddress, slot, {
+            const result = await _getHtsStorageAt(HTSAddress, slot, {
                 ...baseMirrorNodeClient,
                 getAccount,
             });
@@ -171,7 +163,7 @@ describe('::getHtsStorageAt', function () {
         describe(`\`${symbol}(${address})\` token`, function () {
             const tokenResult = require(`./data/${symbol}/getToken.json`);
 
-            /** @type {import('@hashgraph/hts-forking').IMirrorNodeClient} */
+            /** @type {IMirrorNodeClient} */
             const mirrorNodeClient = {
                 ...baseMirrorNodeClient,
                 getTokenById(tokenId) {
@@ -186,7 +178,7 @@ describe('::getHtsStorageAt', function () {
 
             it(`should return \`ZERO_HEX_32_BYTE\` when slot does not correspond to any field (even if token is found)`, async function () {
                 // Slot `0x100` should not be present in `HtsSystemContract`
-                const result = await getHtsStorageAt(address, '0x100', mirrorNodeClient);
+                const result = await _getHtsStorageAt(address, '0x100', mirrorNodeClient);
                 expect(result).to.be.equal(utils.ZERO_HEX_32_BYTE);
             });
 
@@ -194,7 +186,7 @@ describe('::getHtsStorageAt', function () {
                 const slot = slotsByLabel[name];
 
                 it(`should get storage for string field \`${name}\` at slot \`${slot}\``, async function () {
-                    const result = await getHtsStorageAt(address, slot, mirrorNodeClient);
+                    const result = await _getHtsStorageAt(address, slot, mirrorNodeClient);
 
                     const str = tokenResult[name];
                     if (str.length > 31) {
@@ -207,7 +199,7 @@ describe('::getHtsStorageAt', function () {
                         const baseSlot = BigInt(keccak256('0x' + utils.toIntHex256(slot)));
                         let value = '';
                         for (let i = 0; i < (str.length >> 5) + 1; i++) {
-                            const result = await getHtsStorageAt(
+                            const result = await _getHtsStorageAt(
                                 address,
                                 `0x${(baseSlot + BigInt(i)).toString(16)}`,
                                 mirrorNodeClient
@@ -232,7 +224,7 @@ describe('::getHtsStorageAt', function () {
                 const slot = slotsByLabel[name];
 
                 it(`should get storage for primitive field \`${name}\` at slot \`${slot}\``, async function () {
-                    const result = await getHtsStorageAt(address, slot, mirrorNodeClient);
+                    const result = await _getHtsStorageAt(address, slot, mirrorNodeClient);
                     assert(result !== null);
                     expect(result.slice(2)).to.be.equal(
                         utils.toIntHex256(tokenResult[utils.toSnakeCase(name)])
@@ -248,7 +240,7 @@ describe('::getHtsStorageAt', function () {
              */
             const padAccountId = accountId => accountId.toString(16).padStart(8, '0');
 
-            /**@type{{name: string, fn: import('@hashgraph/hts-forking').IMirrorNodeClient['getBalanceOfToken']}[]}*/ ([
+            /**@type{{name: string, fn: IMirrorNodeClient['getBalanceOfToken']}[]}*/ ([
                 {
                     name: 'balance is found',
                     fn: async (_tid, accountId) =>
@@ -263,14 +255,15 @@ describe('::getHtsStorageAt', function () {
                 it(`should get \`balanceOf(${selector})\` tokenId for encoded account when '${name}'`, async function () {
                     const accountId = 1421;
                     const slot = `${selector}${padding}${padAccountId(accountId)}`;
-                    const result = await getHtsStorageAt(address, slot, {
+                    const result = await _getHtsStorageAt(address, slot, {
                         ...baseMirrorNodeClient,
                         getBalanceOfToken,
                     });
 
                     const { balances } = (await getBalanceOfToken(
                         '<not used>',
-                        `0.0.${accountId}`
+                        `0.0.${accountId}`,
+                        0
                     )) ?? { balances: [] };
                     expect(result).to.be.equal(
                         balances.length === 0
@@ -280,7 +273,7 @@ describe('::getHtsStorageAt', function () {
                 });
             });
 
-            /**@type{{name: string, fn: import('@hashgraph/hts-forking').IMirrorNodeClient['getAllowanceForToken']}[]}*/ ([
+            /**@type{{name: string, fn: IMirrorNodeClient['getAllowanceForToken']}[]}*/ ([
                 {
                     name: 'allowance is found',
                     fn: (accountId, _tid, spenderId) =>
@@ -302,7 +295,7 @@ describe('::getHtsStorageAt', function () {
                     const accountId = 4233295;
                     const spenderId = 1335;
                     const slot = `${selector}${padding}${padAccountId(spenderId)}${padAccountId(accountId)}`;
-                    const result = await getHtsStorageAt(address, slot, {
+                    const result = await _getHtsStorageAt(address, slot, {
                         ...baseMirrorNodeClient,
                         getAllowanceForToken,
                     });
