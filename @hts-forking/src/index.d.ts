@@ -27,14 +27,21 @@ interface IMirrorNodeClient {
      *
      * This method should call the Mirror Node API endpoint `GET /api/v1/tokens/{tokenId}`.
      *
-     * @param tokenId
+     * @param tokenId The ID of the token to return information for.
+     * @param blockNumber
      */
-    getTokenById(tokenId: string): Promise<Record<string, unknown> | null>;
+    getTokenById(tokenId: string, blockNumber: number): Promise<Record<string, unknown> | null>;
 
     /**
+     * Get token balance of `accountId`.
      *
-     * @param tokenId
-     * @param accountId
+     * This represents the Token supply distribution across the network.
+     *
+     * This method should call the Mirror Node API endpoint `GET /api/v1/tokens/{tokenId}/balances`.
+     *
+     * @param tokenId The ID of the token to return information for.
+     * @param accountId The ID of the account to return information for.
+     * @param blockNumber
      */
     getBalanceOfToken(
         tokenId: string,
@@ -48,6 +55,9 @@ interface IMirrorNodeClient {
 
     /**
      * Returns information for fungible token allowances for an account.
+     *
+     * NOTE: `blockNumber` is not yet included until we fix issue
+     * https://github.com/hashgraph/hedera-forking/issues/89.
      *
      * @param accountId Account alias or account id or evm address.
      * @param tokenId The ID of the token to return information for.
@@ -75,8 +85,12 @@ interface IMirrorNodeClient {
      * This method should call the Mirror Node API endpoint `GET /api/v1/accounts/{idOrAliasOrEvmAddress}`.
      *
      * @param idOrAliasOrEvmAddress
+     * @param blockNumber
      */
-    getAccount(idOrAliasOrEvmAddress: string): Promise<{
+    getAccount(
+        idOrAliasOrEvmAddress: string,
+        blockNumber: number
+    ): Promise<{
         account: string;
     } | null>;
 }

@@ -109,7 +109,7 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
         // slot(256) = `getAccountId`selector(32) + padding(64) + address(160)
         if (nrequestedSlot >> 160n === 0xe0b490f7_0000_0000_0000_0000n) {
             const encodedAddress = requestedSlot.slice(-40);
-            const account = await mirrorNodeClient.getAccount(encodedAddress);
+            const account = await mirrorNodeClient.getAccount(encodedAddress, blockNumber);
             if (account === null)
                 return ret(
                     `0x${requestedSlot.slice(-8).padStart(64, '0')}`,
@@ -170,7 +170,7 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
 
     const keccakedSlot = _inferSlotAndOffset(nrequestedSlot);
     if (keccakedSlot !== null) {
-        const tokenData = await mirrorNodeClient.getTokenById(tokenId);
+        const tokenData = await mirrorNodeClient.getTokenById(tokenId, blockNumber);
         if (tokenData === null)
             return ret(ZERO_HEX_32_BYTE, `Slot matches keccaked slot but token was not found`);
 
@@ -187,7 +187,7 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
     if (slot === undefined)
         return ret(ZERO_HEX_32_BYTE, `Requested slot does not match any field slots`);
 
-    const tokenResult = await mirrorNodeClient.getTokenById(tokenId);
+    const tokenResult = await mirrorNodeClient.getTokenById(tokenId, blockNumber);
     if (tokenResult === null)
         return ret(ZERO_HEX_32_BYTE, `Slot matches ${slot.label} field, but token was not found`);
 
