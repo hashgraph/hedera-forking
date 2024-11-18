@@ -222,83 +222,85 @@ module.exports = {
                     );
 
                 const tokenInfo = await mapToTokenInfo(tokenResponse, mirrorNodeClient);
-                return rtrace(
-                    '0x' +
-                        typeConverter['tuple'](tokenInfo, {
-                            token: [
-                                'tuple',
+
+                const encodedResponseCode = typeConverter['t_int64']('22');
+                const encodedTokenInfo = typeConverter['tuple'](tokenInfo, {
+                    token: [
+                        'tuple',
+                        {
+                            name: 't_string_storage',
+                            symbol: 't_string_storage',
+                            treasury: 't_address',
+                            memo: 't_string_storage',
+                            tokenSupplyType: 't_bool',
+                            maxSupply: 't_uint256',
+                            freezeDefault: 't_bool',
+                            tokenKeys: [
+                                'tuple[]',
                                 {
-                                    name: 't_string_storage',
-                                    symbol: 't_string_storage',
-                                    treasury: 't_address',
-                                    memo: 't_string_storage',
-                                    tokenSupplyType: 't_bool',
-                                    maxSupply: 't_uint256',
-                                    freezeDefault: 't_bool',
-                                    tokenKeys: [
-                                        'tuple[]',
-                                        {
-                                            keyType: 't_uint8',
-                                            key: [
-                                                'tuple',
-                                                {
-                                                    inheritAccountKey: 't_bool',
-                                                    contractId: 't_address',
-                                                    ed25519: 't_bytes',
-                                                    ECDSA_secp256k1: 't_bytes',
-                                                    delegatableContractId: 't_address',
-                                                },
-                                            ],
-                                        },
-                                    ],
-                                    expiry: [
+                                    keyType: 't_uint8',
+                                    key: [
                                         'tuple',
                                         {
-                                            second: 't_uint256',
-                                            autoRenewAccount: 't_address',
-                                            autoRenewPeriod: 't_uint256',
+                                            inheritAccountKey: 't_bool',
+                                            contractId: 't_address',
+                                            ed25519: 't_bytes',
+                                            ECDSA_secp256k1: 't_bytes',
+                                            delegatableContractId: 't_address',
                                         },
                                     ],
                                 },
                             ],
-                            totalSupply: 't_int64',
-                            deleted: 't_bool',
-                            defaultKycStatus: 't_bool',
-                            pauseStatus: 't_bool',
-                            fixedFees: [
-                                'tuple[]',
+                            expiry: [
+                                'tuple',
                                 {
-                                    amount: 't_uint256',
-                                    tokenId: 't_string_storage',
-                                    useHbarsForPayment: 't_bool',
-                                    useCurrentTokenForPayment: 't_bool',
-                                    feeCollector: 't_address',
+                                    second: 't_uint256',
+                                    autoRenewAccount: 't_address',
+                                    autoRenewPeriod: 't_uint256',
                                 },
                             ],
-                            fractionalFees: [
-                                'tuple[]',
-                                {
-                                    numerator: 't_uint256',
-                                    denominator: 't_uint256',
-                                    minimumAmount: 't_uint256',
-                                    maximumAmount: 't_uint256',
-                                    netOfTransfers: 't_bool',
-                                    feeCollector: 't_address',
-                                },
-                            ],
-                            royaltyFees: [
-                                'tuple[]',
-                                {
-                                    numerator: 't_uint256',
-                                    denominator: 't_uint256',
-                                    amount: 't_uint256',
-                                    tokenId: 't_string_storage',
-                                    useHbarsForPayment: 't_bool',
-                                    feeCollector: 't_address',
-                                },
-                            ],
-                            ledgerId: 't_string_storage',
-                        }),
+                        },
+                    ],
+                    totalSupply: 't_int64',
+                    deleted: 't_bool',
+                    defaultKycStatus: 't_bool',
+                    pauseStatus: 't_bool',
+                    fixedFees: [
+                        'tuple[]',
+                        {
+                            amount: 't_uint256',
+                            tokenId: 't_string_storage',
+                            useHbarsForPayment: 't_bool',
+                            useCurrentTokenForPayment: 't_bool',
+                            feeCollector: 't_address',
+                        },
+                    ],
+                    fractionalFees: [
+                        'tuple[]',
+                        {
+                            numerator: 't_uint256',
+                            denominator: 't_uint256',
+                            minimumAmount: 't_uint256',
+                            maximumAmount: 't_uint256',
+                            netOfTransfers: 't_bool',
+                            feeCollector: 't_address',
+                        },
+                    ],
+                    royaltyFees: [
+                        'tuple[]',
+                        {
+                            numerator: 't_uint256',
+                            denominator: 't_uint256',
+                            amount: 't_uint256',
+                            tokenId: 't_string_storage',
+                            useHbarsForPayment: 't_bool',
+                            feeCollector: 't_address',
+                        },
+                    ],
+                    ledgerId: 't_string_storage',
+                });
+                return rtrace(
+                    '0x' + encodedResponseCode + encodedTokenInfo,
                     `Requested address to token info, and slot matches \`getTokenInfo\``
                 );
             }
