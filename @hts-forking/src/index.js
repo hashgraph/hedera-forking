@@ -39,24 +39,40 @@ const slotMap = (function (slotMap) {
 })(new Map());
 
 /**
+ * @typedef {{ [key: string]: string | {type: string; schema: ObjectTypes} }} ObjectTypes
  * @param {any} tuple
- * @param {{ [key: string]: (string | {[key: string]: string}) }} objTypes
+ * @param {ObjectTypes} objTypes
  * @returns {string}
  */
 const encodeTuple = (tuple, objTypes) => {
     return Object.entries(tuple)
         .map(([key, value]) => {
-            const type = objTypes[key];
-            // @ts-expect-error/TS7053
-            const encodedValue = Array.isArray(type)
-                ? typeConverter[type[0]](value, type[1])
-                : typeConverter[type](value);
-            if (!encodedValue) {
-                console.log(JSON.stringify(tuple));
-                throw new Error(`Failed to encode value for key \`${key}\` with type \`${type}\``);
+            if (!(key in objTypes)) {
+                throw new Error(`Failed to find type for key \`${key}\``);
             }
+
+            let encodedValue;
+            if (typeof objTypes[key] === 'string') {
+                const type = objTypes[key];
+                // @ts-expect-error/TS7053
+                encodedValue = typeConverter[type](value);
+            } else {
+                const { type, schema } = objTypes[key];
+                // @ts-expect-error/TS7053
+                encodedValue = typeConverter[type](value, schema);
+            }
+
+            if (!encodedValue) {
+                // TODO: Remove this later
+                console.log(JSON.stringify(tuple), JSON.stringify(objTypes));
+                throw new Error(
+                    `Failed to encode value for key \`${key}\` with type \`${objTypes[key]}\``
+                );
+            }
+
+            // TODO: Remove this later
             console.log(
-                `key: ${key}, value: ${value}, type: ${type}, encodedValue: ${encodedValue}`
+                `key: ${key}, value: ${JSON.stringify(value)}, type: ${objTypes[key]}, encodedValue: ${encodedValue}`
             );
             return encodedValue;
         })
@@ -72,8 +88,8 @@ const encodeTuple = (tuple, objTypes) => {
  * 't_bool': (value: boolean) => string,
  * 't_address': (value: string) => string,
  * 't_bytes': (value: string) => string,
- * 'tuple': (obj: any, objTypes: any) => string
- * 'tuple[]': (obj: any[], objTypes: any) => string
+ * 'tuple': (obj: any, objTypes: ObjectTypes) => string
+ * 'tuple[]': (obj: any[], objTypes: ObjectTypes) => string
  * }}
  */
 const typeConverter = {
@@ -225,9 +241,9 @@ module.exports = {
 
                 const encodedResponseCode = typeConverter['t_int64']('22');
                 const encodedTokenInfo = typeConverter['tuple'](tokenInfo, {
-                    token: [
-                        'tuple',
-                        {
+                    token: {
+                        type: 'tuple',
+                        schema: {
                             name: 't_string_storage',
                             symbol: 't_string_storage',
                             treasury: 't_address',
@@ -235,49 +251,49 @@ module.exports = {
                             tokenSupplyType: 't_bool',
                             maxSupply: 't_uint256',
                             freezeDefault: 't_bool',
-                            tokenKeys: [
-                                'tuple[]',
-                                {
+                            tokenKeys: {
+                                type: 'tuple[]',
+                                schema: {
                                     keyType: 't_uint8',
-                                    key: [
-                                        'tuple',
-                                        {
+                                    key: {
+                                        type: 'tuple',
+                                        schema: {
                                             inheritAccountKey: 't_bool',
                                             contractId: 't_address',
                                             ed25519: 't_bytes',
                                             ECDSA_secp256k1: 't_bytes',
                                             delegatableContractId: 't_address',
                                         },
-                                    ],
+                                    },
                                 },
-                            ],
-                            expiry: [
-                                'tuple',
-                                {
+                            },
+                            expiry: {
+                                type: 'tuple',
+                                schema: {
                                     second: 't_uint256',
                                     autoRenewAccount: 't_address',
                                     autoRenewPeriod: 't_uint256',
                                 },
-                            ],
+                            },
                         },
-                    ],
+                    },
                     totalSupply: 't_int64',
                     deleted: 't_bool',
                     defaultKycStatus: 't_bool',
                     pauseStatus: 't_bool',
-                    fixedFees: [
-                        'tuple[]',
-                        {
+                    fixedFees: {
+                        type: 'tuple[]',
+                        schema: {
                             amount: 't_uint256',
                             tokenId: 't_string_storage',
                             useHbarsForPayment: 't_bool',
                             useCurrentTokenForPayment: 't_bool',
                             feeCollector: 't_address',
                         },
-                    ],
-                    fractionalFees: [
-                        'tuple[]',
-                        {
+                    },
+                    fractionalFees: {
+                        type: 'tuple[]',
+                        schema: {
                             numerator: 't_uint256',
                             denominator: 't_uint256',
                             minimumAmount: 't_uint256',
@@ -285,10 +301,10 @@ module.exports = {
                             netOfTransfers: 't_bool',
                             feeCollector: 't_address',
                         },
-                    ],
-                    royaltyFees: [
-                        'tuple[]',
-                        {
+                    },
+                    royaltyFees: {
+                        type: 'tuple[]',
+                        schema: {
                             numerator: 't_uint256',
                             denominator: 't_uint256',
                             amount: 't_uint256',
@@ -296,7 +312,7 @@ module.exports = {
                             useHbarsForPayment: 't_bool',
                             feeCollector: 't_address',
                         },
-                    ],
+                    },
                     ledgerId: 't_string_storage',
                 });
                 return rtrace(
@@ -436,15 +452,19 @@ module.exports = {
 
             /**
              * @param {import('./types/mirror-node').Key} key
-             * @returns {import('./types/evm').KeyValue}
+             * @returns {import('./types/evm').KeyValue | null}
              */
-            const getKeyValue = key => ({
-                inheritAccountKey: false,
-                contractId: '',
-                ed25519: key?._type === 'ED25519' ? key.key.toString() : '',
-                ECDSA_secp256k1: key?._type === 'ECDSA_SECP256K1' ? key.key.toString() : '',
-                delegatableContractId: '',
-            });
+            const getKeyValue = key =>
+                key
+                    ? {
+                          inheritAccountKey: false,
+                          contractId: '',
+                          ed25519: key?._type === 'ED25519' ? key.key.toString() : '',
+                          ECDSA_secp256k1:
+                              key?._type === 'ECDSA_SECP256K1' ? key.key.toString() : '',
+                          delegatableContractId: '',
+                      }
+                    : null;
 
             /**
              * @type {import('./types/evm').HederaToken}

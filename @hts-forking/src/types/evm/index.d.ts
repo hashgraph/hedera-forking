@@ -32,7 +32,7 @@ interface KeyValue {
 
 interface TokenKey {
     keyType: number;
-    key: KeyValue;
+    key: KeyValue | null;
 }
 
 interface HederaToken {
