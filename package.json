@@ -5,7 +5,8 @@
     "exports": "./@hardhat-forking-plugin/src/index.js",
     "private": true,
     "workspaces": [
-        "@*"
+        "@hts-forking",
+        "@hardhat-forking-plugin"
     ],
     "scripts": {
         "prepare": "husky",
