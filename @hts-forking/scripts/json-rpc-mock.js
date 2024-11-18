@@ -94,7 +94,6 @@ const mirrorNodeClient = {
     append(method, ...args) {
         this.requests.push(`${method}:${args.join(',')}`);
     },
-
     async getTokenById(tokenId) {
         this.append('getTokenById', tokenId);
         if (tokens[tokenId] === undefined) return null;
@@ -219,7 +218,11 @@ const eth = {
     },
 
     /** @type {EthHandler} */
-    test_getMirrorNodeRequests: async () => mirrorNodeClient.requests,
+    test_getMirrorNodeRequests: async () => {
+        const requests = mirrorNodeClient.requests;
+        mirrorNodeClient.requests = [];
+        return requests;
+    },
 };
 
 console.log(
