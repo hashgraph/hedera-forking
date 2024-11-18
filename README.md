@@ -106,50 +106,50 @@ This project has two main parts
 The following sequence diagram showcases the messages sent between components when fork testing is activated within an Ethereum Development Environment, _e.g._, Foundry or Hardhat.
 
 > [!NOTE]
-> For clarity, the JSON-RPC Relay process is split into its relevant modules, `eth` which handles the `eth_*` JSON-RPC method calls, and `hedera-forking`, the package mentioned above.
+> The JSON-RPC Relay service is not shown here because is not involved when performing a requests for a Token.
 
 ```mermaid
 sequenceDiagram
     autonumber
+    box Local
     actor user as User
-    participant client as Forked Network<br/>Anvil, Hardhat
-    box JSON-RPC Relay
-    participant relay as eth
-    participant hedera-forking
+    participant client as Local Network<br/>Foundry's Anvil, Hardhat's EDR
+    participant hedera-forking as Hardhat Forking Plugin
     end
+    box Remote
+    #participant relay as JSON-RPC Relay
     participant mirror as Mirror Node
+    end
 
     user->>+client: address(Token).totalSupply()
-    client->>+relay: eth_getCode(Token)
-    relay-->>-client: HIP-719 Token Proxy<br/>(delegates call to 0x167)
+    client->>+hedera-forking: eth_getCode(Token)
+    hedera-forking->>+mirror: API tokens/<tokenId>
+    mirror-->>-hedera-forking: Token {}
+    hedera-forking-->>-client: HIP-719 Token Proxy bytecode<br/>(delegate calls to 0x167)
 
-    client->>+relay: eth_getCode(0x167)
-    relay ->> + hedera-forking: getHtsCode
-    hedera-forking -->> - relay: HtsSystemContract bytecode
-    relay-->>-client: HtsSystemContract bytecode
+    client->> + hedera-forking: eth_getCode(0x167)
+    hedera-forking-->>-client: HtsSystemContract bytecode
 
-    client->>+relay: eth_getStorageAt(Token, slot<totalSupply>)
-    relay ->> + hedera-forking: getHtsStorageAt(Token, slot)
+    client->>+hedera-forking: eth_getStorageAt(Token, slot<totalSupply>)
+    #relay ->> + hedera-forking: getHtsStorageAt(Token, slot)
     hedera-forking -) + mirror: API tokens/<tokenId>
     mirror --) - hedera-forking: Token{}
-    hedera-forking -->> - relay: Token{}.totalSupply
-    relay-->>-client: Token{}.totalSupply
+    #hedera-forking -->> - relay: Token{}.totalSupply
+    hedera-forking-->>-client: Token{}.totalSupply
 
     client->>-user: Token{}.totalSupply
 ```
 
 The relevant interactions are
 
-- **(3).** This is the code defined by [HIP-719](https://hips.hedera.com/hip/hip-719#specification).
+- **(5).** This is the code defined by [HIP-719](https://hips.hedera.com/hip/hip-719#specification).
   For reference, you can see the
   [`hedera-services`](https://github.com/hashgraph/hedera-services/blob/fbac99e75c27bf9c70ebc78c5de94a9109ab1851/hedera-node/hedera-smart-contract-service-impl/src/main/java/com/hedera/node/app/service/contract/impl/state/DispatchingEvmFrameState.java#L96)
   implementation.
-- **(5)**-**(6)**. This calls `getHtsCode` which in turn returns the bytecode compiled from `HtsSystemContract.sol`.
-- **(9)**-**(12)**. This calls `getHtsStorageAt` which uses the `HtsSystemContract`'s [Storage Layout](#storage-layout) to fetch the appropriate state from the Mirror Node.
-
-The **(8)** JSON-RPC call is triggered as part of the `redirectForToken(address,bytes)` method call defined in HIP-719.
-Even if the call from HIP-719 is custom encoded, this method call should support standard ABI encoding as well as defined in
-[`hedera-services`](https://github.com/hashgraph/hedera-services/blob/b40f81234acceeac302ea2de14135f4c4185c37d/hedera-node/hedera-smart-contract-service-impl/src/main/java/com/hedera/node/app/service/contract/impl/exec/systemcontracts/common/AbstractCallAttempt.java#L91-L104).
+- **(6)**-**(7)**. This calls `getHtsCode` which in turn returns the bytecode compiled from `HtsSystemContract.sol`.
+- **(8)**-**(12)**. This calls `getHtsStorageAt` which uses the `HtsSystemContract`'s [Storage Layout](#storage-layout) to fetch the appropriate state from the Mirror Node. The **(8)** JSON-RPC call is triggered as part of the `redirectForToken(address,bytes)` method call defined in HIP-719.
+  Even if the call from HIP-719 is custom encoded, this method call should support standard ABI encoding as well as defined in
+  [`hedera-services`](https://github.com/hashgraph/hedera-services/blob/b40f81234acceeac302ea2de14135f4c4185c37d/hedera-node/hedera-smart-contract-service-impl/src/main/java/com/hedera/node/app/service/contract/impl/exec/systemcontracts/common/AbstractCallAttempt.java#L91-L104).
 
 ## Build
 
