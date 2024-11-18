@@ -183,10 +183,16 @@ const eth = {
                 return require(`../test/data/${tokens[tokenId].symbol}/getToken.json`);
             },
             async getAccount(idOrAliasOrEvmAddress) {
-                return requireOrDefault(
-                    `getAccount_0x${idOrAliasOrEvmAddress.toLowerCase()}.json`,
-                    null
-                );
+                // id in the format "shard.realm.number"
+                const idRegex = /^\d+\.\d+\.\d+$/;
+                if (idRegex.test(idOrAliasOrEvmAddress)) {
+                    return requireOrDefault(`getAccount_${idOrAliasOrEvmAddress}.json`, null);
+                } else {
+                    return requireOrDefault(
+                        `getAccount_0x${idOrAliasOrEvmAddress.toLowerCase()}.json`,
+                        null
+                    );
+                }
             },
             async getBalanceOfToken(tokenId, accountId) {
                 const noBalance = { balances: [] };

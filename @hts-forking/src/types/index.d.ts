@@ -16,8 +16,10 @@
  * limitations under the License.
  */
 
+import { TokenResponse } from './mirror-node';
+
 /**
- *
+ * The `IMirrorNodeClient` interface defines the methods that the HTS System Contract uses to interact with the Mirror Node.
  */
 interface IMirrorNodeClient {
     /**
@@ -30,10 +32,7 @@ interface IMirrorNodeClient {
      * @param tokenId
      * @param requestIdPrefix The formatted `requestId` as a prefix for logging purposes.
      */
-    getTokenById(
-        tokenId: string,
-        requestIdPrefix?: string
-    ): Promise<Record<string, unknown> | null>;
+    getTokenById(tokenId: string, requestIdPrefix?: string): Promise<TokenResponse | null>;
 
     /**
      *
@@ -89,6 +88,7 @@ interface IMirrorNodeClient {
         requestIdPrefix?: string
     ): Promise<{
         account: string;
+        evm_address: string;
     } | null>;
 }
 

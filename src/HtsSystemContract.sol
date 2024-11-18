@@ -49,7 +49,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
     function getTokenInfo(address token) htsCall external virtual returns (int64 responseCode, TokenInfo memory tokenInfo) {
         require(token != address(0), "getTokenInfo: invalid token");
         bytes4 selector = this.getTokenInfo.selector;
-        uint160 pad = 0x0;
+        uint64 pad = 0x0;
         bytes32 slot = bytes32(abi.encodePacked(selector, pad, token));
         assembly {
             responseCode := 22

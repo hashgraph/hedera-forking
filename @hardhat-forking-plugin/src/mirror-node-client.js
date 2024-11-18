@@ -38,7 +38,7 @@ class MirrorNodeClient {
      * Fetches information about a token by its token ID.
      *
      * @param {string} tokenId the token ID to fetch.
-     * @returns {Promise<Record<string, unknown> | null>} a `Promise` resolving to the token information or null if not found.
+     * @returns {Promise<import('../../@hts-forking/src/types/mirror-node').TokenResponse | null>} a `Promise` resolving to the token information or null if not found.
      */
     async getTokenById(tokenId) {
         return this.get(`tokens/${tokenId}`);
@@ -74,7 +74,7 @@ class MirrorNodeClient {
      * Fetches account information by account ID, alias, or EVM address.
      *
      * @param {string} idOrAliasOrEvmAddress The account ID, alias, or EVM address to fetch.
-     * @returns {Promise<{ account: string } | null>} A `Promise` resolving to the account information or `null` if not found.
+     * @returns {Promise<{ account: string; evm_address: string; } | null>} A `Promise` resolving to the account information or `null` if not found.
      */
     async getAccount(idOrAliasOrEvmAddress) {
         return this.get(`accounts/${idOrAliasOrEvmAddress}?transactions=false`);

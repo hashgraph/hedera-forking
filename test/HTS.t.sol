@@ -56,10 +56,6 @@ contract HTSTest is Test, TestSetup {
     }
 
     function test_HTS_getTokenInfo_should_return_token_info_for_valid_token() external {
-        if (TestMode.JSON_RPC == testMode) {
-            // skip this test for the mock JSON-RPC (will be handled in another PR for the hardhat solution)
-            return;
-        }
         address token = USDC;
         (int64 responseCode, HtsSystemContract.TokenInfo memory tokenInfo) = HtsSystemContract(HTS_ADDRESS).getTokenInfo(token);
         assertEq(responseCode, 22);
