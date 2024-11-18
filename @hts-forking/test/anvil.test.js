@@ -19,6 +19,7 @@
 const path = require('path');
 const { spawn } = require('child_process');
 const { Worker } = require('worker_threads');
+const { expect } = require('chai');
 const ethers = require('ethers');
 
 const IERC20 = require('../../out/IERC20.sol/IERC20.json');
@@ -79,7 +80,7 @@ function anvil(forkUrl = 'localhost:7546') {
     });
 }
 
-describe.skip('::anvil', function () {
+describe('::anvil', function () {
     /**@type {ethers.JsonRpcProvider} */
     let mockProvider;
 
@@ -101,17 +102,38 @@ describe.skip('::anvil', function () {
         console.log(n.chainId);
     });
 
-    it('Assigns initial balance', async function () {
-        const usdc = new ethers.Contract(
-            '0x0000000000000000000000000000000000068cDa',
-            IERC20.abi,
-            anvilProvider
-        );
-        const name = await usdc['name']();
-        const symbol = await usdc['symbol']();
-        const decimals = await usdc['decimals']();
-        console.log(name, symbol, decimals);
-        const a = await mockProvider.send('test_getMirrorNodeRequests', []);
-        console.log(a);
+    [
+        /**
+         * https://hashscan.io/testnet/token/0.0.429274
+         * https://testnet.mirrornode.hedera.com/api/v1/tokens/0.0.429274
+         */
+        {
+            address: '0x0000000000000000000000000000000000068cDa',
+            name: 'USD Coin',
+            symbol: 'USDC',
+            decimals: 6n,
+            nrequests: 3,
+        },
+        /**
+         * https://hashscan.io/testnet/token/0.0.4730999
+         * https://testnet.mirrornode.hedera.com/api/v1/tokens/0.0.4730999
+         */
+        {
+            address: '0x0000000000000000000000000000000000483077',
+            name: 'My Crypto Token is the name which the string length is greater than 31',
+            symbol: 'Token symbol must be exactly 32!',
+            decimals: 0n,
+            nrequests: 7,
+        },
+    ].forEach(({ address, name, symbol, decimals, nrequests }) => {
+        it(`should get token metadata for token \`${name}\``, async function () {
+            const ft = new ethers.Contract(address, IERC20.abi, anvilProvider);
+            expect(await ft['name']()).to.be.equal(name);
+            expect(await ft['symbol']()).to.be.equal(symbol);
+            expect(await ft['decimals']()).to.be.equal(decimals);
+            expect(await mockProvider.send('test_getMirrorNodeRequests', [])).to.be.of.length.equal(
+                nrequests
+            );
+        });
     });
 });
