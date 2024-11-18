@@ -131,7 +131,7 @@ describe('::anvil', function () {
             expect(await ft['name']()).to.be.equal(name);
             expect(await ft['symbol']()).to.be.equal(symbol);
             expect(await ft['decimals']()).to.be.equal(decimals);
-            expect(await mockProvider.send('test_getMirrorNodeRequests', [])).to.be.of.length.equal(
+            expect(await mockProvider.send('test_getMirrorNodeRequests', [])).to.have.length(
                 nrequests
             );
         });
