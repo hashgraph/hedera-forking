@@ -270,6 +270,170 @@ contract HtsSystemContractJson is HtsSystemContract {
         return tokenInfo;
     }
 
+    function _getHederaToken(string memory json) private returns (HederaToken memory token) {
+        token.tokenKeys = _getTokenKeys(json);
+
+        try vm.parseJsonString(json, ".name") returns (string memory name) {
+            token.name = name;
+        } catch {
+            revert("getTokenInfo: Token name is required");
+        }
+
+        try vm.parseJsonString(json, ".symbol") returns (string memory symbol) {
+            token.symbol = symbol;
+        } catch {
+            revert("getTokenInfo: Token symbol is required");
+        }
+
+        try vm.parseJsonString(json, ".treasury_account_id") returns (string memory treasuryAccountId) {
+            if (keccak256(bytes(treasuryAccountId)) != keccak256(bytes("null"))) {
+                token.treasury =  mirrorNode().getAccountAddress(treasuryAccountId);
+            }
+        } catch {
+            // Do nothing
+        }
+
+        try vm.parseJsonString(json, ".memo") returns (string memory memo) {
+            token.memo = memo;
+        } catch {
+            revert("getTokenInfo: Token memo is required");
+        }
+
+        try vm.parseJsonString(json, ".supply_type") returns (string memory supplyType) {
+            token.tokenSupplyType = keccak256(bytes(supplyType)) == keccak256(bytes("FINITE"));
+        } catch {
+            revert("getTokenInfo: Token supply type is required");
+        }
+
+        try vm.parseJsonString(json, ".max_supply") returns (string memory maxSupply) {
+            token.maxSupply = vm.parseInt(maxSupply);
+        } catch {
+            revert("getTokenInfo: Token max supply is required");
+        }
+
+        try vm.parseJsonBool(json, ".freeze_default") returns (bool freezeDefault) {
+            token.freezeDefault = freezeDefault;
+        } catch {
+            revert("getTokenInfo: Token freeze default is required");
+        }
+
+        try vm.parseJson(json, ".expiry_timestamp") returns (bytes memory expiryBytes) {
+            token.expiry.second = abi.decode(expiryBytes, (int256));
+        } catch {
+            // Do nothing
+        }
+
+        try vm.parseJsonString(json, ".auto_renew_account") returns (string memory autoRenewAccount) {
+            if (keccak256(bytes(autoRenewAccount)) != keccak256(bytes("null"))) {
+                token.expiry.autoRenewAccount = mirrorNode().getAccountAddress(autoRenewAccount);
+            }
+        } catch {
+            // Do nothing
+        }
+
+        try vm.parseJson(json, ".auto_renew_period") returns (bytes memory autoRenewPeriodBytes) {
+            token.expiry.autoRenewPeriod = abi.decode(autoRenewPeriodBytes, (int256));
+        } catch {
+            // Do nothing
+        }
+
+        return token;
+    }
+
+    function _getTokenKeys(string memory json) private pure returns (TokenKey[] memory tokenKeys) {
+        tokenKeys = new TokenKey[](7);
+
+        try vm.parseJson(json, ".admin_key") returns (bytes memory keyBytes) {
+            if (keccak256(keyBytes) != keccak256(abi.encodePacked(bytes32(0)))) {
+                IMirrorNodeResponses.Key memory key = abi.decode(keyBytes, (IMirrorNodeResponses.Key));
+                tokenKeys[0] = _getTokenKey(key, 0x1);
+            }
+        } catch {
+            // Do nothing
+        }
+
+        try vm.parseJson(json, ".kyc_key") returns (bytes memory keyBytes) {
+            if (keccak256(keyBytes) != keccak256(abi.encodePacked(bytes32(0)))) {
+                IMirrorNodeResponses.Key memory key = abi.decode(keyBytes, (IMirrorNodeResponses.Key));
+                tokenKeys[1] = _getTokenKey(key, 0x2);
+            }
+        } catch {
+            // Do nothing
+        }
+
+        try vm.parseJson(json, ".freeze_key") returns (bytes memory keyBytes) {
+            if (keccak256(keyBytes) != keccak256(abi.encodePacked(bytes32(0)))) {
+                IMirrorNodeResponses.Key memory key = abi.decode(keyBytes, (IMirrorNodeResponses.Key));
+                tokenKeys[2] = _getTokenKey(key, 0x4);
+            }
+        } catch {
+            // Do nothing
+        }
+
+        try vm.parseJson(json, ".wipe_key") returns (bytes memory keyBytes) {
+            if (keccak256(keyBytes) != keccak256(abi.encodePacked(bytes32(0)))) {
+                IMirrorNodeResponses.Key memory key = abi.decode(keyBytes, (IMirrorNodeResponses.Key));
+                tokenKeys[3] = _getTokenKey(key, 0x8);
+            }
+        } catch {
+            // Do nothing
+        }
+
+        try vm.parseJson(json, ".supply_key") returns (bytes memory keyBytes) {
+            if (keccak256(keyBytes) != keccak256(abi.encodePacked(bytes32(0)))) {
+                IMirrorNodeResponses.Key memory key = abi.decode(keyBytes, (IMirrorNodeResponses.Key));
+                tokenKeys[4] = _getTokenKey(key, 0x10);
+            }
+        } catch {
+            // Do nothing
+        }
+
+        try vm.parseJson(json, ".fee_schedule_key") returns (bytes memory keyBytes) {
+            if (keccak256(keyBytes) != keccak256(abi.encodePacked(bytes32(0)))) {
+                IMirrorNodeResponses.Key memory key = abi.decode(keyBytes, (IMirrorNodeResponses.Key));
+                tokenKeys[5] = _getTokenKey(key, 0x20);
+            }
+        } catch {
+            // Do nothing
+        }
+
+        try vm.parseJson(json, ".pause_key") returns (bytes memory keyBytes) {
+            if (keccak256(keyBytes) != keccak256(abi.encodePacked(bytes32(0)))) {
+                IMirrorNodeResponses.Key memory key = abi.decode(keyBytes, (IMirrorNodeResponses.Key));
+                tokenKeys[6] = _getTokenKey(key, 0x40);
+            }
+        } catch {
+            // Do nothing
+        }
+
+        return tokenKeys;
+    }
+
+    function _getTokenKey(IMirrorNodeResponses.Key memory key, uint8 keyType) internal pure returns (TokenKey memory) {
+        bool inheritAccountKey = false;
+        address contractId = address(0);
+        address delegatableContractId = address(0);
+        // TODO: Decode hex string into bytes here
+        bytes memory ed25519 = keccak256(bytes(key._type)) == keccak256(bytes("ED25519"))
+            ? vm.parseBytes(key.key)
+            : new bytes(0);
+
+        // TODO: Decode hex string into bytes here
+        bytes memory ECDSA_secp256k1 = keccak256(bytes(key._type)) == keccak256(bytes("ECDSA_SECP256K1"))
+            ? vm.parseBytes(key.key)
+            : new bytes(0);
+        return TokenKey(
+            keyType,
+            KeyValue(
+                contractId,
+                ed25519,
+                inheritAccountKey,
+                ECDSA_secp256k1,
+                delegatableContractId
+            )
+        );
+    }
+
     function _getFixedFees(string memory json) private returns (FixedFee[] memory) {
         if (!vm.keyExistsJson(json, ".custom_fees.fixed_fees")) {
             return new FixedFee[](0);
@@ -284,8 +448,8 @@ contract HtsSystemContractJson is HtsSystemContract {
             for (uint i = 0; i < fees.length; i++) {
                 string memory path = vm.replace(".custom_fees.fixed_fees[{i}]", "{i}", vm.toString(i));
                 int256 amount = vm.parseJsonInt(json, string.concat(path, ".amount"));
-                address denominatingToken = _getAccountAddress(vm.parseJsonString(json, string.concat(path, ".denominating_token_id")));
-                address collectorAccount = _getAccountAddress(vm.parseJsonString(json, string.concat(path, ".collector_account_id")));
+                address denominatingToken = mirrorNode().getAccountAddress(vm.parseJsonString(json, string.concat(path, ".denominating_token_id")));
+                address collectorAccount = mirrorNode().getAccountAddress(vm.parseJsonString(json, string.concat(path, ".collector_account_id")));
                 fixedFees[i] = FixedFee(
                     amount,
                     denominatingToken,
@@ -326,7 +490,7 @@ contract HtsSystemContractJson is HtsSystemContract {
                     denominator,
                     minimum,
                     maximum,
-                    _getAccountAddress(feeCollectorId)
+                    mirrorNode().getAccountAddress(feeCollectorId)
                 );
             }
             return fractionalFees;
@@ -353,9 +517,9 @@ contract HtsSystemContractJson is HtsSystemContract {
                 int256 denominator = vm.parseJsonInt(json, string.concat(path, ".amount.denominator"));
                 int256 fallbackAmount = vm.parseJsonInt(json, string.concat(path, ".fallback_fee.amount"));
                 string memory tokenId = vm.parseJsonString(json, string.concat(path, ".denominating_token_id"));
-                address tokenAccount = _getAccountAddress(tokenId);
+                address tokenAccount = mirrorNode().getAccountAddress(tokenId);
                 string memory collectorAccountId = vm.parseJsonString(json, string.concat(path, ".collector_account_id"));
-                address collectorAccount = _getAccountAddress(collectorAccountId);
+                address collectorAccount = mirrorNode().getAccountAddress(collectorAccountId);
                 royaltyFees[i] = RoyaltyFee(
                     numerator,
                     denominator,
@@ -369,193 +533,6 @@ contract HtsSystemContractJson is HtsSystemContract {
         } catch {
             return new RoyaltyFee[](0);
         }
-    }
-
-    function _getHederaToken(string memory json) private returns (HederaToken memory token) {
-        token.tokenKeys = _getTokenKeys(json);
-
-        try vm.parseJsonString(json, ".name") returns (string memory name) {
-            token.name = name;
-        } catch {
-            revert("getTokenInfo: Token name is required");
-        }
-
-        try vm.parseJsonString(json, ".symbol") returns (string memory symbol) {
-            token.symbol = symbol;
-        } catch {
-            revert("getTokenInfo: Token symbol is required");
-        }
-
-        try vm.parseJsonString(json, ".treasury_account_id") returns (string memory treasuryAccountId) {
-            if (keccak256(bytes(treasuryAccountId)) != keccak256(bytes("null"))) {
-                token.treasury =  _getAccountAddress(treasuryAccountId);
-            }
-        } catch {
-            // Do nothing
-        }
-
-        try vm.parseJsonString(json, ".memo") returns (string memory memo) {
-            token.memo = memo;
-        } catch {
-            revert("getTokenInfo: Token memo is required");
-        }
-
-        try vm.parseJsonString(json, ".supply_type") returns (string memory supplyType) {
-            token.tokenSupplyType = keccak256(bytes(supplyType)) == keccak256(bytes("FINITE"));
-        } catch {
-            revert("getTokenInfo: Token supply type is required");
-        }
-
-        try vm.parseJsonString(json, ".max_supply") returns (string memory maxSupply) {
-            token.maxSupply = vm.parseInt(maxSupply);
-        } catch {
-            revert("getTokenInfo: Token max supply is required");
-        }
-
-        try vm.parseJsonBool(json, ".freeze_default") returns (bool freezeDefault) {
-            token.freezeDefault = freezeDefault;
-        } catch {
-            revert("getTokenInfo: Token freeze default is required");
-        }
-
-        try vm.parseJson(json, ".expiry_timestamp") returns (bytes memory expiryBytes) {
-            token.expiry.second = abi.decode(expiryBytes, (int256));
-        } catch {
-            // Do nothing
-        }
-
-        try vm.parseJsonString(json, ".auto_renew_account") returns (string memory autoRenewAccount) {
-            if (keccak256(bytes(autoRenewAccount)) != keccak256(bytes("null"))) {
-                token.expiry.autoRenewAccount = _getAccountAddress(autoRenewAccount);
-            }
-        } catch {
-            // Do nothing
-        }
-
-        try vm.parseJson(json, ".auto_renew_period") returns (bytes memory autoRenewPeriodBytes) {
-            token.expiry.autoRenewPeriod = abi.decode(autoRenewPeriodBytes, (int256));
-        } catch {
-            // Do nothing
-        }
-
-        return token;
-    }
-
-    function _getTokenKeys(string memory json) private pure returns (TokenKey[] memory tokenKeys) {
-        tokenKeys = new TokenKey[](7);
-
-        try vm.parseJson(json, ".admin_key") returns (bytes memory keyBytes) {
-            if (keccak256(keyBytes) != keccak256(abi.encodePacked(bytes32(0)))) {
-                IMirrorNodeResponses.Key memory key = abi.decode(keyBytes, (IMirrorNodeResponses.Key));
-                tokenKeys[0] = _createTokenKey(key, 0x1);
-            }
-        } catch {
-            // Do nothing
-        }
-
-        try vm.parseJson(json, ".kyc_key") returns (bytes memory keyBytes) {
-            if (keccak256(keyBytes) != keccak256(abi.encodePacked(bytes32(0)))) {
-                IMirrorNodeResponses.Key memory key = abi.decode(keyBytes, (IMirrorNodeResponses.Key));
-                tokenKeys[1] = _createTokenKey(key, 0x2);
-            }
-        } catch {
-            // Do nothing
-        }
-
-        try vm.parseJson(json, ".freeze_key") returns (bytes memory keyBytes) {
-            if (keccak256(keyBytes) != keccak256(abi.encodePacked(bytes32(0)))) {
-                IMirrorNodeResponses.Key memory key = abi.decode(keyBytes, (IMirrorNodeResponses.Key));
-                tokenKeys[2] = _createTokenKey(key, 0x4);
-            }
-        } catch {
-            // Do nothing
-        }
-
-        try vm.parseJson(json, ".wipe_key") returns (bytes memory keyBytes) {
-            if (keccak256(keyBytes) != keccak256(abi.encodePacked(bytes32(0)))) {
-                IMirrorNodeResponses.Key memory key = abi.decode(keyBytes, (IMirrorNodeResponses.Key));
-                tokenKeys[3] = _createTokenKey(key, 0x8);
-            }
-        } catch {
-            // Do nothing
-        }
-
-        try vm.parseJson(json, ".supply_key") returns (bytes memory keyBytes) {
-            if (keccak256(keyBytes) != keccak256(abi.encodePacked(bytes32(0)))) {
-                IMirrorNodeResponses.Key memory key = abi.decode(keyBytes, (IMirrorNodeResponses.Key));
-                tokenKeys[4] = _createTokenKey(key, 0x10);
-            }
-        } catch {
-            // Do nothing
-        }
-
-        try vm.parseJson(json, ".fee_schedule_key") returns (bytes memory keyBytes) {
-            if (keccak256(keyBytes) != keccak256(abi.encodePacked(bytes32(0)))) {
-                IMirrorNodeResponses.Key memory key = abi.decode(keyBytes, (IMirrorNodeResponses.Key));
-                tokenKeys[5] = _createTokenKey(key, 0x20);
-            }
-        } catch {
-            // Do nothing
-        }
-
-        try vm.parseJson(json, ".pause_key") returns (bytes memory keyBytes) {
-            if (keccak256(keyBytes) != keccak256(abi.encodePacked(bytes32(0)))) {
-                IMirrorNodeResponses.Key memory key = abi.decode(keyBytes, (IMirrorNodeResponses.Key));
-                tokenKeys[6] = _createTokenKey(key, 0x40);
-            }
-        } catch {
-            // Do nothing
-        }
-
-        return tokenKeys;
-    }
-
-    function _createTokenKey(IMirrorNodeResponses.Key memory key, uint8 keyType) internal pure returns (TokenKey memory) {
-        bool inheritAccountKey = false;
-        address contractId = address(0);
-        address delegatableContractId = address(0);
-        // TODO: Decode hex string into bytes here
-        bytes memory ed25519 = keccak256(bytes(key._type)) == keccak256(bytes("ED25519"))
-            ? vm.parseBytes(key.key)
-            : new bytes(0);
-
-        // TODO: Decode hex string into bytes here
-        bytes memory ECDSA_secp256k1 = keccak256(bytes(key._type)) == keccak256(bytes("ECDSA_SECP256K1"))
-            ? vm.parseBytes(key.key)
-            : new bytes(0);
-        return TokenKey(
-            keyType,
-            KeyValue(
-                contractId,
-                ed25519,
-                inheritAccountKey,
-                ECDSA_secp256k1,
-                delegatableContractId
-            )
-        );
-    }
-
-    function _getAccountAddress(string memory accountId) private returns (address) {
-        if (bytes(accountId).length == 0
-            || keccak256(bytes(accountId)) == keccak256(bytes("null"))
-            || keccak256(bytes(accountId)) == keccak256(abi.encodePacked(bytes32(0)))) {
-            return address(0);
-        }
-
-        try mirrorNode().fetchAccount(accountId) returns (string memory json) {
-            if (vm.keyExistsJson(json, ".evm_address")) {
-                return vm.parseJsonAddress(json, ".evm_address");
-            }
-        } catch {
-            // Do nothing
-        }
-
-        // ignore the first 4 characters ("0.0.") to get the account number string
-        require(bytes(accountId).length > 4, "Invalid account ID, needs to be in the format '0.0.<account_number>'");
-        uint32 accountNum = uint32(vm.parseUint(vm.replace(accountId, "0.0.", "")));
-
-        // generate a deterministic address based on the account number as a fallback
-        return address(uint160(accountNum));
     }
 
     function _getLedgerId() internal view returns (string memory) {

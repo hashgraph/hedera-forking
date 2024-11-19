@@ -52,6 +52,29 @@ abstract contract MirrorNode is IMirrorNodeResponses {
         return 0;
     }
 
+    function getAccountAddress(string memory accountId) external returns (address) {
+        if (bytes(accountId).length == 0
+            || keccak256(bytes(accountId)) == keccak256(bytes("null"))
+            || keccak256(abi.encodePacked(accountId)) == keccak256(abi.encodePacked(bytes32(0)))) {
+            return address(0);
+        }
+
+        try this.fetchAccount(accountId) returns (string memory json) {
+            if (vm.keyExistsJson(json, ".evm_address")) {
+                return vm.parseJsonAddress(json, ".evm_address");
+            }
+        } catch {
+            // Do nothing
+        }
+
+        // ignore the first 4 characters ("0.0.") to get the account number string
+        require(bytes(accountId).length > 4, "Invalid account ID, needs to be in the format '0.0.<account_number>'");
+        uint32 accountNum = uint32(vm.parseUint(vm.replace(accountId, "0.0.", "")));
+
+        // generate a deterministic address based on the account number as a fallback
+        return address(uint160(accountNum));
+    }
+
     // Lets store the response somewhere in order to prevent multiple calls for the same account id
     function _getAccountNum(address account) private returns (uint32) {
         if ((uint160(account) >> 32) == 0) {
