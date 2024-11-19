@@ -89,7 +89,7 @@ extendConfig((config, userConfig) => {
                 forkingConfig.chainId = chainId;
                 forkingConfig.mirrorNodeUrl = mirrorNodeUrl;
                 forkingConfig.workerPort = workerPort;
-                forkingConfig.hardhatAddresses = getAddresses(config.networks.hardhat.accounts);
+                forkingConfig.localAccounts = getAddresses(config.networks.hardhat.accounts);
                 debug(`HTS emulation configured`);
             }
         } else {

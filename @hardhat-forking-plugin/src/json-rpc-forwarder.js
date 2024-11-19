@@ -32,25 +32,18 @@ const {
 } = require('../../@hts-forking/src');
 
 /** @type {Partial<import('hardhat/types').HardhatNetworkForkingConfig>} */
-const {
-    url: forkingUrl,
-    blockNumber,
-    mirrorNodeUrl,
-    workerPort,
-    hardhatAddresses = [],
-} = workerData;
+const { url: forkingUrl, mirrorNodeUrl, workerPort, localAccounts = [] } = workerData;
 
 assert(mirrorNodeUrl !== undefined, 'json-rpc-forwarder: Missing Mirror Node URL');
 
 debug(
-    c.yellow(
-        'Starting JSON-RPC Relay Forwarder server on :%d, forking url=%s blockNumber=%d mirror node url=%s'
-    ),
+    c.yellow('Starting JSON-RPC Forwarder on :%d, forking url=%s mirror node url=%s'),
     workerPort,
     forkingUrl,
-    blockNumber,
     mirrorNodeUrl
 );
+
+const mirrorNodeClient = new MirrorNodeClient(mirrorNodeUrl);
 
 /**
  * Function signature for `eth_*` method handlers.
@@ -71,16 +64,12 @@ const eth = {
     /** @type {EthHandler} */
     eth_getBalance: async ([address, _blockNumber]) => {
         assert(typeof address === 'string');
-        if (hardhatAddresses.includes(address.toLowerCase())) {
-            return '0x0';
-        }
-        return null;
+        return localAccounts.includes(address.toLowerCase()) ? '0x0' : null;
     },
-
     /** @type {EthHandler} */
     eth_getCode: async ([address, blockNumber]) => {
         assert(typeof address === 'string');
-        if (hardhatAddresses.includes(address.toLowerCase())) {
+        if (localAccounts.includes(address.toLowerCase())) {
             return '0x';
         }
         if (address === HTSAddress) {
@@ -88,28 +77,18 @@ const eth = {
             return getHtsCode();
         }
         if (address.startsWith(LONG_ZERO_PREFIX)) {
-            const mirrorNodeClient = new MirrorNodeClient(mirrorNodeUrl, Number(blockNumber));
             const tokenId = `0.0.${parseInt(address, 16)}`;
-            const token = await mirrorNodeClient.getTokenById(tokenId);
-            if (token !== null) {
-                return getHIP719Code(address);
-            }
-            return '0x';
+            const token = await mirrorNodeClient.getTokenById(tokenId, Number(blockNumber));
+            return token !== null ? getHIP719Code(address) : '0x';
         }
         return null;
     },
 
     /** @type {EthHandler} */
-    eth_getStorageAt: async ([address, slot, blockNumber], reqIdPrefix) => {
+    eth_getStorageAt: async ([address, slot, blockNumber]) => {
         assert(typeof address === 'string');
         assert(typeof slot === 'string');
-        return await getHtsStorageAt(
-            address,
-            slot,
-            new MirrorNodeClient(mirrorNodeUrl, Number(blockNumber)),
-            { trace: msg => debug(c.dim(msg)) },
-            reqIdPrefix
-        );
+        return await getHtsStorageAt(address, slot, Number(blockNumber), mirrorNodeClient);
     },
 };
 

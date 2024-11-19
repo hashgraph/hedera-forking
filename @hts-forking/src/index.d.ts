@@ -27,24 +27,26 @@ interface IMirrorNodeClient {
      *
      * This method should call the Mirror Node API endpoint `GET /api/v1/tokens/{tokenId}`.
      *
-     * @param tokenId
-     * @param requestIdPrefix The formatted `requestId` as a prefix for logging purposes.
+     * @param tokenId The ID of the token to return information for.
+     * @param blockNumber
      */
-    getTokenById(
-        tokenId: string,
-        requestIdPrefix?: string
-    ): Promise<Record<string, unknown> | null>;
+    getTokenById(tokenId: string, blockNumber: number): Promise<Record<string, unknown> | null>;
 
     /**
+     * Get token balance of `accountId`.
      *
-     * @param tokenId
-     * @param accountId
-     * @param requestIdPrefix
+     * This represents the Token supply distribution across the network.
+     *
+     * This method should call the Mirror Node API endpoint `GET /api/v1/tokens/{tokenId}/balances`.
+     *
+     * @param tokenId The ID of the token to return information for.
+     * @param accountId The ID of the account to return information for.
+     * @param blockNumber
      */
     getBalanceOfToken(
         tokenId: string,
         accountId: string,
-        requestIdPrefix?: string
+        blockNumber: number
     ): Promise<{
         balances: {
             balance: number;
@@ -54,16 +56,17 @@ interface IMirrorNodeClient {
     /**
      * Returns information for fungible token allowances for an account.
      *
+     * NOTE: `blockNumber` is not yet included until we fix issue
+     * https://github.com/hashgraph/hedera-forking/issues/89.
+     *
      * @param accountId Account alias or account id or evm address.
      * @param tokenId The ID of the token to return information for.
      * @param spenderId The ID of the spender to return information for.
-     * @param requestIdPrefix
      */
     getAllowanceForToken(
         accountId: string,
         tokenId: string,
-        spenderId: string,
-        requestIdPrefix?: string
+        spenderId: string
     ): Promise<{
         allowances: {
             amount: number;
@@ -82,11 +85,11 @@ interface IMirrorNodeClient {
      * This method should call the Mirror Node API endpoint `GET /api/v1/accounts/{idOrAliasOrEvmAddress}`.
      *
      * @param idOrAliasOrEvmAddress
-     * @param requestIdPrefix
+     * @param blockNumber
      */
     getAccount(
         idOrAliasOrEvmAddress: string,
-        requestIdPrefix?: string
+        blockNumber: number
     ): Promise<{
         account: string;
     } | null>;
@@ -145,14 +148,12 @@ export function getHtsCode(): string;
  *
  * @param address
  * @param slot
+ * @param blockNumber
  * @param mirrorNodeClient
- * @param logger
- * @param requestIdPrefix A prefix ID to identify the request in the logs.
  */
 export function getHtsStorageAt(
     address: string,
     slot: string,
-    mirrorNodeClient: IMirrorNodeClient,
-    logger: { trace: (msg: string) => void },
-    requestIdPrefix?: string
+    blockNumber: number,
+    mirrorNodeClient: IMirrorNodeClient
 ): Promise<string | null>;
