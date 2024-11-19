@@ -46,7 +46,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
      * @return responseCode - the response code for the status of the request. SUCCESS is `22`.
      * @return tokenInfo - token info for `token`
      */
-    function getTokenInfo(address token) htsCall external virtual returns (int64 responseCode, TokenInfo memory tokenInfo) {
+    function getTokenInfo(address token) htsCall external view returns (int64 responseCode, TokenInfo memory tokenInfo) {
         require(token != address(0), "getTokenInfo: invalid token");
 
         (bool success, bytes memory data) = token.staticcall(

@@ -55,7 +55,7 @@ contract HTSTest is Test, TestSetup {
         assertTrue(revertsAsExpected, "expectRevert: call did not revert");
     }
 
-    function test_HTS_getTokenInfo_should_return_token_info_for_valid_token() external {
+    function test_HTS_getTokenInfo_should_return_token_info_for_valid_token() external view {
         if (TestMode.JSON_RPC == testMode) {
             // skip this test for the mock JSON-RPC (will be handled in another PR for the hardhat solution)
             return;
@@ -75,22 +75,22 @@ contract HTSTest is Test, TestSetup {
         assertEq(tokenInfo.token.tokenKeys[0].keyType, 0x1);
         assertEq(tokenInfo.token.tokenKeys[0].key.inheritAccountKey, false);
         assertEq(tokenInfo.token.tokenKeys[0].key.contractId, address(0));
-        assertEq(tokenInfo.token.tokenKeys[0].key.ed25519, bytes("5db29fb3f19f8618cc4689cf13e78a935621845d67547719faf49f65d5c367cc"));
+        assertEq(tokenInfo.token.tokenKeys[0].key.ed25519, vm.parseBytes("5db29fb3f19f8618cc4689cf13e78a935621845d67547719faf49f65d5c367cc"));
         assertEq(tokenInfo.token.tokenKeys[0].key.ECDSA_secp256k1, bytes(""));
         assertEq(tokenInfo.token.tokenKeys[0].key.delegatableContractId, address(0));
         // FreezeKey
         assertEq(tokenInfo.token.tokenKeys[2].keyType, 0x4);
         assertEq(tokenInfo.token.tokenKeys[2].key.inheritAccountKey, false);
         assertEq(tokenInfo.token.tokenKeys[2].key.contractId, address(0));
-        assertEq(tokenInfo.token.tokenKeys[2].key.ed25519, bytes("baa2dd1684d8445d41b22f2b2c913484a7d885cf25ce525f8bf3fe8d5c8cb85d"));
+        assertEq(tokenInfo.token.tokenKeys[2].key.ed25519, vm.parseBytes("baa2dd1684d8445d41b22f2b2c913484a7d885cf25ce525f8bf3fe8d5c8cb85d"));
         assertEq(tokenInfo.token.tokenKeys[2].key.ECDSA_secp256k1, bytes(""));
         assertEq(tokenInfo.token.tokenKeys[2].key.delegatableContractId, address(0));
         // SupplyKey
         assertEq(tokenInfo.token.tokenKeys[4].keyType, 0x10);
         assertEq(tokenInfo.token.tokenKeys[4].key.inheritAccountKey, false);
         assertEq(tokenInfo.token.tokenKeys[4].key.contractId, address(0));
-        assertEq(string(tokenInfo.token.tokenKeys[4].key.ed25519), "4e4658983980d1b25a634eeeb26cb2b0f0e2e9c83263ba5b056798d35f2139a8");
-        assertEq(string(tokenInfo.token.tokenKeys[4].key.ECDSA_secp256k1), "");
+        assertEq(tokenInfo.token.tokenKeys[4].key.ed25519, vm.parseBytes("4e4658983980d1b25a634eeeb26cb2b0f0e2e9c83263ba5b056798d35f2139a8"));
+        assertEq(tokenInfo.token.tokenKeys[4].key.ECDSA_secp256k1, bytes(""));
         assertEq(tokenInfo.token.tokenKeys[4].key.delegatableContractId, address(0));
         // Expiry
         assertEq(tokenInfo.token.expiry.second, 1706825707000718000);

@@ -9,7 +9,6 @@ interface IMirrorNodeResponses {
     }
 
     struct FixedFee {
-        bool all_collectors_are_exempt;
         int64 amount;
         string collector_account_id;
         string denominating_token_id;
@@ -21,7 +20,6 @@ interface IMirrorNodeResponses {
     }
 
     struct FractionalFee {
-        bool all_collectors_are_exempt;
         FractionalAmount amount;
         string collector_account_id;
         string denominating_token_id;

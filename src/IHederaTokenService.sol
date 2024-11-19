@@ -29,14 +29,14 @@ interface IHederaTokenService {
     /// Exactly one of the possible values should be populated in order for the Key to be valid.
     struct KeyValue {
 
-        // if set to true, the key of the calling Hedera account will be inherited as the token key
-        bool inheritAccountKey;
-
         // smart contract instance that is authorized as if it had signed with a key
         address contractId;
 
         // Ed25519 public key bytes
         bytes ed25519;
+
+        // if set to true, the key of the calling Hedera account will be inherited as the token key
+        bool inheritAccountKey;
 
         // Compressed ECDSA(secp256k1) public key bytes
         bytes ECDSA_secp256k1;
@@ -118,17 +118,17 @@ interface IHederaTokenService {
         /// Specifies whether the token is deleted or not
         bool deleted;
 
-        /// Specifies whether the token kyc was defaulted with KycNotApplicable (true) or Revoked (false)
-        bool defaultKycStatus;
-
-        /// Specifies whether the token is currently paused or not
-        bool pauseStatus;
-
         /// The fixed fees collected when transferring the token
         FixedFee[] fixedFees;
 
+        /// Specifies whether the token kyc was defaulted with KycNotApplicable (true) or Revoked (false)
+        bool defaultKycStatus;
+
         /// The fractional fees collected when transferring the token
         FractionalFee[] fractionalFees;
+
+        /// Specifies whether the token is currently paused or not
+        bool pauseStatus;
 
         /// The royalty fees collected when transferring the token
         RoyaltyFee[] royaltyFees;
@@ -162,6 +162,8 @@ interface IHederaTokenService {
     /// be less than the given minimumAmount, and never greater than the given maximumAmount.  The
     /// denomination is always units of the token to which this fractional fee is attached.
     struct FractionalFee {
+        bool netOfTransfers;
+
         // A rational number's numerator, used to set the amount of a value transfer to collect as a custom fee
         int256 numerator;
 
@@ -173,7 +175,6 @@ interface IHederaTokenService {
 
         // The maximum amount to assess (zero implies no maximum)
         int256 maximumAmount;
-        bool netOfTransfers;
 
         // The ID of the account to receive the custom fee, expressed as a solidity address
         address feeCollector;

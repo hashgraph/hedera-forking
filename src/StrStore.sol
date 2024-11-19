@@ -5,23 +5,23 @@ import {Vm} from "forge-std/Vm.sol";
 
 Vm constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
-function storeString(address target, uint256 slot, string memory strvalue) returns (uint256 slotsTaken) {
+function storeString(address target, uint256 slot, string memory strvalue) {
     bytes memory value = bytes(strvalue);
-    return storeBytes(target, slot, value);
+    storeBytes(target, slot, value);
 }
 
-function storeBytes(address target, uint256 slot, bytes memory value) returns (uint256 slotsTaken) {
+function storeBytes(address target, uint256 slot, bytes memory value) {
     uint256 length = value.length;
 
     if (length == 0) {
         vm.store(target, bytes32(slot), bytes32(0));
-        return 1;
+        return;
     }
 
     if (length <= 31) {
         bytes32 slotValue = bytes32(value) | bytes32(length * 2);
         vm.store(target, bytes32(slot), slotValue);
-        return 1;
+        return;
     }
 
     vm.store(target, bytes32(slot), bytes32(length * 2 + 1));
@@ -42,42 +42,42 @@ function storeBytes(address target, uint256 slot, bytes memory value) returns (u
 
         vm.store(target, bytes32(uint256(baseSlot) + i), chunk);
     }
-
-    return numChunks;
 }
 
 function storeUint(address target, uint256 slot, uint256 value) {
     bytes32 uintData = bytes32(value);
-    vm.store(target, bytes32(slot), uintData);
+    storeBytes32(target, slot, 0, uintData);
 }
 
 function storeInt(address target, uint256 slot, int256 value) {
     bytes32 intData = bytes32(uint256(value));
-    vm.store(target, bytes32(slot), intData);
+    storeBytes32(target, slot, 0, intData);
 }
 
 function storeBool(address target, uint256 slot, bool value) {
     bytes32 boolData = value ? bytes32(uint256(1)) : bytes32(uint256(0));
-    vm.store(target, bytes32(slot), boolData);
+    storeBytes32(target, slot, 0, boolData);
 }
 
-function storeBool(address target, uint256 slot, uint8 offset, bool value) {
-    bytes32 slotData = vm.load(target, bytes32(slot));
+function storeBool(address target, uint256 slot, uint256 offsetInsideSlot, bool value) {
     bytes32 boolData = value ? bytes32(uint256(1)) : bytes32(uint256(0));
-    boolData = boolData << offset;
-    boolData = slotData | boolData;
-    vm.store(target, bytes32(slot), boolData);
+    storeBytes32(target, slot, offsetInsideSlot, boolData);
 }
 
 function storeAddress(address target, uint256 slot, address value) {
     bytes32 addressData = bytes32(uint256(uint160(value)));
-    vm.store(target, bytes32(slot), addressData);
+    storeBytes32(target, slot, 0, addressData);
 }
 
-function storeAddress(address target, uint256 slot, uint8 offset, address value) {
-    bytes32 slotData = vm.load(target, bytes32(slot));
-    bytes32 addressData = bytes32(uint256(uint160(value)));
-    addressData = addressData << offset;
-    addressData = slotData | addressData;
-    vm.store(target, bytes32(slot), addressData);
+function storeBytes32(address target, uint256 slot, uint256 offsetInsideSlot, bytes32 value) {
+    // The offset inside the slot must be less than 32
+    require(offsetInsideSlot < 32, "Offset must be less than 32");
+
+    bytes32 slotValue = vm.load(target, bytes32(slot));
+    bytes32 mask = bytes32(uint256(0xffffffffffffffffffffffffffffffff) << (offsetInsideSlot * 8));
+    bytes32 maskedSlotValue = slotValue & ~mask;
+    bytes32 maskedValue = value << (offsetInsideSlot * 8);
+    bytes32 newSlotValue = maskedSlotValue | maskedValue;
+
+    vm.store(target, bytes32(slot), newSlotValue);
 }
