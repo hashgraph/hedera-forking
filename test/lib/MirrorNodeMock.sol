@@ -39,11 +39,6 @@ contract MirrorNodeMock is MirrorNode {
         return vm.readFile(path);
     }
 
-    function fetchAccount(address account) external override view returns (string memory) {
-        string memory path = string.concat("./@hts-forking/test/data/getAccount_", vm.toLowercase(vm.toString(account)), ".json");
-        return vm.readFile(path);
-    }
-
     function fetchAccount(string memory account) external override view returns (string memory) {
         string memory path = string.concat("./@hts-forking/test/data/getAccount_", vm.toLowercase(account), ".json");
         return vm.readFile(path);

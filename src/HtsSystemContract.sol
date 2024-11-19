@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 import {IERC20Events, IERC20} from "./IERC20.sol";
 import {IHRC719} from "./IHRC719.sol";
 import {IHederaTokenService} from "./IHederaTokenService.sol";
-import {parseUint, slice} from "./StrUtils.sol";
 
 address constant HTS_ADDRESS = address(0x167);
 
@@ -16,6 +15,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
     string internal symbol;
     uint8 internal decimals;
     uint256 internal totalSupply;
+    TokenInfo internal _tokenInfo;
 
     /**
      * @dev Prevents delegatecall into the modified method.
@@ -48,13 +48,13 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
      */
     function getTokenInfo(address token) htsCall external virtual returns (int64 responseCode, TokenInfo memory tokenInfo) {
         require(token != address(0), "getTokenInfo: invalid token");
-        bytes4 selector = this.getTokenInfo.selector;
-        uint160 pad = 0x0;
-        bytes32 slot = bytes32(abi.encodePacked(selector, pad, token));
-        assembly {
-            responseCode := 22
-            tokenInfo := sload(slot)
-        }
+
+        (bool success, bytes memory data) = token.staticcall(
+            abi.encodeWithSelector(this.getTokenInfo.selector, token)
+        );
+        require(success, "Failed to get token info");
+        tokenInfo = abi.decode(data, (TokenInfo));
+        responseCode = 22; // HederaResponseCodes.SUCCESS
     }
 
     /**
@@ -194,6 +194,11 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
             bool res;
             assembly { res := sload(slot) }
             return abi.encode(res);
+        } else if (selector == this.getTokenInfo.selector) {
+            require(msg.data.length >= 28, "getTokenInfo: Not enough calldata");
+            require(msg.sender == HTS_ADDRESS, "getTokenInfo: unauthorized");
+            _initTokenData();
+            return abi.encode(_tokenInfo);
         }
         revert ("redirectForToken: not supported");
     }

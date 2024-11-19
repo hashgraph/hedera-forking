@@ -7,14 +7,14 @@ interface IHederaTokenService {
     struct Expiry {
         // The epoch second at which the token should expire; if an auto-renew account and period are
         // specified, this is coerced to the current epoch second plus the autoRenewPeriod
-        int64 second;
+        int256 second;
 
         // ID of an account which will be automatically charged to renew the token's expiration, at
         // autoRenewPeriod interval, expressed as a solidity address
         address autoRenewAccount;
 
         // The interval at which the auto-renew account will be charged to extend the token's expiry
-        int64 autoRenewPeriod;
+        int256 autoRenewPeriod;
     }
 
     /// A Key can be a public key from either the Ed25519 or ECDSA(secp256k1) signature schemes, where
@@ -94,7 +94,7 @@ interface IHederaTokenService {
         // IWA Compatibility. Depends on TokenSupplyType. For tokens of type FUNGIBLE_COMMON - the
         // maximum number of tokens that can be in circulation. For tokens of type NON_FUNGIBLE_UNIQUE -
         // the maximum number of NFTs (serial numbers) that can be minted. This field can never be changed!
-        int64 maxSupply;
+        int256 maxSupply;
 
         // The default Freeze status (frozen or unfrozen) of Hedera accounts relative to this token. If
         // true, an account must be unfrozen before it can receive the token
@@ -113,7 +113,7 @@ interface IHederaTokenService {
         HederaToken token;
 
         /// The number of tokens (fungible) or serials (non-fungible) of the token
-        int64 totalSupply;
+        int256 totalSupply;
 
         /// Specifies whether the token is deleted or not
         bool deleted;
@@ -143,7 +143,7 @@ interface IHederaTokenService {
     /// useCurrentTokenForPayment. Exactly one of the values should be set.
     struct FixedFee {
 
-        int64 amount;
+        int256 amount;
 
         // Specifies ID of token that should be used for fixed fee denomination
         address tokenId;
@@ -163,16 +163,16 @@ interface IHederaTokenService {
     /// denomination is always units of the token to which this fractional fee is attached.
     struct FractionalFee {
         // A rational number's numerator, used to set the amount of a value transfer to collect as a custom fee
-        int64 numerator;
+        int256 numerator;
 
         // A rational number's denominator, used to set the amount of a value transfer to collect as a custom fee
-        int64 denominator;
+        int256 denominator;
 
         // The minimum amount to assess
-        int64 minimumAmount;
+        int256 minimumAmount;
 
         // The maximum amount to assess (zero implies no maximum)
-        int64 maximumAmount;
+        int256 maximumAmount;
         bool netOfTransfers;
 
         // The ID of the account to receive the custom fee, expressed as a solidity address
@@ -186,17 +186,17 @@ interface IHederaTokenService {
     /// Royalty fees can only be added to tokens of type type NON_FUNGIBLE_UNIQUE.
     struct RoyaltyFee {
         // A fraction's numerator of fungible value exchanged for an NFT to collect as royalty
-        int64 numerator;
+        int256 numerator;
 
         // A fraction's denominator of fungible value exchanged for an NFT to collect as royalty
-        int64 denominator;
+        int256 denominator;
 
         // If present, the fee to assess to the NFT receiver when no fungible value
         // is exchanged with the sender. Consists of:
         // amount: the amount to charge for the fee
         // tokenId: Specifies ID of token that should be used for fixed fee denomination
         // useHbarsForPayment: Specifies this fee should be denominated in Hbar
-        int64 amount;
+        int256 amount;
         address tokenId;
         bool useHbarsForPayment;
 

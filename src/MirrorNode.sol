@@ -2,10 +2,9 @@
 pragma solidity ^0.8.0;
 
 import {Vm} from "forge-std/Vm.sol";
-import {IMirrorNode} from "./IMirrorNode.sol";
-import {storeAddress, storeBool} from "./StrStore.sol";
+import {IMirrorNodeResponses} from "./IMirrorNodeResponses.sol";
 
-abstract contract MirrorNode is IMirrorNode {
+abstract contract MirrorNode is IMirrorNodeResponses {
 
     Vm internal constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
@@ -24,8 +23,6 @@ abstract contract MirrorNode is IMirrorNode {
     function fetchBalance(address token, uint32 accountNum) external virtual returns (string memory json);
 
     function fetchAllowance(address token, uint32 ownerNum, uint32 spenderNum) external virtual returns (string memory json);
-
-    function fetchAccount(address account) external virtual returns (string memory json);
 
     function fetchAccount(string memory account) external virtual returns (string memory json);
 
@@ -61,7 +58,7 @@ abstract contract MirrorNode is IMirrorNode {
             return uint32(uint160(account));
         }
 
-        try this.fetchAccount(account) returns (string memory json) {
+        try this.fetchAccount(vm.toString(account)) returns (string memory json) {
             if (vm.keyExistsJson(json, ".account")) {
                 return uint32(vm.parseUint(vm.replace(vm.parseJsonString(json, ".account"), "0.0.", "")));
             }
