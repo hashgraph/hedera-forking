@@ -2,18 +2,14 @@
 pragma solidity ^0.8.0;
 
 import {console} from "forge-std/console.sol";
-import {StdCheats} from "forge-std/StdCheats.sol";
-import {Vm} from "forge-std/Vm.sol";
 
-import {HtsSystemContractJson, HTS_ADDRESS} from "../../src/HtsSystemContractJson.sol";
+import {htsSetup} from "../../src/htsSetup.sol";
+import {HTS_ADDRESS} from "../../src/HtsSystemContractJson.sol";
 import {MirrorNode} from "../../src/MirrorNode.sol";
 import {MirrorNodeFFI} from "../../src/MirrorNodeFFI.sol";
 import {MirrorNodeMock} from "./MirrorNodeMock.sol";
 
-abstract contract TestSetup is StdCheats {
-    // `vm` is private in StdCheats, so we duplicate it here
-    Vm private constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
-
+abstract contract TestSetup {
     /**
      * https://hashscan.io/testnet/token/0.0.429274
      * https://testnet.mirrornode.hedera.com/api/v1/tokens/0.0.429274
@@ -61,27 +57,19 @@ abstract contract TestSetup is StdCheats {
     function setUpMockStorageForNonFork() internal {
         if (HTS_ADDRESS.code.length == 0) {
             console.log("HTS code length is 0, non-fork test, code and data provided locally");
-
-            deployCodeTo("HtsSystemContractJson.sol", HTS_ADDRESS);
             MirrorNodeMock mirrorNodeMock = new MirrorNodeMock();
             mirrorNodeMock.deployHIP719Proxy(USDC, "USDC");
             mirrorNodeMock.deployHIP719Proxy(MFCT, "MFCT");
             mirrorNode = mirrorNodeMock;
-            HtsSystemContractJson(HTS_ADDRESS).setMirrorNodeProvider(mirrorNode);
-            vm.allowCheatcodes(HTS_ADDRESS);
-
+            htsSetup(mirrorNode);
             testMode = TestMode.NonFork;
         } else if (HTS_ADDRESS.code.length == 1) {
             console.log("HTS code length is 1, forking from a remote Hedera network, HTS/FFI code with Mirror Node backend is deployed here");
-            deployCodeTo("HtsSystemContractJson.sol", HTS_ADDRESS);
             mirrorNode = new MirrorNodeFFI();
-            HtsSystemContractJson(HTS_ADDRESS).setMirrorNodeProvider(mirrorNode);
-            vm.allowCheatcodes(HTS_ADDRESS);
-
+            htsSetup(mirrorNode);
             testMode = TestMode.FFI;
         } else {
             console.log("HTS code length is greater than 1 (%d), HTS code comes from forked network", HTS_ADDRESS.code.length);
-            
             testMode = TestMode.JSON_RPC;
         }
     }

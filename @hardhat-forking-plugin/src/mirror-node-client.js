@@ -18,30 +18,36 @@
 
 const debug = require('util').debuglog('hedera-forking-mirror');
 
+/** @import { IMirrorNodeClient } from '@hashgraph/hts-forking' */
+
 /**
  * Class representing a client for interacting with the Hedera Mirror Node API.
+ *
+ * @implements {IMirrorNodeClient}
  */
 class MirrorNodeClient {
+    /** @type {{[query: string]: unknown}} */
+    _responses = {};
+
     /**
      * Creates a new instance of the `MirrorNodeClient`.
      *
      * @param {string} url The base URL of the Hedera Mirror Node API.
-     * @param {number=} blockNumber
      */
-    constructor(url, blockNumber) {
+    constructor(url) {
         this.url = url;
-        this.blockNumber = blockNumber;
-        this.forkBlock = null;
     }
 
     /**
      * Fetches information about a token by its token ID.
      *
      * @param {string} tokenId the token ID to fetch.
+     * @param {number} blockNumber
      * @returns {Promise<Record<string, unknown> | null>} a `Promise` resolving to the token information or null if not found.
      */
-    async getTokenById(tokenId) {
-        return this.get(`tokens/${tokenId}`);
+    async getTokenById(tokenId, blockNumber) {
+        const timestamp = await this.getBlockQueryParam(blockNumber);
+        return this._get(`tokens/${tokenId}?${timestamp}`);
     }
 
     /**
@@ -49,10 +55,12 @@ class MirrorNodeClient {
      *
      * @param {string} tokenId the token ID to fetch the balance for.
      * @param {string} accountId the account ID to fetch the balance for.
+     * @param {number} blockNumber
      * @returns {Promise<{ balances: { balance: number }[] } | null>} A `Promise` resolving to the account's token balance.
      */
-    async getBalanceOfToken(tokenId, accountId) {
-        return this.get(`tokens/${tokenId}/balances?account.id=${accountId}`);
+    async getBalanceOfToken(tokenId, accountId, blockNumber) {
+        const timestamp = await this.getBlockQueryParam(blockNumber);
+        return this._get(`tokens/${tokenId}/balances?account.id=${accountId}&${timestamp}`);
     }
 
     /**
@@ -63,10 +71,9 @@ class MirrorNodeClient {
      * @param {string} spenderId The spender's account ID.
      * @returns {Promise<{ allowances: { amount: number }[] } | null>} A `Promise` resolving to the token allowances.
      */
-    async getAllowanceForToken(accountId, tokenId, spenderId) {
-        return this.get(
-            `accounts/${accountId}/allowances/tokens?token.id=${tokenId}&spender.id=${spenderId}`,
-            false
+    getAllowanceForToken(accountId, tokenId, spenderId) {
+        return this._get(
+            `accounts/${accountId}/allowances/tokens?token.id=${tokenId}&spender.id=${spenderId}`
         );
     }
 
@@ -74,21 +81,29 @@ class MirrorNodeClient {
      * Fetches account information by account ID, alias, or EVM address.
      *
      * @param {string} idOrAliasOrEvmAddress The account ID, alias, or EVM address to fetch.
+     * @param {number} blockNumber
      * @returns {Promise<{ account: string } | null>} A `Promise` resolving to the account information or `null` if not found.
      */
-    async getAccount(idOrAliasOrEvmAddress) {
-        return this.get(`accounts/${idOrAliasOrEvmAddress}?transactions=false`);
+    async getAccount(idOrAliasOrEvmAddress, blockNumber) {
+        const timestamp = await this.getBlockQueryParam(blockNumber);
+        return this._get(`accounts/${idOrAliasOrEvmAddress}?transactions=false&${timestamp}`);
     }
 
     /**
-     *
      * @param {number} blockNumber
+     * @returns {Promise<{timestamp: {to: string}} | null>}
      */
-    async getTimestamp(blockNumber) {
-        if (this.forkBlock === null) {
-            this.forkBlock = await this.get(`blocks/${blockNumber}`, false);
-        }
-        return this.forkBlock.timestamp.to;
+    getBlock(blockNumber) {
+        return this._get(`blocks/${blockNumber}`);
+    }
+
+    /**
+     * @param {number} blockNumber
+     * @returns {Promise<string>}
+     */
+    async getBlockQueryParam(blockNumber) {
+        const block = await this.getBlock(blockNumber);
+        return `timestamp=${block?.timestamp.to}`;
     }
 
     /**
@@ -96,37 +111,38 @@ class MirrorNodeClient {
      *
      * @private
      * @template T
-     * @param {string} endpoint The endpoint to send the `GET` request to.
-     * @param {boolean} withTimestamp
+     * @param {string} request The endpoint to send the `GET` request to.
      * @returns {Promise<T | null>} A `Promise` resolving to the response data or `null` if an error happened.
      */
-    async get(endpoint, withTimestamp = true) {
-        const timestamp =
-            withTimestamp && this.blockNumber !== undefined
-                ? `${endpoint.includes('?') ? '&' : '?'}timestamp=${await this.getTimestamp(this.blockNumber)}`
-                : '';
+    async _get(request) {
+        const url = `${this.url}${request}`;
+
+        if (this._responses[url] !== undefined) {
+            debug('Cached response for', url);
+            return /**@type{T}*/ (this._responses[url]);
+        }
 
         try {
-            const url = `${this.url}${endpoint}${timestamp}`;
             debug('Mirror Node request', url);
             const response = await fetch(url);
             if (!response.ok) {
                 if (response.status === 404) {
+                    this._responses[url] = null;
                     return null;
                 }
                 throw new Error(
                     `Request failed with status ${response.status}: ${response.statusText}`
                 );
             }
-            return await response.json();
+            const result = await response.json();
+            this._responses[url] = result;
+            return result;
         } catch (err) {
-            console.error(`Error fetching data from ${endpoint}`);
+            console.error(`Error fetching data from ${request}`);
             console.error(err);
             return null;
         }
     }
 }
 
-module.exports = {
-    MirrorNodeClient,
-};
+module.exports = { MirrorNodeClient };
