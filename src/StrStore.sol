@@ -46,38 +46,24 @@ function storeBytes(address target, uint256 slot, bytes memory value) {
 
 function storeUint(address target, uint256 slot, uint256 value) {
     bytes32 uintData = bytes32(value);
-    storeBytes32(target, slot, 0, uintData);
+    storeBytes32(target, slot, uintData);
 }
 
 function storeInt(address target, uint256 slot, int256 value) {
     bytes32 intData = bytes32(uint256(value));
-    storeBytes32(target, slot, 0, intData);
+    storeBytes32(target, slot, intData);
 }
 
 function storeBool(address target, uint256 slot, bool value) {
     bytes32 boolData = value ? bytes32(uint256(1)) : bytes32(uint256(0));
-    storeBytes32(target, slot, 0, boolData);
-}
-
-function storeBool(address target, uint256 slot, uint256 offsetInsideSlot, bool value) {
-    bytes32 boolData = value ? bytes32(uint256(1)) : bytes32(uint256(0));
-    storeBytes32(target, slot, offsetInsideSlot, boolData);
+    storeBytes32(target, slot, boolData);
 }
 
 function storeAddress(address target, uint256 slot, address value) {
     bytes32 addressData = bytes32(uint256(uint160(value)));
-    storeBytes32(target, slot, 0, addressData);
+    storeBytes32(target, slot, addressData);
 }
 
-function storeBytes32(address target, uint256 slot, uint256 offsetInsideSlot, bytes32 value) {
-    // The offset inside the slot must be less than 32
-    require(offsetInsideSlot < 32, "Offset must be less than 32");
-
-    bytes32 slotValue = vm.load(target, bytes32(slot));
-    bytes32 mask = bytes32(uint256(0xffffffffffffffffffffffffffffffff) << (offsetInsideSlot * 8));
-    bytes32 maskedSlotValue = slotValue & ~mask;
-    bytes32 maskedValue = value << (offsetInsideSlot * 8);
-    bytes32 newSlotValue = maskedSlotValue | maskedValue;
-
-    vm.store(target, bytes32(slot), newSlotValue);
+function storeBytes32(address target, uint256 slot, bytes32 value) {
+    vm.store(target, bytes32(slot), value);
 }
