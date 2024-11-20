@@ -75,21 +75,21 @@ contract HTSTest is Test, TestSetup {
         assertEq(tokenInfo.token.tokenKeys[0].keyType, 0x1);
         assertEq(tokenInfo.token.tokenKeys[0].key.inheritAccountKey, false);
         assertEq(tokenInfo.token.tokenKeys[0].key.contractId, address(0));
-        assertEq(tokenInfo.token.tokenKeys[0].key.ed25519, vm.parseBytes("5db29fb3f19f8618cc4689cf13e78a935621845d67547719faf49f65d5c367cc"));
+        assertEq(tokenInfo.token.tokenKeys[0].key.ed25519, hex"5db29fb3f19f8618cc4689cf13e78a935621845d67547719faf49f65d5c367cc");
         assertEq(tokenInfo.token.tokenKeys[0].key.ECDSA_secp256k1, bytes(""));
         assertEq(tokenInfo.token.tokenKeys[0].key.delegatableContractId, address(0));
         // FreezeKey
         assertEq(tokenInfo.token.tokenKeys[2].keyType, 0x4);
         assertEq(tokenInfo.token.tokenKeys[2].key.inheritAccountKey, false);
         assertEq(tokenInfo.token.tokenKeys[2].key.contractId, address(0));
-        assertEq(tokenInfo.token.tokenKeys[2].key.ed25519, vm.parseBytes("baa2dd1684d8445d41b22f2b2c913484a7d885cf25ce525f8bf3fe8d5c8cb85d"));
+        assertEq(tokenInfo.token.tokenKeys[2].key.ed25519, hex"baa2dd1684d8445d41b22f2b2c913484a7d885cf25ce525f8bf3fe8d5c8cb85d");
         assertEq(tokenInfo.token.tokenKeys[2].key.ECDSA_secp256k1, bytes(""));
         assertEq(tokenInfo.token.tokenKeys[2].key.delegatableContractId, address(0));
         // SupplyKey
         assertEq(tokenInfo.token.tokenKeys[4].keyType, 0x10);
         assertEq(tokenInfo.token.tokenKeys[4].key.inheritAccountKey, false);
         assertEq(tokenInfo.token.tokenKeys[4].key.contractId, address(0));
-        assertEq(tokenInfo.token.tokenKeys[4].key.ed25519, vm.parseBytes("4e4658983980d1b25a634eeeb26cb2b0f0e2e9c83263ba5b056798d35f2139a8"));
+        assertEq(tokenInfo.token.tokenKeys[4].key.ed25519, hex"4e4658983980d1b25a634eeeb26cb2b0f0e2e9c83263ba5b056798d35f2139a8");
         assertEq(tokenInfo.token.tokenKeys[4].key.ECDSA_secp256k1, bytes(""));
         assertEq(tokenInfo.token.tokenKeys[4].key.delegatableContractId, address(0));
         // Expiry
@@ -106,9 +106,22 @@ contract HTSTest is Test, TestSetup {
         assertEq(tokenInfo.ledgerId, testMode == TestMode.FFI ? "0x01" : "0x00");
     }
 
-    function test_HTS_getTokenInfo_should_revert_for_invalid_token() external {
+    function test_HTS_getTokenInfo_should_revert_for_empty_token_address() external {
         address token = address(0);
         vm.expectRevert(bytes("getTokenInfo: invalid token"));
+        HtsSystemContract(HTS_ADDRESS).getTokenInfo(token);
+    }
+
+    function test_HTS_getTokenInfo_should_revert_for_invalid_token() external {
+        address token = makeAddr("unknown-token");
+        vm.expectRevert();
+        HtsSystemContract(HTS_ADDRESS).getTokenInfo(token);
+    }
+
+    function test_HTS_getTokenInfo_should_revert_when_call_to_mirror_node_fails() external {
+        address token = MFCT;
+        vm.mockCallRevert(address(mirrorNode), abi.encode(mirrorNode.fetchTokenData.selector), abi.encode("mirror node error"));
+        vm.expectRevert(bytes("getTokenInfo: failed to get token info"));
         HtsSystemContract(HTS_ADDRESS).getTokenInfo(token);
     }
 
@@ -116,5 +129,11 @@ contract HTSTest is Test, TestSetup {
         vm.expectRevert(bytes("htsCall: delegated call"));
         (bool revertsAsExpected, ) = HTS_ADDRESS.delegatecall(abi.encodeWithSelector(HtsSystemContract.getTokenInfo.selector, address(this)));
         assertTrue(revertsAsExpected, "expectRevert: call did not revert");
+    }
+
+    function test_HTS_getTokenInfo_should_revert_when_called_from_outside_of_HTS() external {
+        address token = USDC;
+        vm.expectRevert(bytes("getTokenInfo: unauthorized"));
+        HtsSystemContract(token).getTokenInfo(token);
     }
 }

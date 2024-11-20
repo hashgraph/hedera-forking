@@ -6,6 +6,7 @@ import {StdCheats} from "forge-std/StdCheats.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 import {HtsSystemContractJson, HTS_ADDRESS} from "../../src/HtsSystemContractJson.sol";
+import {MirrorNode} from "../../src/MirrorNode.sol";
 import {MirrorNodeFFI} from "../../src/MirrorNodeFFI.sol";
 import {MirrorNodeMock} from "./MirrorNodeMock.sol";
 
@@ -55,15 +56,17 @@ abstract contract TestSetup is StdCheats {
     }
 
     TestMode internal testMode;
+    MirrorNode internal mirrorNode;
 
     function setUpMockStorageForNonFork() internal {
         if (HTS_ADDRESS.code.length == 0) {
             console.log("HTS code length is 0, non-fork test, code and data provided locally");
 
             deployCodeTo("HtsSystemContractJson.sol", HTS_ADDRESS);
-            MirrorNodeMock mirrorNode = new MirrorNodeMock();
-            mirrorNode.deployHIP719Proxy(USDC, "USDC");
-            mirrorNode.deployHIP719Proxy(MFCT, "MFCT");
+            MirrorNodeMock mirrorNodeMock = new MirrorNodeMock();
+            mirrorNodeMock.deployHIP719Proxy(USDC, "USDC");
+            mirrorNodeMock.deployHIP719Proxy(MFCT, "MFCT");
+            mirrorNode = mirrorNodeMock;
             HtsSystemContractJson(HTS_ADDRESS).setMirrorNodeProvider(mirrorNode);
             vm.allowCheatcodes(HTS_ADDRESS);
 
@@ -71,7 +74,8 @@ abstract contract TestSetup is StdCheats {
         } else if (HTS_ADDRESS.code.length == 1) {
             console.log("HTS code length is 1, forking from a remote Hedera network, HTS/FFI code with Mirror Node backend is deployed here");
             deployCodeTo("HtsSystemContractJson.sol", HTS_ADDRESS);
-            HtsSystemContractJson(HTS_ADDRESS).setMirrorNodeProvider(new MirrorNodeFFI());
+            mirrorNode = new MirrorNodeFFI();
+            HtsSystemContractJson(HTS_ADDRESS).setMirrorNodeProvider(mirrorNode);
             vm.allowCheatcodes(HTS_ADDRESS);
 
             testMode = TestMode.FFI;

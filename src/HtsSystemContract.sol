@@ -52,7 +52,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
         (bool success, bytes memory data) = token.staticcall(
             abi.encodeWithSelector(this.getTokenInfo.selector, token)
         );
-        require(success, "Failed to get token info");
+        require(success, "getTokenInfo: failed to get token info");
         tokenInfo = abi.decode(data, (TokenInfo));
         responseCode = 22; // HederaResponseCodes.SUCCESS
     }

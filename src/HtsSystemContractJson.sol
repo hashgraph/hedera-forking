@@ -60,13 +60,13 @@ contract HtsSystemContractJson is HtsSystemContract {
         storeString(address(this), uint256(slot), vm.parseJsonString(json, ".symbol"));
 
         assembly { slot := decimals.slot }
-        vm.store(address(this), slot, bytes32(vm.parseJsonUint(json, ".decimals")));
+        storeUint(address(this), uint256(slot), vm.parseJsonUint(json, ".decimals"));
 
         assembly { slot := totalSupply.slot }
-        vm.store(address(this), slot, bytes32(vm.parseJsonUint(json, ".total_supply")));
+        storeUint(address(this), uint256(slot), vm.parseJsonUint(json, ".total_supply"));
 
         assembly { slot := initialized.slot }
-        vm.store(address(this), slot, bytes32(uint256(1)));
+        storeBool(address(this), uint256(slot), true);
 
         _initTokenInfo(json);
     }
@@ -74,171 +74,110 @@ contract HtsSystemContractJson is HtsSystemContract {
     function _initTokenInfo(string memory json) internal {
         TokenInfo memory tokenInfo = _getTokenInfo(json);
 
-        bytes32 slot;
-        uint8 offset;
+        bytes32 slotBytes;
+        assembly { slotBytes := _tokenInfo.slot }
 
-        assembly { slot := _tokenInfo.slot }
+        uint256 slot = uint256(slotBytes);
 
         // Name
-        storeString(address(this), uint256(slot), tokenInfo.token.name);
-        slot = bytes32(uint256(slot) + 1);
+        storeString(address(this), slot++, tokenInfo.token.name);
 
         // Symbol
-        storeString(address(this), uint256(slot), tokenInfo.token.symbol);
-        slot = bytes32(uint256(slot) + 1);
+        storeString(address(this), slot++, tokenInfo.token.symbol);
 
         // Treasury
-        storeAddress(address(this), uint256(slot), tokenInfo.token.treasury);
-        slot = bytes32(uint256(slot) + 1);
+        storeAddress(address(this), slot++, tokenInfo.token.treasury);
 
         // Memo
-        storeString(address(this), uint256(slot), tokenInfo.token.memo);
-        slot = bytes32(uint256(slot) + 1);
+        storeString(address(this), slot++, tokenInfo.token.memo);
 
         // Token supply type
-        storeBool(address(this), uint256(slot), tokenInfo.token.tokenSupplyType);
-        slot = bytes32(uint256(slot) + 1);
+        storeBool(address(this), slot++, tokenInfo.token.tokenSupplyType);
 
         // Max supply
-        storeInt(address(this), uint256(slot), tokenInfo.token.maxSupply);
-        slot = bytes32(uint256(slot) + 1);
+        storeInt(address(this), slot++, tokenInfo.token.maxSupply);
 
         // Freeze default
-        storeBool(address(this), uint256(slot), tokenInfo.token.freezeDefault);
-        slot = bytes32(uint256(slot) + 1);
+        storeBool(address(this), slot++, tokenInfo.token.freezeDefault);
 
         // Token keys
         // https://docs.soliditylang.org/en/latest/internals/layout_in_storage.html
-        uint256 p = uint256(slot);
-        storeUint(address(this), p, tokenInfo.token.tokenKeys.length);
-        uint256 itemSlot = uint256(keccak256(abi.encodePacked(p)));
-
+        storeUint(address(this), slot, tokenInfo.token.tokenKeys.length);
+        uint256 itemSlot = uint256(keccak256(abi.encodePacked(slot)));
         for (uint256 i = 0; i < tokenInfo.token.tokenKeys.length; i++) {
             // Key type
-            storeUint(address(this), itemSlot, tokenInfo.token.tokenKeys[i].keyType);
-            itemSlot += 1;
-
-            storeAddress(address(this), itemSlot, tokenInfo.token.tokenKeys[i].key.contractId);
-            itemSlot += 1;
-
-            storeBytes(address(this), itemSlot, tokenInfo.token.tokenKeys[i].key.ed25519);
-            itemSlot += 1;
-
-            storeBool(address(this), itemSlot, tokenInfo.token.tokenKeys[i].key.inheritAccountKey);
-            itemSlot += 1;
-
-            storeBytes(address(this), itemSlot, tokenInfo.token.tokenKeys[i].key.ECDSA_secp256k1);
-            itemSlot += 1;
-
-            storeAddress(address(this), itemSlot, tokenInfo.token.tokenKeys[i].key.delegatableContractId);
-            itemSlot += 1;
+            storeUint(address(this), itemSlot++, tokenInfo.token.tokenKeys[i].keyType);
+            // Key value
+            storeAddress(address(this), itemSlot++, tokenInfo.token.tokenKeys[i].key.contractId);
+            storeBytes(address(this), itemSlot++, tokenInfo.token.tokenKeys[i].key.ed25519);
+            storeBool(address(this), itemSlot++, tokenInfo.token.tokenKeys[i].key.inheritAccountKey);
+            storeBytes(address(this), itemSlot++, tokenInfo.token.tokenKeys[i].key.ECDSA_secp256k1);
+            storeAddress(address(this), itemSlot++, tokenInfo.token.tokenKeys[i].key.delegatableContractId);
         }
-        slot = bytes32(uint256(slot) + 1);
+        slot += 1;
 
         // Expiry
-        storeInt(address(this), uint256(slot), tokenInfo.token.expiry.second);
-        slot = bytes32(uint256(slot) + 1);
-
-        storeAddress(address(this), uint256(slot), tokenInfo.token.expiry.autoRenewAccount);
-        slot = bytes32(uint256(slot) + 1);
-
-        storeInt(address(this), uint256(slot), tokenInfo.token.expiry.autoRenewPeriod);
-        slot = bytes32(uint256(slot) + 1);
+        storeInt(address(this), slot++, tokenInfo.token.expiry.second);
+        storeAddress(address(this), slot++, tokenInfo.token.expiry.autoRenewAccount);
+        storeInt(address(this), slot++, tokenInfo.token.expiry.autoRenewPeriod);
 
         // Total supply
-        storeInt(address(this), uint256(slot), tokenInfo.totalSupply);
-        slot = bytes32(uint256(slot) + 1);
+        storeInt(address(this), slot++, tokenInfo.totalSupply);
 
         // Deleted
-        storeBool(address(this), uint256(slot), tokenInfo.deleted);
-        slot = bytes32(uint256(slot) + 1);
+        storeBool(address(this), slot++, tokenInfo.deleted);
 
         // Fixed fees
         // https://docs.soliditylang.org/en/latest/internals/layout_in_storage.html
-        p = uint256(slot);
-        itemSlot = uint256(keccak256(abi.encodePacked(p)));
-        storeUint(address(this), p, tokenInfo.fixedFees.length);
+        itemSlot = uint256(keccak256(abi.encodePacked(slot)));
+        storeUint(address(this), slot, tokenInfo.fixedFees.length);
         for (uint256 i = 0; i < tokenInfo.fixedFees.length; i++) {
-            storeInt(address(this), itemSlot, tokenInfo.fixedFees[i].amount);
-            itemSlot += 1;
-
-            storeAddress(address(this), itemSlot, tokenInfo.fixedFees[i].tokenId);
-            offset = 20;
-
-            storeBool(address(this), itemSlot, offset, tokenInfo.fixedFees[i].useHbarsForPayment);
-            offset += 1;
-
-            storeBool(address(this), itemSlot, offset, tokenInfo.fixedFees[i].useCurrentTokenForPayment);
-            itemSlot += 1;
-
-            storeAddress(address(this), itemSlot, tokenInfo.fixedFees[i].feeCollector);
-            itemSlot += 1;
+            storeAddress(address(this), itemSlot++, tokenInfo.fixedFees[i].feeCollector);
+            storeInt(address(this), itemSlot++, tokenInfo.fixedFees[i].amount);
+            storeAddress(address(this), itemSlot++, tokenInfo.fixedFees[i].tokenId);
+            itemSlot += 1; // Skip the gap1 variable
+            storeBool(address(this), itemSlot++, tokenInfo.fixedFees[i].useHbarsForPayment);
+            itemSlot += 1; // Skip the gap2 variable
+            storeBool(address(this), itemSlot++, tokenInfo.fixedFees[i].useCurrentTokenForPayment);
         }
-        slot = bytes32(uint256(slot) + 1);
+        slot += 1;
 
         // Default KYC status
-        storeBool(address(this), uint256(slot), tokenInfo.defaultKycStatus);
-        slot = bytes32(uint256(slot) + 1);
+        storeBool(address(this), slot++, tokenInfo.defaultKycStatus);
 
         // Fractional fees
         // https://docs.soliditylang.org/en/latest/internals/layout_in_storage.html
-        p = uint256(slot);
-        itemSlot = uint256(keccak256(abi.encodePacked(p)));
-        storeUint(address(this), p, tokenInfo.fractionalFees.length);
+        itemSlot = uint256(keccak256(abi.encodePacked(slot)));
+        storeUint(address(this), slot, tokenInfo.fractionalFees.length);
         for (uint256 i = 0; i < tokenInfo.fractionalFees.length; i++) {
             storeBool(address(this), itemSlot, tokenInfo.fractionalFees[i].netOfTransfers);
-            itemSlot += 1;
-
-            storeInt(address(this), itemSlot, tokenInfo.fractionalFees[i].numerator);
-            itemSlot += 1;
-
-            storeInt(address(this), itemSlot, tokenInfo.fractionalFees[i].denominator);
-            itemSlot += 1;
-
-            storeInt(address(this), itemSlot, tokenInfo.fractionalFees[i].minimumAmount);
-            itemSlot += 1;
-
-            storeInt(address(this), itemSlot, tokenInfo.fractionalFees[i].maximumAmount);
-            itemSlot += 1;
-
-            storeAddress(address(this), itemSlot, tokenInfo.fractionalFees[i].feeCollector);
-            itemSlot += 1;
+            storeInt(address(this), itemSlot++, tokenInfo.fractionalFees[i].numerator);
+            storeInt(address(this), itemSlot++, tokenInfo.fractionalFees[i].denominator);
+            storeInt(address(this), itemSlot++, tokenInfo.fractionalFees[i].minimumAmount);
+            storeInt(address(this), itemSlot++, tokenInfo.fractionalFees[i].maximumAmount);
+            storeAddress(address(this), itemSlot++, tokenInfo.fractionalFees[i].feeCollector);
         }
-        slot = bytes32(uint256(slot) + 1);
+        slot += 1;
 
         // Pause status
-        storeBool(address(this), uint256(slot), tokenInfo.pauseStatus);
-        slot = bytes32(uint256(slot) + 1);
+        storeBool(address(this), slot++, tokenInfo.pauseStatus);
 
         // Royalty fees
         // https://docs.soliditylang.org/en/latest/internals/layout_in_storage.html
-        p = uint256(slot);
-        itemSlot = uint256(keccak256(abi.encodePacked(p)));
-        storeUint(address(this), p, tokenInfo.royaltyFees.length);
+        itemSlot = uint256(keccak256(abi.encodePacked(slot)));
+        storeUint(address(this), slot, tokenInfo.royaltyFees.length);
         for (uint256 i = 0; i < tokenInfo.royaltyFees.length; i++) {
-            storeInt(address(this), itemSlot, tokenInfo.royaltyFees[i].numerator);
-            itemSlot += 1;
-
-            storeInt(address(this), itemSlot, tokenInfo.royaltyFees[i].denominator);
-            itemSlot += 1;
-
-            storeInt(address(this), itemSlot, tokenInfo.royaltyFees[i].amount);
-            itemSlot += 1;
-
-            storeAddress(address(this), itemSlot, tokenInfo.royaltyFees[i].tokenId);
-            offset = 20;
-
-            storeBool(address(this), itemSlot, offset, tokenInfo.royaltyFees[i].useHbarsForPayment);
-            itemSlot += 1;
-
-            storeAddress(address(this), uint256(slot), tokenInfo.royaltyFees[i].feeCollector);
-            itemSlot += 1;
+            storeAddress(address(this), itemSlot++, tokenInfo.royaltyFees[i].feeCollector);
+            storeInt(address(this), itemSlot++, tokenInfo.royaltyFees[i].numerator);
+            storeInt(address(this), itemSlot++, tokenInfo.royaltyFees[i].denominator);
+            storeBool(address(this), itemSlot++, tokenInfo.royaltyFees[i].useHbarsForPayment);
+            storeInt(address(this), itemSlot++, tokenInfo.royaltyFees[i].amount);
+            storeAddress(address(this), itemSlot++, tokenInfo.royaltyFees[i].tokenId);
         }
-        slot = bytes32(uint256(slot) + 1);
+        slot += 1;
 
         // Ledger ID
-        storeString(address(this), uint256(slot), tokenInfo.ledgerId);
-        slot = bytes32(uint256(slot) + 1);
+        storeString(address(this), slot++, tokenInfo.ledgerId);
     }
 
     function _getTokenInfo(string memory json) private returns (TokenInfo memory tokenInfo) {
@@ -248,94 +187,37 @@ contract HtsSystemContractJson is HtsSystemContract {
         tokenInfo.royaltyFees = _getRoyaltyFees(json);
         tokenInfo.ledgerId = _getLedgerId();
         tokenInfo.defaultKycStatus = false; // not available in the fetched JSON from mirror node
-
-        try vm.parseJsonString(json, ".total_supply") returns (string memory totalSupply) {
-            tokenInfo.totalSupply = vm.parseInt(totalSupply);
-        } catch {
-            revert("getTokenInfo: Token total supply is required");
-        }
-
-        try vm.parseJsonBool(json, ".deleted") returns (bool deleted) {
-            tokenInfo.deleted = deleted;
-        } catch {
-            // Do nothing
-        }
-
-        try vm.parseJsonString(json, ".pause_status") returns (string memory pauseStatus) {
-            tokenInfo.pauseStatus = keccak256(bytes(pauseStatus)) == keccak256(bytes("PAUSED"));
-        } catch {
-            revert("getTokenInfo: Token pause status is required");
-        }
-
+        tokenInfo.totalSupply = vm.parseInt(vm.parseJsonString(json, ".total_supply"));
+        tokenInfo.deleted = vm.parseJsonBool(json, ".deleted");
+        tokenInfo.pauseStatus = keccak256(bytes(vm.parseJsonString(json, ".pause_status"))) == keccak256(bytes("PAUSED"));
         return tokenInfo;
     }
 
     function _getHederaToken(string memory json) private returns (HederaToken memory token) {
         token.tokenKeys = _getTokenKeys(json);
-
-        try vm.parseJsonString(json, ".name") returns (string memory name) {
-            token.name = name;
-        } catch {
-            revert("getTokenInfo: Token name is required");
-        }
-
-        try vm.parseJsonString(json, ".symbol") returns (string memory symbol) {
-            token.symbol = symbol;
-        } catch {
-            revert("getTokenInfo: Token symbol is required");
-        }
-
-        try vm.parseJsonString(json, ".treasury_account_id") returns (string memory treasuryAccountId) {
-            if (keccak256(bytes(treasuryAccountId)) != keccak256(bytes("null"))) {
-                token.treasury =  mirrorNode().getAccountAddress(treasuryAccountId);
-            }
-        } catch {
-            // Do nothing
-        }
-
-        try vm.parseJsonString(json, ".memo") returns (string memory memo) {
-            token.memo = memo;
-        } catch {
-            revert("getTokenInfo: Token memo is required");
-        }
-
-        try vm.parseJsonString(json, ".supply_type") returns (string memory supplyType) {
-            token.tokenSupplyType = keccak256(bytes(supplyType)) == keccak256(bytes("FINITE"));
-        } catch {
-            revert("getTokenInfo: Token supply type is required");
-        }
-
-        try vm.parseJsonString(json, ".max_supply") returns (string memory maxSupply) {
-            token.maxSupply = vm.parseInt(maxSupply);
-        } catch {
-            revert("getTokenInfo: Token max supply is required");
-        }
-
-        try vm.parseJsonBool(json, ".freeze_default") returns (bool freezeDefault) {
-            token.freezeDefault = freezeDefault;
-        } catch {
-            revert("getTokenInfo: Token freeze default is required");
-        }
-
-        try vm.parseJson(json, ".expiry_timestamp") returns (bytes memory expiryBytes) {
-            token.expiry.second = abi.decode(expiryBytes, (int256));
-        } catch {
-            // Do nothing
-        }
+        token.name = vm.parseJsonString(json, ".name");
+        token.symbol = vm.parseJsonString(json, ".symbol");
+        token.memo = vm.parseJsonString(json, ".memo");
+        token.tokenSupplyType = keccak256(bytes(vm.parseJsonString(json, ".supply_type"))) == keccak256(bytes("FINITE"));
+        token.maxSupply = vm.parseInt(vm.parseJsonString(json, ".max_supply"));
+        token.freezeDefault = vm.parseJsonBool(json, ".freeze_default");
+        token.expiry.second = abi.decode(vm.parseJson(json, ".expiry_timestamp"), (int256));
 
         try vm.parseJsonString(json, ".auto_renew_account") returns (string memory autoRenewAccount) {
             if (keccak256(bytes(autoRenewAccount)) != keccak256(bytes("null"))) {
                 token.expiry.autoRenewAccount = mirrorNode().getAccountAddress(autoRenewAccount);
             }
-        } catch {
-            // Do nothing
-        }
+        } catch {}
 
         try vm.parseJson(json, ".auto_renew_period") returns (bytes memory autoRenewPeriodBytes) {
             token.expiry.autoRenewPeriod = abi.decode(autoRenewPeriodBytes, (int256));
-        } catch {
-            // Do nothing
-        }
+        } catch {}
+
+        try vm.parseJsonString(json, ".treasury_account_id") returns (string memory treasuryAccountId) {
+            if (keccak256(bytes(treasuryAccountId)) != keccak256(bytes("null"))) {
+                token.treasury =  mirrorNode().getAccountAddress(treasuryAccountId);
+            }
+        } catch {}
 
         return token;
     }
@@ -348,63 +230,49 @@ contract HtsSystemContractJson is HtsSystemContract {
                 IMirrorNodeResponses.Key memory key = abi.decode(keyBytes, (IMirrorNodeResponses.Key));
                 tokenKeys[0] = _getTokenKey(key, 0x1);
             }
-        } catch {
-            // Do nothing
-        }
+        } catch {}
 
         try vm.parseJson(json, ".kyc_key") returns (bytes memory keyBytes) {
             if (keccak256(keyBytes) != keccak256(abi.encodePacked(bytes32(0)))) {
                 IMirrorNodeResponses.Key memory key = abi.decode(keyBytes, (IMirrorNodeResponses.Key));
                 tokenKeys[1] = _getTokenKey(key, 0x2);
             }
-        } catch {
-            // Do nothing
-        }
+        } catch {}
 
         try vm.parseJson(json, ".freeze_key") returns (bytes memory keyBytes) {
             if (keccak256(keyBytes) != keccak256(abi.encodePacked(bytes32(0)))) {
                 IMirrorNodeResponses.Key memory key = abi.decode(keyBytes, (IMirrorNodeResponses.Key));
                 tokenKeys[2] = _getTokenKey(key, 0x4);
             }
-        } catch {
-            // Do nothing
-        }
+        } catch {}
 
         try vm.parseJson(json, ".wipe_key") returns (bytes memory keyBytes) {
             if (keccak256(keyBytes) != keccak256(abi.encodePacked(bytes32(0)))) {
                 IMirrorNodeResponses.Key memory key = abi.decode(keyBytes, (IMirrorNodeResponses.Key));
                 tokenKeys[3] = _getTokenKey(key, 0x8);
             }
-        } catch {
-            // Do nothing
-        }
+        } catch {}
 
         try vm.parseJson(json, ".supply_key") returns (bytes memory keyBytes) {
             if (keccak256(keyBytes) != keccak256(abi.encodePacked(bytes32(0)))) {
                 IMirrorNodeResponses.Key memory key = abi.decode(keyBytes, (IMirrorNodeResponses.Key));
                 tokenKeys[4] = _getTokenKey(key, 0x10);
             }
-        } catch {
-            // Do nothing
-        }
+        } catch {}
 
         try vm.parseJson(json, ".fee_schedule_key") returns (bytes memory keyBytes) {
             if (keccak256(keyBytes) != keccak256(abi.encodePacked(bytes32(0)))) {
                 IMirrorNodeResponses.Key memory key = abi.decode(keyBytes, (IMirrorNodeResponses.Key));
                 tokenKeys[5] = _getTokenKey(key, 0x20);
             }
-        } catch {
-            // Do nothing
-        }
+        } catch {}
 
         try vm.parseJson(json, ".pause_key") returns (bytes memory keyBytes) {
             if (keccak256(keyBytes) != keccak256(abi.encodePacked(bytes32(0)))) {
                 IMirrorNodeResponses.Key memory key = abi.decode(keyBytes, (IMirrorNodeResponses.Key));
                 tokenKeys[6] = _getTokenKey(key, 0x40);
             }
-        } catch {
-            // Do nothing
-        }
+        } catch {}
 
         return tokenKeys;
     }
@@ -413,12 +281,9 @@ contract HtsSystemContractJson is HtsSystemContract {
         bool inheritAccountKey = false;
         address contractId = address(0);
         address delegatableContractId = address(0);
-        // TODO: Decode hex string into bytes here
         bytes memory ed25519 = keccak256(bytes(key._type)) == keccak256(bytes("ED25519"))
             ? vm.parseBytes(key.key)
             : new bytes(0);
-
-        // TODO: Decode hex string into bytes here
         bytes memory ECDSA_secp256k1 = keccak256(bytes(key._type)) == keccak256(bytes("ECDSA_SECP256K1"))
             ? vm.parseBytes(key.key)
             : new bytes(0);
@@ -447,15 +312,15 @@ contract HtsSystemContractJson is HtsSystemContract {
             FixedFee[] memory fixedFees = new FixedFee[](fees.length);
             for (uint i = 0; i < fees.length; i++) {
                 string memory path = vm.replace(".custom_fees.fixed_fees[{i}]", "{i}", vm.toString(i));
-                int256 amount = vm.parseJsonInt(json, string.concat(path, ".amount"));
                 address denominatingToken = mirrorNode().getAccountAddress(vm.parseJsonString(json, string.concat(path, ".denominating_token_id")));
-                address collectorAccount = mirrorNode().getAccountAddress(vm.parseJsonString(json, string.concat(path, ".collector_account_id")));
                 fixedFees[i] = FixedFee(
-                    amount,
+                    mirrorNode().getAccountAddress(vm.parseJsonString(json, string.concat(path, ".collector_account_id"))),
+                    vm.parseJsonInt(json, string.concat(path, ".amount")),
                     denominatingToken,
+                    uint96(0),
                     denominatingToken == address(0),
-                    denominatingToken == address(this),
-                    collectorAccount
+                    uint248(0),
+                    denominatingToken == address(this)
                 );
             }
             return fixedFees;
@@ -478,19 +343,13 @@ contract HtsSystemContractJson is HtsSystemContract {
             FractionalFee[] memory fractionalFees = new FractionalFee[](fees.length);
             for (uint i = 0; i < fees.length; i++) {
                 string memory path = vm.replace(".custom_fees.fractional_fees[{i}]", "{i}", vm.toString(i));
-                bool netOfTransfers = vm.parseJsonBool(json, string.concat(path, ".net_of_transfers"));
-                int256 numerator = vm.parseJsonInt(json, string.concat(path, ".amount.numerator"));
-                int256 denominator = vm.parseJsonInt(json, string.concat(path, ".amount.denominator"));
-                int256 maximum = vm.parseJsonInt(json, string.concat(path, ".maximum"));
-                int256 minimum = vm.parseJsonInt(json, string.concat(path, ".minimum"));
-                string memory feeCollectorId = vm.parseJsonString(json, string.concat(path, ".collector_account_id"));
                 fractionalFees[i] = FractionalFee(
-                    netOfTransfers,
-                    numerator,
-                    denominator,
-                    minimum,
-                    maximum,
-                    mirrorNode().getAccountAddress(feeCollectorId)
+                    vm.parseJsonBool(json, string.concat(path, ".net_of_transfers")),
+                    vm.parseJsonInt(json, string.concat(path, ".amount.numerator")),
+                    vm.parseJsonInt(json, string.concat(path, ".amount.denominator")),
+                    vm.parseJsonInt(json, string.concat(path, ".minimum")),
+                    vm.parseJsonInt(json, string.concat(path, ".maximum")),
+                    mirrorNode().getAccountAddress(vm.parseJsonString(json, string.concat(path, ".collector_account_id")))
                 );
             }
             return fractionalFees;
@@ -513,20 +372,14 @@ contract HtsSystemContractJson is HtsSystemContract {
             RoyaltyFee[] memory royaltyFees = new RoyaltyFee[](fees.length);
             for (uint i = 0; i < fees.length; i++) {
                 string memory path = vm.replace(".custom_fees.royalty_fees[{i}]", "{i}", vm.toString(i));
-                int256 numerator = vm.parseJsonInt(json, string.concat(path, ".amount.numerator"));
-                int256 denominator = vm.parseJsonInt(json, string.concat(path, ".amount.denominator"));
-                int256 fallbackAmount = vm.parseJsonInt(json, string.concat(path, ".fallback_fee.amount"));
-                string memory tokenId = vm.parseJsonString(json, string.concat(path, ".denominating_token_id"));
-                address tokenAccount = mirrorNode().getAccountAddress(tokenId);
-                string memory collectorAccountId = vm.parseJsonString(json, string.concat(path, ".collector_account_id"));
-                address collectorAccount = mirrorNode().getAccountAddress(collectorAccountId);
+                address collectorAccount = mirrorNode().getAccountAddress(vm.parseJsonString(json, string.concat(path, ".collector_account_id")));
                 royaltyFees[i] = RoyaltyFee(
-                    numerator,
-                    denominator,
-                    fallbackAmount,
-                    tokenAccount,
+                    collectorAccount,
+                    vm.parseJsonInt(json, string.concat(path, ".amount.numerator")),
+                    vm.parseJsonInt(json, string.concat(path, ".amount.denominator")),
                     collectorAccount == address(0),
-                    collectorAccount
+                    vm.parseJsonInt(json, string.concat(path, ".fallback_fee.amount")),
+                    mirrorNode().getAccountAddress(vm.parseJsonString(json, string.concat(path, ".denominating_token_id")))
                 );
             }
             return royaltyFees;

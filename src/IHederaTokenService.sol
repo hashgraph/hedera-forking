@@ -143,19 +143,25 @@ interface IHederaTokenService {
     /// useCurrentTokenForPayment. Exactly one of the values should be set.
     struct FixedFee {
 
+        // The ID of the account to receive the custom fee, expressed as a solidity address
+        address feeCollector;
+
         int256 amount;
 
         // Specifies ID of token that should be used for fixed fee denomination
         address tokenId;
 
+        // variable used for gap in struct to prevent offsets: 256 bits (slot) - 160 bits (address) = 96 remaining bits
+        uint96 gap1;
+
         // Specifies this fixed fee should be denominated in Hbar
         bool useHbarsForPayment;
 
+        // variable used for gap in struct to prevent offsets: 256 bits (slot) - 8 bits (bool) = 248 remaining bits
+        uint248 gap2;
+
         // Specifies this fixed fee should be denominated in the Token currently being created
         bool useCurrentTokenForPayment;
-
-        // The ID of the account to receive the custom fee, expressed as a solidity address
-        address feeCollector;
     }
 
     /// A fraction of the transferred units of a token to assess as a fee. The amount assessed will never
@@ -186,6 +192,9 @@ interface IHederaTokenService {
     /// any fungible value, the ledger will assess the fallback fee, if present, to the new NFT owner.
     /// Royalty fees can only be added to tokens of type type NON_FUNGIBLE_UNIQUE.
     struct RoyaltyFee {
+        // The ID of the account to receive the custom fee, expressed as a solidity address
+        address feeCollector;
+
         // A fraction's numerator of fungible value exchanged for an NFT to collect as royalty
         int256 numerator;
 
@@ -194,15 +203,12 @@ interface IHederaTokenService {
 
         // If present, the fee to assess to the NFT receiver when no fungible value
         // is exchanged with the sender. Consists of:
+        // useHbarsForPayment: Specifies this fee should be denominated in Hbar
         // amount: the amount to charge for the fee
         // tokenId: Specifies ID of token that should be used for fixed fee denomination
-        // useHbarsForPayment: Specifies this fee should be denominated in Hbar
+        bool useHbarsForPayment;
         int256 amount;
         address tokenId;
-        bool useHbarsForPayment;
-
-        // The ID of the account to receive the custom fee, expressed as a solidity address
-        address feeCollector;
     }
 
     /// Query token info

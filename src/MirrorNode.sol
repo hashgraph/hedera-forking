@@ -2,9 +2,8 @@
 pragma solidity ^0.8.0;
 
 import {Vm} from "forge-std/Vm.sol";
-import {IMirrorNodeResponses} from "./IMirrorNodeResponses.sol";
 
-abstract contract MirrorNode is IMirrorNodeResponses {
+abstract contract MirrorNode {
 
     Vm internal constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
@@ -68,7 +67,7 @@ abstract contract MirrorNode is IMirrorNodeResponses {
         }
 
         // ignore the first 4 characters ("0.0.") to get the account number string
-        require(bytes(accountId).length > 4, "Invalid account ID, needs to be in the format '0.0.<account_number>'");
+        require(bytes(accountId).length > 4, "Invalid account ID");
         uint32 accountNum = uint32(vm.parseUint(vm.replace(accountId, "0.0.", "")));
 
         // generate a deterministic address based on the account number as a fallback
