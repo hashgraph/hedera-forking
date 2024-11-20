@@ -14,17 +14,17 @@ function storeBytes(address target, uint256 slot, bytes memory value) {
     uint256 length = value.length;
 
     if (length == 0) {
-        vm.store(target, bytes32(slot), bytes32(0));
+        storeBytes32(target, slot, bytes32(0));
         return;
     }
 
     if (length <= 31) {
         bytes32 slotValue = bytes32(value) | bytes32(length * 2);
-        vm.store(target, bytes32(slot), slotValue);
+        storeBytes32(target, slot, slotValue);
         return;
     }
 
-    vm.store(target, bytes32(slot), bytes32(length * 2 + 1));
+    storeBytes32(target, slot, bytes32(length * 2 + 1));
     uint256 numChunks = (length + 31) / 32;
     bytes32 baseSlot = keccak256(abi.encodePacked(slot));
 
@@ -40,7 +40,7 @@ function storeBytes(address target, uint256 slot, bytes memory value) {
             chunk |= bytes32(value[j]) >> (8 * (j - chunkStart));
         }
 
-        vm.store(target, bytes32(uint256(baseSlot) + i), chunk);
+        storeBytes32(target, uint256(baseSlot) + i, chunk);
     }
 }
 
