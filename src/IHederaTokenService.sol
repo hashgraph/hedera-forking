@@ -151,14 +151,14 @@ interface IHederaTokenService {
         // Specifies ID of token that should be used for fixed fee denomination
         address tokenId;
 
-        // variable used for gap in struct to prevent offsets: 256 bits (slot) - 160 bits (address) = 96 remaining bits
-        uint96 gap1;
+        // variable used for gap in struct to prevent offsets
+        uint256 gap1;
 
         // Specifies this fixed fee should be denominated in Hbar
         bool useHbarsForPayment;
 
-        // variable used for gap in struct to prevent offsets: 256 bits (slot) - 8 bits (bool) = 248 remaining bits
-        uint248 gap2;
+        // variable used for gap in struct to prevent offsets
+        uint256 gap2;
 
         // Specifies this fixed fee should be denominated in the Token currently being created
         bool useCurrentTokenForPayment;
