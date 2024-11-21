@@ -59,7 +59,7 @@ describe('::json-rpc-forwarder', function () {
             new Worker(scriptPath, {
                 workerData: {
                     mirrorNodeUrl: '',
-                    hardhatAddresses: ['0x70997970c51812dc3a010c7d01b50e0d17dc79c8'],
+                    localAccounts: ['0x70997970c51812dc3a010c7d01b50e0d17dc79c8'],
                 },
             })
                 .on('message', message => {

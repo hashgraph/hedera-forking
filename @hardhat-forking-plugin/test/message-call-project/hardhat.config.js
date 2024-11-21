@@ -18,7 +18,7 @@
 
 require('@nomicfoundation/hardhat-ethers');
 require('@hashgraph/hardhat-forking-plugin');
-const { projectTestConfig } = require('../.lib');
+const { projectTestConfig } = require('../.testConfig');
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {

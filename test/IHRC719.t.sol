@@ -5,7 +5,6 @@ import {Test, console} from "lib/forge-std/src/Test.sol";
 import {TestSetup} from "./lib/TestSetup.sol";
 import {IHRC719} from "src/IHRC719.sol";
 
-
 contract IHRC719TokenAssociationTest is Test, TestSetup {
     function setUp() external {
         setUpMockStorageForNonFork();
@@ -13,7 +12,6 @@ contract IHRC719TokenAssociationTest is Test, TestSetup {
 
     function test_IHRC719_isAssociated() external {
         address alice = makeAddr("alice");
-        assignAccountIdsToEVMAddressesForNonFork(alice);
 
         vm.prank(alice);
         assertEq(IHRC719(USDC).isAssociated(), false);
@@ -21,7 +19,6 @@ contract IHRC719TokenAssociationTest is Test, TestSetup {
 
     function test_IHRC719_associate() external {
         address alice = makeAddr("alice");
-        assignAccountIdsToEVMAddressesForNonFork(alice);
 
         vm.startPrank(alice);
         assertEq(IHRC719(USDC).associate(), 1);
@@ -31,7 +28,6 @@ contract IHRC719TokenAssociationTest is Test, TestSetup {
 
     function test_IHRC719_dissociate() external {
         address alice = makeAddr("alice");
-        assignAccountIdsToEVMAddressesForNonFork(alice);
 
         vm.startPrank(alice);
         assertEq(IHRC719(USDC).dissociate(), 1);
@@ -41,7 +37,6 @@ contract IHRC719TokenAssociationTest is Test, TestSetup {
 
      function test_IHRC719_associate_then_dissociate() external {
         address alice = makeAddr("alice");
-        assignAccountIdsToEVMAddressesForNonFork(alice);
 
         vm.startPrank(alice);
         assertEq(IHRC719(USDC).associate(), 1);
@@ -54,7 +49,6 @@ contract IHRC719TokenAssociationTest is Test, TestSetup {
     function test_IHRC719_different_accounts() external {
         address alice = makeAddr("alice");
         address bob = makeAddr("bob");
-        assignAccountIdsToEVMAddressesForNonFork(alice, bob);
 
         vm.startPrank(alice);
         assertEq(IHRC719(USDC).associate(), 1);

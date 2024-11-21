@@ -24,15 +24,18 @@
 
 const { strict: assert } = require('assert');
 const http = require('http');
+const { parentPort } = require('worker_threads');
 
 const {
-    getHtsCode,
-    getHtsStorageAt,
     HTSAddress,
     getHIP719Code,
+    getHtsCode,
+    getHtsStorageAt,
 } = require('@hashgraph/hts-forking');
 const { ZERO_HEX_32_BYTE } = require('../src/utils');
 const { tokens } = require('../test/data');
+
+/** @import { IMirrorNodeClient } from '@hashgraph/hts-forking' */
 
 /** ANSI colors functions to avoid any external dependency. */
 const c = {
@@ -59,12 +62,76 @@ const isHIP719Contract = address =>
         .includes(address.toLowerCase());
 
 /**
+ * Loads and returns the module indicated by `path` if exists.
+ * The `path` is relative to `test/data/`.
+ * In case the module does not exist, it returns `defaultValue`.
+ *
+ * @template T
+ * @param {string} path of the module relative to `test/data/`.
+ * @param {T} defaultValue The value to return when `path`.
+ * @returns {T} The loaded module indicated by `path` if exists. Otherwise `defaultValue`.
+ */
+const requireOrDefault = (path, defaultValue) => {
+    try {
+        return require(`../test/data/${path}`);
+    } catch (err) {
+        assert(err instanceof Error);
+        // https://nodejs.org/api/errors.html#module_not_found
+        if (/**@type {{code?: string}}*/ (err).code === 'MODULE_NOT_FOUND') return defaultValue;
+        throw err;
+    }
+};
+
+/**
+ * Written like an object (instead of `class`) to avoid type-checking errors due to
+ * - https://github.com/microsoft/TypeScript/issues/49905
+ * - https://github.com/microsoft/TypeScript/issues/58542
+ * @type {IMirrorNodeClient & {requests: string[], append(method: string, ...args: unknown[]): void}}
+ */
+const mirrorNodeClient = {
+    requests: [],
+
+    append(method, ...args) {
+        this.requests.push(`${method}:${args.join(',')}`);
+    },
+    async getTokenById(tokenId) {
+        this.append('getTokenById', tokenId);
+        if (tokens[tokenId] === undefined) return null;
+        return require(`../test/data/${tokens[tokenId].symbol}/getToken.json`);
+    },
+    async getAccount(idOrAliasOrEvmAddress) {
+        this.append('getAccount', idOrAliasOrEvmAddress);
+        return requireOrDefault(`getAccount_0x${idOrAliasOrEvmAddress.toLowerCase()}.json`, null);
+    },
+    async getBalanceOfToken(tokenId, accountId, blockNumber) {
+        this.append('getBalanceOfToken', tokenId, accountId, blockNumber);
+        const noBalance = { balances: [] };
+        if (tokens[tokenId] === undefined) return noBalance;
+        return requireOrDefault(
+            `${tokens[tokenId].symbol}/getBalanceOfToken_${accountId}.json`,
+            noBalance
+        );
+    },
+    async getAllowanceForToken(accountId, tokenId, spenderId) {
+        this.append('getAllowanceForToken', accountId, tokenId, spenderId);
+        const noAllowance = { allowances: [] };
+        if (tokens[tokenId] === undefined) return noAllowance;
+        return requireOrDefault(
+            `${tokens[tokenId].symbol}/getAllowanceForToken_${accountId}_${spenderId}.json`,
+            noAllowance
+        );
+    },
+};
+
+/**
  * Function signature for `eth_*` and `net_*` method handlers.
+ * Also includes any additional JSON-RPC method used for testing under the `test_*` namespace.
+ *
  * The `params` argument comes from the JSON-RPC request,
  * so it must to be declared as `unknown[]`.
  * Therefore, each method handler should validate each element of `params` they use.
  *
- * @typedef {(params: unknown[], reqId: string) => Promise<unknown>} EthHandler
+ * @typedef {(params: unknown[]) => Promise<unknown>} EthHandler
  */
 
 /**
@@ -76,35 +143,30 @@ const isHIP719Contract = address =>
 const eth = {
     /**
      * https://docs.infura.io/api/networks/ethereum/json-rpc-methods/net_version
-     *
      * @type {EthHandler}
      */
     net_version: async () => parseInt('0x12b').toString(),
 
     /**
      * https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_chainid
-     *
      * @type {EthHandler}
      */
     eth_chainId: async () => '0x12b',
 
     /**
      * https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_blocknumber
-     *
      * @type {EthHandler}
      */
     eth_blockNumber: async () => '0x811364',
 
     /**
      * https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_gasprice
-     *
      * @type {EthHandler}
      */
     eth_gasPrice: async () => '0x1802ba9f400',
 
     /**
      * https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_feehistory
-     *
      * @type {EthHandler}
      */
     eth_feeHistory: async () => ({
@@ -116,7 +178,6 @@ const eth = {
 
     /**
      * https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_getblockbynumber
-     *
      * @type {EthHandler}
      */
     eth_getBlockByNumber: async ([blockNumber, _transactionDetails]) =>
@@ -124,14 +185,12 @@ const eth = {
 
     /**
      * https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_gettransactioncount
-     *
      * @type {EthHandler}
      */
     eth_getTransactionCount: async ([_address, _blockNumber]) => '0x0',
 
     /**
      * https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_getcode
-     *
      * @type {EthHandler}
      */
     eth_getCode: async ([address, _blockNumber]) =>
@@ -143,74 +202,26 @@ const eth = {
 
     /**
      * https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_getbalance
-     *
      * @type {EthHandler}
      */
     eth_getBalance: async ([_address, _blockNumber]) => '0x0',
 
     /**
      * https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_getstorageat
-     *
      * @type {EthHandler}
      */
-    eth_getStorageAt: async ([address, slot, _blockNumber], reqId) => {
-        /**
-         * Loads and returns the module indicated by `path` if exists.
-         * The `path` is relative to `test/data/`.
-         * In case the module does not exist, it returns `defaultValue`.
-         *
-         * @template T
-         * @param {string} path of the module relative to `test/data/`.
-         * @param {T} defaultValue The value to return when `path`.
-         * @returns {T} The loaded module indicated by `path` if exists. Otherwise `defaultValue`.
-         */
-        const requireOrDefault = (path, defaultValue) => {
-            try {
-                return require(`../test/data/${path}`);
-            } catch (err) {
-                assert(err instanceof Error);
-                // https://nodejs.org/api/errors.html#module_not_found
-                if (/**@type {{code?: string}}*/ (err).code === 'MODULE_NOT_FOUND')
-                    return defaultValue;
-                throw err;
-            }
-        };
-
-        /** @type {import('@hashgraph/hts-forking').IMirrorNodeClient} */
-        const mirrorNodeClient = {
-            async getTokenById(tokenId) {
-                if (tokens[tokenId] === undefined) return null;
-                return require(`../test/data/${tokens[tokenId].symbol}/getToken.json`);
-            },
-            async getAccount(idOrAliasOrEvmAddress) {
-                return requireOrDefault(
-                    `getAccount_0x${idOrAliasOrEvmAddress.toLowerCase()}.json`,
-                    null
-                );
-            },
-            async getBalanceOfToken(tokenId, accountId) {
-                const noBalance = { balances: [] };
-                if (tokens[tokenId] === undefined) return noBalance;
-                return requireOrDefault(
-                    `${tokens[tokenId].symbol}/getBalanceOfToken_${accountId}.json`,
-                    noBalance
-                );
-            },
-            async getAllowanceForToken(accountId, tokenId, spenderId) {
-                const noAllowance = { allowances: [] };
-                if (tokens[tokenId] === undefined) return noAllowance;
-                return requireOrDefault(
-                    `${tokens[tokenId].symbol}/getAllowanceForToken_${accountId}_${spenderId}.json`,
-                    noAllowance
-                );
-            },
-        };
-
+    eth_getStorageAt: async ([address, slot, blockNumber]) => {
         assert(typeof address === 'string');
         assert(typeof slot === 'string');
-        const trace = (/**@type{unknown}*/ msg) => console.debug(c.cyan('[TRACE]'), c.dim(msg));
-        const value = await getHtsStorageAt(address, slot, mirrorNodeClient, { trace }, reqId);
+        const value = await getHtsStorageAt(address, slot, Number(blockNumber), mirrorNodeClient);
         return value ?? ZERO_HEX_32_BYTE;
+    },
+
+    /** @type {EthHandler} */
+    test_getMirrorNodeRequests: async () => {
+        const requests = mirrorNodeClient.requests;
+        mirrorNodeClient.requests = [];
+        return requests;
     },
 };
 
@@ -236,20 +247,9 @@ console.info(
     c.dim('>'),
     'https://book.getfoundry.sh/reference/forge/forge-test#description'
 );
-console.info(
-    c.cyan('[INFO]'),
-    '\u{1F680}',
-    c.magenta('JSON-RPC Mock Server'),
-    `running on http://localhost:${c.yellow(port)}`
-);
 
-http.createServer(function (req, res) {
-    /**
-     * @param {string} str
-     * @param {number} max
-     * @returns {string}
-     */
-    const truncate = (str, max = 92) =>
+const server = http.createServer(function (req, res) {
+    const truncate = (/**@type{string}*/ str, max = 92) =>
         str.length > max
             ? c.green(str.slice(0, 92)) + c.yellow(`[${str.length - max} more bytes..]`)
             : c.green(str);
@@ -271,13 +271,27 @@ http.createServer(function (req, res) {
 
         const handler = eth[/**@type{keyof typeof eth}*/ (method)];
         assert(handler !== undefined, `Method not supported: ${method}`);
-        const reqId = `[Req ID: ${id}]`;
-        const result = await handler(params, reqId);
+        const result = await handler(params);
         const response = JSON.stringify({ jsonrpc, id, result });
-        console.log(c.cyan('[INFO]'), c.blue(reqId + ' result'), truncate(JSON.stringify(result)));
+        console.log(c.cyan('[INFO]'), truncate(JSON.stringify(result)));
 
         res.setHeader('Content-Type', 'application/json');
         res.writeHead(200);
         res.end(response);
     });
-}).listen(port);
+});
+
+server.listen(port, () => {
+    const address = server.address();
+    assert(address !== null);
+    assert(typeof address === 'object');
+
+    parentPort?.postMessage({ listening: true, ...address });
+
+    console.info(
+        c.cyan('[INFO]'),
+        '\u{1F680}',
+        c.magenta('JSON-RPC Mock Server'),
+        `running on http://localhost:${c.yellow(address.port)}`
+    );
+});

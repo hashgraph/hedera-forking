@@ -1,18 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.17;
+pragma solidity ^0.8.0;
 
 import {console} from "forge-std/console.sol";
-import {StdCheats} from "forge-std/StdCheats.sol";
-import {Vm} from "forge-std/Vm.sol";
 
-import {MocksToStorageLoader} from "./MocksToStorageLoader.sol";
+import {htsSetup} from "../../src/htsSetup.sol";
+import {HTS_ADDRESS} from "../../src/HtsSystemContractJson.sol";
+import {MirrorNode} from "../../src/MirrorNode.sol";
+import {MirrorNodeFFI} from "../../src/MirrorNodeFFI.sol";
+import {MirrorNodeMock} from "./MirrorNodeMock.sol";
 
-abstract contract TestSetup is StdCheats {
-    // `vm` is private in StdCheats, so we duplicate it here
-    Vm private constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
-
-    address internal constant HTS = 0x0000000000000000000000000000000000000167;
-
+abstract contract TestSetup {
     /**
      * https://hashscan.io/testnet/token/0.0.429274
      * https://testnet.mirrornode.hedera.com/api/v1/tokens/0.0.429274
@@ -57,42 +54,25 @@ abstract contract TestSetup is StdCheats {
     }
 
     TestMode internal testMode;
-
-    MocksToStorageLoader private loader;
+    MirrorNode internal mirrorNode;
 
     function setUpMockStorageForNonFork() internal {
-        console.log("HTS code has %d bytes", HTS.code.length);
-        if (HTS.code.length == 0) {
+        if (HTS_ADDRESS.code.length == 0) {
             console.log("HTS code length is 0, non-fork test, code and data provided locally");
-            loader = new MocksToStorageLoader(HTS);
-            loader.loadHts();
-            loader.loadToken(USDC, "USDC");
-            loader.loadToken(MFCT, "MFCT");
-
+            MirrorNodeMock mirrorNodeMock = new MirrorNodeMock();
+            mirrorNodeMock.deployHIP719Proxy(USDC, "USDC");
+            mirrorNodeMock.deployHIP719Proxy(MFCT, "MFCT");
+            mirrorNode = mirrorNodeMock;
+            htsSetup(mirrorNode);
             testMode = TestMode.NonFork;
-        } else if (HTS.code.length == 1) {
+        } else if (HTS_ADDRESS.code.length == 1) {
             console.log("HTS code length is 1, forking from a remote Hedera network, HTS/FFI code with Mirror Node backend is deployed here");
-            deployCodeTo("HtsSystemContractFFI.sol", HTS);
-            vm.allowCheatcodes(HTS);
-
+            mirrorNode = new MirrorNodeFFI();
+            htsSetup(mirrorNode);
             testMode = TestMode.FFI;
         } else {
-            console.log("HTS code length is greater than 1, HTS code comes from forked network");
-            
+            console.log("HTS code length is greater than 1 (%d), HTS code comes from forked network", HTS_ADDRESS.code.length);
             testMode = TestMode.JSON_RPC;
-        }
-    }
-
-    function assignAccountIdsToEVMAddressesForNonFork(address firstAddress) internal {
-        if (address(loader) != address(0)) {
-            loader.assignEvmAccountAddress(firstAddress, 1);
-        }
-    }
-
-    function assignAccountIdsToEVMAddressesForNonFork(address firstAddress, address secondAddress) internal {
-        if (address(loader) != address(0)) {
-            loader.assignEvmAccountAddress(firstAddress, 1);
-            loader.assignEvmAccountAddress(secondAddress, 2);
         }
     }
 }

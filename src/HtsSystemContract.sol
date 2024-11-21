@@ -2,19 +2,21 @@
 pragma solidity ^0.8.0;
 
 import {IERC20Events, IERC20} from "./IERC20.sol";
-import {IHederaTokenService} from "./IHederaTokenService.sol";
 import {IHRC719} from "./IHRC719.sol";
+import {IHederaTokenService} from "./IHederaTokenService.sol";
+import {console} from "forge-std/Console.sol";
+
+address constant HTS_ADDRESS = address(0x167);
 
 contract HtsSystemContract is IHederaTokenService, IERC20Events {
-
-    address internal constant HTS_ADDRESS = address(0x167);
 
     // All ERC20 properties are accessed with a `delegatecall` from the Token Proxy.
     // See `__redirectForToken` for more details.
     string internal name;
     string internal symbol;
-    uint8 private decimals;
-    uint256 private totalSupply;
+    uint8 internal decimals;
+    uint256 internal totalSupply;
+    TokenInfo internal _tokenInfo;
 
     /**
      * @dev Prevents delegatecall into the modified method.
@@ -32,39 +34,28 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
      * See https://docs.hedera.com/hedera/core-concepts/accounts/account-properties
      * for more info on account properties.
      */
-    function getAccountId(address account) htsCall public virtual view returns (uint32 accountId) {
-        // 0xe0b490f7 is the selector for HtsSystemContract.getAccountId.
-        // Due to limitations with virtual functions, we use a direct byte assignment here.
-        bytes4 selector = 0xe0b490f7;
+    function getAccountId(address account) htsCall external virtual view returns (uint32 accountId) {
+        bytes4 selector = this.getAccountId.selector;
         uint64 pad = 0x0;
-        uint256 slot = uint256(bytes32(abi.encodePacked(selector, pad, account)));
-        assembly {
-            accountId := sload(slot)
-        }
+        bytes32 slot = bytes32(abi.encodePacked(selector, pad, account));
+        assembly { accountId := sload(slot) }
     }
 
-    function _mockTokenInfo() public view returns (IHederaTokenService.TokenInfo memory tokenInfo) {
-        tokenInfo = IHederaTokenService.TokenInfo(
-            IHederaTokenService.HederaToken(
-                "",
-                "",
-                address(0),
-                "",
-                false,
-                0,
-                false,
-                new IHederaTokenService.TokenKey[](0),
-                IHederaTokenService.Expiry(0, address(0), 0)
-            ),
-            int64(uint64(totalSupply)),
-            false,
-            false,
-            false,
-            new IHederaTokenService.FixedFee[](0),
-            new IHederaTokenService.FractionalFee[](0),
-            new IHederaTokenService.RoyaltyFee[](0),
-            ""
+    /**
+     * Query token info
+     * @param token - The token address to check
+     * @return responseCode - the response code for the status of the request. SUCCESS is `22`.
+     * @return tokenInfo - token info for `token`
+     */
+    function getTokenInfo(address token) htsCall public view returns (int64 responseCode, TokenInfo memory tokenInfo) {
+        require(token != address(0), "getTokenInfo: invalid token");
+
+        (bool success, bytes memory data) = token.staticcall(
+            abi.encodeWithSelector(this.getTokenInfo.selector, token)
         );
+        require(success, "getTokenInfo: failed to get token info");
+        tokenInfo = abi.decode(data, (TokenInfo));
+        responseCode = 22; // HederaResponseCodes.SUCCESS
     }
 
     /// Mints an amount of the token to the defined treasury account
@@ -86,14 +77,19 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
         require(token != address(0), "mintToken: invalid token");
         require(amount > 0, "mintToken: invalid amount");
 
-        IHederaTokenService.TokenInfo memory tokenInfo = this._mockTokenInfo();
+        (int64 getTokenInfoResponseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
+        require(getTokenInfoResponseCode == 22, "mintToken: failed to get token info");
+
         address treasuryAccount = tokenInfo.token.treasury;
         require(treasuryAccount != address(0), "mintToken: invalid account");
 
-        _update(address(0), treasuryAccount, uint64(amount));
+        (bool success, ) = token.call(
+            abi.encodeWithSelector(this._update.selector, address(0), treasuryAccount, uint256(uint64(amount)))
+        );
+        require(success, "mintToken: failed to mint tokens");
 
         responseCode = 22; // HederaResponseCodes.SUCCESS
-        newTotalSupply = int64(uint64(totalSupply));
+        newTotalSupply = int64(uint64(IERC20(token).totalSupply()));
         serialNumbers = new int64[](0);
         require(newTotalSupply >= 0, "mintToken: invalid total supply");
     }
@@ -114,14 +110,19 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
         require(token != address(0), "burnToken: invalid token");
         require(amount > 0, "burnToken: invalid amount");
 
-        IHederaTokenService.TokenInfo memory tokenInfo = this._mockTokenInfo();
+        (int64 getTokenInfoResponseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
+        require(getTokenInfoResponseCode == 22, "burnToken: failed to get token info");
+
         address treasuryAccount = tokenInfo.token.treasury;
         require(treasuryAccount != address(0), "burnToken: invalid account");
 
-        _update(treasuryAccount, address(0), uint64(amount));
+        (bool success, ) = token.call(
+            abi.encodeWithSelector(this._update.selector, treasuryAccount, address(0), uint256(uint64(amount)))
+        );
+        require(success, "burnToken: failed to burn tokens");
 
         responseCode = 22; // HederaResponseCodes.SUCCESS
-        newTotalSupply = int64(uint64(totalSupply));
+        newTotalSupply = int64(uint64(IERC20(token).totalSupply()));
         require(newTotalSupply >= 0, "burnToken: invalid total supply");
     }
 
@@ -199,12 +200,16 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
         bytes4 selector = bytes4(msg.data[24:28]);
 
         if (selector == IERC20.name.selector) {
+            _initTokenData();
             return abi.encode(name);
         } else if (selector == IERC20.decimals.selector) {
+            _initTokenData();
             return abi.encode(decimals);
         } else if (selector == IERC20.totalSupply.selector) {
+            _initTokenData();
             return abi.encode(totalSupply);
         } else if (selector == IERC20.symbol.selector) {
+            _initTokenData();
             return abi.encode(symbol);
         } else if (selector == IERC20.balanceOf.selector) {
             require(msg.data.length >= 60, "balanceOf: Not enough calldata");
@@ -246,62 +251,69 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
             emit Approval(owner, spender, amount);
             return abi.encode(true);
         } else if (selector == IHRC719.associate.selector) {
-            uint256 slot = _isAssociatedSlot(msg.sender);
-            assembly {
-                sstore(slot, true)
-            }
+            bytes32 slot = _isAssociatedSlot(msg.sender);
+            assembly { sstore(slot, true) }
             return abi.encode(true);
         } else if (selector == IHRC719.dissociate.selector) {
-            uint256 slot = _isAssociatedSlot(msg.sender);
-            assembly {
-                sstore(slot, false)
-            }
+            bytes32 slot = _isAssociatedSlot(msg.sender);
+            assembly { sstore(slot, false) }
             return abi.encode(true);
         } else if (selector == IHRC719.isAssociated.selector) {
-            uint256 slot = _isAssociatedSlot(msg.sender);
+            bytes32 slot = _isAssociatedSlot(msg.sender);
             bool res;
-            assembly {
-                res := sload(slot)
-            }
+            assembly { res := sload(slot) }
             return abi.encode(res);
+        } else if (selector == this.getTokenInfo.selector) {
+            require(msg.data.length >= 28, "getTokenInfo: Not enough calldata");
+            require(msg.sender == HTS_ADDRESS, "getTokenInfo: unauthorized");
+            _initTokenData();
+            return abi.encode(_tokenInfo);
+        } else if (selector == this._update.selector) {
+            require(msg.data.length >= 124, "update: Not enough calldata");
+            require(msg.sender == HTS_ADDRESS, "update: unauthorized");
+            address from = address(bytes20(msg.data[40:60]));
+            address to = address(bytes20(msg.data[72:92]));
+            uint256 amount = uint256(bytes32(msg.data[92:124]));
+            _initTokenData();
+            _update(from, to, amount);
+            return abi.encode(true);
         }
         revert ("redirectForToken: not supported");
     }
 
-    function _balanceOfSlot(address account) internal view returns (uint256 slot) {
+    function _initTokenData() internal virtual {
+    }
+
+    function _balanceOfSlot(address account) internal virtual returns (bytes32) {
         bytes4 selector = IERC20.balanceOf.selector;
         uint192 pad = 0x0;
         uint32 accountId = HtsSystemContract(HTS_ADDRESS).getAccountId(account);
-        slot = uint256(bytes32(abi.encodePacked(selector, pad, accountId)));
+        return bytes32(abi.encodePacked(selector, pad, accountId));
     }
 
-    function _allowanceSlot(address owner, address spender) internal view returns (uint256 slot) {
+    function _allowanceSlot(address owner, address spender) internal virtual returns (bytes32) {
         bytes4 selector = IERC20.allowance.selector;
         uint160 pad = 0x0;
         uint32 ownerId = HtsSystemContract(HTS_ADDRESS).getAccountId(owner);
         uint32 spenderId = HtsSystemContract(HTS_ADDRESS).getAccountId(spender);
-        slot = uint256(bytes32(abi.encodePacked(selector, pad, spenderId, ownerId)));
+        return bytes32(abi.encodePacked(selector, pad, spenderId, ownerId));
     }
 
-    function _isAssociatedSlot(address account) internal view returns (uint256 slot) {
+    function _isAssociatedSlot(address account) internal virtual returns (bytes32) {
         bytes4 selector = IHRC719.isAssociated.selector;
         uint192 pad = 0x0;
         uint32 accountId = HtsSystemContract(HTS_ADDRESS).getAccountId(account);
-        slot = uint256(bytes32(abi.encodePacked(selector, pad, accountId)));
+        return bytes32(abi.encodePacked(selector, pad, accountId));
     }
 
-    function __balanceOf(address account) private view returns (uint256 amount) {
-        uint256 slot = _balanceOfSlot(account);
-        assembly {
-            amount := sload(slot)
-        }
+    function __balanceOf(address account) private returns (uint256 amount) {
+        bytes32 slot = _balanceOfSlot(account);
+        assembly { amount := sload(slot) }
     }
 
-    function __allowance(address owner, address spender) private view returns (uint256 amount) {
-        uint256 slot = _allowanceSlot(owner, spender);
-        assembly {
-            amount := sload(slot)
-        }
+    function __allowance(address owner, address spender) private returns (uint256 amount) {
+        bytes32 slot = _allowanceSlot(owner, spender);
+        assembly { amount := sload(slot) }
     }
 
     function _transfer(address from, address to, uint256 amount) private {
@@ -311,11 +323,14 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
         emit Transfer(from, to, amount);
     }
 
-    function _update(address from, address to, uint256 amount) private {
+    function _update(address from, address to, uint256 amount) public {
+        console.log("from: %s, to: %s, amount: %s", from, to, amount);
         if (from == address(0)) {
-            totalSupply += amount;
+            bytes32 totalSupplySlot;
+            assembly { totalSupplySlot := totalSupply.slot }
+            assembly { sstore(totalSupplySlot, add(sload(totalSupplySlot), amount)) }
         } else {
-            uint256 fromSlot = _balanceOfSlot(from);
+            bytes32 fromSlot = _balanceOfSlot(from);
             uint256 fromBalance;
             assembly { fromBalance := sload(fromSlot) }
             require(fromBalance >= amount, "_transfer: insufficient balance");
@@ -323,9 +338,11 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
         }
 
         if (to == address(0)) {
-            totalSupply -= amount;
+            bytes32 totalSupplySlot;
+            assembly { totalSupplySlot := totalSupply.slot }
+            assembly { sstore(totalSupplySlot, sub(sload(totalSupplySlot), amount)) }
         } else {
-            uint256 toSlot = _balanceOfSlot(to);
+            bytes32 toSlot = _balanceOfSlot(to);
             uint256 toBalance;
             assembly { toBalance := sload(toSlot) }
             // Solidity's checked arithmetic will revert if this overflows
@@ -338,10 +355,8 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
     function _approve(address owner, address spender, uint256 amount) private {
         require(owner != address(0), "_approve: invalid owner");
         require(spender != address(0), "_approve: invalid spender");
-        uint256 allowanceSlot = _allowanceSlot(owner, spender);
-        assembly {
-            sstore(allowanceSlot, amount)
-        }
+        bytes32 allowanceSlot = _allowanceSlot(owner, spender);
+        assembly { sstore(allowanceSlot, amount) }
     }
 
     /**

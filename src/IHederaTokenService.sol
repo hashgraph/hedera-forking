@@ -7,14 +7,14 @@ interface IHederaTokenService {
     struct Expiry {
         // The epoch second at which the token should expire; if an auto-renew account and period are
         // specified, this is coerced to the current epoch second plus the autoRenewPeriod
-        int64 second;
+        int256 second;
 
         // ID of an account which will be automatically charged to renew the token's expiration, at
         // autoRenewPeriod interval, expressed as a solidity address
         address autoRenewAccount;
 
         // The interval at which the auto-renew account will be charged to extend the token's expiry
-        int64 autoRenewPeriod;
+        int256 autoRenewPeriod;
     }
 
     /// A Key can be a public key from either the Ed25519 or ECDSA(secp256k1) signature schemes, where
@@ -29,14 +29,14 @@ interface IHederaTokenService {
     /// Exactly one of the possible values should be populated in order for the Key to be valid.
     struct KeyValue {
 
-        // if set to true, the key of the calling Hedera account will be inherited as the token key
-        bool inheritAccountKey;
-
         // smart contract instance that is authorized as if it had signed with a key
         address contractId;
 
         // Ed25519 public key bytes
         bytes ed25519;
+
+        // if set to true, the key of the calling Hedera account will be inherited as the token key
+        bool inheritAccountKey;
 
         // Compressed ECDSA(secp256k1) public key bytes
         bytes ECDSA_secp256k1;
@@ -94,7 +94,7 @@ interface IHederaTokenService {
         // IWA Compatibility. Depends on TokenSupplyType. For tokens of type FUNGIBLE_COMMON - the
         // maximum number of tokens that can be in circulation. For tokens of type NON_FUNGIBLE_UNIQUE -
         // the maximum number of NFTs (serial numbers) that can be minted. This field can never be changed!
-        int64 maxSupply;
+        int256 maxSupply;
 
         // The default Freeze status (frozen or unfrozen) of Hedera accounts relative to this token. If
         // true, an account must be unfrozen before it can receive the token
@@ -113,22 +113,22 @@ interface IHederaTokenService {
         HederaToken token;
 
         /// The number of tokens (fungible) or serials (non-fungible) of the token
-        int64 totalSupply;
+        int256 totalSupply;
 
         /// Specifies whether the token is deleted or not
         bool deleted;
 
-        /// Specifies whether the token kyc was defaulted with KycNotApplicable (true) or Revoked (false)
-        bool defaultKycStatus;
-
-        /// Specifies whether the token is currently paused or not
-        bool pauseStatus;
-
         /// The fixed fees collected when transferring the token
         FixedFee[] fixedFees;
 
+        /// Specifies whether the token kyc was defaulted with KycNotApplicable (true) or Revoked (false)
+        bool defaultKycStatus;
+
         /// The fractional fees collected when transferring the token
         FractionalFee[] fractionalFees;
+
+        /// Specifies whether the token is currently paused or not
+        bool pauseStatus;
 
         /// The royalty fees collected when transferring the token
         RoyaltyFee[] royaltyFees;
@@ -143,37 +143,44 @@ interface IHederaTokenService {
     /// useCurrentTokenForPayment. Exactly one of the values should be set.
     struct FixedFee {
 
-        int64 amount;
+        // The ID of the account to receive the custom fee, expressed as a solidity address
+        address feeCollector;
+
+        int256 amount;
 
         // Specifies ID of token that should be used for fixed fee denomination
         address tokenId;
 
+        // variable used for gap in struct to prevent offsets
+        uint256 gap1;
+
         // Specifies this fixed fee should be denominated in Hbar
         bool useHbarsForPayment;
 
+        // variable used for gap in struct to prevent offsets
+        uint256 gap2;
+
         // Specifies this fixed fee should be denominated in the Token currently being created
         bool useCurrentTokenForPayment;
-
-        // The ID of the account to receive the custom fee, expressed as a solidity address
-        address feeCollector;
     }
 
     /// A fraction of the transferred units of a token to assess as a fee. The amount assessed will never
     /// be less than the given minimumAmount, and never greater than the given maximumAmount.  The
     /// denomination is always units of the token to which this fractional fee is attached.
     struct FractionalFee {
+        bool netOfTransfers;
+
         // A rational number's numerator, used to set the amount of a value transfer to collect as a custom fee
-        int64 numerator;
+        int256 numerator;
 
         // A rational number's denominator, used to set the amount of a value transfer to collect as a custom fee
-        int64 denominator;
+        int256 denominator;
 
         // The minimum amount to assess
-        int64 minimumAmount;
+        int256 minimumAmount;
 
         // The maximum amount to assess (zero implies no maximum)
-        int64 maximumAmount;
-        bool netOfTransfers;
+        int256 maximumAmount;
 
         // The ID of the account to receive the custom fee, expressed as a solidity address
         address feeCollector;
@@ -185,25 +192,42 @@ interface IHederaTokenService {
     /// any fungible value, the ledger will assess the fallback fee, if present, to the new NFT owner.
     /// Royalty fees can only be added to tokens of type type NON_FUNGIBLE_UNIQUE.
     struct RoyaltyFee {
+        // The ID of the account to receive the custom fee, expressed as a solidity address
+        address feeCollector;
+
         // A fraction's numerator of fungible value exchanged for an NFT to collect as royalty
-        int64 numerator;
+        int256 numerator;
 
         // A fraction's denominator of fungible value exchanged for an NFT to collect as royalty
-        int64 denominator;
+        int256 denominator;
 
         // If present, the fee to assess to the NFT receiver when no fungible value
         // is exchanged with the sender. Consists of:
+        // useHbarsForPayment: Specifies this fee should be denominated in Hbar
         // amount: the amount to charge for the fee
         // tokenId: Specifies ID of token that should be used for fixed fee denomination
-        // useHbarsForPayment: Specifies this fee should be denominated in Hbar
-        int64 amount;
-        address tokenId;
         bool useHbarsForPayment;
-
-        // The ID of the account to receive the custom fee, expressed as a solidity address
-        address feeCollector;
+        int256 amount;
+        address tokenId;
     }
 
+    /// Query token info
+    /// @param token The token address to check
+    /// @return responseCode The response code for the status of the request. SUCCESS is 22.
+    /// @return tokenInfo TokenInfo info for `token`
+    function getTokenInfo(address token) external returns (int64 responseCode, TokenInfo memory tokenInfo);
+
+    /// Mints an amount of the token to the defined treasury account
+    /// @param token The token for which to mint tokens. If token does not exist, transaction results in
+    ///              INVALID_TOKEN_ID
+    /// @param amount Applicable to tokens of type FUNGIBLE_COMMON. The amount to mint to the Treasury Account.
+    ///               Amount must be a positive non-zero number represented in the lowest denomination of the
+    ///               token. The new supply must be lower than 2^63.
+    /// @param metadata Applicable to tokens of type NON_FUNGIBLE_UNIQUE. A list of metadata that are being created.
+    ///                 Maximum allowed size of each metadata is 100 bytes
+    /// @return responseCode The response code for the status of the request. SUCCESS is 22.
+    /// @return newTotalSupply The new supply of tokens. For NFTs it is the total count of NFTs
+    /// @return serialNumbers If the token is an NFT the newly generate serial numbers, othersise empty.
     function mintToken(address token, int64 amount, bytes[] memory metadata) external returns (
         int64 responseCode,
         int64 newTotalSupply,
