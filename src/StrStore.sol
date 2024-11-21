@@ -13,11 +13,6 @@ function storeString(address target, uint256 slot, string memory strvalue) {
 function storeBytes(address target, uint256 slot, bytes memory value) {
     uint256 length = value.length;
 
-    if (length == 0) {
-        storeBytes32(target, slot, bytes32(0));
-        return;
-    }
-
     if (length <= 31) {
         bytes32 slotValue = bytes32(value) | bytes32(length * 2);
         storeBytes32(target, slot, slotValue);
@@ -50,7 +45,7 @@ function storeUint(address target, uint256 slot, uint256 value) {
 }
 
 function storeInt(address target, uint256 slot, int256 value) {
-    bytes32 intData = bytes32(uint256(value));
+    bytes32 intData = bytes32(abi.encodePacked(value));
     storeBytes32(target, slot, intData);
 }
 
