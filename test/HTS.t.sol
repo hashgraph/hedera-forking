@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import {Test} from "forge-std/Test.sol";
 import {HtsSystemContract, HTS_ADDRESS} from "../src/HtsSystemContract.sol";
 import {IHederaTokenService} from "../src/IHederaTokenService.sol";
+import {IERC20} from "../src/IERC20.sol";
 import {TestSetup} from "./lib/TestSetup.sol";
 
 contract HTSTest is Test, TestSetup {
@@ -56,7 +57,7 @@ contract HTSTest is Test, TestSetup {
         assertTrue(revertsAsExpected, "expectRevert: call did not revert");
     }
 
-    function test_HTS_getTokenInfo_should_return_token_info_for_valid_token() external view {
+    function test_HTS_getTokenInfo_should_return_token_info_for_valid_token() external {
         if (TestMode.JSON_RPC == testMode) {
             // skip this test for the mock JSON-RPC (will be handled in another PR for the hardhat solution)
             return;
@@ -122,7 +123,7 @@ contract HTSTest is Test, TestSetup {
     function test_HTS_getTokenInfo_should_revert_when_call_to_mirror_node_fails() external {
         address token = MFCT;
         vm.mockCallRevert(address(mirrorNode), abi.encode(mirrorNode.fetchTokenData.selector), abi.encode("mirror node error"));
-        vm.expectRevert(bytes("getTokenInfo: failed to get token info"));
+        vm.expectRevert(abi.encode("mirror node error"));
         HtsSystemContract(HTS_ADDRESS).getTokenInfo(token);
     }
 
@@ -143,25 +144,27 @@ contract HTSTest is Test, TestSetup {
         address treasury = USDC_TREASURY;
         int64 amount = 1000;
         int64 initialTotalSupply = 10000000005000000;
+        uint256 initialTreasuryBalance = IERC20(token).balanceOf(treasury);
         bytes[] memory metadata = new bytes[](0);
 
         (int64 responseCode, int64 newTotalSupply, int64[] memory serialNumbers) = HtsSystemContract(HTS_ADDRESS).mintToken(token, amount, metadata);
         assertEq(responseCode, 22);
         assertEq(serialNumbers.length, 0);
         assertEq(newTotalSupply, initialTotalSupply + amount);
+        assertEq(IERC20(token).balanceOf(treasury), uint64(initialTreasuryBalance) + uint64(amount));
     }
 
     function test_mintToken_should_revert_with_invalid_treasureAccount() external {
         address token = USDC;
         int64 amount = 1000;
         bytes[] memory metadata = new bytes[](0);
-        int64 initialTotalSupply = 0;
+        int64 initialTotalSupply = 10000000005000000;
         IHederaTokenService.TokenInfo memory tokenInfo;
         tokenInfo.token = IHederaTokenService.HederaToken(
-            "MFCT",
-            "MFCT",
+            "USD Coin",
+            "USDC",
             address(0),
-            "",
+            "USDC HBAR",
             false,
             initialTotalSupply + amount,
             false,
@@ -169,7 +172,7 @@ contract HTSTest is Test, TestSetup {
             IHederaTokenService.Expiry(0, address(0), 0)
         );
 
-        vm.mockCall(token, abi.encode(HtsSystemContract.getTokenInfo.selector), abi.encode(tokenInfo));
+        vm.mockCall(token, abi.encode(HtsSystemContract.getTokenInfo.selector), abi.encode(22, tokenInfo));
         vm.expectRevert(bytes("mintToken: invalid account"));
         HtsSystemContract(HTS_ADDRESS).mintToken(token, amount, metadata);
     }
@@ -202,21 +205,23 @@ contract HTSTest is Test, TestSetup {
         assertEq(responseCodeMint, 22);
         assertEq(serialNumbers.length, 0);
         assertEq(newTotalSupplyAfterMint, initialTotalSupply + amount);
+        assertEq(IERC20(token).balanceOf(treasury), uint64(initialTotalSupply + amount));
 
         (int64 responseCodeBurn, int64 newTotalSupplyAfterBurn) = HtsSystemContract(HTS_ADDRESS).burnToken(token, amount, serialNumbers);
         assertEq(responseCodeBurn, 22);
         assertEq(newTotalSupplyAfterBurn, initialTotalSupply);
+        assertEq(IERC20(token).balanceOf(treasury), uint64(initialTotalSupply));
     }
 
     function test_burnToken_should_revert_with_invalid_treasureAccount() external {
         address token = MFCT;
         int64 amount = 1000;
-        int64 initialTotalSupply = 0;
+        int64 initialTotalSupply = 5000;
         int64[] memory serialNumbers = new int64[](0);
         IHederaTokenService.TokenInfo memory tokenInfo;
         tokenInfo.token = IHederaTokenService.HederaToken(
-            "MFCT",
-            "MFCT",
+            "My Crypto Token is the name which the string length is greater than 31",
+            "Token symbol must be exactly 32!",
             address(0),
             "",
             false,
@@ -226,7 +231,7 @@ contract HTSTest is Test, TestSetup {
             IHederaTokenService.Expiry(0, address(0), 0)
         );
 
-        vm.mockCall(token, abi.encode(HtsSystemContract.getTokenInfo.selector), abi.encode(tokenInfo));
+        vm.mockCall(token, abi.encode(HtsSystemContract.getTokenInfo.selector), abi.encode(22, tokenInfo));
         vm.expectRevert(bytes("burnToken: invalid account"));
         HtsSystemContract(HTS_ADDRESS).burnToken(token, amount, serialNumbers);
     }
