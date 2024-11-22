@@ -26,8 +26,16 @@ describe('::storageLayout', function () {
         expect(set.size).to.be.equal(storageLayout.storage.length);
     });
 
-    it('should contain only string and number slot types (to ensure all types are supported)', function () {
-        expect(storageLayout.types).to.have.all.keys('t_uint8', 't_uint256', 't_string_storage');
+    it('should contain only supported slot types', function () {
+        expect(storageLayout.types).to.include.keys(
+            't_address',
+            't_bool',
+            't_bytes_storage',
+            't_int256',
+            't_string_storage',
+            't_uint256',
+            't_uint8'
+        );
     });
 
     describe('storage', function () {
