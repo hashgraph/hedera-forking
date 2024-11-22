@@ -46,15 +46,10 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
      * @return responseCode - the response code for the status of the request. SUCCESS is `22`.
      * @return tokenInfo - token info for `token`
      */
-    function getTokenInfo(address token) htsCall external view returns (int64 responseCode, TokenInfo memory tokenInfo) {
+    function getTokenInfo(address token) htsCall external returns (int64 responseCode, TokenInfo memory tokenInfo) {
         require(token != address(0), "getTokenInfo: invalid token");
 
-        (bool success, bytes memory data) = token.staticcall(
-            abi.encodeWithSelector(this.getTokenInfo.selector, token)
-        );
-        require(success, "getTokenInfo: failed to get token info");
-        tokenInfo = abi.decode(data, (TokenInfo));
-        responseCode = 22; // HederaResponseCodes.SUCCESS
+        (responseCode, tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
     }
 
     /**
@@ -198,7 +193,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
             require(msg.data.length >= 28, "getTokenInfo: Not enough calldata");
             require(msg.sender == HTS_ADDRESS, "getTokenInfo: unauthorized");
             _initTokenData();
-            return abi.encode(_tokenInfo);
+            return abi.encode(22, _tokenInfo);
         }
         revert ("redirectForToken: not supported");
     }

@@ -55,7 +55,7 @@ contract HTSTest is Test, TestSetup {
         assertTrue(revertsAsExpected, "expectRevert: call did not revert");
     }
 
-    function test_HTS_getTokenInfo_should_return_token_info_for_valid_token() external view {
+    function test_HTS_getTokenInfo_should_return_token_info_for_valid_token() external {
         if (TestMode.JSON_RPC == testMode) {
             // skip this test for the mock JSON-RPC (will be handled in another PR for the hardhat solution)
             return;
@@ -121,7 +121,7 @@ contract HTSTest is Test, TestSetup {
     function test_HTS_getTokenInfo_should_revert_when_call_to_mirror_node_fails() external {
         address token = MFCT;
         vm.mockCallRevert(address(mirrorNode), abi.encode(mirrorNode.fetchTokenData.selector), abi.encode("mirror node error"));
-        vm.expectRevert(bytes("getTokenInfo: failed to get token info"));
+        vm.expectRevert(abi.encode("mirror node error"));
         HtsSystemContract(HTS_ADDRESS).getTokenInfo(token);
     }
 
