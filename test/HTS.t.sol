@@ -145,6 +145,11 @@ contract HTSTest is Test, TestSetup {
     }
 
     function test_mintToken_should_succeed_with_valid_input() external {
+        if (TestMode.JSON_RPC == testMode) {
+            // TODO: skip this test until the hardhat solution for getTokenInfo is implemented
+            return;
+        }
+
         address token = USDC;
         address treasury = USDC_TREASURY;
         int64 amount = 1000;
@@ -201,21 +206,27 @@ contract HTSTest is Test, TestSetup {
     }
 
     function test_burnToken_should_succeed_with_valid_input() external {
+        if (TestMode.JSON_RPC == testMode) {
+            // TODO: skip this test until the hardhat solution for getTokenInfo is implemented
+            return;
+        }
+
         address token = MFCT;
         address treasury = MFCT_TREASURY;
         int64 amount = 1000;
         int64 initialTotalSupply = 5000;
+        uint256 initialTreasuryBalance = IERC20(token).balanceOf(treasury);
 
         (int64 responseCodeMint, int64 newTotalSupplyAfterMint, int64[] memory serialNumbers) = HtsSystemContract(HTS_ADDRESS).mintToken(token, amount, new bytes[](0));
         assertEq(responseCodeMint, 22);
         assertEq(serialNumbers.length, 0);
         assertEq(newTotalSupplyAfterMint, initialTotalSupply + amount);
-        assertEq(IERC20(token).balanceOf(treasury), uint64(initialTotalSupply + amount));
+        assertEq(IERC20(token).balanceOf(treasury), uint64(initialTreasuryBalance) + uint64(amount));
 
         (int64 responseCodeBurn, int64 newTotalSupplyAfterBurn) = HtsSystemContract(HTS_ADDRESS).burnToken(token, amount, serialNumbers);
         assertEq(responseCodeBurn, 22);
         assertEq(newTotalSupplyAfterBurn, initialTotalSupply);
-        assertEq(IERC20(token).balanceOf(treasury), uint64(initialTotalSupply));
+        assertEq(IERC20(token).balanceOf(treasury), uint64(initialTreasuryBalance));
     }
 
     function test_burnToken_should_revert_with_invalid_treasureAccount() external {

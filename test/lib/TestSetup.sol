@@ -22,7 +22,7 @@ abstract contract TestSetup {
      * https://testnet.mirrornode.hedera.com/api/v1/tokens/0.0.4730999
      */
     address internal MFCT = 0x0000000000000000000000000000000000483077;
-    address internal MFCT_TREASURY = 0x000000000000000000000000000000000028BC6B;
+    address internal MFCT_TREASURY = 0xa3612A87022a4706FC9452C50abd2703ac4Fd7d9;
 
     /**
      * 3 test modes.
