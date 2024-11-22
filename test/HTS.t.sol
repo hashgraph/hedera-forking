@@ -119,6 +119,11 @@ contract HTSTest is Test, TestSetup {
     }
 
     function test_HTS_getTokenInfo_should_revert_when_call_to_mirror_node_fails() external {
+        if (TestMode.JSON_RPC == testMode) {
+            // skip this test for the mock JSON-RPC, as it is not possible to simulate the mirror node error
+            return;
+        }
+
         address token = MFCT;
         vm.mockCallRevert(address(mirrorNode), abi.encode(mirrorNode.fetchTokenData.selector), abi.encode("mirror node error"));
         vm.expectRevert(abi.encode("mirror node error"));
