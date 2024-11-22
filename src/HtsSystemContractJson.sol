@@ -57,8 +57,6 @@ contract HtsSystemContractJson is HtsSystemContract {
 
         string memory json = mirrorNode().fetchTokenData(address(this));
 
-        _initTokenInfo(json);
-
         assembly { slot := name.slot }
         storeString(address(this), uint256(slot), vm.parseJsonString(json, ".name"));
 
@@ -73,6 +71,8 @@ contract HtsSystemContractJson is HtsSystemContract {
 
         assembly { slot := initialized.slot }
         storeBool(address(this), uint256(slot), true);
+
+        _initTokenInfo(json);
     }
 
     function _initTokenInfo(string memory json) internal {

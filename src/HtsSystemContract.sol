@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 import {IERC20Events, IERC20} from "./IERC20.sol";
 import {IHRC719} from "./IHRC719.sol";
 import {IHederaTokenService} from "./IHederaTokenService.sol";
-import {console} from "forge-std/Console.sol";
 
 address constant HTS_ADDRESS = address(0x167);
 
@@ -78,10 +77,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
         address treasuryAccount = tokenInfo.token.treasury;
         require(treasuryAccount != address(0), "mintToken: invalid account");
 
-        (bool success, ) = token.call(
-            abi.encodeWithSelector(this._update.selector, address(0), treasuryAccount, uint256(uint64(amount)))
-        );
-        require(success, "mintToken: failed to mint tokens");
+        HtsSystemContract(token)._update(address(0), treasuryAccount, uint256(uint64(amount)));
 
         responseCode = 22; // HederaResponseCodes.SUCCESS
         newTotalSupply = int64(uint64(IERC20(token).totalSupply()));
@@ -111,10 +107,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
         address treasuryAccount = tokenInfo.token.treasury;
         require(treasuryAccount != address(0), "burnToken: invalid account");
 
-        (bool success, ) = token.call(
-            abi.encodeWithSelector(this._update.selector, treasuryAccount, address(0), uint256(uint64(amount)))
-        );
-        require(success, "burnToken: failed to burn tokens");
+        HtsSystemContract(token)._update(treasuryAccount, address(0), uint256(uint64(amount)));
 
         responseCode = 22; // HederaResponseCodes.SUCCESS
         newTotalSupply = int64(uint64(IERC20(token).totalSupply()));
@@ -319,7 +312,6 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
     }
 
     function _update(address from, address to, uint256 amount) public {
-        console.log("from: %s, to: %s, amount: %s", from, to, amount);
         if (from == address(0)) {
             bytes32 totalSupplySlot;
             assembly { totalSupplySlot := totalSupply.slot }
