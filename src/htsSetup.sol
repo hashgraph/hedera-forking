@@ -32,9 +32,6 @@ Vm constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
  * > That is, behavior might differ when switching from local development to a real Hedera network.
  * > Always test your contracts against a real Hedera network before launching your contracts.
  */
-function htsSetup() {
-    htsSetup(new MirrorNodeFFI());
-}
 
 function htsSetup(MirrorNode mirrorNode) {
     __deployCodeTo("HtsSystemContractJson.sol", HTS_ADDRESS);

@@ -48,9 +48,13 @@ contract HtsSystemContractJson is HtsSystemContract {
      * @dev Reading Smart Contract's data into it's storage directly from the MirrorNode.
      */
     function _initTokenData() internal override {
-        if (initialized) return;
-        
         bytes32 slot;
+        assembly { slot := initialized.slot }
+        if (vm.load(address(this), slot) == bytes32(uint256(1))) {
+            // Already initialized
+            return;
+        }
+
         string memory json = mirrorNode().fetchTokenData(address(this));
 
         assembly { slot := name.slot }
