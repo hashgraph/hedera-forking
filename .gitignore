@@ -4,5 +4,7 @@
 /cache/
 /out/
 
+.idea/
+
 # Contains Mirror Node request logs created when mocking `curl`
 /scripts/curl.log

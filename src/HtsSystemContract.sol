@@ -3,10 +3,11 @@ pragma solidity ^0.8.0;
 
 import {IERC20Events, IERC20} from "./IERC20.sol";
 import {IHRC719} from "./IHRC719.sol";
+import {IHederaTokenService} from "./IHederaTokenService.sol";
 
 address constant HTS_ADDRESS = address(0x167);
 
-contract HtsSystemContract is IERC20Events {
+contract HtsSystemContract is IHederaTokenService, IERC20Events {
 
     // All ERC20 properties are accessed with a `delegatecall` from the Token Proxy.
     // See `__redirectForToken` for more details.
@@ -14,6 +15,7 @@ contract HtsSystemContract is IERC20Events {
     string internal symbol;
     uint8 internal decimals;
     uint256 internal totalSupply;
+    TokenInfo internal _tokenInfo;
 
     /**
      * @dev Prevents delegatecall into the modified method.
@@ -36,6 +38,18 @@ contract HtsSystemContract is IERC20Events {
         uint64 pad = 0x0;
         bytes32 slot = bytes32(abi.encodePacked(selector, pad, account));
         assembly { accountId := sload(slot) }
+    }
+
+    /**
+     * Query token info
+     * @param token - The token address to check
+     * @return responseCode - the response code for the status of the request. SUCCESS is `22`.
+     * @return tokenInfo - token info for `token`
+     */
+    function getTokenInfo(address token) htsCall external returns (int64 responseCode, TokenInfo memory tokenInfo) {
+        require(token != address(0), "getTokenInfo: invalid token");
+
+        (responseCode, tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
     }
 
     /**
@@ -175,6 +189,11 @@ contract HtsSystemContract is IERC20Events {
             bool res;
             assembly { res := sload(slot) }
             return abi.encode(res);
+        } else if (selector == this.getTokenInfo.selector) {
+            require(msg.data.length >= 28, "getTokenInfo: Not enough calldata");
+            require(msg.sender == HTS_ADDRESS, "getTokenInfo: unauthorized");
+            _initTokenData();
+            return abi.encode(22, _tokenInfo);
         }
         revert ("redirectForToken: not supported");
     }

@@ -5,6 +5,8 @@ import {console} from "forge-std/console.sol";
 
 import {htsSetup} from "../../src/htsSetup.sol";
 import {HTS_ADDRESS} from "../../src/HtsSystemContractJson.sol";
+import {MirrorNode} from "../../src/MirrorNode.sol";
+import {MirrorNodeFFI} from "../../src/MirrorNodeFFI.sol";
 import {MirrorNodeMock} from "./MirrorNodeMock.sol";
 
 abstract contract TestSetup {
@@ -50,18 +52,21 @@ abstract contract TestSetup {
     }
 
     TestMode internal testMode;
+    MirrorNode internal mirrorNode;
 
     function setUpMockStorageForNonFork() internal {
         if (HTS_ADDRESS.code.length == 0) {
             console.log("HTS code length is 0, non-fork test, code and data provided locally");
-            MirrorNodeMock mirrorNode = new MirrorNodeMock();
-            mirrorNode.deployHIP719Proxy(USDC, "USDC");
-            mirrorNode.deployHIP719Proxy(MFCT, "MFCT");
+            MirrorNodeMock mirrorNodeMock = new MirrorNodeMock();
+            mirrorNodeMock.deployHIP719Proxy(USDC, "USDC");
+            mirrorNodeMock.deployHIP719Proxy(MFCT, "MFCT");
+            mirrorNode = mirrorNodeMock;
             htsSetup(mirrorNode);
             testMode = TestMode.NonFork;
         } else if (HTS_ADDRESS.code.length == 1) {
             console.log("HTS code length is 1, forking from a remote Hedera network, HTS/FFI code with Mirror Node backend is deployed here");
-            htsSetup();
+            mirrorNode = new MirrorNodeFFI();
+            htsSetup(mirrorNode);
             testMode = TestMode.FFI;
         } else {
             console.log("HTS code length is greater than 1 (%d), HTS code comes from forked network", HTS_ADDRESS.code.length);

@@ -1,0 +1,42 @@
+// SPDX-License-Identifier: Apache-2.0
+pragma solidity ^0.8.0;
+
+interface IMirrorNodeResponses {
+
+    struct Key {
+        string _type;
+        string key;
+    }
+
+    struct FixedFee {
+        int64 amount;
+        string collector_account_id;
+        string denominating_token_id;
+    }
+
+    struct FractionalAmount {
+        int64 numerator;
+        int64 denominator;
+    }
+
+    struct FractionalFee {
+        FractionalAmount amount;
+        string collector_account_id;
+        string denominating_token_id;
+        int64 maximum;
+        int64 minimum;
+        bool net_of_transfers;
+    }
+
+    struct RoyaltyFee {
+        bool all_collectors_are_exempt;
+        FractionalAmount amount;
+        string collector_account_id;
+        FallbackFee fallback_fee;
+    }
+
+    struct FallbackFee {
+        int64 amount;
+        string denominating_token_id;
+    }
+}
