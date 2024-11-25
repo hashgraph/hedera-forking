@@ -40,30 +40,13 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
         assembly { accountId := sload(slot) }
     }
 
-    /**
-     * Query token info
-     * @param token - The token address to check
-     * @return responseCode - the response code for the status of the request. SUCCESS is `22`.
-     * @return tokenInfo - token info for `token`
-     */
-    function getTokenInfo(address token) htsCall public returns (int64 responseCode, TokenInfo memory tokenInfo) {
+    function getTokenInfo(address token) htsCall external returns (int64 responseCode, TokenInfo memory tokenInfo) {
         require(token != address(0), "getTokenInfo: invalid token");
 
         (responseCode, tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
     }
 
-    /// Mints an amount of the token to the defined treasury account
-    /// @param token The token for which to mint tokens. If token does not exist, transaction results in
-    ///              INVALID_TOKEN_ID
-    /// @param amount Applicable to tokens of type FUNGIBLE_COMMON. The amount to mint to the Treasury Account.
-    ///               Amount must be a positive non-zero number represented in the lowest denomination of the
-    ///               token. The new supply must be lower than 2^63.
-    /// @param metadata Applicable to tokens of type NON_FUNGIBLE_UNIQUE. A list of metadata that are being created.
-    ///                 Maximum allowed size of each metadata is 100 bytes
-    /// @return responseCode The response code for the status of the request. SUCCESS is 22.
-    /// @return newTotalSupply The new supply of tokens. For NFTs it is the total count of NFTs
-    /// @return serialNumbers If the token is an NFT the newly generate serial numbers, othersise empty.
-    function mintToken(address token, int64 amount, bytes[] memory metadata) htsCall external returns (
+    function mintToken(address token, int64 amount, bytes[] memory) htsCall external returns (
         int64 responseCode,
         int64 newTotalSupply,
         int64[] memory serialNumbers
@@ -71,8 +54,8 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
         require(token != address(0), "mintToken: invalid token");
         require(amount > 0, "mintToken: invalid amount");
 
-        (int64 getTokenInfoResponseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
-        require(getTokenInfoResponseCode == 22, "mintToken: failed to get token info");
+        (int64 tokenInfoResponseCode, TokenInfo memory tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
+        require(tokenInfoResponseCode == 22, "mintToken: failed to get token info");
 
         address treasuryAccount = tokenInfo.token.treasury;
         require(treasuryAccount != address(0), "mintToken: invalid account");
@@ -85,24 +68,15 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
         require(newTotalSupply >= 0, "mintToken: invalid total supply");
     }
 
-    /// Burns an amount of the token from the defined treasury account
-    /// @param token The token for which to burn tokens. If token does not exist, transaction results in
-    ///              INVALID_TOKEN_ID
-    /// @param amount  Applicable to tokens of type FUNGIBLE_COMMON. The amount to burn from the Treasury Account.
-    ///                Amount must be a positive non-zero number, not bigger than the token balance of the treasury
-    ///                account (0; balance], represented in the lowest denomination.
-    /// @param serialNumbers Applicable to tokens of type NON_FUNGIBLE_UNIQUE. The list of serial numbers to be burned.
-    /// @return responseCode The response code for the status of the request. SUCCESS is 22.
-    /// @return newTotalSupply The new supply of tokens. For NFTs it is the total count of NFTs
-    function burnToken(address token, int64 amount, int64[] memory serialNumbers) htsCall external returns (
+    function burnToken(address token, int64 amount, int64[] memory) htsCall external returns (
         int64 responseCode,
         int64 newTotalSupply
     ) {
         require(token != address(0), "burnToken: invalid token");
         require(amount > 0, "burnToken: invalid amount");
 
-        (int64 getTokenInfoResponseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
-        require(getTokenInfoResponseCode == 22, "burnToken: failed to get token info");
+        (int64 tokenInfoResponseCode, TokenInfo memory tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
+        require(tokenInfoResponseCode == 22, "burnToken: failed to get token info");
 
         address treasuryAccount = tokenInfo.token.treasury;
         require(treasuryAccount != address(0), "burnToken: invalid account");
@@ -313,9 +287,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
 
     function _update(address from, address to, uint256 amount) public {
         if (from == address(0)) {
-            bytes32 totalSupplySlot;
-            assembly { totalSupplySlot := totalSupply.slot }
-            assembly { sstore(totalSupplySlot, add(sload(totalSupplySlot), amount)) }
+            totalSupply += amount;
         } else {
             bytes32 fromSlot = _balanceOfSlot(from);
             uint256 fromBalance;
@@ -325,9 +297,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
         }
 
         if (to == address(0)) {
-            bytes32 totalSupplySlot;
-            assembly { totalSupplySlot := totalSupply.slot }
-            assembly { sstore(totalSupplySlot, sub(sload(totalSupplySlot), amount)) }
+            totalSupply -= amount;
         } else {
             bytes32 toSlot = _balanceOfSlot(to);
             uint256 toBalance;
