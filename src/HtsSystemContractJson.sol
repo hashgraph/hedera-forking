@@ -14,7 +14,7 @@ contract HtsSystemContractJson is HtsSystemContract {
     MirrorNode private _mirrorNode;
 
     bool private initialized;
-    bool private relationshipsInitialized;
+    mapping (address => bool) private relationshipsInitialized;
 
     function setMirrorNodeProvider(MirrorNode mirrorNode_) htsCall external {
         _mirrorNode = mirrorNode_;
@@ -83,14 +83,12 @@ contract HtsSystemContractJson is HtsSystemContract {
     }
 
     function _initTokenRelationships(address account) internal override {
-        bytes32 slot;
-        assembly { slot := relationshipsInitialized.slot }
-        if (vm.load(address(this), slot) == bytes32(uint256(1))) {
+        if (relationshipsInitialized[account]) {
             // Already initialized
             return;
         }
 
-        slot = _isAssociatedSlot(account);
+        bytes32 slot = _isAssociatedSlot(account);
         try mirrorNode().fetchTokenRelationshipOfAccount(vm.toString(account), address(this)) returns (string memory json) {
             string memory notFoundError = "{\"_status\":{\"messages\":[{\"message\":\"Not found\"}]}}";
             if (keccak256(bytes(json)) == keccak256(bytes(notFoundError))) {
@@ -104,8 +102,7 @@ contract HtsSystemContractJson is HtsSystemContract {
             storeBool(address(this), uint256(slot), false);
         }
 
-        assembly { slot := relationshipsInitialized.slot }
-        storeBool(address(this), uint256(slot), true);
+        relationshipsInitialized[account] = true;
     }
 
     function _initTokenInfo(string memory json) internal {
