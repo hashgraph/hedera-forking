@@ -67,8 +67,12 @@ describe('::getHtsStorageAt', function () {
     });
 
     it(`should return \`ZERO_HEX_32_BYTE\` when slot does not correspond to any field`, async function () {
+        const mirrorNodeClient = {
+            ...baseMirrorNodeClient,
+            getTokenById: async () => require(`./data/USDC/getToken.json`),
+        };
         // Slot `0xff` should not be present in `HtsSystemContract`
-        const result = await _getHtsStorageAt(`${LONG_ZERO_PREFIX}1`, '0xff', baseMirrorNodeClient);
+        const result = await _getHtsStorageAt(`${LONG_ZERO_PREFIX}1`, '0xff', mirrorNodeClient);
         expect(result).to.be.equal(utils.ZERO_HEX_32_BYTE);
     });
 
