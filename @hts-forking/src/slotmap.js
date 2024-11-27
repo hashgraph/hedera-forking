@@ -69,9 +69,9 @@ const _typeConverter = {
     },
     t_uint8: toIntHex256,
     t_uint256: toIntHex256,
-    t_int256: str => toIntHex256(str ?? '0'),
-    t_address: str => toIntHex256(str?.replace('0.0.', '') ?? '0'),
-    t_bool: value => toIntHex256(value ? '1' : '0'),
+    t_int256: str => toIntHex256(str ?? 0),
+    t_address: str => toIntHex256(str?.replace('0.0.', '') ?? 0),
+    t_bool: value => toIntHex256(value ? 1 : 0),
 };
 
 /**
@@ -110,8 +110,6 @@ function slotMapOf(token) {
 
     const map = new SlotMap();
 
-    const keccakOf = s => BigInt(keccak256(`0x${s.toString(16).padStart(64, '0')}`));
-
     /**
      * @param {{label: string, slot: string, type: string}} slot
      * @param {bigint} baseSlot
@@ -131,8 +129,8 @@ function slotMapOf(token) {
             const arr = obj[toSnakeCase(slot.label)];
             assert(Array.isArray(arr));
 
-            map.store(computedSlot, toIntHex256(arr.length.toString()), `${path}{len}`, type);
-            const baseKeccak = keccakOf(computedSlot);
+            map.store(computedSlot, toIntHex256(arr.length), `${path}{len}`, type);
+            const baseKeccak = BigInt(keccak256(`0x${toIntHex256(computedSlot)}`));
             const { numberOfBytes } = types[/**@type{keyof typeof types}*/ (base)];
             assert(parseInt(numberOfBytes) % 32 === 0);
             arr.forEach((item, i) =>
@@ -145,7 +143,7 @@ function slotMapOf(token) {
             );
         } else {
             const prop = obj[toSnakeCase(slot.label)];
-            const value = _typeConverter[slot.type](prop);
+            const value = _typeConverter[slot.type](/**@type{string}*/ (prop));
 
             if (!Array.isArray(value)) {
                 map.store(computedSlot, value, path, type);
@@ -154,7 +152,7 @@ function slotMapOf(token) {
             } else {
                 const [x, ...xs] = value;
                 map.store(computedSlot, x, `${path}{len}`, type);
-                const baseKeccak = keccakOf(computedSlot);
+                const baseKeccak = BigInt(keccak256(`0x${toIntHex256(computedSlot)}`));
                 xs.forEach((x, i) => map.store(baseKeccak + BigInt(i), x, `${path}{${i}}`, type));
             }
         }
