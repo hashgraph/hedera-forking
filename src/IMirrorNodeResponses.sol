@@ -39,4 +39,14 @@ interface IMirrorNodeResponses {
         int64 amount;
         string denominating_token_id;
     }
+
+    struct TokenRelationship {
+        bool automatic_association;
+        uint256 balance;
+        string created_timestamp;
+        uint256 decimals;
+        string token_id;
+        string freeze_status;
+        string kyc_status;
+    }
 }

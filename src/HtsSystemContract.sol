@@ -213,14 +213,17 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
             emit Approval(owner, spender, amount);
             return abi.encode(true);
         } else if (selector == IHRC719.associate.selector) {
+            _initTokenRelationships(msg.sender);
             bytes32 slot = _isAssociatedSlot(msg.sender);
             assembly { sstore(slot, true) }
             return abi.encode(true);
         } else if (selector == IHRC719.dissociate.selector) {
+            _initTokenRelationships(msg.sender);
             bytes32 slot = _isAssociatedSlot(msg.sender);
             assembly { sstore(slot, false) }
             return abi.encode(true);
         } else if (selector == IHRC719.isAssociated.selector) {
+            _initTokenRelationships(msg.sender);
             bytes32 slot = _isAssociatedSlot(msg.sender);
             bool res;
             assembly { res := sload(slot) }
@@ -244,6 +247,9 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
     }
 
     function _initTokenData() internal virtual {
+    }
+
+    function _initTokenRelationships(address account) internal virtual {
     }
 
     function _balanceOfSlot(address account) internal virtual returns (bytes32) {
