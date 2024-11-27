@@ -20,19 +20,26 @@ const { expect } = require('chai');
 
 const { slotMapOf } = require('../src/slotmap');
 
+const mirrorNode =
+    /** @type{Pick<import('@hashgraph/hts-forking').IMirrorNodeClient, 'getAccount'>} */ ({
+        getAccount: async address => ({ account: '', evm_address: address?.replace('0.0.', '') }),
+    });
+
 describe('::slotMapOf', function () {
     ['MFCT', 'USDC'].forEach(symbol => {
         describe(symbol, function () {
             const map = slotMapOf(require(`../test/data/${symbol}/getToken.json`));
 
             [...map.entries()].forEach(([slot, { value, path }]) => {
-                it(`should have valid slot \`${slot}\` for field \`${path}\``, function () {
+                it(`should have valid slot \`${slot}\` for field \`${path}\``, async function () {
                     expect(slot).to.be.not.undefined;
                     expect(value).to.be.not.undefined;
+                    if (typeof value === 'function') {
+                        value = await value(mirrorNode, 0);
+                    }
                     expect(value).to.be.a('string');
-                    expect(value).to.be.have.length(2 + 64);
-                    expect(value.slice(0, 2)).to.be.equal('0x');
-                    expect(() => BigInt(value)).to.not.throw(SyntaxError);
+                    expect(value).to.be.have.length(64);
+                    expect(() => BigInt(`0x${value}`)).to.not.throw(SyntaxError);
                 });
             });
         });

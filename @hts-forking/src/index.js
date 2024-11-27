@@ -127,7 +127,11 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
     const entry = slotMapOf(token).get(nrequestedSlot);
     if (entry === undefined)
         return ret(ZERO_HEX_32_BYTE, `Requested slot does not match any field slots`);
-    return ret(entry.value, `Slot matches ${entry.path}: ${entry.path}`);
+    const value =
+        typeof entry.value === 'function'
+            ? await entry.value(mirrorNodeClient, blockNumber)
+            : entry.value;
+    return ret(`0x${value}`, `Slot matches ${entry.path}: ${entry.path}`);
 }
 
 module.exports = { HTSAddress, LONG_ZERO_PREFIX, getHIP719Code, getHtsCode, getHtsStorageAt };
