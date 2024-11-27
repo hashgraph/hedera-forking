@@ -102,7 +102,13 @@ contract HtsSystemContractJson is HtsSystemContract {
             storeBool(address(this), uint256(slot), false);
         }
 
-        relationshipsInitialized[account] = true;
+        // The value corresponding to a mapping key k is located at keccak256(h(k).p),
+        // where . is concatenation, p is the base slot and h is a function applied to the key depending on its type:
+        // - for value types, h pads the value to 32 bytes in the same way as when storing the value in memory.
+        // - for strings and byte arrays, h(k) is just the non-padded data.
+        assembly { slot := relationshipsInitialized.slot }
+        slot = keccak256(abi.encodePacked(bytes32(uint256(uint160(account))), slot));
+        storeBool(address(this), uint256(slot), true);
     }
 
     function _initTokenInfo(string memory json) internal {
