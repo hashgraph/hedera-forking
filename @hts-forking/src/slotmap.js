@@ -75,6 +75,49 @@ const _types = {
 };
 
 /**
+ * @param {{label: string;slot: string;type: string;}} slot
+ * @param {bigint} baseSlot
+ * @param {Record<string, unknown>} obj
+ * @param {string} path
+ * @param {SlotMap} map
+ */
+function visit(slot, baseSlot, obj, path, map) {
+    const computedSlot = BigInt(slot.slot) + baseSlot;
+    path += `.${slot.label}`;
+    const { label, type } = slot;
+
+    const ty = types[/**@type{keyof typeof types}*/ (type)];
+    if ('members' in ty) {
+        ty.members.forEach(s => visit(s, computedSlot, obj, path, map));
+    } else if ('base' in ty) {
+        const base = ty['base'];
+        const arr = obj[toSnakeCase(label)];
+        assert(Array.isArray(arr));
+
+        map.store(computedSlot, toIntHex256(arr.length), `${path}{len}`, type);
+        const baseKeccak = BigInt(keccak256(`0x${toIntHex256(computedSlot)}`));
+        const { numberOfBytes } = types[/**@type{keyof typeof types}*/ (base)];
+        assert(parseInt(numberOfBytes) % 32 === 0);
+        arr.forEach((item, i) =>
+            visit(
+                { label: '_', type: base, slot: '0' },
+                baseKeccak + BigInt(i) * (BigInt(numberOfBytes) / 32n),
+                item,
+                `${path}[${i}]`,
+                map
+            )
+        );
+    } else {
+        const prop = obj[toSnakeCase(label)];
+        const [value, ...chunks] = _types[type](/**@type{string}*/ (prop));
+        map.store(computedSlot, value, path, type);
+
+        const baseKeccak = BigInt(keccak256(`0x${toIntHex256(computedSlot)}`));
+        chunks.forEach((x, i) => map.store(baseKeccak + BigInt(i), x, `${path}{${i}}`, type));
+    }
+}
+
+/**
  * @param {Record<string, unknown>} token
  * @returns {Map<bigint, {value: string, path: string}>}
  */
@@ -84,7 +127,6 @@ function slotMapOf(token) {
     token['ledger_id'] = '0x00';
     token['second'] = `${token['expiry_timestamp']}`;
     token['pause_status'] = token['pause_status'] === 'PAUSED';
-
     token['token_keys'] = /**@type {const}*/ ([
         ['admin_key', 0x1],
         ['kyc_key', 0x2],
@@ -102,56 +144,13 @@ function slotMapOf(token) {
             return { key_type, ed25519: key.key, _e_c_d_s_a_secp256k1: '' };
         return { key_type, ed25519: '', _e_c_d_s_a_secp256k1: key.key };
     });
-
     const customFees = /**@type {Record<string, unknown>}*/ (token['custom_fees']);
     token['fixed_fees'] = customFees['fixed_fees'] ?? [];
     token['fractional_fees'] = customFees['fractional_fees'] ?? [];
     token['royalty_fees'] = customFees['royalty_fees'] ?? [];
 
     const map = new SlotMap();
-
-    /**
-     * @param {{label: string, slot: string, type: string}} slot
-     * @param {bigint} baseSlot
-     * @param {Record<string, unknown>} obj
-     * @param {string} path
-     */
-    function flatten(slot, baseSlot, obj, path) {
-        const computedSlot = BigInt(slot.slot) + baseSlot;
-        path += `.${slot.label}`;
-        const { label, type } = slot;
-
-        const ty = types[/**@type{keyof typeof types}*/ (type)];
-        if ('members' in ty) {
-            ty.members.forEach(s => flatten(s, computedSlot, obj, path));
-        } else if ('base' in ty) {
-            const base = ty['base'];
-            const arr = obj[toSnakeCase(label)];
-            assert(Array.isArray(arr));
-
-            map.store(computedSlot, toIntHex256(arr.length), `${path}{len}`, type);
-            const baseKeccak = BigInt(keccak256(`0x${toIntHex256(computedSlot)}`));
-            const { numberOfBytes } = types[/**@type{keyof typeof types}*/ (base)];
-            assert(parseInt(numberOfBytes) % 32 === 0);
-            arr.forEach((item, i) =>
-                flatten(
-                    { label: '_', type: base, slot: '0' },
-                    baseKeccak + BigInt(i) * (BigInt(numberOfBytes) / 32n),
-                    item,
-                    `${path}[${i}]`
-                )
-            );
-        } else {
-            const prop = obj[toSnakeCase(label)];
-            const [value, ...chunks] = _types[type](/**@type{string}*/ (prop));
-            map.store(computedSlot, value, path, type);
-
-            const baseKeccak = BigInt(keccak256(`0x${toIntHex256(computedSlot)}`));
-            chunks.forEach((x, i) => map.store(baseKeccak + BigInt(i), x, `${path}{${i}}`, type));
-        }
-    }
-
-    storage.forEach(slot => flatten(slot, 0n, token, ''));
+    storage.forEach(slot => visit(slot, 0n, token, '', map));
     return map._map;
 }
 
