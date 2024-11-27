@@ -35,8 +35,8 @@ module.exports = {
     toSnakeCase: camelCase => camelCase.replace(/([A-Z])/g, '_$1').toLowerCase(),
 
     /**
-     * @param {string} value Decimal `value` as string.
+     * @param {string | number | bigint} value Decimal `value` as string.
      * @returns {string}
      */
-    toIntHex256: value => parseInt(value).toString(16).padStart(64, '0'),
+    toIntHex256: value => BigInt(value).toString(16).padStart(64, '0'),
 };

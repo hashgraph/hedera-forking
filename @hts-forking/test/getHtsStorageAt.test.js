@@ -21,7 +21,7 @@ const { expect, config } = require('chai');
 const { keccak256, id } = require('ethers');
 
 const { HTSAddress, LONG_ZERO_PREFIX, getHtsStorageAt } = require('@hashgraph/hts-forking');
-const utils = require('../src/utils');
+const { ZERO_HEX_32_BYTE, toIntHex256, toSnakeCase } = require('../src/utils');
 const { tokens } = require('../test/data');
 const { storageLayout } = require('../resources/HtsSystemContract.json');
 
@@ -73,7 +73,7 @@ describe('::getHtsStorageAt', function () {
         };
         // Slot `0xff` should not be present in `HtsSystemContract`
         const result = await _getHtsStorageAt(`${LONG_ZERO_PREFIX}1`, '0xff', mirrorNodeClient);
-        expect(result).to.be.equal(utils.ZERO_HEX_32_BYTE);
+        expect(result).to.be.equal(ZERO_HEX_32_BYTE);
     });
 
     it(`should return \`ZERO_HEX_32_BYTE\` when \`address\` is not found for a non-keccaked slot`, async function () {
@@ -84,13 +84,13 @@ describe('::getHtsStorageAt', function () {
             '0x0',
             mirrorNodeClient
         );
-        expect(result).to.be.equal(utils.ZERO_HEX_32_BYTE);
+        expect(result).to.be.equal(ZERO_HEX_32_BYTE);
     });
 
     ['name', 'symbol'].forEach(name => {
         const slot = slotsByLabel[name];
         it(`should return \`ZERO_HEX_32_BYTE\` when \`address\` is not found for the keccaked slot of \`${slot}\` for field \`${name}\``, async function () {
-            const keccakedSlot = keccak256('0x' + utils.toIntHex256(slot));
+            const keccakedSlot = keccak256('0x' + toIntHex256(slot));
             /** @type{IMirrorNodeClient} */
             const mirrorNodeClient = {
                 ...baseMirrorNodeClient,
@@ -101,7 +101,7 @@ describe('::getHtsStorageAt', function () {
                 keccakedSlot,
                 mirrorNodeClient
             );
-            expect(result).to.be.equal(utils.ZERO_HEX_32_BYTE);
+            expect(result).to.be.equal(ZERO_HEX_32_BYTE);
         });
     });
 
@@ -109,7 +109,7 @@ describe('::getHtsStorageAt', function () {
         it(`should return \`ZERO_HEX_32_BYTE\` on \`0x167\` when slot does not match \`getAccountId\``, async function () {
             const slot = '0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15';
             const result = await _getHtsStorageAt(HTSAddress, slot, baseMirrorNodeClient);
-            expect(result).to.be.equal(utils.ZERO_HEX_32_BYTE);
+            expect(result).to.be.equal(ZERO_HEX_32_BYTE);
         });
 
         it(`should return address' suffix on \`0x167\` when accountId does not exist`, async function () {
@@ -132,7 +132,7 @@ describe('::getHtsStorageAt', function () {
                 };
                 const slot = '0xe0b490f700000000000000004D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15';
                 const result = await _getHtsStorageAt(HTSAddress, slot, mirrorNodeClient);
-                expect(result).to.be.equal(utils.ZERO_HEX_32_BYTE);
+                expect(result).to.be.equal(ZERO_HEX_32_BYTE);
             });
         });
 
@@ -175,7 +175,7 @@ describe('::getHtsStorageAt', function () {
             it(`should return \`ZERO_HEX_32_BYTE\` when slot does not correspond to any field (even if token is found)`, async function () {
                 // Slot `0x100` should not be present in `HtsSystemContract`
                 const result = await _getHtsStorageAt(address, '0x100', mirrorNodeClient);
-                expect(result).to.be.equal(utils.ZERO_HEX_32_BYTE);
+                expect(result).to.be.equal(ZERO_HEX_32_BYTE);
             });
 
             ['name', 'symbol'].forEach(name => {
@@ -192,7 +192,7 @@ describe('::getHtsStorageAt', function () {
                         assert(result !== null);
                         expect(result.slice(2)).to.be.equal('0'.repeat(62) + len);
 
-                        const baseSlot = BigInt(keccak256('0x' + utils.toIntHex256(slot)));
+                        const baseSlot = BigInt(keccak256('0x' + toIntHex256(slot)));
                         let value = '';
                         for (let i = 0; i < (str.length >> 5) + 1; i++) {
                             const result = await _getHtsStorageAt(
@@ -223,7 +223,7 @@ describe('::getHtsStorageAt', function () {
                     const result = await _getHtsStorageAt(address, slot, mirrorNodeClient);
                     assert(result !== null);
                     expect(result.slice(2)).to.be.equal(
-                        utils.toIntHex256(tokenResult[utils.toSnakeCase(name)])
+                        toIntHex256(tokenResult[toSnakeCase(name)])
                     );
                 });
             });
@@ -263,8 +263,8 @@ describe('::getHtsStorageAt', function () {
                     )) ?? { balances: [] };
                     expect(result).to.be.equal(
                         balances.length === 0
-                            ? utils.ZERO_HEX_32_BYTE
-                            : `0x${utils.toIntHex256(balances[0].balance.toString())}`
+                            ? ZERO_HEX_32_BYTE
+                            : `0x${toIntHex256(balances[0].balance)}`
                     );
                 });
             });
@@ -303,8 +303,8 @@ describe('::getHtsStorageAt', function () {
                     )) ?? { allowances: [] };
                     expect(result).to.be.equal(
                         allowances.length === 0
-                            ? utils.ZERO_HEX_32_BYTE
-                            : `0x${utils.toIntHex256(allowances[0].amount.toString())}`
+                            ? ZERO_HEX_32_BYTE
+                            : `0x${toIntHex256(allowances[0].amount)}`
                     );
                 });
             });
