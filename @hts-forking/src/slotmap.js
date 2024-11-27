@@ -24,16 +24,18 @@ const {
     storageLayout: { storage, types },
 } = require('../resources/HtsSystemContract.json');
 
+/** @typedef {string | ((mirrorNode: Pick<import('.').IMirrorNodeClient, 'getAccount'>, blockNumber: number) => Promise<string>)} Value */
+
 class SlotMap {
     constructor() {
-        /** @type {Map<bigint, {value: string, path: string, type: string}>} */
+        /** @type {Map<bigint, {value: Value, path: string, type: string}>} */
         this._map = new Map();
     }
 
     /**
      *
      * @param {bigint} slot
-     * @param {string} value
+     * @param {Value} value
      * @param {string} path
      * @param {string} type
      */
@@ -41,12 +43,12 @@ class SlotMap {
         const prev = this._map.get(slot);
         if (prev !== undefined)
             throw new Error(`Slot \`${slot}\` in use by ${JSON.stringify(prev)}: ${value}@${path}`);
-        this._map.set(slot, { value: '0x' + value, path, type });
+        this._map.set(slot, { value, path, type });
     }
 }
 
 /**
- * @type {{[t_name: string]: (value: string) => string[]}}
+ * @type {{[t_name: string]: (value: string) => Value[]}}
  */
 const _types = {
     t_string_storage: function (str) {
@@ -70,7 +72,14 @@ const _types = {
     t_uint8: val => [toIntHex256(val)],
     t_uint256: val => [toIntHex256(val)],
     t_int256: str => [toIntHex256(str ?? 0)],
-    t_address: str => [toIntHex256(str?.replace('0.0.', '') ?? 0)],
+    t_address: str => [
+        str
+            ? (mirrorNode, blockNumber) =>
+                  mirrorNode
+                      .getAccount(str, blockNumber)
+                      .then(acc => toIntHex256(acc?.evm_address ?? str?.replace('0.0.', '') ?? 0))
+            : toIntHex256(0),
+    ],
     t_bool: value => [toIntHex256(value ? 1 : 0)],
 };
 
@@ -113,13 +122,13 @@ function visit(slot, baseSlot, obj, path, map) {
         map.store(computedSlot, value, path, type);
 
         const baseKeccak = BigInt(keccak256(`0x${toIntHex256(computedSlot)}`));
-        chunks.forEach((x, i) => map.store(baseKeccak + BigInt(i), x, `${path}{${i}}`, type));
+        chunks.forEach((c, i) => map.store(baseKeccak + BigInt(i), c, `${path}{${i}}`, type));
     }
 }
 
 /**
  * @param {Record<string, unknown>} token
- * @returns {Map<bigint, {value: string, path: string}>}
+ * @returns {Map<bigint, {value: Value, path: string}>}
  */
 function slotMapOf(token) {
     token['default_kyc_status'] = false;

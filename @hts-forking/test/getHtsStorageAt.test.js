@@ -128,7 +128,7 @@ describe('::getHtsStorageAt', function () {
                 /** @type{IMirrorNodeClient} */
                 const mirrorNodeClient = {
                     ...baseMirrorNodeClient,
-                    getAccount: async _address => ({ account: accountId }),
+                    getAccount: async _address => ({ account: accountId, evm_address: '' }),
                 };
                 const slot = '0xe0b490f700000000000000004D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15';
                 const result = await _getHtsStorageAt(HTSAddress, slot, mirrorNodeClient);
