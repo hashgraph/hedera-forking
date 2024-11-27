@@ -46,32 +46,32 @@ class SlotMap {
 }
 
 /**
- * @type {{[t_name: string]: (value: string) => string | string[]}}
+ * @type {{[t_name: string]: (value: string) => string[]}}
  */
-const _typeConverter = {
+const _types = {
     t_string_storage: function (str) {
         return this['t_bytes_storage'](Buffer.from(str).toString('hex'));
     },
-    t_bytes_storage: str => {
-        const len = Buffer.from(str, 'hex').length;
-        const [chunk, lenByte, rest] =
+    t_bytes_storage: hexstr => {
+        const len = Buffer.from(hexstr, 'hex').length;
+        const [header, lenByte, chunks] =
             len > 31
                 ? [
                       '0',
                       len * 2 + 1,
                       [...Array(Math.ceil(len / 32)).keys()].map(i =>
-                          str.substring(i * 64, (i + 1) * 64).padEnd(64, '0')
+                          hexstr.substring(i * 64, (i + 1) * 64).padEnd(64, '0')
                       ),
                   ]
-                : [str, len * 2, []];
+                : [hexstr, len * 2, []];
 
-        return [`${chunk.padEnd(64 - 2, '0')}${lenByte.toString(16).padStart(2, '0')}`, ...rest];
+        return [`${header.padEnd(64 - 2, '0')}${lenByte.toString(16).padStart(2, '0')}`, ...chunks];
     },
-    t_uint8: toIntHex256,
-    t_uint256: toIntHex256,
-    t_int256: str => toIntHex256(str ?? 0),
-    t_address: str => toIntHex256(str?.replace('0.0.', '') ?? 0),
-    t_bool: value => toIntHex256(value ? 1 : 0),
+    t_uint8: val => [toIntHex256(val)],
+    t_uint256: val => [toIntHex256(val)],
+    t_int256: str => [toIntHex256(str ?? 0)],
+    t_address: str => [toIntHex256(str?.replace('0.0.', '') ?? 0)],
+    t_bool: value => [toIntHex256(value ? 1 : 0)],
 };
 
 /**
@@ -119,14 +119,14 @@ function slotMapOf(token) {
     function flatten(slot, baseSlot, obj, path) {
         const computedSlot = BigInt(slot.slot) + baseSlot;
         path += `.${slot.label}`;
-        const { type } = slot;
+        const { label, type } = slot;
 
         const ty = types[/**@type{keyof typeof types}*/ (type)];
         if ('members' in ty) {
             ty.members.forEach(s => flatten(s, computedSlot, obj, path));
         } else if ('base' in ty) {
             const base = ty['base'];
-            const arr = obj[toSnakeCase(slot.label)];
+            const arr = obj[toSnakeCase(label)];
             assert(Array.isArray(arr));
 
             map.store(computedSlot, toIntHex256(arr.length), `${path}{len}`, type);
@@ -142,19 +142,12 @@ function slotMapOf(token) {
                 )
             );
         } else {
-            const prop = obj[toSnakeCase(slot.label)];
-            const value = _typeConverter[slot.type](/**@type{string}*/ (prop));
+            const prop = obj[toSnakeCase(label)];
+            const [value, ...chunks] = _types[type](/**@type{string}*/ (prop));
+            map.store(computedSlot, value, path, type);
 
-            if (!Array.isArray(value)) {
-                map.store(computedSlot, value, path, type);
-            } else if (value.length === 1) {
-                map.store(computedSlot, value[0], path, type);
-            } else {
-                const [x, ...xs] = value;
-                map.store(computedSlot, x, `${path}{len}`, type);
-                const baseKeccak = BigInt(keccak256(`0x${toIntHex256(computedSlot)}`));
-                xs.forEach((x, i) => map.store(baseKeccak + BigInt(i), x, `${path}{${i}}`, type));
-            }
+            const baseKeccak = BigInt(keccak256(`0x${toIntHex256(computedSlot)}`));
+            chunks.forEach((x, i) => map.store(baseKeccak + BigInt(i), x, `${path}{${i}}`, type));
         }
     }
 
