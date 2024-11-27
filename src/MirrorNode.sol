@@ -25,6 +25,8 @@ abstract contract MirrorNode {
 
     function fetchAccount(string memory account) external virtual returns (string memory json);
 
+    function fetchTokenRelationshipOfAccount(string memory account, address token) external virtual returns (string memory json);
+
     function getBalance(address token, address account) external returns (uint256) {
         uint32 accountNum = _getAccountNum(account);
         if (accountNum == 0) return 0;
