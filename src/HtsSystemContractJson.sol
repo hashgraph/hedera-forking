@@ -46,11 +46,21 @@ contract HtsSystemContractJson is HtsSystemContract {
 
     /**
      * @dev Reading Smart Contract's data into it's storage directly from the MirrorNode.
+     * @dev Both `initialized` and `_mirrorNode` are stored in the same slot (with different offsets).
+     * Given how `initialized` is written to (see at the end of the method), it would seem that the
+     * instance variable `_mirrorNode` is overwritten.
+     * However, this is not the case because the slot space for each access is different:
+     * - `_mirrorNode` is accessed through the `0x167` address.
+     * - `initialized` is accessed through the address of the token.
      */
     function _initTokenData() internal override {
-        if (initialized) return;
-        
         bytes32 slot;
+        assembly { slot := initialized.slot }
+        if (vm.load(address(this), slot) == bytes32(uint256(1))) {
+            // Already initialized
+            return;
+        }
+
         string memory json = mirrorNode().fetchTokenData(address(this));
 
         assembly { slot := name.slot }

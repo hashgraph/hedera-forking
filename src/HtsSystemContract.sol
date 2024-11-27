@@ -40,16 +40,52 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
         assembly { accountId := sload(slot) }
     }
 
-    /**
-     * Query token info
-     * @param token - The token address to check
-     * @return responseCode - the response code for the status of the request. SUCCESS is `22`.
-     * @return tokenInfo - token info for `token`
-     */
     function getTokenInfo(address token) htsCall external returns (int64 responseCode, TokenInfo memory tokenInfo) {
         require(token != address(0), "getTokenInfo: invalid token");
 
         (responseCode, tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
+    }
+
+    function mintToken(address token, int64 amount, bytes[] memory) htsCall external returns (
+        int64 responseCode,
+        int64 newTotalSupply,
+        int64[] memory serialNumbers
+    ) {
+        require(token != address(0), "mintToken: invalid token");
+        require(amount > 0, "mintToken: invalid amount");
+
+        (int64 tokenInfoResponseCode, TokenInfo memory tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
+        require(tokenInfoResponseCode == 22, "mintToken: failed to get token info");
+
+        address treasuryAccount = tokenInfo.token.treasury;
+        require(treasuryAccount != address(0), "mintToken: invalid account");
+
+        HtsSystemContract(token)._update(address(0), treasuryAccount, uint256(uint64(amount)));
+
+        responseCode = 22; // HederaResponseCodes.SUCCESS
+        newTotalSupply = int64(uint64(IERC20(token).totalSupply()));
+        serialNumbers = new int64[](0);
+        require(newTotalSupply >= 0, "mintToken: invalid total supply");
+    }
+
+    function burnToken(address token, int64 amount, int64[] memory) htsCall external returns (
+        int64 responseCode,
+        int64 newTotalSupply
+    ) {
+        require(token != address(0), "burnToken: invalid token");
+        require(amount > 0, "burnToken: invalid amount");
+
+        (int64 tokenInfoResponseCode, TokenInfo memory tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
+        require(tokenInfoResponseCode == 22, "burnToken: failed to get token info");
+
+        address treasuryAccount = tokenInfo.token.treasury;
+        require(treasuryAccount != address(0), "burnToken: invalid account");
+
+        HtsSystemContract(token)._update(treasuryAccount, address(0), uint256(uint64(amount)));
+
+        responseCode = 22; // HederaResponseCodes.SUCCESS
+        newTotalSupply = int64(uint64(IERC20(token).totalSupply()));
+        require(newTotalSupply >= 0, "burnToken: invalid total supply");
     }
 
     /**
@@ -194,6 +230,15 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
             require(msg.sender == HTS_ADDRESS, "getTokenInfo: unauthorized");
             _initTokenData();
             return abi.encode(22, _tokenInfo);
+        } else if (selector == this._update.selector) {
+            require(msg.data.length >= 124, "update: Not enough calldata");
+            require(msg.sender == HTS_ADDRESS, "update: unauthorized");
+            address from = address(bytes20(msg.data[40:60]));
+            address to = address(bytes20(msg.data[72:92]));
+            uint256 amount = uint256(bytes32(msg.data[92:124]));
+            _initTokenData();
+            _update(from, to, amount);
+            return abi.encode(true);
         }
         revert ("redirectForToken: not supported");
     }
@@ -236,22 +281,32 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
     function _transfer(address from, address to, uint256 amount) private {
         require(from != address(0), "hts: invalid sender");
         require(to != address(0), "hts: invalid receiver");
-
-        bytes32 fromSlot = _balanceOfSlot(from);
-        uint256 fromBalance;
-        assembly { fromBalance := sload(fromSlot) }
-        require(fromBalance >= amount, "_transfer: insufficient balance");
-        assembly { sstore(fromSlot, sub(fromBalance, amount)) }
-
-        bytes32 toSlot = _balanceOfSlot(to);
-        uint256 toBalance;
-        assembly { toBalance := sload(toSlot) }
-        // Solidity's checked arithmetic will revert if this overflows
-        // https://soliditylang.org/blog/2020/12/16/solidity-v0.8.0-release-announcement
-        uint256 newToBalance = toBalance + amount;
-        assembly { sstore(toSlot, newToBalance) }
-
+        _update(from, to, amount);
         emit Transfer(from, to, amount);
+    }
+
+    function _update(address from, address to, uint256 amount) public {
+        if (from == address(0)) {
+            totalSupply += amount;
+        } else {
+            bytes32 fromSlot = _balanceOfSlot(from);
+            uint256 fromBalance;
+            assembly { fromBalance := sload(fromSlot) }
+            require(fromBalance >= amount, "_transfer: insufficient balance");
+            assembly { sstore(fromSlot, sub(fromBalance, amount)) }
+        }
+
+        if (to == address(0)) {
+            totalSupply -= amount;
+        } else {
+            bytes32 toSlot = _balanceOfSlot(to);
+            uint256 toBalance;
+            assembly { toBalance := sload(toSlot) }
+            // Solidity's checked arithmetic will revert if this overflows
+            // https://soliditylang.org/blog/2020/12/16/solidity-v0.8.0-release-announcement
+            uint256 newToBalance = toBalance + amount;
+            assembly { sstore(toSlot, newToBalance) }
+        }
     }
 
     function _approve(address owner, address spender, uint256 amount) private {
