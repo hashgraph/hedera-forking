@@ -46,6 +46,35 @@ class SlotMap {
 }
 
 /**
+ * @type {{[t_name: string]: (value: string) => string | string[]}}
+ */
+const _typeConverter = {
+    t_string_storage: function (str) {
+        return this['t_bytes_storage'](Buffer.from(str).toString('hex'));
+    },
+    t_bytes_storage: str => {
+        const len = Buffer.from(str, 'hex').length;
+        const [chunk, lenByte, rest] =
+            len > 31
+                ? [
+                      '0',
+                      len * 2 + 1,
+                      [...Array(Math.ceil(len / 32)).keys()].map(i =>
+                          str.substring(i * 64, (i + 1) * 64).padEnd(64, '0')
+                      ),
+                  ]
+                : [str, len * 2, []];
+
+        return [`${chunk.padEnd(64 - 2, '0')}${lenByte.toString(16).padStart(2, '0')}`, ...rest];
+    },
+    t_uint8: toIntHex256,
+    t_uint256: toIntHex256,
+    t_int256: str => toIntHex256(str ?? '0'),
+    t_address: str => toIntHex256(str?.replace('0.0.', '') ?? '0'),
+    t_bool: value => toIntHex256(value ? '1' : '0'),
+};
+
+/**
  * @param {Record<string, unknown>} token
  * @returns {Map<bigint, {value: string, path: string}>}
  */
@@ -55,6 +84,7 @@ function slotMapOf(token) {
     token['ledger_id'] = '0x00';
     token['second'] = `${token['expiry_timestamp']}`;
     token['pause_status'] = token['pause_status'] === 'PAUSED';
+
     token['token_keys'] = /**@type {const}*/ ([
         ['admin_key', 0x1],
         ['kyc_key', 0x2],
@@ -63,72 +93,22 @@ function slotMapOf(token) {
         ['supply_key', 0x10],
         ['fee_schedule_key', 0x20],
         ['pause_key', 0x40],
-    ])
-        .map(([prop, keyType]) => [token[prop], keyType])
-        .map(
-            ([key, key_type]) => (
-                assert(typeof key === 'object'),
-                key === null
-                    ? { key_type, ed25519: '', _e_c_d_s_a_secp256k1: '' }
-                    : (assert('_type' in key && 'key' in key),
-                      key._type === 'ED25519'
-                          ? { key_type, ed25519: key.key, _e_c_d_s_a_secp256k1: '' }
-                          : { key_type, ed25519: '', _e_c_d_s_a_secp256k1: key.key })
-            )
-        );
+    ]).map(([prop, key_type]) => {
+        const key = token[prop];
+        if (key === null) return { key_type, ed25519: '', _e_c_d_s_a_secp256k1: '' };
+        assert(typeof key === 'object');
+        assert('_type' in key && 'key' in key);
+        if (key._type === 'ED25519')
+            return { key_type, ed25519: key.key, _e_c_d_s_a_secp256k1: '' };
+        return { key_type, ed25519: '', _e_c_d_s_a_secp256k1: key.key };
+    });
+
     const customFees = /**@type {Record<string, unknown>}*/ (token['custom_fees']);
     token['fixed_fees'] = customFees['fixed_fees'] ?? [];
     token['fractional_fees'] = customFees['fractional_fees'] ?? [];
     token['royalty_fees'] = customFees['royalty_fees'] ?? [];
 
     const map = new SlotMap();
-
-    /**
-     * @type {{[t_name: string]: (value: string) => string | string[]}}
-     */
-    const _typeConverter = {
-        t_string_storage: str => {
-            const [hexStr, lenByte, rest] =
-                str.length > 31
-                    ? [
-                          '0',
-                          str.length * 2 + 1,
-                          [...Array(Math.ceil(str.length / 32)).keys()].map(i => {
-                              const hexStr = Buffer.from(str).toString('hex');
-                              return hexStr.substring(i * 64, (i + 1) * 64).padEnd(64, '0');
-                          }),
-                      ]
-                    : [Buffer.from(str).toString('hex'), str.length * 2, []];
-
-            return [
-                `${hexStr.padEnd(64 - 2, '0')}${lenByte.toString(16).padStart(2, '0')}`,
-                ...rest,
-            ];
-        },
-        t_bytes_storage: str => {
-            const len = Buffer.from(str, 'hex').length;
-            const [hexStr, lenByte, rest] =
-                len > 31
-                    ? [
-                          '0',
-                          len * 2 + 1,
-                          [...Array(Math.ceil(len / 32)).keys()].map(i =>
-                              str.substring(i * 64, (i + 1) * 64).padEnd(64, '0')
-                          ),
-                      ]
-                    : [str, len * 2, []];
-
-            return [
-                `${hexStr.padEnd(64 - 2, '0')}${lenByte.toString(16).padStart(2, '0')}`,
-                ...rest,
-            ];
-        },
-        t_uint8: toIntHex256,
-        t_uint256: toIntHex256,
-        t_int256: str => toIntHex256(str ?? '0'),
-        t_address: str => toIntHex256(str?.replace('0.0.', '') ?? '0'),
-        t_bool: value => toIntHex256(value ? '1' : '0'),
-    };
 
     const keccakOf = s => BigInt(keccak256(`0x${s.toString(16).padStart(64, '0')}`));
 
@@ -137,7 +117,6 @@ function slotMapOf(token) {
      * @param {bigint} baseSlot
      * @param {Record<string, unknown>} obj
      * @param {string} path
-     * @returns {{path: string, type: string, computedSlot: bigint, value: unknown}[]}
      */
     function flatten(slot, baseSlot, obj, path) {
         const computedSlot = BigInt(slot.slot) + baseSlot;
@@ -158,7 +137,7 @@ function slotMapOf(token) {
             assert(parseInt(numberOfBytes) % 32 === 0);
             arr.forEach((item, i) =>
                 flatten(
-                    { label: 'asdf', type: base, slot: '0' },
+                    { label: '_', type: base, slot: '0' },
                     baseKeccak + BigInt(i) * (BigInt(numberOfBytes) / 32n),
                     item,
                     `${path}[${i}]`
@@ -182,7 +161,6 @@ function slotMapOf(token) {
     }
 
     storage.forEach(slot => flatten(slot, 0n, token, ''));
-    console.log(token, map._map);
     return map._map;
 }
 
