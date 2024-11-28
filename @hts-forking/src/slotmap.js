@@ -45,6 +45,13 @@ class SlotMap {
             throw new Error(`Slot \`${slot}\` in use by ${JSON.stringify(prev)}: ${value}@${path}`);
         this._map.set(slot, { value, path, type });
     }
+
+    /**
+     * @param {bigint} slot
+     */
+    load(slot) {
+        return this._map.get(slot);
+    }
 }
 
 /**
@@ -128,7 +135,7 @@ function visit(slot, baseSlot, obj, path, map) {
 
 /**
  * @param {Record<string, unknown>} token
- * @returns {Map<bigint, {value: Value, path: string}>}
+ * @returns {SlotMap}
  */
 function slotMapOf(token) {
     token['default_kyc_status'] = false;
@@ -160,7 +167,7 @@ function slotMapOf(token) {
 
     const map = new SlotMap();
     storage.forEach(slot => visit(slot, 0n, token, '', map));
-    return map._map;
+    return map;
 }
 
 module.exports = { slotMapOf };

@@ -30,7 +30,7 @@ describe('::slotMapOf', function () {
         describe(symbol, function () {
             const map = slotMapOf(require(`../test/data/${symbol}/getToken.json`));
 
-            [...map.entries()].forEach(([slot, { value, path }]) => {
+            [...map._map.entries()].forEach(([slot, { value, path }]) => {
                 it(`should have valid slot \`${slot}\` for field \`${path}\``, async function () {
                     expect(slot).to.be.not.undefined;
                     expect(value).to.be.not.undefined;
