@@ -18,31 +18,39 @@
 
 const { expect } = require('chai');
 
-const { storageLayout } = require('../resources/HtsSystemContract.json');
+const {
+    storageLayout: { storage, types },
+} = require('../resources/HtsSystemContract.json');
 
 describe('::storageLayout', function () {
-    it('should have one slot per field (sanity check to ensure slots are unique)', function () {
-        const set = new Set(storageLayout.storage.map(slot => Number(slot.slot)));
-        expect(set.size).to.be.equal(storageLayout.storage.length);
-    });
-
-    it('should contain only supported slot types', function () {
-        expect(storageLayout.types).to.include.keys(
-            't_address',
-            't_bool',
-            't_bytes_storage',
-            't_int256',
-            't_string_storage',
-            't_uint256',
-            't_uint8'
-        );
-    });
-
     describe('storage', function () {
-        storageLayout.storage.forEach(({ label, offset, slot, type }) => {
-            it(`should have slot \`${label}(${slot}): ${type}\` at \`offset\` \`0\` (to avoid packing, thus avoiding making many requests per slot)`, function () {
-                expect(offset, label).to.be.equal(0);
+        it('should have one slot per field (sanity check to ensure slots are unique and not shared between fields)', function () {
+            const set = new Set(storage.map(slot => Number(slot.slot)));
+            expect(set.size).to.be.equal(storage.length);
+        });
+
+        describe('slots', function () {
+            storage.forEach(({ label, offset, slot, type }) => {
+                it(`should have slot \`${label}(${slot}): ${type}\` at \`offset\` \`0\` (to avoid packing, thus avoiding making many requests per slot)`, function () {
+                    expect(offset, label).to.be.equal(0);
+                });
             });
+        });
+    });
+
+    describe('types', function () {
+        it('should contain only supported encodings, i.e., no `mapping`', function () {
+            const encodings = new Set(Object.values(types).map(({ encoding }) => encoding));
+            expect([...encodings]).to.be.have.members(['inplace', 'bytes', 'dynamic_array']);
+        });
+
+        it('should have all its struct members with offset `0` to avoid field packing', function () {
+            Object.values(types)
+                .filter(ty => 'members' in ty)
+                .flatMap(ty => ty.members)
+                .forEach(member => {
+                    expect(member.offset).to.be.equal(0, member.label);
+                });
         });
     });
 });
