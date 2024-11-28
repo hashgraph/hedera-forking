@@ -14,7 +14,6 @@ contract HtsSystemContractJson is HtsSystemContract {
     MirrorNode private _mirrorNode;
 
     bool private initialized;
-    mapping (address => bool) private relationshipsInitialized;
 
     function setMirrorNodeProvider(MirrorNode mirrorNode_) htsCall external {
         _mirrorNode = mirrorNode_;
@@ -80,35 +79,6 @@ contract HtsSystemContractJson is HtsSystemContract {
         storeBool(address(this), uint256(slot), true);
 
         _initTokenInfo(json);
-    }
-
-    function _initTokenRelationships(address account) internal override {
-        if (relationshipsInitialized[account]) {
-            // Already initialized
-            return;
-        }
-
-        bytes32 slot = _isAssociatedSlot(account);
-        try mirrorNode().fetchTokenRelationshipOfAccount(vm.toString(account), address(this)) returns (string memory json) {
-            string memory notFoundError = "{\"_status\":{\"messages\":[{\"message\":\"Not found\"}]}}";
-            if (keccak256(bytes(json)) == keccak256(bytes(notFoundError))) {
-                storeBool(address(this), uint256(slot), false);
-            } else {
-                bytes memory tokens = vm.parseJson(json, ".tokens");
-                IMirrorNodeResponses.TokenRelationship[] memory relationships = abi.decode(tokens, (IMirrorNodeResponses.TokenRelationship[]));
-                storeBool(address(this), uint256(slot), relationships.length > 0);
-            }
-        } catch {
-            storeBool(address(this), uint256(slot), false);
-        }
-
-        // The value corresponding to a mapping key k is located at keccak256(h(k).p),
-        // where . is concatenation, p is the base slot and h is a function applied to the key depending on its type:
-        // - for value types, h pads the value to 32 bytes in the same way as when storing the value in memory.
-        // - for strings and byte arrays, h(k) is just the non-padded data.
-        assembly { slot := relationshipsInitialized.slot }
-        slot = keccak256(abi.encodePacked(bytes32(uint256(uint160(account))), slot));
-        storeBool(address(this), uint256(slot), true);
     }
 
     function _initTokenInfo(string memory json) internal {
@@ -449,6 +419,15 @@ contract HtsSystemContractJson is HtsSystemContract {
         if (vm.load(_scratchAddr(), slot) == bytes32(0)) {
             uint256 amount = mirrorNode().getAllowance(address(this), owner, spender);
             _setValue(slot, bytes32(amount));
+        }
+        return slot;
+    }
+
+    function _isAssociatedSlot(address account) internal override returns (bytes32) {
+        bytes32 slot = super._isAssociatedSlot(account);
+        if (vm.load(_scratchAddr(), slot) == bytes32(0)) {
+            bool associated = mirrorNode().isAssociated(address(this), account);
+            _setValue(slot, bytes32(uint256(associated ? 1 : 0)));
         }
         return slot;
     }
