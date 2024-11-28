@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
+import "./IMirrorNodeResponses.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 abstract contract MirrorNode {
@@ -24,6 +25,8 @@ abstract contract MirrorNode {
     function fetchAllowance(address token, uint32 ownerNum, uint32 spenderNum) external virtual returns (string memory json);
 
     function fetchAccount(string memory account) external virtual returns (string memory json);
+
+    function fetchTokenRelationshipOfAccount(string memory account, address token) external virtual returns (string memory json);
 
     function getBalance(address token, address account) external returns (uint256) {
         uint32 accountNum = _getAccountNum(account);
@@ -49,6 +52,17 @@ abstract contract MirrorNode {
             }
         } catch {}
         return 0;
+    }
+
+    function isAssociated(address token, address account) external returns (bool) {
+        try this.fetchTokenRelationshipOfAccount(vm.toString(account), token) returns (string memory json) {
+            if (vm.keyExistsJson(json, ".tokens")) {
+                bytes memory tokens = vm.parseJson(json, ".tokens");
+                IMirrorNodeResponses.TokenRelationship[] memory relationships = abi.decode(tokens, (IMirrorNodeResponses.TokenRelationship[]));
+                return relationships.length > 0;
+            }
+        } catch {}
+        return false;
     }
 
     function getAccountAddress(string memory accountId) external returns (address) {

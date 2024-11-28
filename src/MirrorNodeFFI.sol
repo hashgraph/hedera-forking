@@ -60,6 +60,15 @@ contract MirrorNodeFFI is MirrorNode {
         ));
     }
 
+    function fetchTokenRelationshipOfAccount(string memory idOrAliasOrEvmAddress, address token) external override returns (string memory) {
+        return _get(string.concat(
+            "accounts/",
+            idOrAliasOrEvmAddress,
+            "/tokens?token.id=0.0.",
+            vm.toString(uint160(token))
+        ));
+    }
+
     /**
      * @dev Returns the block information by given number.
      *

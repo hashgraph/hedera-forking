@@ -43,4 +43,10 @@ contract MirrorNodeMock is MirrorNode {
         string memory path = string.concat("./@hts-forking/test/data/getAccount_", vm.toLowercase(account), ".json");
         return vm.readFile(path);
     }
+
+    function fetchTokenRelationshipOfAccount(string memory idOrAliasOrEvmAddress, address token) external override view returns (string memory) {
+        string memory symbol = _symbolOf[token];
+        string memory path = string.concat("./@hts-forking/test/data/", symbol, "/getTokenRelationship_", vm.toLowercase(idOrAliasOrEvmAddress), ".json");
+        return vm.readFile(path);
+    }
 }
