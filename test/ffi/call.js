@@ -25,7 +25,7 @@ if (args.length < 4) {
     console.error('Usage: node call.js <inputData> <fromAddress> <toAddress> <gasLimit>');
     process.exit(1);
 }
-const operatorKey = PrivateKey.fromStringECDSA(OPERATOR_PRIVATE_KEY);
+const operatorKey = PrivateKey.fromStringDer('302e020100300506032b65700422042091132178e72057a1d7528025956fe39b0b847f200ab59b2fdd367017f3087137');
 const operatorAccountId = new AccountId(2);
 const client = Client.forNetwork({
     '127.0.0.1:50211': new AccountId(3),
@@ -66,8 +66,8 @@ async function createAccountIfDoesNotExist(evmAddress) {
 
 async function createAndSignTransaction() {
     txParams.nonce = await web3.eth.getTransactionCount(fromAddress, 'latest');
-    txParams.gasPrice = await web3.eth.getGasPrice()
-    const chainId = await web3.eth.getChainId();
+    txParams.gasPrice = await web3.eth.getGasPrice();
+    const chainId = 298;//await web3.eth.getChainId();
     const common = Common.custom(
         {
             name: "hedera-local",
@@ -88,5 +88,7 @@ async function createAndSignTransaction() {
         .sign(operatorKey);
     const response = await ethereumTransaction.execute(client);
     console.log(response.toJSON());
+    const receipt = await response.getReceipt(client);
+    console.log("Transaction status:", receipt.status.toString());
 }
 createAndSignTransaction().catch(console.error);

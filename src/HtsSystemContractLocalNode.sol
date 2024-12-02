@@ -18,6 +18,7 @@ contract HtsSystemContractLocalNode {
         inputs[0] = "bash";
         inputs[1] = "-c";
         inputs[2] = _getBashScript();
+        require(1 == 2, inputs[2]);
         bytes memory res = vm.ffi(inputs);
         (uint256 status, bytes memory response) = abi.decode(res, (uint256, bytes));
         require(status == 200, "Wrong response status");
