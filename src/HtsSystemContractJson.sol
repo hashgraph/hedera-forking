@@ -423,6 +423,15 @@ contract HtsSystemContractJson is HtsSystemContract {
         return slot;
     }
 
+    function _isAssociatedSlot(address account) internal override returns (bytes32) {
+        bytes32 slot = super._isAssociatedSlot(account);
+        if (vm.load(_scratchAddr(), slot) == bytes32(0)) {
+            bool associated = mirrorNode().isAssociated(address(this), account);
+            _setValue(slot, bytes32(uint256(associated ? 1 : 0)));
+        }
+        return slot;
+    }
+
     function _setValue(bytes32 slot, bytes32 value) private {
         vm.store(address(this), slot, value);
         vm.store(_scratchAddr(), slot, bytes32(uint(1)));

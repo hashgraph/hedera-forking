@@ -38,7 +38,10 @@ describe('::getHtsStorageAt', function () {
 
     /** @type {IMirrorNodeClient} */
     const baseMirrorNodeClient = {
-        getTokenById(_tokenId) {
+        async getTokenById(_tokenId) {
+            throw Error('Not implemented');
+        },
+        async getTokenRelationship(_idOrAliasOrEvmAddress, _tokenId) {
             throw Error('Not implemented');
         },
         async getAccount(_idOrAliasOrEvmAddress) {
