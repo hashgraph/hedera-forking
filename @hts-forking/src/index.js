@@ -168,6 +168,22 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
         );
     }
 
+    // Encoded `address(tokenId).isAssociated()` slot
+    // slot(256) = `isAssociated`selector(32) + padding(192) + accountId(32)
+    if (nrequestedSlot >> 224n === 0x4d8fdd6dn) {
+        const accountId = `0.0.${parseInt(requestedSlot.slice(-8), 16)}`;
+        const { tokens } = (await mirrorNodeClient.getTokenRelationship(accountId, tokenId)) ?? {
+            tokens: [],
+        };
+        if (tokens.some(t => t.token_id === tokenId)) {
+            return ret(
+                `0x${Number(1).toString(16).padStart(64, '0')}`,
+                `Token ${tokenId} is associated with ${accountId}`
+            );
+        }
+        return ret(ZERO_HEX_32_BYTE, `Token ${tokenId} not associated with ${accountId}`);
+    }
+
     const keccakedSlot = _inferSlotAndOffset(nrequestedSlot);
     if (keccakedSlot !== null) {
         const tokenData = await mirrorNodeClient.getTokenById(tokenId, blockNumber);
