@@ -33,6 +33,24 @@ interface IMirrorNodeClient {
     getTokenById(tokenId: string, blockNumber: number): Promise<Record<string, unknown> | null>;
 
     /**
+     * Get token relationship for an account.
+     *
+     * This method should call the Mirror Node API endpoint: `GET /api/v1/accounts/{idOrAliasOrEvmAddress}/tokens`.
+     *
+     * @param idOrAliasOrEvmAddress The ID or alias or EVM address of the account
+     * @param tokenId The ID of the token to return information for
+     */
+    getTokenRelationship(
+        idOrAliasOrEvmAddress: string,
+        tokenId: string
+    ): Promise<{
+        tokens: {
+            token_id: string;
+            automatic_association: boolean;
+        }[];
+    } | null>;
+
+    /**
      * Get token balance of `accountId`.
      *
      * This represents the Token supply distribution across the network.

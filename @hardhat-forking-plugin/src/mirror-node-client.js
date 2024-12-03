@@ -51,6 +51,16 @@ class MirrorNodeClient {
     }
 
     /**
+     * Get token relationship for an account.
+     *
+     * @param {string} idOrAliasOrEvmAddress The ID or alias or EVM address of the account
+     * @param {string} tokenId The ID of the token to return information for
+     */
+    async getTokenRelationship(idOrAliasOrEvmAddress, tokenId) {
+        return this._get(`accounts/${idOrAliasOrEvmAddress}/tokens?token.id=${tokenId}`);
+    }
+
+    /**
      * Fetches the balance of a token for a specific account.
      *
      * @param {string} tokenId the token ID to fetch the balance for.

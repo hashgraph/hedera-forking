@@ -65,4 +65,22 @@ contract IHRC719TokenAssociationTest is Test, TestSetup {
 
         vm.stopPrank();
     }
+
+    function test_IHRC719_with_real_accounts() external {
+        if (testMode != TestMode.JSON_RPC) {
+            // TODO: Remove this when foundry solution is merged into main
+            return;
+        }
+        vm.startPrank(USDC_TREASURY);
+        assertEq(IHRC719(USDC).isAssociated(), true);
+        assertEq(IHRC719(USDC).dissociate(), 1);
+        assertEq(IHRC719(USDC).isAssociated(), false);
+
+        vm.startPrank(MFCT_TREASURY);
+        assertEq(IHRC719(MFCT).isAssociated(), true);
+        assertEq(IHRC719(MFCT).dissociate(), 1);
+        assertEq(IHRC719(MFCT).isAssociated(), false);
+
+        vm.stopPrank();
+    }
 }

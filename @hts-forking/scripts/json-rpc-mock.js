@@ -121,6 +121,15 @@ const mirrorNodeClient = {
             noAllowance
         );
     },
+    async getTokenRelationship(idOrAliasOrEvmAddress, tokenId) {
+        this.append('getTokenRelationship', idOrAliasOrEvmAddress, tokenId);
+        const noTokens = { tokens: [] };
+        if (tokens[tokenId] === undefined) return noTokens;
+        return requireOrDefault(
+            `${tokens[tokenId].symbol}/getTokenRelationship_${idOrAliasOrEvmAddress}.json`,
+            noTokens
+        );
+    },
 };
 
 /**
