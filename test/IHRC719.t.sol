@@ -67,7 +67,7 @@ contract IHRC719TokenAssociationTest is Test, TestSetup {
     }
 
     function test_IHRC719_with_real_accounts() external {
-        if (testMode() == TestMode.JSON_RPC) {
+        if (TestMode.JSON_RPC == testMode) {
             // TODO: Enable this test with https://github.com/hashgraph/hedera-forking/issues/126
             return;
         }
