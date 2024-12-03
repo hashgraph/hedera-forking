@@ -209,8 +209,16 @@ function slotMapOf(token) {
             return { key_type, ed25519: key.key, _e_c_d_s_a_secp256k1: '' };
         return { key_type, ed25519: '', _e_c_d_s_a_secp256k1: key.key };
     });
-    const customFees = /**@type {Record<string, unknown>}*/ (token['custom_fees']);
-    token['fixed_fees'] = customFees['fixed_fees'] ?? [];
+    const customFees = /**@type {Record<string, Record<string, unknown>[]>}*/ (
+        token['custom_fees']
+    );
+    token['fixed_fees'] = (customFees['fixed_fees'] ?? []).map(fee => ({
+        fee_collector: fee['collector_account_id'],
+        amount: fee['amount'],
+        token_id: fee['denominating_token_id'],
+        use_hbars_for_payment: !!fee['denominating_token_id'],
+        use_current_token_for_payment: fee['denominating_token_id'] === token['token_id'],
+    }));
     token['fractional_fees'] = customFees['fractional_fees'] ?? [];
     token['royalty_fees'] = customFees['royalty_fees'] ?? [];
 
