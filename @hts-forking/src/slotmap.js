@@ -24,8 +24,20 @@ const {
     storageLayout: { storage, types },
 } = require('../resources/HtsSystemContract.json');
 
-/** @typedef {string | ((mirrorNode: Pick<import('.').IMirrorNodeClient, 'getAccount'>, blockNumber: number) => Promise<string>)} Value */
+/**
+ * Represents the value in the `SlotMap`.
+ * This can be either a `string`, or a function that returns a `string`.
+ * The latter was introduced to support "lazy-loading" of values that
+ * may require additional calls to the Mirror Node.
+ *
+ * See for example how `t_address` is converted in `_types`.
+ *
+ * @typedef {string | ((mirrorNode: Pick<import('.').IMirrorNodeClient, 'getAccount'>, blockNumber: number) => Promise<string>)} Value
+ */
 
+/**
+ * Wrapper around a `Map` that holds the slot values for a given token.
+ */
 class SlotMap {
     constructor() {
         /** @type {Map<bigint, {value: Value, path: string, type: string}>} */
@@ -33,6 +45,10 @@ class SlotMap {
     }
 
     /**
+     * Sets `value` into `slot`.
+     *
+     * The slots cannot be modified,
+     * so reassigning an already existing slot will throw an error.
      *
      * @param {bigint} slot
      * @param {Value} value
@@ -55,6 +71,17 @@ class SlotMap {
 }
 
 /**
+ * Table to convert Solidity primitive types into slot values.
+ *
+ * For types that may occupy more than one slot, _i.e._,
+ * [`string` and `bytes`](https://docs.soliditylang.org/en/latest/internals/layout_in_storage.html#bytes-and-string),
+ * a `Value[]` can be returned instead.
+ * In this case, additional slot values will be stored starting from `keccak256(p)` where is `p` is the base slot.
+ *
+ * If a value needs to be "lazy-loaded", _e.g._, in case for `t_address`,
+ * then a function that resolves to a `string` will be returned.
+ * See `Value` for more details.
+ *
  * @type {{[t_name: string]: (value: string) => Value[]}}
  */
 const _types = {
@@ -91,11 +118,17 @@ const _types = {
 };
 
 /**
- * @param {{label: string;slot: string;type: string;}} slot
- * @param {bigint} baseSlot
- * @param {Record<string, unknown>} obj
- * @param {string} path
- * @param {SlotMap} map
+ * Computes the storage slots starting from the given `slot` and
+ * extracts the corresponding field from `obj` and stores it into `map`.
+ *
+ * When a `slot` is either a `struct` or an array,
+ * it will visit its members or items recursively.
+ *
+ * @param {{label: string;slot: string;type: string;}} slot the starting slot to compute storage slots.
+ * @param {bigint} baseSlot the base slot that `slot` is instantiated from.
+ * @param {Record<string, unknown>} obj the current object to extract values from. It may change when visiting arrays.
+ * @param {string} path represents the current `path` to extract a primitive value.
+ * @param {SlotMap} map the `SlotMap` used to store the computed values. This argument will remain invariant across recursive calls.
  */
 function visit(slot, baseSlot, obj, path, map) {
     const computedSlot = BigInt(slot.slot) + baseSlot;
@@ -134,6 +167,20 @@ function visit(slot, baseSlot, obj, path, map) {
 }
 
 /**
+ * Builds the `SlotMap` for the given `token`.
+ * It uses the Solidity [storage layout](https://docs.soliditylang.org/en/latest/internals/layout_in_storage.html)
+ * definition to build the slot map.
+ *
+ * It works in two phases.
+ *
+ * Firstly, it normalizes the `token` object.
+ * This consist of
+ * - normalizing some field names so that the Solidity definition matches the `token` object
+ * - creating `token_keys` array to match Solidity definitions
+ * - flattening top-level `structs`, _e.g._, `second`
+ *
+ * Secondly, it builds the actual `SlotMap` starting from the declared fields in the storage layout.
+ *
  * @param {Record<string, unknown>} token
  * @returns {SlotMap}
  */
