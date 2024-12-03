@@ -8,3 +8,6 @@
 
 # Contains Mirror Node request logs created when mocking `curl`
 /scripts/curl.log
+
+# Ignore `.env` that contains account details for the `create-token` script
+/scripts/.env
