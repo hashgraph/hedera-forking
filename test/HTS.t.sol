@@ -58,10 +58,6 @@ contract HTSTest is Test, TestSetup {
     }
 
     function test_HTS_getTokenInfo_should_return_token_info_for_valid_token() external {
-        if (TestMode.JSON_RPC == testMode) {
-            // skip this test for the mock JSON-RPC (will be handled in another PR for the hardhat solution)
-            return;
-        }
         address token = USDC;
         (int64 responseCode, HtsSystemContract.TokenInfo memory tokenInfo) = HtsSystemContract(HTS_ADDRESS).getTokenInfo(token);
         assertEq(responseCode, 22);
@@ -145,11 +141,6 @@ contract HTSTest is Test, TestSetup {
     }
 
     function test_mintToken_should_succeed_with_valid_input() external {
-        if (TestMode.JSON_RPC == testMode) {
-            // TODO: skip this test until the hardhat solution for getTokenInfo is implemented
-            return;
-        }
-
         address token = USDC;
         address treasury = USDC_TREASURY;
         int64 amount = 1000;
@@ -206,11 +197,6 @@ contract HTSTest is Test, TestSetup {
     }
 
     function test_burnToken_should_succeed_with_valid_input() external {
-        if (TestMode.JSON_RPC == testMode) {
-            // TODO: skip this test until the hardhat solution for getTokenInfo is implemented
-            return;
-        }
-
         address token = MFCT;
         address treasury = MFCT_TREASURY;
         int64 amount = 1000;
