@@ -5,9 +5,9 @@
     },
     "auto_renew_account": null,
     "auto_renew_period": 7776000,
-    "created_timestamp": "1733283190.645827373",
+    "created_timestamp": "1733285979.395119081",
     "custom_fees": {
-        "created_timestamp": "1733283190.645827373",
+        "created_timestamp": "1733285979.395119081",
         "fixed_fees": [
             {
                 "all_collectors_are_exempt": false,
@@ -25,14 +25,39 @@
                 "all_collectors_are_exempt": false,
                 "amount": 3,
                 "collector_account_id": "0.0.2669675",
-                "denominating_token_id": "0.0.5206058"
+                "denominating_token_id": "0.0.5206169"
             }
         ],
-        "fractional_fees": []
+        "fractional_fees": [
+            {
+                "all_collectors_are_exempt": false,
+                "amount": {
+                    "numerator": 1,
+                    "denominator": 100
+                },
+                "collector_account_id": "0.0.2669675",
+                "denominating_token_id": "0.0.5206169",
+                "maximum": 4,
+                "minimum": 3,
+                "net_of_transfers": false
+            },
+            {
+                "all_collectors_are_exempt": false,
+                "amount": {
+                    "numerator": 5,
+                    "denominator": 100
+                },
+                "collector_account_id": "0.0.2669675",
+                "denominating_token_id": "0.0.5206169",
+                "maximum": 4,
+                "minimum": 3,
+                "net_of_transfers": true
+            }
+        ]
     },
     "decimals": "0",
     "deleted": false,
-    "expiry_timestamp": 1741059190000000000,
+    "expiry_timestamp": 1741061978000000000,
     "fee_schedule_key": null,
     "freeze_default": false,
     "freeze_key": null,
@@ -42,14 +67,14 @@
     "memo": "",
     "metadata": "",
     "metadata_key": null,
-    "modified_timestamp": "1733283190.645827373",
+    "modified_timestamp": "1733285979.395119081",
     "name": "Crypto Token with Custom Fees",
     "pause_key": null,
     "pause_status": "NOT_APPLICABLE",
     "supply_key": null,
     "supply_type": "INFINITE",
     "symbol": "CTCF",
-    "token_id": "0.0.5206058",
+    "token_id": "0.0.5206169",
     "total_supply": "15000",
     "treasury_account_id": "0.0.2669675",
     "type": "FUNGIBLE_COMMON",

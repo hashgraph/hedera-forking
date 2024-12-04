@@ -24,6 +24,8 @@ const {
     PrivateKey,
     TokenCreateTransaction,
     CustomFixedFee,
+    CustomFractionalFee,
+    FeeAssessmentMethod,
 } = require('@hashgraph/sdk');
 
 async function main() {
@@ -54,6 +56,7 @@ async function main() {
         .setInitialSupply(15000)
         .setAdminKey(PrivateKey.fromStringDer(privateKey))
         .setCustomFees([
+            // https://docs.hedera.com/hedera/sdks-and-apis/deprecated/sdks/token-service/custom-token-fees#fixed-fee
             new CustomFixedFee({ amount: 1, feeCollectorAccountId: '0.0.2669675' }),
             new CustomFixedFee({
                 amount: 2,
@@ -64,6 +67,22 @@ async function main() {
                 amount: 3,
                 feeCollectorAccountId: '0.0.2669675',
             }).setDenominatingTokenToSameToken(),
+
+            // https://docs.hedera.com/hedera/sdks-and-apis/deprecated/sdks/token-service/custom-token-fees#fractional-fee
+            new CustomFractionalFee({
+                feeCollectorAccountId: '0.0.2669675',
+                numerator: 1,
+                denominator: 100,
+                min: 3,
+                max: 4,
+            }).setAssessmentMethod(FeeAssessmentMethod.Inclusive),
+            new CustomFractionalFee({
+                feeCollectorAccountId: '0.0.2669675',
+                numerator: 5,
+                denominator: 100,
+                min: 3,
+                max: 4,
+            }).setAssessmentMethod(FeeAssessmentMethod.Exclusive),
         ])
         .freezeWith(client); // Freeze the transaction for signing
 

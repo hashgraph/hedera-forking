@@ -112,6 +112,7 @@ contract HTSTest is Test, TestSetup {
         assertEq(tokenInfo.token.memo, "");
         assertEq(tokenInfo.token.tokenSupplyType, false);
         assertEq(tokenInfo.token.maxSupply, 0);
+
         assertEq(tokenInfo.fixedFees.length, 3);
 
         assertEq(tokenInfo.fixedFees[0].feeCollector, 0xa3612A87022a4706FC9452C50abd2703ac4Fd7d9);
@@ -128,11 +129,26 @@ contract HTSTest is Test, TestSetup {
 
         assertEq(tokenInfo.fixedFees[2].feeCollector, 0xa3612A87022a4706FC9452C50abd2703ac4Fd7d9);
         assertEq(tokenInfo.fixedFees[2].amount, 3);
-        assertEq(tokenInfo.fixedFees[2].tokenId, 0x00000000000000000000000000000000004F702a);
+        assertEq(tokenInfo.fixedFees[2].tokenId, CTCF);
         assertEq(tokenInfo.fixedFees[2].useHbarsForPayment, false);
         assertEq(tokenInfo.fixedFees[2].useCurrentTokenForPayment, true);
 
-        assertEq(tokenInfo.fractionalFees.length, 0);
+        assertEq(tokenInfo.fractionalFees.length, 2);
+        
+        assertEq(tokenInfo.fractionalFees[0].netOfTransfers, false);
+        assertEq(tokenInfo.fractionalFees[0].numerator, 1);
+        assertEq(tokenInfo.fractionalFees[0].denominator, 100);
+        assertEq(tokenInfo.fractionalFees[0].minimumAmount, 3);
+        assertEq(tokenInfo.fractionalFees[0].maximumAmount, 4);
+        assertEq(tokenInfo.fractionalFees[0].feeCollector, 0xa3612A87022a4706FC9452C50abd2703ac4Fd7d9);
+
+        assertEq(tokenInfo.fractionalFees[1].netOfTransfers, true);
+        assertEq(tokenInfo.fractionalFees[1].numerator, 5);
+        assertEq(tokenInfo.fractionalFees[1].denominator, 100);
+        assertEq(tokenInfo.fractionalFees[1].minimumAmount, 3);
+        assertEq(tokenInfo.fractionalFees[1].maximumAmount, 4);
+        assertEq(tokenInfo.fractionalFees[1].feeCollector, 0xa3612A87022a4706FC9452C50abd2703ac4Fd7d9);
+
         assertEq(tokenInfo.royaltyFees.length, 0);
     }
 

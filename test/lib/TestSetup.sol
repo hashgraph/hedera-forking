@@ -25,10 +25,10 @@ abstract contract TestSetup {
     address internal MFCT_TREASURY = 0xa3612A87022a4706FC9452C50abd2703ac4Fd7d9;
 
     /**
-     * https://hashscan.io/testnet/token/0.0.5206058
-     * https://testnet.mirrornode.hedera.com/api/v1/tokens/0.0.5206058
+     * https://hashscan.io/testnet/token/0.0.5206169
+     * https://testnet.mirrornode.hedera.com/api/v1/tokens/0.0.5206169
      */
-    address internal CTCF = 0x00000000000000000000000000000000004F702a;
+    address internal CTCF = 0x00000000000000000000000000000000004F7099;
 
     /**
      * 3 test modes.
