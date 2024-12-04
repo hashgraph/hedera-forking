@@ -58,10 +58,6 @@ contract HTSTest is Test, TestSetup {
     }
 
     function test_HTS_getTokenInfo_should_return_token_info_for_valid_token() external {
-        if (TestMode.JSON_RPC == testMode) {
-            // skip this test for the mock JSON-RPC (will be handled in another PR for the hardhat solution)
-            return;
-        }
         address token = USDC;
         (int64 responseCode, HtsSystemContract.TokenInfo memory tokenInfo) = HtsSystemContract(HTS_ADDRESS).getTokenInfo(token);
         assertEq(responseCode, 22);
@@ -108,6 +104,54 @@ contract HTSTest is Test, TestSetup {
         assertEq(tokenInfo.ledgerId, testMode == TestMode.FFI ? "0x01" : "0x00");
     }
 
+    function test_HTS_getTokenInfo_should_return_custom_fees_for_valid_token() external {
+        (int64 responseCode, HtsSystemContract.TokenInfo memory tokenInfo) = HtsSystemContract(HTS_ADDRESS).getTokenInfo(CTCF);
+        assertEq(responseCode, 22);
+        assertEq(tokenInfo.token.name, "Crypto Token with Custom Fees");
+        assertEq(tokenInfo.token.symbol, "CTCF");
+        assertEq(tokenInfo.token.memo, "");
+        assertEq(tokenInfo.token.tokenSupplyType, false);
+        assertEq(tokenInfo.token.maxSupply, 0);
+
+        assertEq(tokenInfo.fixedFees.length, 3);
+
+        assertEq(tokenInfo.fixedFees[0].feeCollector, 0xa3612A87022a4706FC9452C50abd2703ac4Fd7d9);
+        assertEq(tokenInfo.fixedFees[0].amount, 1);
+        assertEq(tokenInfo.fixedFees[0].tokenId, address(0));
+        assertEq(tokenInfo.fixedFees[0].useHbarsForPayment, true);
+        assertEq(tokenInfo.fixedFees[0].useCurrentTokenForPayment, false);
+
+        assertEq(tokenInfo.fixedFees[1].feeCollector, 0x0000000000000000000000000000000000000D89);
+        assertEq(tokenInfo.fixedFees[1].amount, 2);
+        assertEq(tokenInfo.fixedFees[1].tokenId, 0x0000000000000000000000000000000000068cDa);
+        assertEq(tokenInfo.fixedFees[1].useHbarsForPayment, false);
+        assertEq(tokenInfo.fixedFees[1].useCurrentTokenForPayment, false);
+
+        assertEq(tokenInfo.fixedFees[2].feeCollector, 0xa3612A87022a4706FC9452C50abd2703ac4Fd7d9);
+        assertEq(tokenInfo.fixedFees[2].amount, 3);
+        assertEq(tokenInfo.fixedFees[2].tokenId, CTCF);
+        assertEq(tokenInfo.fixedFees[2].useHbarsForPayment, false);
+        assertEq(tokenInfo.fixedFees[2].useCurrentTokenForPayment, true);
+
+        assertEq(tokenInfo.fractionalFees.length, 2);
+        
+        assertEq(tokenInfo.fractionalFees[0].netOfTransfers, false);
+        assertEq(tokenInfo.fractionalFees[0].numerator, 1);
+        assertEq(tokenInfo.fractionalFees[0].denominator, 100);
+        assertEq(tokenInfo.fractionalFees[0].minimumAmount, 3);
+        assertEq(tokenInfo.fractionalFees[0].maximumAmount, 4);
+        assertEq(tokenInfo.fractionalFees[0].feeCollector, 0xa3612A87022a4706FC9452C50abd2703ac4Fd7d9);
+
+        assertEq(tokenInfo.fractionalFees[1].netOfTransfers, true);
+        assertEq(tokenInfo.fractionalFees[1].numerator, 5);
+        assertEq(tokenInfo.fractionalFees[1].denominator, 100);
+        assertEq(tokenInfo.fractionalFees[1].minimumAmount, 3);
+        assertEq(tokenInfo.fractionalFees[1].maximumAmount, 4);
+        assertEq(tokenInfo.fractionalFees[1].feeCollector, 0xa3612A87022a4706FC9452C50abd2703ac4Fd7d9);
+
+        assertEq(tokenInfo.royaltyFees.length, 0);
+    }
+
     function test_HTS_getTokenInfo_should_revert_for_empty_token_address() external {
         address token = address(0);
         vm.expectRevert(bytes("getTokenInfo: invalid token"));
@@ -145,11 +189,6 @@ contract HTSTest is Test, TestSetup {
     }
 
     function test_mintToken_should_succeed_with_valid_input() external {
-        if (TestMode.JSON_RPC == testMode) {
-            // TODO: skip this test until the hardhat solution for getTokenInfo is implemented
-            return;
-        }
-
         address token = USDC;
         address treasury = USDC_TREASURY;
         int64 amount = 1000;
@@ -206,11 +245,6 @@ contract HTSTest is Test, TestSetup {
     }
 
     function test_burnToken_should_succeed_with_valid_input() external {
-        if (TestMode.JSON_RPC == testMode) {
-            // TODO: skip this test until the hardhat solution for getTokenInfo is implemented
-            return;
-        }
-
         address token = MFCT;
         address treasury = MFCT_TREASURY;
         int64 amount = 1000;

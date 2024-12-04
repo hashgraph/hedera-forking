@@ -160,7 +160,7 @@ contract HtsSystemContractJson is HtsSystemContract {
         itemSlot = uint256(keccak256(abi.encodePacked(slot)));
         storeUint(address(this), slot, tokenInfo.fractionalFees.length);
         for (uint256 i = 0; i < tokenInfo.fractionalFees.length; i++) {
-            storeBool(address(this), itemSlot, tokenInfo.fractionalFees[i].netOfTransfers);
+            storeBool(address(this), itemSlot++, tokenInfo.fractionalFees[i].netOfTransfers);
             storeInt(address(this), itemSlot++, tokenInfo.fractionalFees[i].numerator);
             storeInt(address(this), itemSlot++, tokenInfo.fractionalFees[i].denominator);
             storeInt(address(this), itemSlot++, tokenInfo.fractionalFees[i].minimumAmount);
