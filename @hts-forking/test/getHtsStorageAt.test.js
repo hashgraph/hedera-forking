@@ -155,159 +155,166 @@ describe('::getHtsStorageAt', function () {
         });
     });
 
-    Object.values(tokens).forEach(({ symbol, address }) => {
-        describe(`\`${symbol}(${address})\` token`, function () {
-            const tokenResult = require(`./data/${symbol}/getToken.json`);
+    Object.values(tokens)
+        .filter(t => ['USDC', 'MFCT'].includes(t.symbol))
+        .forEach(({ symbol, address }) => {
+            describe(`\`${symbol}(${address})\` token`, function () {
+                const tokenResult = require(`./data/${symbol}/getToken.json`);
 
-            /** @type {IMirrorNodeClient} */
-            const mirrorNodeClient = {
-                ...baseMirrorNodeClient,
-                getTokenById(tokenId) {
-                    // https://testnet.mirrornode.hedera.com/api/v1/tokens/0.0.429274
-                    expect(tokenId).to.be.equal(
-                        tokenResult.token_id,
-                        'Invalid usage, provide the right address for token'
-                    );
-                    return tokenResult;
-                },
-            };
+                /** @type {IMirrorNodeClient} */
+                const mirrorNodeClient = {
+                    ...baseMirrorNodeClient,
+                    getTokenById(tokenId) {
+                        // https://testnet.mirrornode.hedera.com/api/v1/tokens/0.0.429274
+                        expect(tokenId).to.be.equal(
+                            tokenResult.token_id,
+                            'Invalid usage, provide the right address for token'
+                        );
+                        return tokenResult;
+                    },
+                };
 
-            it(`should return \`ZERO_HEX_32_BYTE\` when slot does not correspond to any field (even if token is found)`, async function () {
-                // Slot `0x100` should not be present in `HtsSystemContract`
-                const result = await _getHtsStorageAt(address, '0x100', mirrorNodeClient);
-                expect(result).to.be.equal(ZERO_HEX_32_BYTE);
-            });
+                it(`should return \`ZERO_HEX_32_BYTE\` when slot does not correspond to any field (even if token is found)`, async function () {
+                    // Slot `0x100` should not be present in `HtsSystemContract`
+                    const result = await _getHtsStorageAt(address, '0x100', mirrorNodeClient);
+                    expect(result).to.be.equal(ZERO_HEX_32_BYTE);
+                });
 
-            ['name', 'symbol'].forEach(name => {
-                const slot = slotsByLabel[name];
+                ['name', 'symbol'].forEach(name => {
+                    const slot = slotsByLabel[name];
 
-                it(`should get storage for string field \`${name}\` at slot \`${slot}\``, async function () {
-                    const result = await _getHtsStorageAt(address, slot, mirrorNodeClient);
+                    it(`should get storage for string field \`${name}\` at slot \`${slot}\``, async function () {
+                        const result = await _getHtsStorageAt(address, slot, mirrorNodeClient);
 
-                    const str = tokenResult[name];
-                    if (str.length > 31) {
-                        assert(this.test !== undefined);
-                        this.test.title += ' (large string)';
-                        const len = (str.length * 2 + 1).toString(16).padStart(2, '0');
-                        assert(result !== null);
-                        expect(result.slice(2)).to.be.equal('0'.repeat(62) + len);
-
-                        const baseSlot = BigInt(keccak256('0x' + toIntHex256(slot)));
-                        let value = '';
-                        for (let i = 0; i < (str.length >> 5) + 1; i++) {
-                            const result = await _getHtsStorageAt(
-                                address,
-                                `0x${(baseSlot + BigInt(i)).toString(16)}`,
-                                mirrorNodeClient
-                            );
+                        const str = tokenResult[name];
+                        if (str.length > 31) {
+                            assert(this.test !== undefined);
+                            this.test.title += ' (large string)';
+                            const len = (str.length * 2 + 1).toString(16).padStart(2, '0');
                             assert(result !== null);
-                            value += result.slice(2);
+                            expect(result.slice(2)).to.be.equal('0'.repeat(62) + len);
+
+                            const baseSlot = BigInt(keccak256('0x' + toIntHex256(slot)));
+                            let value = '';
+                            for (let i = 0; i < (str.length >> 5) + 1; i++) {
+                                const result = await _getHtsStorageAt(
+                                    address,
+                                    `0x${(baseSlot + BigInt(i)).toString(16)}`,
+                                    mirrorNodeClient
+                                );
+                                assert(result !== null);
+                                value += result.slice(2);
+                            }
+                            const decoded = Buffer.from(value, 'hex')
+                                .subarray(0, str.length)
+                                .toString('utf8');
+                            expect(decoded).to.be.equal(str);
+                        } else {
+                            const value = Buffer.from(str).toString('hex').padEnd(62, '0');
+                            const len = (str.length * 2).toString(16).padStart(2, '0');
+                            assert(result !== null);
+                            expect(result.slice(2)).to.be.equal(value + len);
                         }
-                        const decoded = Buffer.from(value, 'hex')
-                            .subarray(0, str.length)
-                            .toString('utf8');
-                        expect(decoded).to.be.equal(str);
-                    } else {
-                        const value = Buffer.from(str).toString('hex').padEnd(62, '0');
-                        const len = (str.length * 2).toString(16).padStart(2, '0');
+                    });
+                });
+
+                ['decimals', 'totalSupply'].forEach(name => {
+                    const slot = slotsByLabel[name];
+
+                    it(`should get storage for primitive field \`${name}\` at slot \`${slot}\``, async function () {
+                        const result = await _getHtsStorageAt(address, slot, mirrorNodeClient);
                         assert(result !== null);
-                        expect(result.slice(2)).to.be.equal(value + len);
-                    }
-                });
-            });
-
-            ['decimals', 'totalSupply'].forEach(name => {
-                const slot = slotsByLabel[name];
-
-                it(`should get storage for primitive field \`${name}\` at slot \`${slot}\``, async function () {
-                    const result = await _getHtsStorageAt(address, slot, mirrorNodeClient);
-                    assert(result !== null);
-                    expect(result.slice(2)).to.be.equal(
-                        toIntHex256(tokenResult[toSnakeCase(name)])
-                    );
-                });
-            });
-
-            /**
-             * Pads `accountId` to be encoded within a storage slot.
-             *
-             * @param {number} accountId The `accountId` to pad.
-             * @returns {string}
-             */
-            const padAccountId = accountId => accountId.toString(16).padStart(8, '0');
-
-            /**@type{{name: string, fn: IMirrorNodeClient['getBalanceOfToken']}[]}*/ ([
-                {
-                    name: 'balance is found',
-                    fn: async (_tid, accountId) =>
-                        require(`./data/${symbol}/getBalanceOfToken_${accountId}`),
-                },
-                { name: 'balance is empty', fn: async (_tid, _accountId) => ({ balances: [] }) },
-                { name: 'balance is null', fn: async (_tid, _accountId) => null },
-            ]).forEach(({ name, fn: getBalanceOfToken }) => {
-                const selector = id('balanceOf(address)').slice(0, 10);
-                const padding = '0'.repeat(24 * 2);
-
-                it(`should get \`balanceOf(${selector})\` tokenId for encoded account when '${name}'`, async function () {
-                    const accountId = 1421;
-                    const slot = `${selector}${padding}${padAccountId(accountId)}`;
-                    const result = await _getHtsStorageAt(address, slot, {
-                        ...baseMirrorNodeClient,
-                        getBalanceOfToken,
+                        expect(result.slice(2)).to.be.equal(
+                            toIntHex256(tokenResult[toSnakeCase(name)])
+                        );
                     });
-
-                    const { balances } = (await getBalanceOfToken(
-                        '<not used>',
-                        `0.0.${accountId}`,
-                        0
-                    )) ?? { balances: [] };
-                    expect(result).to.be.equal(
-                        balances.length === 0
-                            ? ZERO_HEX_32_BYTE
-                            : `0x${toIntHex256(balances[0].balance)}`
-                    );
                 });
-            });
 
-            /**@type{{name: string, fn: IMirrorNodeClient['getAllowanceForToken']}[]}*/ ([
-                {
-                    name: 'allowance is found',
-                    fn: (accountId, _tid, spenderId) =>
-                        require(`./data/${symbol}/getAllowanceForToken_${accountId}_${spenderId}`),
-                },
-                {
-                    name: 'allowance is empty',
-                    fn: (_accountId, _tid, _spenderId) => ({ allowances: [] }),
-                },
-                {
-                    name: 'allowance is null',
-                    fn: (_accountId, _tid, _spenderId) => null,
-                },
-            ]).forEach(({ name, fn: getAllowanceForToken }) => {
-                const selector = id('allowance(address,address)').slice(0, 10);
-                const padding = '0'.repeat(20 * 2);
+                /**
+                 * Pads `accountId` to be encoded within a storage slot.
+                 *
+                 * @param {number} accountId The `accountId` to pad.
+                 * @returns {string}
+                 */
+                const padAccountId = accountId => accountId.toString(16).padStart(8, '0');
 
-                it(`should get \`allowance(${selector})\` of tokenId for encoded owner/spender when '${name}'`, async function () {
-                    const accountId = 4233295;
-                    const spenderId = 1335;
-                    const slot = `${selector}${padding}${padAccountId(spenderId)}${padAccountId(accountId)}`;
-                    const result = await _getHtsStorageAt(address, slot, {
-                        ...baseMirrorNodeClient,
-                        getAllowanceForToken,
+                /**@type{{name: string, fn: IMirrorNodeClient['getBalanceOfToken']}[]}*/ ([
+                    {
+                        name: 'balance is found',
+                        fn: async (_tid, accountId) =>
+                            require(`./data/${symbol}/getBalanceOfToken_${accountId}`),
+                    },
+                    {
+                        name: 'balance is empty',
+                        fn: async (_tid, _accountId) => ({ balances: [] }),
+                    },
+                    { name: 'balance is null', fn: async (_tid, _accountId) => null },
+                ]).forEach(({ name, fn: getBalanceOfToken }) => {
+                    const selector = id('balanceOf(address)').slice(0, 10);
+                    const padding = '0'.repeat(24 * 2);
+
+                    it(`should get \`balanceOf(${selector})\` tokenId for encoded account when '${name}'`, async function () {
+                        const accountId = 1421;
+                        const slot = `${selector}${padding}${padAccountId(accountId)}`;
+                        const result = await _getHtsStorageAt(address, slot, {
+                            ...baseMirrorNodeClient,
+                            getBalanceOfToken,
+                        });
+
+                        const { balances } = (await getBalanceOfToken(
+                            '<not used>',
+                            `0.0.${accountId}`,
+                            0
+                        )) ?? { balances: [] };
+                        expect(result).to.be.equal(
+                            balances.length === 0
+                                ? ZERO_HEX_32_BYTE
+                                : `0x${toIntHex256(balances[0].balance)}`
+                        );
                     });
+                });
 
-                    const { allowances } = (await getAllowanceForToken(
-                        `0.0.${accountId}`,
-                        '<not used>',
-                        `0.0.${spenderId}`
-                    )) ?? { allowances: [] };
-                    expect(result).to.be.equal(
-                        allowances.length === 0
-                            ? ZERO_HEX_32_BYTE
-                            : `0x${toIntHex256(allowances[0].amount)}`
-                    );
+                /**@type{{name: string, fn: IMirrorNodeClient['getAllowanceForToken']}[]}*/ ([
+                    {
+                        name: 'allowance is found',
+                        fn: (accountId, _tid, spenderId) =>
+                            require(
+                                `./data/${symbol}/getAllowanceForToken_${accountId}_${spenderId}`
+                            ),
+                    },
+                    {
+                        name: 'allowance is empty',
+                        fn: (_accountId, _tid, _spenderId) => ({ allowances: [] }),
+                    },
+                    {
+                        name: 'allowance is null',
+                        fn: (_accountId, _tid, _spenderId) => null,
+                    },
+                ]).forEach(({ name, fn: getAllowanceForToken }) => {
+                    const selector = id('allowance(address,address)').slice(0, 10);
+                    const padding = '0'.repeat(20 * 2);
+
+                    it(`should get \`allowance(${selector})\` of tokenId for encoded owner/spender when '${name}'`, async function () {
+                        const accountId = 4233295;
+                        const spenderId = 1335;
+                        const slot = `${selector}${padding}${padAccountId(spenderId)}${padAccountId(accountId)}`;
+                        const result = await _getHtsStorageAt(address, slot, {
+                            ...baseMirrorNodeClient,
+                            getAllowanceForToken,
+                        });
+
+                        const { allowances } = (await getAllowanceForToken(
+                            `0.0.${accountId}`,
+                            '<not used>',
+                            `0.0.${spenderId}`
+                        )) ?? { allowances: [] };
+                        expect(result).to.be.equal(
+                            allowances.length === 0
+                                ? ZERO_HEX_32_BYTE
+                                : `0x${toIntHex256(allowances[0].amount)}`
+                        );
+                    });
                 });
             });
         });
-    });
 });

@@ -105,8 +105,7 @@ contract HTSTest is Test, TestSetup {
     }
 
     function test_HTS_getTokenInfo_should_return_custom_fees_for_valid_token() external {
-        address token = address(/*0.0.*/5206058);
-        (int64 responseCode, HtsSystemContract.TokenInfo memory tokenInfo) = HtsSystemContract(HTS_ADDRESS).getTokenInfo(token);
+        (int64 responseCode, HtsSystemContract.TokenInfo memory tokenInfo) = HtsSystemContract(HTS_ADDRESS).getTokenInfo(CTCF);
         assertEq(responseCode, 22);
         assertEq(tokenInfo.token.name, "Crypto Token with Custom Fees");
         assertEq(tokenInfo.token.symbol, "CTCF");
