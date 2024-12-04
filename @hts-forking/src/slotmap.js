@@ -124,6 +124,10 @@ const _types = {
  * When a `slot` is either a `struct` or an array,
  * it will visit its members or items recursively.
  *
+ * Some `struct`s may contain "gap"s in their definitions.
+ * These gaps are declared only to avoid packing multiple fields in the same storage slot.
+ * These "gap" fields must start with `__gap` to avoid retrieving an inexisting value.
+ *
  * @param {{label: string;slot: string;type: string;}} slot the starting slot to compute storage slots.
  * @param {bigint} baseSlot the base slot that `slot` is instantiated from.
  * @param {Record<string, unknown>} obj the current object to extract values from. It may change when visiting arrays.
@@ -156,7 +160,7 @@ function visit(slot, baseSlot, obj, path, map) {
                 map
             )
         );
-    } else {
+    } else if (!label.startsWith('__gap')) {
         const prop = obj[toSnakeCase(label)];
         const [value, ...chunks] = _types[type](/**@type{string}*/ (prop));
         map.store(computedSlot, value, path, type);
@@ -216,7 +220,7 @@ function slotMapOf(token) {
         fee_collector: fee['collector_account_id'],
         amount: fee['amount'],
         token_id: fee['denominating_token_id'],
-        use_hbars_for_payment: !!fee['denominating_token_id'],
+        use_hbars_for_payment: !fee['denominating_token_id'],
         use_current_token_for_payment: fee['denominating_token_id'] === token['token_id'],
     }));
     token['fractional_fees'] = customFees['fractional_fees'] ?? [];

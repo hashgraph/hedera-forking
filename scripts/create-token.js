@@ -56,10 +56,14 @@ async function main() {
         .setCustomFees([
             new CustomFixedFee({ amount: 1, feeCollectorAccountId: '0.0.2669675' }),
             new CustomFixedFee({
-                amount: 1,
+                amount: 2,
                 feeCollectorAccountId: '0.0.3465',
                 denominatingTokenId: '0.0.429274',
             }),
+            new CustomFixedFee({
+                amount: 3,
+                feeCollectorAccountId: '0.0.2669675',
+            }).setDenominatingTokenToSameToken(),
         ])
         .freezeWith(client); // Freeze the transaction for signing
 

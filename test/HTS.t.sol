@@ -104,6 +104,39 @@ contract HTSTest is Test, TestSetup {
         assertEq(tokenInfo.ledgerId, testMode == TestMode.FFI ? "0x01" : "0x00");
     }
 
+    function test_HTS_getTokenInfo_should_return_custom_fees_for_valid_token() external {
+        address token = address(/*0.0.*/5206058);
+        (int64 responseCode, HtsSystemContract.TokenInfo memory tokenInfo) = HtsSystemContract(HTS_ADDRESS).getTokenInfo(token);
+        assertEq(responseCode, 22);
+        assertEq(tokenInfo.token.name, "Crypto Token with Custom Fees");
+        assertEq(tokenInfo.token.symbol, "CTCF");
+        assertEq(tokenInfo.token.memo, "");
+        assertEq(tokenInfo.token.tokenSupplyType, false);
+        assertEq(tokenInfo.token.maxSupply, 0);
+        assertEq(tokenInfo.fixedFees.length, 3);
+
+        assertEq(tokenInfo.fixedFees[0].feeCollector, 0xa3612A87022a4706FC9452C50abd2703ac4Fd7d9);
+        assertEq(tokenInfo.fixedFees[0].amount, 1);
+        assertEq(tokenInfo.fixedFees[0].tokenId, address(0));
+        assertEq(tokenInfo.fixedFees[0].useHbarsForPayment, true);
+        assertEq(tokenInfo.fixedFees[0].useCurrentTokenForPayment, false);
+
+        assertEq(tokenInfo.fixedFees[1].feeCollector, 0x0000000000000000000000000000000000000D89);
+        assertEq(tokenInfo.fixedFees[1].amount, 2);
+        assertEq(tokenInfo.fixedFees[1].tokenId, 0x0000000000000000000000000000000000068cDa);
+        assertEq(tokenInfo.fixedFees[1].useHbarsForPayment, false);
+        assertEq(tokenInfo.fixedFees[1].useCurrentTokenForPayment, false);
+
+        assertEq(tokenInfo.fixedFees[2].feeCollector, 0xa3612A87022a4706FC9452C50abd2703ac4Fd7d9);
+        assertEq(tokenInfo.fixedFees[2].amount, 3);
+        assertEq(tokenInfo.fixedFees[2].tokenId, 0x00000000000000000000000000000000004F702a);
+        assertEq(tokenInfo.fixedFees[2].useHbarsForPayment, false);
+        assertEq(tokenInfo.fixedFees[2].useCurrentTokenForPayment, true);
+
+        assertEq(tokenInfo.fractionalFees.length, 0);
+        assertEq(tokenInfo.royaltyFees.length, 0);
+    }
+
     function test_HTS_getTokenInfo_should_revert_for_empty_token_address() external {
         address token = address(0);
         vm.expectRevert(bytes("getTokenInfo: invalid token"));
