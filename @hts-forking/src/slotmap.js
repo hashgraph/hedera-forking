@@ -223,7 +223,14 @@ function slotMapOf(token) {
         use_hbars_for_payment: !fee['denominating_token_id'],
         use_current_token_for_payment: fee['denominating_token_id'] === token['token_id'],
     }));
-    token['fractional_fees'] = customFees['fractional_fees'] ?? [];
+    token['fractional_fees'] = (customFees['fractional_fees'] ?? []).map(fee => ({
+        net_of_transfers: fee['net_of_transfers'],
+        numerator: /**@type{{numerator: unknown}}*/ (fee['amount'])['numerator'],
+        denominator: /**@type{{denominator: unknown}}*/ (fee['amount'])['denominator'],
+        minimum_amount: fee['minimum'],
+        maximum_amount: fee['maximum'],
+        fee_collector: fee['collector_account_id'],
+    }));
     token['royalty_fees'] = customFees['royalty_fees'] ?? [];
 
     const map = new SlotMap();
