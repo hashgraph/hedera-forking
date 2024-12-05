@@ -17,9 +17,6 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
     uint8 internal decimals;
     uint256 internal totalSupply;
     TokenInfo internal _tokenInfo;
-    mapping(uint256 => address) internal _owners;
-    mapping(uint256 => address) internal _approved;
-    mapping(address => uint256[]) internal _ownedTokens;
 
     /**
      * @dev Prevents delegatecall into the modified method.
@@ -250,7 +247,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
             require(msg.data.length >= 60, "ownerOf: Not enough calldata");
             _initTokenData();
             uint256 tokenId = uint256(bytes32(msg.data[40:72]));
-            return abi.encode(_owners[tokenId]);
+            return abi.encode(__ownerOf(tokenId));
         } else if (selector == IERC721.transferFrom.selector) {
             require(msg.data.length >= 124, "transferFrom: Not enough calldata");
             address from = address(bytes20(msg.data[40:60]));
@@ -262,26 +259,23 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
             require(msg.data.length >= 92, "approve: Not enough calldata");
             address spender = address(bytes20(msg.data[40:60]));
             uint256 tokenId = uint256(bytes32(msg.data[60:92]));
-            address owner = msg.sender;
-            _approve(owner, spender, tokenId, true);
-            emit Approval(owner, spender, tokenId);
+            _approve(spender, tokenId, true);
             return abi.encode(true);
         } else if (selector == IERC721.setApprovalForAll.selector) {
             require(msg.data.length >= 92, "setApprovalForAll: Not enough calldata");
             address operator = address(bytes20(msg.data[40:60]));
             bool approved = uint256(bytes32(msg.data[60:92])) == 1;
-            address owner = msg.sender;
-            _setApprovalForAll(owner, operator, approved);
-            emit ApprovalForAll(owner, operator, approved);
+            _setApprovalForAll(operator, approved);
+            return abi.encode(true);
         } else if (selector == IERC721.getApproved.selector) {
             require(msg.data.length >= 60, "getApproved: Not enough calldata");
             uint256 tokenId = uint256(bytes32(msg.data[40:72]));
-            return abi.encode(_approved[tokenId]);
+            return abi.encode(__getApproved(tokenId));
         } else if (selector == IERC721.isApprovedForAll.selector) {
             require(msg.data.length >= 92, "isApprovedForAll: Not enough calldata");
             address owner = address(bytes20(msg.data[40:60]));
             address operator = address(bytes20(msg.data[72:92]));
-            return abi.encode(_isApprovedForAll(owner, operator));
+            return abi.encode(__isApprovedForAll(owner, operator));
         }
         return abi.encode("undefined");
     }
@@ -348,6 +342,26 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         return bytes32(abi.encodePacked(selector, pad, accountId));
     }
 
+    function _ownerOfSlot(uint32 tokenId) internal virtual returns (bytes32) {
+        bytes4 selector = IERC721.ownerOf.selector;
+        uint192 pad = 0x0;
+        return bytes32(abi.encodePacked(selector, pad, tokenId));
+    }
+
+    function _getApprovedSlot(uint32 tokenId) internal virtual returns (bytes32) {
+        bytes4 selector = IERC721.getApproved.selector;
+        uint192 pad = 0x0;
+        return bytes32(abi.encodePacked(selector, pad, tokenId));
+    }
+
+    function _isApprovedForAllSlot(address owner, address operator) internal virtual returns (bytes32) {
+        bytes4 selector = IERC721.isApprovedForAll.selector;
+        uint160 pad = 0x0;
+        uint32 ownerId = HtsSystemContract(HTS_ADDRESS).getAccountId(owner);
+        uint32 operatorId = HtsSystemContract(HTS_ADDRESS).getAccountId(operator);
+        return bytes32(abi.encodePacked(selector, pad, ownerId, operatorId));
+    }
+
     function __balanceOf(address account) private returns (uint256 amount) {
         bytes32 slot = _balanceOfSlot(account);
         assembly { amount := sload(slot) }
@@ -356,6 +370,21 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
     function __allowance(address owner, address spender) private returns (uint256 amount) {
         bytes32 slot = _allowanceSlot(owner, spender);
         assembly { amount := sload(slot) }
+    }
+
+    function __ownerOf(uint256 tokenId) private returns (address owner) {
+        bytes32 slot = _ownerOfSlot(uint32(tokenId));
+        assembly { owner := sload(slot) }
+    }
+
+    function __getApproved(uint256 tokenId) private returns (address approved) {
+        bytes32 slot = _getApprovedSlot(uint32(tokenId));
+        assembly { approved := sload(slot) }
+    }
+
+    function __isApprovedForAll(address owner, address operator) private returns (bool isApprovedForAll) {
+        bytes32 slot = _isApprovedForAllSlot(owner, operator);
+        assembly { isApprovedForAll := sload(slot) }
     }
 
     function _transfer(address from, address to, uint256 amount) private {
@@ -367,9 +396,9 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
 
     function _transferNFT(address from, address to, uint256 tokenId) private {
         require(from != address(0), "hts: invalid sender");
-        require(from == _owners[tokenId], "hts: sender should own the token");
         require(to != address(0), "hts: invalid receiver");
-        _owners[tokenId] = to;
+        bytes32 slot = _ownerOfSlot(uint32(tokenId));
+        assembly { sstore(slot, to) }
         emit Transfer(from, to, tokenId);
     }
 
@@ -404,9 +433,13 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         assembly { sstore(allowanceSlot, amount) }
     }
 
-    function _approve(address owner, address spender, uint256 tokenId, bool isApproved) private {
-        require(owner == _owners[tokenId], "approve: msg.sender should own the token");
-        _approved[tokenId] = isApproved ? spender : address(0);
+    function _approve(address spender, uint256 tokenId, bool isApproved) private {
+        address owner = __ownerOf(tokenId);
+        require(msg.sender == owner, "_approve: unauthorized");
+        bytes32 slot = _getApprovedSlot(uint32(tokenId));
+        address newApproved = isApproved ? spender : address(0);
+        assembly { sstore(slot, newApproved) }
+        emit Approval(owner, spender, tokenId);
     }
 
     /**
@@ -423,25 +456,11 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         }
     }
 
-    function _setApprovalForAll(address owner, address operator, bool approved) private {
+    function _setApprovalForAll(address operator, bool approved) private {
+        address owner = msg.sender;
         require(operator != owner, "setApprovalForAll: invalid operator");
-        for (uint256 i = 0; i < _ownedTokens[owner].length; i++) {
-            uint256 tokenId = _ownedTokens[owner][i];
-            _approve(owner, operator, tokenId, approved);
-        }
-    }
-
-    function _isApprovedForAll(address owner, address operator) private view returns (bool) {
-        for (uint256 i = 0; i < _ownedTokens[owner].length; i++) {
-            uint256 tokenId = _ownedTokens[owner][i];
-            if (!__isApproved(operator, tokenId)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    function __isApproved(address account, uint256 tokenId) private view returns (bool allowance) {
-        return _approved[tokenId] == account;
+        bytes32 slot = _isApprovedForAllSlot(owner, operator);
+        assembly { sstore(slot, approved) }
+        emit ApprovalForAll(owner, operator, approved);
     }
 }
