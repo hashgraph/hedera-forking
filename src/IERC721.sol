@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
+import {IERC20Events} from "./IERC20.sol";
+
 /**
  * These events should be emitted by `transferFrom`, `approve` and `setApprovalForAll` respectively.
  *
  * See https://ethereum.org/en/developers/docs/standards/tokens/erc-721/#events for more information.
  */
-interface IERC721Events {
-    event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
-    event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId);
+interface IERC721Events is IERC20Events {
     event ApprovalForAll(address indexed owner, address indexed operator, bool approved);
 }
 
