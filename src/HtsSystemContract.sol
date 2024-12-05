@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
+import {console} from "forge-std/console.sol";
 import {IERC20Events, IERC20} from "./IERC20.sol";
 import {IERC721} from "./IERC721.sol";
 import {IHRC719} from "./IHRC719.sol";
@@ -164,25 +165,30 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
         bytes memory result = abi.encode(false);
 
         result = __redirectForERC20(selector);
-        if (keccak256(result) != keccak256(abi.encode(false))) {
+        console.logBytes(result);
+        if (keccak256(result) != keccak256(abi.encode("undefined"))) {
             return result;
         }
 
         result = __redirectForERC721(selector);
-        if (keccak256(result) != keccak256(abi.encode(false))) {
+        console.logBytes(result);
+        if (keccak256(result) != keccak256(abi.encode("undefined"))) {
             return result;
         }
 
         result = __redirectForHRC719(selector);
-        if (keccak256(result) != keccak256(abi.encode(false))) {
+        console.logBytes(result);
+        if (keccak256(result) != keccak256(abi.encode("undefined"))) {
             return result;
         }
 
         result = __redirectForHTS(selector);
-        if (keccak256(result) != keccak256(abi.encode(false))) {
+        console.logBytes(result);
+        if (keccak256(result) != keccak256(abi.encode("undefined"))) {
             return result;
         }
 
+        console.logBytes4(selector);
         revert ("redirectForToken: not supported");
     }
 
@@ -239,7 +245,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
             emit IERC20Events.Approval(owner, spender, amount);
             return abi.encode(true);
         }
-        return abi.encode(false);
+        return abi.encode("undefined");
     }
 
     function __redirectForERC721(bytes4 selector) internal virtual returns (bytes memory) {
@@ -265,7 +271,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
             require(msg.data.length >= 92, "isApprovedForAll: Not enough calldata");
             // TODO: Implement with https://github.com/hashgraph/hedera-forking/issues/125
         }
-        return abi.encode(false);
+        return abi.encode("undefined");
     }
 
     function __redirectForHRC719(bytes4 selector) internal virtual returns (bytes memory) {
@@ -283,7 +289,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
             assembly { res := sload(slot) }
             return abi.encode(res);
         }
-        return abi.encode(false);
+        return abi.encode("undefined");
     }
 
     function __redirectForHTS(bytes4 selector) internal virtual returns (bytes memory) {
@@ -302,7 +308,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
             _update(from, to, amount);
             return abi.encode(true);
         }
-        return abi.encode(false);
+        return abi.encode("undefined");
     }
 
     function _initTokenData() internal virtual {
