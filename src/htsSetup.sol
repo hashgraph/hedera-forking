@@ -13,7 +13,7 @@ Vm constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
  * @notice Sets up the HTS emulation contract.
  * The HTS emulation contract will be deployed at `0x167` address using `vm.etch`.
  *
- * Remember to enable [ffi](https://book.getfoundry.sh/cheatcodes/ffi)
+ * Remember to enable [`ffi`](https://book.getfoundry.sh/cheatcodes/ffi)
  * in your Foundry project to use HTS contract in your tests.
  * You can do this by adding the following lines to your `.toml` file
  *
