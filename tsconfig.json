@@ -21,5 +21,5 @@
         "noUnusedLocals": true,
         "noUnusedParameters": true
     },
-    "exclude": ["./launch-token/", "./examples/"]
+    "exclude": ["./scripts/create-token.js", "./examples/"]
 }

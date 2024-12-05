@@ -25,6 +25,12 @@ abstract contract TestSetup {
     address internal MFCT_TREASURY = 0xa3612A87022a4706FC9452C50abd2703ac4Fd7d9;
 
     /**
+     * https://hashscan.io/testnet/token/0.0.5206169
+     * https://testnet.mirrornode.hedera.com/api/v1/tokens/0.0.5206169
+     */
+    address internal CTCF = 0x00000000000000000000000000000000004F7099;
+
+    /**
      * 3 test modes.
      */
     enum TestMode {
@@ -62,6 +68,7 @@ abstract contract TestSetup {
             MirrorNodeMock mirrorNodeMock = new MirrorNodeMock();
             mirrorNodeMock.deployHIP719Proxy(USDC, "USDC");
             mirrorNodeMock.deployHIP719Proxy(MFCT, "MFCT");
+            mirrorNodeMock.deployHIP719Proxy(CTCF, "CTCF");
             mirrorNode = mirrorNodeMock;
             htsSetup(mirrorNode);
             testMode = TestMode.NonFork;
