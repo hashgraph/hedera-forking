@@ -100,8 +100,12 @@ const mirrorNodeClient = {
         return require(`../test/data/${tokens[tokenId].symbol}/getToken.json`);
     },
     async getAccount(idOrAliasOrEvmAddress) {
+        assert(!idOrAliasOrEvmAddress.startsWith('0x'));
         this.append('getAccount', idOrAliasOrEvmAddress);
-        return requireOrDefault(`getAccount_0x${idOrAliasOrEvmAddress.toLowerCase()}.json`, null);
+        if (!idOrAliasOrEvmAddress.startsWith('0.0.')) {
+            idOrAliasOrEvmAddress = `0x${idOrAliasOrEvmAddress}`;
+        }
+        return requireOrDefault(`getAccount_${idOrAliasOrEvmAddress.toLowerCase()}.json`, null);
     },
     async getBalanceOfToken(tokenId, accountId, blockNumber) {
         this.append('getBalanceOfToken', tokenId, accountId, blockNumber);

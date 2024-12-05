@@ -110,6 +110,7 @@ interface IMirrorNodeClient {
         blockNumber: number
     ): Promise<{
         account: string;
+        evm_address: string;
     } | null>;
 }
 

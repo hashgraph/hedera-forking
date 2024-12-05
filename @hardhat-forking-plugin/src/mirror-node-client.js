@@ -92,7 +92,7 @@ class MirrorNodeClient {
      *
      * @param {string} idOrAliasOrEvmAddress The account ID, alias, or EVM address to fetch.
      * @param {number} blockNumber
-     * @returns {Promise<{ account: string } | null>} A `Promise` resolving to the account information or `null` if not found.
+     * @returns {Promise<{ account: string, evm_address: string } | null>} A `Promise` resolving to the account information or `null` if not found.
      */
     async getAccount(idOrAliasOrEvmAddress, blockNumber) {
         const timestamp = await this.getBlockQueryParam(blockNumber);
