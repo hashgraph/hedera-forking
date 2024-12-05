@@ -1,8 +1,59 @@
 # Hedera Forking Support for System Contracts
 
-<!-- !./scripts/md-table.js out/IHederaTokenService.sol/IHederaTokenService.json -->
+## Supported Methods
 
-placeholder
+### Fungible Tokens
+
+<!-- !./scripts/abi-table.js out/IERC20.sol/IERC20.json -->
+
+| Function                                                                   | Returns     | Selector   | Behavior |
+| -------------------------------------------------------------------------- | ----------- | ---------- | -------- |
+| `function allowance(address owner, address spender) view`                  | `(uint256)` | `dd62ed3e` |          |
+| `function approve(address spender, uint256 amount)`                        | `(bool)`    | `095ea7b3` |          |
+| `function balanceOf(address account) view`                                 | `(uint256)` | `70a08231` |          |
+| `function decimals() view`                                                 | `(uint8)`   | `313ce567` |          |
+| `function name() view`                                                     | `(string)`  | `06fdde03` |          |
+| `function symbol() view`                                                   | `(string)`  | `95d89b41` |          |
+| `function totalSupply() view`                                              | `(uint256)` | `18160ddd` |          |
+| `function transfer(address recipient, uint256 amount)`                     | `(bool)`    | `a9059cbb` |          |
+| `function transferFrom(address sender, address recipient, uint256 amount)` | `(bool)`    | `23b872dd` |          |
+
+<!-- -->
+
+<!-- !./scripts/abi-table.js out/IHRC719.sol/IHRC719.json -->
+
+| Function                       | Returns                  | Selector   | Behavior                                                                                                                       |
+| ------------------------------ | ------------------------ | ---------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `function associate()`         | `(uint256 responseCode)` | `0a754de6` | Associates the calling account with the token This function allows an account to opt-in to receive the token                   |
+| `function dissociate()`        | `(uint256 responseCode)` | `5c9217e0` | Dissociates the calling account from the token This function allows an account to opt-out from receiving the token             |
+| `function isAssociated() view` | `(bool associated)`      | `4d8fdd6d` | Checks if the calling account is associated with the token This function returns the association status of the calling account |
+
+<!-- -->
+
+### Non-Fungible Tokens
+
+> [!NOTE]
+> ERC721 support coming soon!
+
+<!-- !./scripts/abi-table.js out/IHRC719.sol/IHRC719.json -->
+
+| Function                       | Returns                  | Selector   | Behavior                                                                                                                       |
+| ------------------------------ | ------------------------ | ---------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `function associate()`         | `(uint256 responseCode)` | `0a754de6` | Associates the calling account with the token This function allows an account to opt-in to receive the token                   |
+| `function dissociate()`        | `(uint256 responseCode)` | `5c9217e0` | Dissociates the calling account from the token This function allows an account to opt-out from receiving the token             |
+| `function isAssociated() view` | `(bool associated)`      | `4d8fdd6d` | Checks if the calling account is associated with the token This function returns the association status of the calling account |
+
+<!-- -->
+
+### Hedera Token Service (located at address `0x167`)
+
+<!-- !./scripts/abi-table.js out/IHederaTokenService.sol/IHederaTokenService.json -->
+
+| Function                                                                 | Returns                                                                                                | Selector   | Behavior                                                       |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ | ---------- | -------------------------------------------------------------- |
+| `function burnToken(address token, int64 amount, int64[] serialNumbers)` | `(int64 responseCode, int64 newTotalSupply)`                                                           | `d6910d06` | Burns an amount of the token from the defined treasury account |
+| `function getTokenInfo(address token)`                                   | `(int64 responseCode, ((string name, string symbol, address treasury, string memo, bool tokenSupplyTy` | `1f69565f` | Query token info                                               |
+| `function mintToken(address token, int64 amount, bytes[] metadata)`      | `(int64 responseCode, int64 newTotalSupply, int64[] serialNumbers)`                                    | `e0f4059a` | Mints an amount of the token to the defined treasury account   |
 
 <!-- -->
 
