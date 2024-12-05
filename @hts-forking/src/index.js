@@ -132,7 +132,7 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
         const { tokens } = (await mirrorNodeClient.getTokenRelationship(accountId, tokenId)) ?? {
             tokens: [],
         };
-        if (tokens.some(t => t.token_id === tokenId)) {
+        if (tokens?.length > 0) {
             return ret(`0x${toIntHex256(1)}`, `Token ${tokenId} is associated with ${accountId}`);
         }
         return ret(ZERO_HEX_32_BYTE, `Token ${tokenId} not associated with ${accountId}`);
