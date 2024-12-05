@@ -404,6 +404,11 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         assembly { owner := sload(slot) }
         require(owner == from, "hts: sender is not owner");
 
+        // If the sender is not the owner, check if the sender is approved
+        if (msg.sender != from) {
+            require(msg.sender == __getApproved(tokenId) || __isApprovedForAll(from, msg.sender), "hts: unauthorized");
+        }
+
         // Clear approval
         bytes32 approvalSlot = _getApprovedSlot(uint32(tokenId));
         assembly { sstore(approvalSlot, 0) }
