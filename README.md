@@ -1,5 +1,11 @@
 # Hedera Forking Support for System Contracts
 
+<!-- !./scripts/md-table.js out/IHederaTokenService.sol/IHederaTokenService.json -->
+
+placeholder
+
+<!-- -->
+
 For Hardhat instructions, go to [Hardhat](#hardhat).
 
 ## Foundry
@@ -74,23 +80,35 @@ It enables the following features
 
 ### Installation
 
-To use this plugin, install it via `npm`
+To use this plugin, install it via your package manager
+
+#### **npm**
 
 ```console
 npm install --save-dev @hashgraph/hardhat-forking-plugin
 ```
 
+#### **yarn**
+
 ```console
 yarn add --dev @hashgraph/hardhat-forking-plugin
 ```
 
-Next, add the following line to the top of your HardHat config file `hardhat.config.js`
+### Set up
+
+Next, add the following line to the top of your Hardhat config file, _e.g._, `hardhat.config.js`
 
 ```javascript
 require('@hashgraph/hardhat-forking-plugin');
 ```
 
-This will automatically replace the default HardHat provider with the one dedicated to the Hedera network.
+or if you are using TypeScript, include the following into your `hardhat.config.ts`
+
+```javascript
+import '@hashgraph/hardhat-forking-plugin';
+```
+
+This will automatically replace the default Hardhat provider with the one dedicated to the Hedera network.
 You can then proceed with writing your tests, and the plugin will allow you to query Hedera token data seamlessly.
 
 ### Configuration
@@ -100,6 +118,21 @@ By default, the plugin uses the Hedera Mirror Node based on the guessed chain ID
 The value of the configuration parameter: hardhat.forking.url will be used to infer the initial chain ID.
 
 Only chain IDs 295 (Mainnet), 296 (Testnet), and 297 (Previewnet) are supported.
+
+```javascript
+    networks: {
+        hardhat: {
+            forking: {
+                url: 'https://mainnet.hashio.io/api',
+                // This allows Hardhat to enable JSON-RPC's response cache.
+                // Forking from a block is not fully integrated yet into HTS emulation.
+                blockNumber: 70531900,
+                chainId: 295,
+                workerPort: 1235,
+            },
+        },
+    },
+```
 
 ### Endpoints with Altered Behavior
 
