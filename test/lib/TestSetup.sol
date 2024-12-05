@@ -31,6 +31,12 @@ abstract contract TestSetup {
     address internal CTCF = 0x00000000000000000000000000000000004F7099;
 
     /**
+     * https://hashscan.io/testnet/token/0.0.4271533
+     * https://testnet.mirrornode.hedera.com/api/v1/tokens/0.0.4271533
+     */
+    address internal CFNFTFF = 0x0000000000000000000000000000000000412DaD;
+
+    /**
      * 3 test modes.
      */
     enum TestMode {

@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
-import {console} from "forge-std/console.sol";
 import {IERC20Events, IERC20} from "./IERC20.sol";
-import {IERC721} from "./IERC721.sol";
+import {IERC721Events, IERC721} from "./IERC721.sol";
 import {IHRC719} from "./IHRC719.sol";
 import {IHederaTokenService} from "./IHederaTokenService.sol";
 
 address constant HTS_ADDRESS = address(0x167);
 
-contract HtsSystemContract is IHederaTokenService, IERC20Events {
+contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
 
     // All ERC20 properties are accessed with a `delegatecall` from the Token Proxy.
     // See `__redirectForToken` for more details.
@@ -18,6 +17,9 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
     uint8 internal decimals;
     uint256 internal totalSupply;
     TokenInfo internal _tokenInfo;
+    mapping(uint256 => address) internal _owners;
+    mapping(uint256 => address) internal _approved;
+    mapping(address => uint256[]) internal _ownedTokens;
 
     /**
      * @dev Prevents delegatecall into the modified method.
@@ -165,30 +167,25 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
         bytes memory result = abi.encode(false);
 
         result = __redirectForERC20(selector);
-        console.logBytes(result);
         if (keccak256(result) != keccak256(abi.encode("undefined"))) {
             return result;
         }
 
         result = __redirectForERC721(selector);
-        console.logBytes(result);
         if (keccak256(result) != keccak256(abi.encode("undefined"))) {
             return result;
         }
 
         result = __redirectForHRC719(selector);
-        console.logBytes(result);
         if (keccak256(result) != keccak256(abi.encode("undefined"))) {
             return result;
         }
 
         result = __redirectForHTS(selector);
-        console.logBytes(result);
         if (keccak256(result) != keccak256(abi.encode("undefined"))) {
             return result;
         }
 
-        console.logBytes4(selector);
         revert ("redirectForToken: not supported");
     }
 
@@ -242,7 +239,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
             uint256 amount = uint256(bytes32(msg.data[60:92]));
             address owner = msg.sender;
             _approve(owner, spender, amount);
-            emit IERC20Events.Approval(owner, spender, amount);
+            emit Approval(owner, spender, amount);
             return abi.encode(true);
         }
         return abi.encode("undefined");
@@ -252,24 +249,52 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
         if (selector == IERC721.ownerOf.selector) {
             require(msg.data.length >= 60, "ownerOf: Not enough calldata");
             _initTokenData();
-            return abi.encode(_tokenInfo.token.treasury);
+            uint256 tokenId = uint256(bytes32(msg.data[40:72]));
+            return abi.encode(_owners[tokenId]);
         } else if (selector == IERC721.transferFrom.selector) {
             require(msg.data.length >= 124, "transferFrom: Not enough calldata");
-            // TODO: Implement with https://github.com/hashgraph/hedera-forking/issues/125
+            address from = address(bytes20(msg.data[40:60]));
+            address to = address(bytes20(msg.data[72:92]));
+            uint256 tokenId = uint256(bytes32(msg.data[92:124]));
+            address spender = msg.sender;
+            _spendAllowance(from, spender, tokenId, true);
+            _transferNFT(from, to, tokenId);
             return abi.encode(true);
         } else if (selector == IERC721.approve.selector) {
             require(msg.data.length >= 92, "approve: Not enough calldata");
-            // TODO: Implement with https://github.com/hashgraph/hedera-forking/issues/125
+            address spender = address(bytes20(msg.data[40:60]));
+            uint256 tokenId = uint256(bytes32(msg.data[60:92]));
+            address owner = msg.sender;
+            require(owner == _owners[tokenId], "approve: msg.sender should own the token");
+            _approve(spender, tokenId, true);
+            emit Approval(owner, spender, tokenId);
             return abi.encode(true);
         } else if (selector == IERC721.setApprovalForAll.selector) {
             require(msg.data.length >= 92, "setApprovalForAll: Not enough calldata");
-            // TODO: Implement with https://github.com/hashgraph/hedera-forking/issues/125
+            address operator = address(bytes20(msg.data[40:60]));
+            bool approved = uint256(bytes32(msg.data[60:92])) == 1;
+            address owner = msg.sender;
+            require(operator != owner, "setApprovalForAll: msg.sender should own the token");
+            for (uint256 i = 0; i < _ownedTokens[owner].length; i++) {
+                uint256 tokenId = _ownedTokens[owner][i];
+                _approve(operator, tokenId, approved);
+            }
+            emit ApprovalForAll(owner, operator, approved);
         } else if (selector == IERC721.getApproved.selector) {
             require(msg.data.length >= 60, "getApproved: Not enough calldata");
-            // TODO: Implement with https://github.com/hashgraph/hedera-forking/issues/125
+            uint256 tokenId = uint256(bytes32(msg.data[40:72]));
+            return abi.encode(_approved[tokenId]);
         } else if (selector == IERC721.isApprovedForAll.selector) {
             require(msg.data.length >= 92, "isApprovedForAll: Not enough calldata");
-            // TODO: Implement with https://github.com/hashgraph/hedera-forking/issues/125
+            address owner = address(bytes20(msg.data[40:60]));
+            address operator = address(bytes20(msg.data[72:92]));
+            for (uint256 i = 0; i < _ownedTokens[owner].length; i++) {
+                uint256 tokenId = _ownedTokens[owner][i];
+                if (!__allowance(operator, tokenId)) {
+                    return abi.encode(false);
+                }
+            }
+            return abi.encode(true);
         }
         return abi.encode("undefined");
     }
@@ -346,11 +371,23 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
         assembly { amount := sload(slot) }
     }
 
+    function __allowance(address account, uint256 tokenId) private returns (bool allowance) {
+        return _approved[tokenId] == account;
+    }
+
     function _transfer(address from, address to, uint256 amount) private {
         require(from != address(0), "hts: invalid sender");
         require(to != address(0), "hts: invalid receiver");
         _update(from, to, amount);
-        emit IERC20Events.Transfer(from, to, amount);
+        emit Transfer(from, to, amount);
+    }
+
+    function _transferNFT(address from, address to, uint256 tokenId) private {
+        require(from != address(0), "hts: invalid sender");
+        require(from == _owners[tokenId], "hts: sender should own the token");
+        require(to != address(0), "hts: invalid receiver");
+        _owners[tokenId] = to;
+        emit Transfer(from, to, tokenId);
     }
 
     function _update(address from, address to, uint256 amount) public {
@@ -384,6 +421,10 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
         assembly { sstore(allowanceSlot, amount) }
     }
 
+    function _approve(address spender, uint256 tokenId, bool value) private {
+        _approved[tokenId] = value ? spender : address(0);
+    }
+
     /**
      * TODO: We might need to optimize the double owner+spender calls to get
      * their account IDs.
@@ -394,6 +435,15 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events {
             require(currentAllowance >= amount, "_spendAllowance: insufficient");
             unchecked {
                 _approve(owner, spender, currentAllowance - amount);
+            }
+        }
+    }
+
+    function _spendAllowance(address owner, address spender, uint256 tokenId, bool value) private {
+        bool currentAllowance = __allowance(spender, tokenId);
+        if (currentAllowance != value) {
+            unchecked {
+                _approve(spender, tokenId, value);
             }
         }
     }
