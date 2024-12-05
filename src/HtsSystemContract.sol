@@ -454,11 +454,14 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
     }
 
     function _approve(address spender, uint256 tokenId, bool isApproved) private {
+        // The caller must own the token or be an approved operator.
         address owner = __ownerOf(tokenId);
-        require(msg.sender == owner, "_approve: unauthorized");
+        require(msg.sender == owner || __getApproved(tokenId) == msg.sender || __isApprovedForAll(owner, msg.sender), "_approve: unauthorized");
+
         bytes32 slot = _getApprovedSlot(uint32(tokenId));
         address newApproved = isApproved ? spender : address(0);
         assembly { sstore(slot, newApproved) }
+
         emit Approval(owner, spender, tokenId);
     }
 
@@ -478,7 +481,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
 
     function _setApprovalForAll(address operator, bool approved) private {
         address owner = msg.sender;
-        require(operator != owner, "setApprovalForAll: invalid operator");
+        require(operator != address(0) && operator != owner, "setApprovalForAll: invalid operator");
         bytes32 slot = _isApprovedForAllSlot(owner, operator);
         assembly { sstore(slot, approved) }
         emit ApprovalForAll(owner, operator, approved);
