@@ -397,7 +397,22 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
     function _transferNFT(address from, address to, uint256 tokenId) private {
         require(from != address(0), "hts: invalid sender");
         require(to != address(0), "hts: invalid receiver");
+
+        // Check if the sender is the owner of the token
         bytes32 slot = _ownerOfSlot(uint32(tokenId));
+        address owner;
+        assembly { owner := sload(slot) }
+        require(owner == from, "hts: sender is not owner");
+
+        // Clear approval
+        bytes32 approvalSlot = _getApprovedSlot(uint32(tokenId));
+        assembly { sstore(approvalSlot, 0) }
+
+        // Clear approval for all
+        bytes32 isApprovedForAllSlot = _isApprovedForAllSlot(from, to);
+        assembly { sstore(isApprovedForAllSlot, false) }
+
+        // Set the new owner
         assembly { sstore(slot, to) }
         emit Transfer(from, to, tokenId);
     }

@@ -34,7 +34,7 @@ interface IERC721 {
      * Requirements:
      * - `sender` cannot be the zero address.
      * - `recipient` cannot be the zero address.
-     * - `tokenId` token must be owned by `from`.
+     * - `tokenId` token must be owned by `sender`.
      * - If the caller is not `sender`, it must be approved to move this token by either {approve} or {setApprovalForAll}.
      *
      * Emits a {Transfer} event.
