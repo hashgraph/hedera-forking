@@ -2,7 +2,7 @@
 
 **This projects allows Smart Contract developers working on Hedera to use fork testing while using Hedera System Contracts.**
 It does so by providing an emulation layer for the [Hedera Token Service](https://hardhat.org/hardhat-network/docs/overview#mainnet-forking) _(more System Contracts to come)_ written in Solidity.
-Given it is written in Solidity, it can executed in a forked network environment, such as
+Given it is written in Solidity, it can be executed in a forked network environment, such as
 [Foundry](https://book.getfoundry.sh/forge/fork-testing) or
 [Hardhat](https://hardhat.org/hardhat-network/docs/overview#mainnet-forking).
 
@@ -120,15 +120,15 @@ It enables the following features
 
 ### Installation
 
-To use this plugin, install it via your package manager
+To use this plugin, install it via your package manager.
 
-#### **npm**
+If you are using **npm**
 
 ```console
 npm install --save-dev @hashgraph/hardhat-forking-plugin
 ```
 
-#### **yarn**
+or using **yarn**
 
 ```console
 yarn add --dev @hashgraph/hardhat-forking-plugin
@@ -142,7 +142,7 @@ Next, add the following line to the top of your Hardhat config file, _e.g._, `ha
 require('@hashgraph/hardhat-forking-plugin');
 ```
 
-or if you are using TypeScript, include the following into your `hardhat.config.ts`
+or if you are using TypeScript, include the following line into your `hardhat.config.ts`
 
 ```javascript
 import '@hashgraph/hardhat-forking-plugin';
@@ -155,9 +155,14 @@ You can then proceed with writing your tests, and the plugin will allow you to q
 
 By default, the plugin uses the Hedera Mirror Node based on the guessed chain ID from the currently forked network.
 
-The value of the configuration parameter: hardhat.forking.url will be used to infer the initial chain ID.
+Two additional values needs to be set in order to activate the plugin.
 
-Only chain IDs 295 (Mainnet), 296 (Testnet), and 297 (Previewnet) are supported.
+- **`chainId`**. The chain ID
+  The call to `eth_chainId` onto the configuration parameter `hardhat.forking.url` needs to match will be used to infer the initial chain ID.
+  Only chain IDs `295` (Mainnet), `296` (Testnet), and `297` (Previewnet) are supported.
+- **`workerPort`**. Any free port used to co
+
+For example
 
 ```javascript
     networks: {
@@ -174,6 +179,33 @@ Only chain IDs 295 (Mainnet), 296 (Testnet), and 297 (Previewnet) are supported.
     },
 ```
 
+### Running Your Tests
+
+For example, to query USDC information on mainnet you can use the following test
+
+```javascript examples/hardhat-hts/test/usdc-info.test.js
+const { expect } = require('chai');
+const { ethers } = require('hardhat');
+
+describe('USDC example -- informational', function () {
+  it('should get name, symbol and decimals', async function () {
+    // https://hashscan.io/mainnet/token/0.0.456858
+    const usdcAddress = '0x000000000000000000000000000000000006f89a';
+
+    const usdc = await ethers.getContractAt('IERC20', usdcAddress);
+    expect(await usdc['name']()).to.be.equal('USD Coin');
+    expect(await usdc['symbol']()).to.be.equal('USDC');
+    expect(await usdc['decimals']()).to.be.equal(6n);
+  });
+});
+```
+
+Then run your Hardhat tests as usual
+
+```console
+npx hardhat
+```
+
 ### Endpoints with Altered Behavior
 
 The first RPC call using the Hardhat provider will set up the HTS bytecode via the JSON RPC method `hardhat_setCode`.
@@ -183,11 +215,6 @@ This operation will only work if the precompile address is not already occupied 
 Each time the `eth_call` method is invoked, the target address will be checked to see if it represents a token by querying the MirrorNode. Its basic storage fields (such as name, balance, decimals, etc.) will be set using the `hardhat_setStorageAt` method.
 
 If the function selector in the `eth_call` request corresponds to any of the following functions, an additional operation will be performed, as described below:
-
-| Function                     | Behavior                                                                                                                                                                                    |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `balanceOf(address)`         | Sets the balance of the address (downloaded from MirrorNode) into the storage slot from where it will be queried.                                                                           |
-| `allowance(address,address)` | Sets the token spending allowance for the address from the first parameter to the second parameter, after retrieving the data from the MirrorNode, and stores it in the corresponding slot. |
 
 Additionally, by loading the HTS and token code into the EVM, the following methods can be called on the token's address, functioning similarly to how they would on the actual Hedera EVM:
 
@@ -202,8 +229,6 @@ Additionally, by loading the HTS and token code into the EVM, the following meth
 | `transfer(address,uint256)`             | Transfers a specified amount of tokens from the caller to the provided address.               |
 | `transferFrom(address,address,uint256)` | Transfers a specified amount of tokens from one address to another.                           |
 | `approve(address,uint256)`              | Approves an address to spend a specified number of tokens.                                    |
-
-**Note:** Currently, only **fungible tokens** are supported.
 
 ## Hedera Token Service Supported Methods
 
@@ -390,7 +415,7 @@ This repo consists of two projects/packages.
 A Foundry project, to compile and test the `HtsSystemContract.sol` contract.
 And an `npm` package that implements both `eth_getCode` and `eth_getStorageAt` JSON-RPC methods when HTS emulation is involved together with the Hardhat plugin that uses these methods.
 
-To compile the `HtsSystemContract` and test contracts run
+To compile the `HtsSystemContract`, its dependencies and the test contracts run
 
 ```console
 forge build
