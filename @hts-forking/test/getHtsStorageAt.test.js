@@ -37,8 +37,11 @@ describe('::getHtsStorageAt', function () {
         getHtsStorageAt(address, slot, 0, mirrorNodeClient);
 
     /** @type {IMirrorNodeClient} */
-    const baseMirrorNodeClient = {
-        getTokenById(_tokenId) {
+    const mirrorNodeClientStub = {
+        async getTokenById(_tokenId) {
+            throw Error('Not implemented');
+        },
+        async getTokenRelationship(_idOrAliasOrEvmAddress, _tokenId) {
             throw Error('Not implemented');
         },
         async getAccount(_idOrAliasOrEvmAddress) {
@@ -61,14 +64,14 @@ describe('::getHtsStorageAt', function () {
         const result = await _getHtsStorageAt(
             '0x4e59b44847b379578588920ca78fbf26c0b4956c',
             '0x0',
-            baseMirrorNodeClient
+            mirrorNodeClientStub
         );
         expect(result).to.be.null;
     });
 
     it(`should return \`ZERO_HEX_32_BYTE\` when slot does not correspond to any field`, async function () {
         const mirrorNodeClient = {
-            ...baseMirrorNodeClient,
+            ...mirrorNodeClientStub,
             getTokenById: async () => require(`./data/USDC/getToken.json`),
         };
         // Slot `0xff` should not be present in `HtsSystemContract`
@@ -78,7 +81,7 @@ describe('::getHtsStorageAt', function () {
 
     it(`should return \`ZERO_HEX_32_BYTE\` when \`address\` is not found for a non-keccaked slot`, async function () {
         /** @type{IMirrorNodeClient} */
-        const mirrorNodeClient = { ...baseMirrorNodeClient, getTokenById: async _tokenId => null };
+        const mirrorNodeClient = { ...mirrorNodeClientStub, getTokenById: async _tokenId => null };
         const result = await _getHtsStorageAt(
             '0x0000000000000000000000000000000000000001',
             '0x0',
@@ -93,7 +96,7 @@ describe('::getHtsStorageAt', function () {
             const keccakedSlot = keccak256('0x' + toIntHex256(slot));
             /** @type{IMirrorNodeClient} */
             const mirrorNodeClient = {
-                ...baseMirrorNodeClient,
+                ...mirrorNodeClientStub,
                 getTokenById: async _tokenId => null,
             };
             const result = await _getHtsStorageAt(
@@ -108,14 +111,14 @@ describe('::getHtsStorageAt', function () {
     describe('`getAccountId` mapping on `0x167`', function () {
         it(`should return \`ZERO_HEX_32_BYTE\` on \`0x167\` when slot does not match \`getAccountId\``, async function () {
             const slot = '0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15';
-            const result = await _getHtsStorageAt(HTSAddress, slot, baseMirrorNodeClient);
+            const result = await _getHtsStorageAt(HTSAddress, slot, mirrorNodeClientStub);
             expect(result).to.be.equal(ZERO_HEX_32_BYTE);
         });
 
         it(`should return address' suffix on \`0x167\` when accountId does not exist`, async function () {
             /** @type{IMirrorNodeClient} */
             const mirrorNodeClient = {
-                ...baseMirrorNodeClient,
+                ...mirrorNodeClientStub,
                 getAccount: async _address => null,
             };
             const slot = '0xe0b490f700000000000000004D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15';
@@ -127,7 +130,7 @@ describe('::getHtsStorageAt', function () {
             it(`should return \`ZERO_HEX_32_BYTE\` on \`0x167\` when slot matches \`getAccountId\` but \`${accountId}\`'s shard|realm is not zero`, async function () {
                 /** @type{IMirrorNodeClient} */
                 const mirrorNodeClient = {
-                    ...baseMirrorNodeClient,
+                    ...mirrorNodeClientStub,
                     getAccount: async _address => ({ account: accountId, evm_address: '' }),
                 };
                 const slot = '0xe0b490f700000000000000004D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15';
@@ -148,7 +151,7 @@ describe('::getHtsStorageAt', function () {
 
             const slot = '0xe0b490f700000000000000004D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15';
             const result = await _getHtsStorageAt(HTSAddress, slot, {
-                ...baseMirrorNodeClient,
+                ...mirrorNodeClientStub,
                 getAccount,
             });
             expect(result).to.be.equal(`0x${'58d'.padStart(64, '0')}`);
@@ -163,7 +166,7 @@ describe('::getHtsStorageAt', function () {
 
                 /** @type {IMirrorNodeClient} */
                 const mirrorNodeClient = {
-                    ...baseMirrorNodeClient,
+                    ...mirrorNodeClientStub,
                     getTokenById(tokenId) {
                         // https://testnet.mirrornode.hedera.com/api/v1/tokens/0.0.429274
                         expect(tokenId).to.be.equal(
@@ -257,7 +260,7 @@ describe('::getHtsStorageAt', function () {
                         const accountId = 1421;
                         const slot = `${selector}${padding}${padAccountId(accountId)}`;
                         const result = await _getHtsStorageAt(address, slot, {
-                            ...baseMirrorNodeClient,
+                            ...mirrorNodeClientStub,
                             getBalanceOfToken,
                         });
 
@@ -299,7 +302,7 @@ describe('::getHtsStorageAt', function () {
                         const spenderId = 1335;
                         const slot = `${selector}${padding}${padAccountId(spenderId)}${padAccountId(accountId)}`;
                         const result = await _getHtsStorageAt(address, slot, {
-                            ...baseMirrorNodeClient,
+                            ...mirrorNodeClientStub,
                             getAllowanceForToken,
                         });
 
@@ -312,6 +315,51 @@ describe('::getHtsStorageAt', function () {
                             allowances.length === 0
                                 ? ZERO_HEX_32_BYTE
                                 : `0x${toIntHex256(allowances[0].amount)}`
+                        );
+                    });
+                });
+
+                /**@type{{name: string, fn: IMirrorNodeClient['getTokenRelationship']}}*/ [
+                    {
+                        name: 'token relationship is found',
+                        fn: (
+                            /** @type {string} */ idOrAliasOrEvmAddress,
+                            /** @type {string} */ _tid
+                        ) =>
+                            require(
+                                `./data/${symbol}/getTokenRelationship_${idOrAliasOrEvmAddress}`
+                            ),
+                    },
+                    {
+                        name: 'token relationship is empty',
+                        fn: (/** @type {string} */ _accountId, /** @type {string} */ _tid) => ({
+                            tokens: [],
+                        }),
+                    },
+                    {
+                        name: 'token relationship is null',
+                        fn: (/** @type {string} */ _accountId, /** @type {string} */ _tid) => null,
+                    },
+                ].forEach(({ name, fn: getTokenRelationship }) => {
+                    const selector = id('isAssociated()').slice(0, 10);
+                    const padding = '0'.repeat(24 * 2);
+
+                    it(`should get \`isAssociated(${selector})\` when '${name}'`, async function () {
+                        const accountId = parseInt(
+                            tokenResult.treasury_account_id.replace('0.0.', '')
+                        );
+                        const slot = `${selector}${padding}${padAccountId(accountId)}`;
+                        const result = await _getHtsStorageAt(address, slot, {
+                            ...mirrorNodeClientStub,
+                            getTokenRelationship,
+                        });
+
+                        const { tokens } = (await getTokenRelationship(
+                            `0.0.${accountId}`,
+                            tokenResult.token_id
+                        )) ?? { tokens: [] };
+                        expect(result).to.be.equal(
+                            tokens.length === 0 ? ZERO_HEX_32_BYTE : `0x${toIntHex256(1)}`
                         );
                     });
                 });
