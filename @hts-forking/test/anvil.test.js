@@ -112,7 +112,7 @@ describe('::anvil', function () {
             name: 'USD Coin',
             symbol: 'USDC',
             decimals: 6n,
-            nrequests: 3,
+            nrequests: 4,
         },
         /**
          * https://hashscan.io/testnet/token/0.0.4730999
@@ -123,7 +123,7 @@ describe('::anvil', function () {
             name: 'My Crypto Token is the name which the string length is greater than 31',
             symbol: 'Token symbol must be exactly 32!',
             decimals: 0n,
-            nrequests: 7,
+            nrequests: 8,
         },
     ].forEach(({ address, name, symbol, decimals, nrequests }) => {
         it(`should get token metadata for token \`${name}\``, async function () {

@@ -62,6 +62,13 @@ contract HtsSystemContractJson is HtsSystemContract {
         }
 
         string memory json = mirrorNode().fetchTokenData(address(this));
+        if (keccak256(bytes(json)) == keccak256(bytes('{"_status":{"messages":[{"message":"Not found"}]}}'))) {
+            // Token not found
+            return;
+        }
+
+        assembly { slot := tokenType.slot }
+        storeString(address(this), uint256(slot), vm.parseJsonString(json, ".type"));
 
         assembly { slot := name.slot }
         storeString(address(this), uint256(slot), vm.parseJsonString(json, ".name"));
