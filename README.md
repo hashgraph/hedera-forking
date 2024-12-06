@@ -40,21 +40,14 @@ Given `curl` is an external command, `ffi` needs to be enabled.
 
 ### Usage
 
-To set up and fix your Foundry tests with Hedera forking, follow these steps
-
-Add Setup Code in Your Test Files
-
-Import our wrapper function
-
-of your tests to deploy the required contract code and enable cheat codes
-
-Include the following lines in the setup phase
+To enable HTS in your tests, you need to add the following setup code in your test files.
+Import our wrapper function to deploy HTS emulation and enable cheat codes for it.
 
 ```solidity
 import {htsSetup} from "hedera-forking/src/htsSetup.sol";
 ```
 
-and invoke it in your [test setup](https://book.getfoundry.sh/forge/writing-tests)
+and then invoke it in your [test setup](https://book.getfoundry.sh/forge/writing-tests)
 
 ```solidity
     function setUp() public {
@@ -62,9 +55,53 @@ and invoke it in your [test setup](https://book.getfoundry.sh/forge/writing-test
     }
 ```
 
+Now you can use HTS and remote tokens as if they were deployed locally when fork testing.
+For example
+
+```solidity examples/foundry-hts/USDC.t.sol
+// SPDX-License-Identifier: Apache-2.0
+pragma solidity ^0.8.0;
+
+import {Test} from "forge-std/Test.sol";
+import {htsSetup} from "hedera-forking/src/htsSetup.sol";
+import {IERC20} from "hedera-forking/src/IERC20.sol";
+
+contract USDCExampleTest is Test {
+    // https://hashscan.io/mainnet/token/0.0.456858
+    address USDC_mainnet = 0x000000000000000000000000000000000006f89a;
+
+    address private user1;
+
+    function setUp() external {
+        htsSetup();
+
+        user1 = makeAddr("user1");
+        deal(USDC_mainnet, user1, 1000 * 10e8);
+    }
+
+    function test_get_balance_of_existing_account() view external {
+        // https://hashscan.io/mainnet/account/0.0.1528
+        address usdcHolder = 0x00000000000000000000000000000000000005f8;
+        // Balance retrieved from mainnet at block 72433403
+        assertEq(IERC20(USDC_mainnet).balanceOf(usdcHolder), 28_525_752677);
+    }
+
+    function test_dealt_balance_of_local_account() view external {
+        assertEq(IERC20(USDC_mainnet).balanceOf(user1), 1000 * 10e8);
+    }
+}
+```
+
 ### Running your Tests
 
-To run the tests and observe the setup in action, use the following command
+To run the tests, use the following command
+
+```console
+forge test --fork-url https://mainnet.hashio.io/api
+```
+
+You can also include a specific block number.
+For example, the test above is known to work at block `72433403`
 
 ```console
 forge test --fork-url https://mainnet.hashio.io/api --fork-block-number 72433403

@@ -18,32 +18,37 @@
  * limitations under the License.
  */
 
+const { strict: assert } = require('assert');
 const { readFileSync, writeFileSync } = require('fs');
 const c = require('ansi-colors');
 const { execSync } = require('child_process');
 
 function main() {
-    const BEGIN_MARKER = /^<!-- (.+) -->$/;
-    const END_MARKER = '<!-- -->';
+    const MARKERS = /**@type{const}*/ ([
+        { begin: /^```\w+ (.+)$/, end: '```' },
+        { begin: /^<!-- (.+) -->$/, end: '<!-- -->' },
+    ]);
 
     const args = process.argv.slice(2);
     if (args.length !== 1) throw new Error('Invalid number of arguments');
     const readme = readFileSync(args[0], 'utf8');
 
-    /** @type {{line: string, file: string} | null} */
+    /** @type {{line: string, file: string, end: typeof MARKERS[number]['end']} | null} */
     let marker = null;
     let output = '';
     const write = (/** @type string */ line) => (output += line + '\n');
 
     for (const line of readme.split('\n')) {
         const trimmedLine = line.trim();
-        // const parts = trimmedLine.split(' ');
-        const m = trimmedLine.match(BEGIN_MARKER);
-        // if (parts.length >= 2 && parts[0].match(BEGIN_MARKER) && parts[1] !== '' && marker === null) {
-        if (m !== null && marker === null) {
-            marker = { line: trimmedLine, file: m[1] };
+        const found = MARKERS.map(marker => ({
+            ...marker,
+            match: trimmedLine.match(marker.begin),
+        })).find(({ match }) => match !== null);
+        if (found !== undefined && marker === null) {
+            assert(found.match !== null);
+            marker = { line: trimmedLine, file: found.match[1], end: found.end };
             process.stdout.write(`Opening marker ${c.magenta(marker.file)} .. `);
-        } else if (trimmedLine === END_MARKER && marker !== null) {
+        } else if (marker !== null && trimmedLine === marker.end) {
             write(marker.line);
             let content;
             if (marker.file.startsWith('!')) {
@@ -56,15 +61,12 @@ function main() {
                 console.info('exec', c.cyan(marker.file));
             } else {
                 content = readFileSync(marker.file, 'utf8');
-                content = content
-                    .replace('#!/usr/bin/env node', '')
-                    .replace(/\/\* eslint-.+ \*\//g, '')
-                    .trim();
+                content = content.trim();
 
                 console.info('verbatim', c.cyan(marker.file));
             }
             write(content);
-            write(END_MARKER);
+            write(marker.end);
 
             marker = null;
         } else if (marker === null) {
