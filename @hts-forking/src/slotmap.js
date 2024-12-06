@@ -162,6 +162,7 @@ function visit(slot, baseSlot, obj, path, map) {
         );
     } else if (!label.startsWith('__gap')) {
         const prop = obj[toSnakeCase(label)];
+        if (prop === undefined) return;
         const [value, ...chunks] = _types[type](/**@type{string}*/ (prop));
         map.store(computedSlot, value, path, type);
 
@@ -189,6 +190,7 @@ function visit(slot, baseSlot, obj, path, map) {
  * @returns {SlotMap}
  */
 function slotMapOf(token) {
+    token['token_type'] = token['type'];
     token['default_kyc_status'] = false;
     token['treasury'] = token['treasury_account_id'];
     token['ledger_id'] = '0x00';
