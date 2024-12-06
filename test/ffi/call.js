@@ -10,8 +10,13 @@ import {
     Hbar,
     AccountId,
     TransactionId,
-    AccountInfoQuery, AccountCreateTransaction,
+    TokenSupplyType,
+    AccountInfoQuery, AccountCreateTransaction, TokenCreateTransaction, TokenType,
 } from '@hashgraph/sdk';
+import { htsAbi } from './abi/hts-abi.js';
+
+process.removeAllListeners('warning');
+
 import dotenv from 'dotenv';
 dotenv.config();
 const OPERATOR_PRIVATE_KEY = process.env['OPERATOR_PRIVATE_KEY'] || '';
@@ -63,8 +68,109 @@ async function createAccountIfDoesNotExist(evmAddress) {
     // todo
 }
 
+function decodeTokenParameters(bytecode) {
+    // Assuming the bytecode is ABI-encoded with these fields in order:
+    // - tokenName (string)
+    // - tokenSymbol (string)
+    // - initialSupply (uint256)
+    // - decimals (uint8)
+    // - treasuryAccount (address)
+
+    const decoded = web3.eth.abi.decodeParameters(
+        ['string', 'string', 'uint256', 'uint8', 'address'],
+        bytecode
+    );
+
+    return {
+        name: decoded[0],
+        symbol: decoded[1],
+        initialSupply: decoded[2],
+        decimals: decoded[3],
+        treasuryAccount: decoded[4],
+    };
+}
+
 
 async function createAndSignTransaction() {
+    const methodSignature = '0x0fb65bf3';
+    if (inputData.startsWith(methodSignature)) {
+        const decodedParams = web3.eth.abi.decodeParameters(
+            htsAbi.createNonFungibleToken,
+            `0x${inputData.substring(methodSignature.length)}`
+        );
+
+
+        const tokenData = decodedParams['0']; // Primary token data
+        const tokenCreateTx = new TokenCreateTransaction()
+            .setTokenType(TokenType.FungibleCommon)
+            .setTokenName(tokenData.name)
+            .setTokenSymbol(tokenData.symbol)
+  //          .setTreasuryAccountId(AccountId.fromString(tokenData.treasury))
+            .setInitialSupply(decodedParams.initialTotalSupply)
+            .setTreasuryAccountId(operatorAccountId)
+            .setDecimals(Number(decodedParams.decimals))
+            .setTokenMemo(tokenData.memo)
+            .setSupplyType(tokenData.tokenSupplyType ? TokenSupplyType.Finite : TokenSupplyType.Infinite)
+            .setFreezeDefault(tokenData.freezeDefault);
+        if (tokenData.tokenSupplyType) {
+            tokenCreateTx.setMaxSupply(Number(tokenData.maxSupply));
+        }
+
+        if (Array.isArray(tokenData.tokenKeys)) {
+            for (const key of tokenData.tokenKeys) {
+                if (key.keyType === 1) {
+                    tokenCreateTx.setAdminKey(
+                        operatorKey.publicKey // Key value
+                    );
+                }
+            }
+        }
+        if (Array.isArray(tokenData.fixedFees)) {
+            for (const fee of tokenData.fixedFees) {
+                tokenCreateTx.setCustomFees([{
+                    fixedFee: Number(fee.amount),
+                    feeCollectorAccountId: AccountId.fromString(fee.feeCollector),
+                }]);
+            }
+        }
+        /*
+             if (Array.isArray(tokenData.fractionalFees)) {
+                 for (const fee of tokenData.fractionalFees) {
+                     tokenCreateTx.customFees([{
+                         numerator: Number(fee.numerator),
+                         denominator: Number(fee.denominator),
+                         minimumAmount: Number(fee.minimumAmount),
+                         maximumAmount: Number(fee.maximumAmount),
+                         feeCollectorAccountId: AccountId.fromString(fee.feeCollector),
+                     }]);
+                 }
+             }*/
+        if (tokenData.expiry) {
+      //      tokenCreateTx.setAutoRenewAccountId(AccountId.fromString(tokenData.expiry.autoRenewAccount))
+      //          .setAutoRenewPeriod(Number(tokenData.expiry.autoRenewPeriod));
+        }
+        const txResponse = await (await tokenCreateTx.freezeWith(client).sign(operatorKey)).execute(client);
+        const receipt = await txResponse.getReceipt(client);
+        const tokenId = receipt.tokenId.toString();
+
+        const pseudoEthAddress = `0x${parseInt(tokenId.split('.')[2], 10).toString(16).padStart(40, '0')}`;
+        const responseString = {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "result": web3.eth.abi.encodeParameters(
+                ['int64', 'address'],
+                [22, pseudoEthAddress]
+            )
+        };
+        console.log(web3.eth.abi.encodeParameters(
+            ['uint256', 'bytes'],
+            [200, web3.utils.utf8ToHex(JSON.stringify(responseString))]
+        ));
+        setTimeout(process.exit, 2000);
+
+        return;
+    }
+
     txParams.nonce = await web3.eth.getTransactionCount(fromAddress, 'latest');
     txParams.gasPrice = await web3.eth.getGasPrice();
     const chainId = 298;//await web3.eth.getChainId();
@@ -87,8 +193,9 @@ async function createAndSignTransaction() {
         .freezeWith(client)
         .sign(operatorKey);
     const response = await ethereumTransaction.execute(client);
-    console.log(response.toJSON());
     const receipt = await response.getReceipt(client);
-    console.log("Transaction status:", receipt.status.toString());
 }
-createAndSignTransaction().catch(console.error);
+createAndSignTransaction().catch((result) => {
+    console.error(result);
+    process.exit();
+});

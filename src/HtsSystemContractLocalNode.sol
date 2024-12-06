@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import {Vm} from "forge-std/Vm.sol";
 import {IERC20} from "./IERC20.sol";
 import {IHRC719} from "./IHRC719.sol";
+import {IHederaTokenService} from "./IHederaTokenService.sol";
 
 contract HtsSystemContractLocalNode {
     Vm private constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
@@ -18,11 +19,30 @@ contract HtsSystemContractLocalNode {
         inputs[0] = "bash";
         inputs[1] = "-c";
         inputs[2] = _getBashScript();
-        require(1 == 2, inputs[2]);
         bytes memory res = vm.ffi(inputs);
         (uint256 status, bytes memory response) = abi.decode(res, (uint256, bytes));
-        require(status == 200, "Wrong response status");
-        return vm.parseJsonBytes(string(response), ".result");
+        bytes memory result = vm.parseJsonBytes(string(response), ".result");
+        _handleResult(result);
+        return result;
+    }
+
+    function _handleResult(bytes memory response) private {
+        bytes4 selector = bytes4(msg.data[0:4]);
+        if (
+            selector == IHederaTokenService.createFungibleToken.selector ||
+            selector == IHederaTokenService.createNonFungibleToken.selector ||
+            selector == IHederaTokenService.createFungibleTokenWithCustomFees.selector ||
+            selector == IHederaTokenService.createNonFungibleTokenWithCustomFees.selector
+        ) {
+            (int responseCode, address tokenAddress) = abi.decode(response, (int, address));
+            if (responseCode == 22) {
+                string memory template = vm.replace(vm.trim(vm.readFile("./@hts-forking/src/HIP719.bytecode.json")), "\"", "");
+                string memory placeholder = "fefefefefefefefefefefefefefefefefefefefe";
+                string memory addressString = vm.replace(vm.toString(tokenAddress), "0x", "");
+                string memory proxyBytecode = vm.replace(template, placeholder, addressString);
+                vm.etch(tokenAddress, vm.parseBytes(proxyBytecode));
+            }
+        }
     }
 
     function _getBashScript() private returns (string memory) {
@@ -33,7 +53,7 @@ contract HtsSystemContractLocalNode {
                 "{",
                 '"jsonrpc":"2.0",',
                 '"method":"eth_call",',
-                '"params":[{"from":"', vm.toString(sender), '","to":"', vm.toString(address(0x167)), '","data":"', vm.toString(data), '"},"latest"],',
+                '"params":[{"to":"', vm.toString(address(0x167)), '","data":"', vm.toString(data), '"},"latest"],',
                 '"id":1',
                 "}"
             ));
