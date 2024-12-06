@@ -63,6 +63,9 @@ contract HtsSystemContractJson is HtsSystemContract {
 
         string memory json = mirrorNode().fetchTokenData(address(this));
 
+        assembly { slot := tokenType.slot }
+        storeString(address(this), uint256(slot), vm.parseJsonString(json, ".type"));
+
         assembly { slot := name.slot }
         storeString(address(this), uint256(slot), vm.parseJsonString(json, ".name"));
 

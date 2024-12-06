@@ -19,6 +19,10 @@ interface IERC721Events is IERC20Events {
  * https://hips.hedera.com/hip/hip-376
  */
 interface IERC721 {
+    /**
+     * @dev Returns the number of tokens in `owner`'s account.
+     */
+    function balanceOf(address owner) external view returns (uint256 balance);
 
     /**
      * @dev Returns the owner of the `tokenId` token.
