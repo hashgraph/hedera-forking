@@ -1,32 +1,43 @@
 # Hedera Forking Support for System Contracts
 
-## Supported Methods
+## Supported Methods for Hedera Token Service
 
 ### Fungible Tokens
 
-<!-- !./scripts/abi-table.js out/IERC20.sol/IERC20.json -->
+The following methods are applicable to Fungible Tokens.
 
-| Function                                                                   | Returns     | Selector   | Behavior |
-| -------------------------------------------------------------------------- | ----------- | ---------- | -------- |
-| `function allowance(address owner, address spender) view`                  | `(uint256)` | `dd62ed3e` |          |
-| `function approve(address spender, uint256 amount)`                        | `(bool)`    | `095ea7b3` |          |
-| `function balanceOf(address account) view`                                 | `(uint256)` | `70a08231` |          |
-| `function decimals() view`                                                 | `(uint8)`   | `313ce567` |          |
-| `function name() view`                                                     | `(string)`  | `06fdde03` |          |
-| `function symbol() view`                                                   | `(string)`  | `95d89b41` |          |
-| `function totalSupply() view`                                              | `(uint256)` | `18160ddd` |          |
-| `function transfer(address recipient, uint256 amount)`                     | `(bool)`    | `a9059cbb` |          |
-| `function transferFrom(address sender, address recipient, uint256 amount)` | `(bool)`    | `23b872dd` |          |
+#### ERC20 Interface
+
+<!-- !./scripts/abi-table.js out/IERC20.sol/IERC20.json out/IERC20.sol/IERC20Events.json -->
+
+| Function                                                          | Comment                                                                                                                                                                                                              |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `allowance(address owner, address spender) view`                  | Returns the remaining number of tokens that `spender` will be allowed to spend on behalf of `owner` through {transferFrom}. This is zero by default. This value changes when {approve} or {transferFrom} are called. |
+| `approve(address spender, uint256 amount)`                        | Sets a `value` amount of tokens as the allowance of `spender` over the caller's tokens. Returns a boolean value indicating whether the operation succeeded.                                                          |
+| `balanceOf(address account) view`                                 | Returns the value of tokens owned by `account`.                                                                                                                                                                      |
+| `decimals() view`                                                 | Returns the decimals places of the token.                                                                                                                                                                            |
+| `name() view`                                                     | Returns the name of the token.                                                                                                                                                                                       |
+| `symbol() view`                                                   | Returns the symbol of the token.                                                                                                                                                                                     |
+| `totalSupply() view`                                              | Returns the value of tokens in existence.                                                                                                                                                                            |
+| `transfer(address recipient, uint256 amount)`                     | Moves a `value` amount of tokens from the caller's account to `to`. Returns a boolean value indicating whether the operation succeeded.                                                                              |
+| `transferFrom(address sender, address recipient, uint256 amount)` | Moves a `value` amount of tokens from `from` to `to` using the allowance mechanism. `value` is then deducted from the caller's allowance. Returns a boolean value indicating whether the operation succeeded.        |
+
+| Event                                                                      | Comment                                                                                                               |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `Approval(address indexed owner, address indexed spender, uint256 amount)` | Emitted when the allowance of a `spender` for an `owner` is set by a call to {approve}. `value` is the new allowance. |
+| `Transfer(address indexed from, address indexed to, uint256 amount)`       | Emitted when `value` tokens are moved from one account (`from`) to another (`to`). Note that `value` may be zero.     |
 
 <!-- -->
 
+#### Association Methods Interface
+
 <!-- !./scripts/abi-table.js out/IHRC719.sol/IHRC719.json -->
 
-| Function                       | Returns                  | Selector   | Behavior                                                                                                                       |
-| ------------------------------ | ------------------------ | ---------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `function associate()`         | `(uint256 responseCode)` | `0a754de6` | Associates the calling account with the token This function allows an account to opt-in to receive the token                   |
-| `function dissociate()`        | `(uint256 responseCode)` | `5c9217e0` | Dissociates the calling account from the token This function allows an account to opt-out from receiving the token             |
-| `function isAssociated() view` | `(bool associated)`      | `4d8fdd6d` | Checks if the calling account is associated with the token This function returns the association status of the calling account |
+| Function              | Comment                                                                                                                        |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `associate()`         | Associates the calling account with the token This function allows an account to opt-in to receive the token                   |
+| `dissociate()`        | Dissociates the calling account from the token This function allows an account to opt-out from receiving the token             |
+| `isAssociated() view` | Checks if the calling account is associated with the token This function returns the association status of the calling account |
 
 <!-- -->
 
@@ -35,13 +46,15 @@
 > [!NOTE]
 > ERC721 support coming soon!
 
+#### Association Methods Interface
+
 <!-- !./scripts/abi-table.js out/IHRC719.sol/IHRC719.json -->
 
-| Function                       | Returns                  | Selector   | Behavior                                                                                                                       |
-| ------------------------------ | ------------------------ | ---------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `function associate()`         | `(uint256 responseCode)` | `0a754de6` | Associates the calling account with the token This function allows an account to opt-in to receive the token                   |
-| `function dissociate()`        | `(uint256 responseCode)` | `5c9217e0` | Dissociates the calling account from the token This function allows an account to opt-out from receiving the token             |
-| `function isAssociated() view` | `(bool associated)`      | `4d8fdd6d` | Checks if the calling account is associated with the token This function returns the association status of the calling account |
+| Function              | Comment                                                                                                                        |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `associate()`         | Associates the calling account with the token This function allows an account to opt-in to receive the token                   |
+| `dissociate()`        | Dissociates the calling account from the token This function allows an account to opt-out from receiving the token             |
+| `isAssociated() view` | Checks if the calling account is associated with the token This function returns the association status of the calling account |
 
 <!-- -->
 
@@ -49,11 +62,11 @@
 
 <!-- !./scripts/abi-table.js out/IHederaTokenService.sol/IHederaTokenService.json -->
 
-| Function                                                                 | Returns                                                                                                | Selector   | Behavior                                                       |
-| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ | ---------- | -------------------------------------------------------------- |
-| `function burnToken(address token, int64 amount, int64[] serialNumbers)` | `(int64 responseCode, int64 newTotalSupply)`                                                           | `d6910d06` | Burns an amount of the token from the defined treasury account |
-| `function getTokenInfo(address token)`                                   | `(int64 responseCode, ((string name, string symbol, address treasury, string memo, bool tokenSupplyTy` | `1f69565f` | Query token info                                               |
-| `function mintToken(address token, int64 amount, bytes[] metadata)`      | `(int64 responseCode, int64 newTotalSupply, int64[] serialNumbers)`                                    | `e0f4059a` | Mints an amount of the token to the defined treasury account   |
+| Function                                                        | Comment                                                        |
+| --------------------------------------------------------------- | -------------------------------------------------------------- |
+| `burnToken(address token, int64 amount, int64[] serialNumbers)` | Burns an amount of the token from the defined treasury account |
+| `getTokenInfo(address token)`                                   | Query token info                                               |
+| `mintToken(address token, int64 amount, bytes[] metadata)`      | Mints an amount of the token to the defined treasury account   |
 
 <!-- -->
 

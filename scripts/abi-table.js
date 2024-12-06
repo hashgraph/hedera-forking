@@ -22,42 +22,55 @@ const { readFileSync } = require('fs');
 const { Fragment } = require('ethers');
 
 /**
- * @param {string} jsonPath
+ * @param {string} kind
+ * @param {unknown[]} abi
+ * @param {{[sighash: string]: {notice: string}}} userdoc
+ * @param {{[sighash: string]: {details: string}}} devdoc
  */
-function* table(jsonPath) {
-    const json = JSON.parse(readFileSync(jsonPath, 'utf8'));
-    const {
-        abi,
-        methodIdentifiers,
-        metadata: {
-            output: { devdoc, userdoc },
-        },
-    } = json;
+function* data(kind, abi, userdoc, devdoc) {
+    for (const entry of abi) {
+        const frag = Fragment.from(entry);
+        if (frag.type === kind) {
+            const sighash = frag.format('sighash');
+            const [member] = frag.format('full').replace(`${kind} `, '').split(' returns ');
+            const notice = userdoc[sighash]?.notice;
+            const dev = devdoc[sighash]?.details;
 
-    for (const member of abi) {
-        const frag = Fragment.from(member);
-        const sighash = frag.format('sighash');
-        const selector = methodIdentifiers[sighash];
-        const [fn, returns] = frag.format('full').split(' returns ');
-        const notice = userdoc.methods[sighash]?.notice;
-        const dev = devdoc.methods[sighash]?.details;
-
-        yield { fn, returns, selector, notice, dev };
+            yield { member, notice, dev };
+        }
     }
 }
 
 function main() {
-    const write = console.info;
+    const jsonPaths = process.argv.slice(2);
+    if (jsonPaths.length === 0) throw new Error('Invalid json path(s) to extract ABI from');
 
-    const jsonPath = process.argv[2];
-
-    write('| Function | Returns | Selector | Behavior |');
-    write('|----------|---------|----------|----------|');
-    for (const { fn, returns, selector, notice, dev } of table(jsonPath)) {
-        write(
-            `| \`${fn}\` | \`${returns.slice(0, 100)}\` | \`${selector}\` | ${notice ?? ''} ${dev ?? ''} |`
+    const { abi, userdoc, devdoc } = jsonPaths
+        .map(jsonPath => JSON.parse(readFileSync(jsonPath, 'utf8')))
+        .reduce(
+            ({ abi, userdoc, devdoc }, json) => ({
+                abi: [...json.abi, ...abi],
+                userdoc: { ...json.userdoc, ...userdoc },
+                devdoc: { ...json.devdoc, ...devdoc },
+            }),
+            { abi: [], userdoc: {}, devdoc: {} }
         );
-    }
+
+    const write = console.info;
+    [
+        ['Function', 'methods'],
+        ['Event', 'events'],
+    ].forEach(([kind, prop]) => {
+        const members = [...data(kind.toLowerCase(), abi, userdoc[prop] ?? {}, devdoc[prop] ?? {})];
+        if (members.length > 0) {
+            write();
+            write(`| ${kind} | Comment |`);
+            write('|----------|---------|');
+            for (const { member, notice, dev } of members) {
+                write(`| \`${member}\` | ${notice ?? ''} ${dev ?? ''} |`);
+            }
+        }
+    });
 }
 
 main();

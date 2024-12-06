@@ -27,10 +27,7 @@ function main() {
     const END_MARKER = '<!-- -->';
 
     const args = process.argv.slice(2);
-    if (args.length !== 1) {
-        throw new Error('Invalid number of arguments');
-    }
-
+    if (args.length !== 1) throw new Error('Invalid number of arguments');
     const readme = readFileSync(args[0], 'utf8');
 
     /** @type {{line: string, file: string} | null} */
