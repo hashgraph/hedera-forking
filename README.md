@@ -1,7 +1,6 @@
 # Hedera Forking for System Contracts
 
-This projects allows Smart Contract developers working on Hedera to use fork testing while using Hedera System Contracts.
-
+**This projects allows Smart Contract developers working on Hedera to use fork testing while using Hedera System Contracts.**
 It does so by providing an emulation layer for the [Hedera Token Service](https://hardhat.org/hardhat-network/docs/overview#mainnet-forking) _(more System Contracts to come)_ written in Solidity.
 Given it is written in Solidity, it can executed in a forked network environment, such as
 [Foundry](https://book.getfoundry.sh/forge/fork-testing) or
@@ -17,7 +16,7 @@ We provide a Foundry library that enables fork testing when using HTS Tokens.
 
 ### Installation
 
-First install our library in your Foundry project
+First, install our library in your Foundry project
 
 ```console
 forge install hashgraph/hedera-forking
@@ -25,7 +24,7 @@ forge install hashgraph/hedera-forking
 
 ### Set up
 
-To use this library in your tests, you need to enable [`ffi`](https://book.getfoundry.sh/cheatcodes/ffi) in your Foundry project.
+To use this library in your tests, you need to enable [`ffi`](https://book.getfoundry.sh/cheatcodes/ffi).
 You can do so by adding the following lines to your `.toml` file
 
 ```toml
@@ -35,26 +34,27 @@ ffi = true
 
 Alternatively, you can add the `--ffi` flag to your execution script.
 
-This is necessary because our library uses [`surl`](https://github.com/memester-xyz/surl),
-which relies on `ffi` to make HTTP requests.
+This is necessary because our library relies on [`curl`](https://curl.se/) to make HTTP requests to the Hedera remote network.
+This enables the library to fetch token state in the remote network.
+Given `curl` is an external command, `ffi` needs to be enabled.
 
 ### Usage
-
-This repository includes the example Smart Contract referenced in this [issue](https://github.com/hashgraph/hedera-smart-contracts/issues/863).
 
 To set up and fix your Foundry tests with Hedera forking, follow these steps
 
 Add Setup Code in Your Test Files
 
-Import our function wrapper
+Import our wrapper function
 
-Include the following lines in the setup phase of your tests to deploy the required contract code and enable cheat codes
+of your tests to deploy the required contract code and enable cheat codes
+
+Include the following lines in the setup phase
 
 ```solidity
 import {htsSetup} from "hedera-forking/src/htsSetup.sol";
 ```
 
-and include it in your [test setup](https://book.getfoundry.sh/forge/writing-tests)
+and invoke it in your [test setup](https://book.getfoundry.sh/forge/writing-tests)
 
 ```solidity
     function setUp() public {
@@ -67,7 +67,7 @@ and include it in your [test setup](https://book.getfoundry.sh/forge/writing-tes
 To run the tests and observe the setup in action, use the following command
 
 ```console
-forge test --fork-url https://mainnet.hashio.io/api
+forge test --fork-url https://mainnet.hashio.io/api --fork-block-number 72433403
 ```
 
 ## Hardhat
