@@ -30,7 +30,7 @@ Vm constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
  * > The HTS emulation contract **SHOULD BE ONLY** used to ease development workflow when working with Hedera Tokens.
  * > The HTS emulation contract **DOES NOT** replicate Hedera Token Services fully.
  * > That is, behavior might differ when switching from local development to a real Hedera network.
- * > Always test your contracts against a real Hedera network before launching your contracts.
+ * > **Always test your contracts against a real Hedera network before launching your contracts.**
  */
 function htsSetup() {
     htsSetup(new MirrorNodeFFI());

@@ -10,6 +10,12 @@ You can use either our [Foundry library](#foundry) or [Hardhat plugin](#hardhat)
 
 See [Hedera Token Service Supported Methods](#hedera-token-service-supported-methods) for a list of methods currently implemented as part of this project.
 
+> [!WARNING]
+> The HTS emulation contract **SHOULD BE ONLY** used to ease development workflow when working with Hedera Tokens.
+> The HTS emulation contract **DOES NOT** replicate Hedera Token Services fully.
+> That is, behavior might differ when switching from local development to a real Hedera network.
+> **Always test your contracts against a real Hedera network before launching your contracts.**
+
 ## Foundry
 
 We provide a Foundry library that enables fork testing when using HTS Tokens.
