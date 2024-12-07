@@ -109,14 +109,8 @@ forge test --fork-url https://mainnet.hashio.io/api --fork-block-number 72433403
 
 ## Hardhat
 
-This plugin replaces the default HardHat provider with one specifically designed for testing on the Hedera network.
-It enables the following features
-
-- **Hedera Precompile Support** Assigns the Hedera precompile code to the `0x167` address.
-  During tests, you'll be able to query Hedera token data as though they are stored on standard blockchains.
-  Currently, only fungible tokens are supported to a limited degree.
-- **Token Proxy Address Storage** Sets up token proxy addresses by directly querying data from the Hedera MirrorNode, giving you access to real-time account balances, allowances, and token information (such as name, symbol, and decimals) in the IERC20 format for fungible tokens.
-  Please note that only fungible tokens are supported at this time.
+This plugin intercepts the calls made by Hardhat to fetch remote state, \_i.e., `eth_getCode` and `eth_getStorageAt`, to provide emulation for HTS.
+It assigns the Hedera Token Service code to the `0x167` address. In your tests, you will be able to query Hedera Token data as if they were stored as regular Smart Contracts.
 
 ### Installation
 
@@ -148,7 +142,7 @@ or if you are using TypeScript, include the following line into your `hardhat.co
 import '@hashgraph/hardhat-forking-plugin';
 ```
 
-This will automatically replace the default Hardhat provider with the one dedicated to the Hedera network.
+This will automatically create a worker thread to intercept calls to fetch remote state.
 You can then proceed with writing your tests, and the plugin will allow you to query Hedera token data seamlessly.
 
 ### Configuration
@@ -157,10 +151,8 @@ By default, the plugin uses the Hedera Mirror Node based on the guessed chain ID
 
 Two additional values needs to be set in order to activate the plugin.
 
-- **`chainId`**. The chain ID
-  The call to `eth_chainId` onto the configuration parameter `hardhat.forking.url` needs to match will be used to infer the initial chain ID.
-  Only chain IDs `295` (Mainnet), `296` (Testnet), and `297` (Previewnet) are supported.
-- **`workerPort`**. Any free port used to co
+- **`chainId`**. The call to `eth_chainId` of configuration parameter `hardhat.forking.url` needs to match the `chainId` configuration argument. Only chain IDs `295` (Mainnet), `296` (Testnet), and `297` (Previewnet) are supported.
+- **`workerPort`**. Any free port to start the worker to intercept Hardhat calls to fetch remote state.
 
 For example
 
@@ -178,6 +170,15 @@ For example
         },
     },
 ```
+
+> [!NOTE]
+> Unfortunately, these configuration settings cannot be set automatically by the Plugin.
+> This is because the way Hardhat plugins are loaded by Hardhat.
+> The main issue is _"since Hardhat needs to be loadable via `require` call, configuration must be synchronous"_.
+> See [here](https://github.com/NomicFoundation/hardhat/issues/3287) and [here](https://github.com/NomicFoundation/hardhat/issues/2496) for more details.
+>
+> We need to shift the setting of `chainId` and `workerPort` to the user,
+> Creating a Worker so we can hook into `eth_getCode` and `eth_getStorageAt` to provide HTS emulation and querying the `chainId` of a remote network are **asynchronous** operations.
 
 ### Running Your Tests
 
@@ -275,18 +276,6 @@ Each time the `eth_call` method is invoked, the target address will be checked t
 If the function selector in the `eth_call` request corresponds to any of the following functions, an additional operation will be performed, as described below:
 
 Additionally, by loading the HTS and token code into the EVM, the following methods can be called on the token's address, functioning similarly to how they would on the actual Hedera EVM:
-
-| Function                                | Behavior                                                                                      |
-| --------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `name()`                                | Returns the token's name.                                                                     |
-| `symbol()`                              | Returns the token's symbol.                                                                   |
-| `decimals()`                            | Returns the token's decimals.                                                                 |
-| `totalSupply()`                         | Returns the token's total supply.                                                             |
-| `balanceOf(address)`                    | Returns the balance of the specified address.                                                 |
-| `allowance(address,address)`            | Returns the allowance for the specified address to spend tokens on behalf of another address. |
-| `transfer(address,uint256)`             | Transfers a specified amount of tokens from the caller to the provided address.               |
-| `transferFrom(address,address,uint256)` | Transfers a specified amount of tokens from one address to another.                           |
-| `approve(address,uint256)`              | Approves an address to spend a specified number of tokens.                                    |
 
 ## Hedera Token Service Supported Methods
 
