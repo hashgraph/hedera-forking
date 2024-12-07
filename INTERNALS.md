@@ -120,9 +120,11 @@ This project has two main parts
   Provides functions that can be hooked into the Relay to fetch the appropiate data when HTS System Contract (at address `0x167`) or Hedera Tokens are invoked.
   This package uses the compilation output of the `HtsSystemContract` contract to return its bytecode and to map storage slots to field names.
 
+The following contract diagram depics the main contracts involved and their relationships.
+
 ```mermaid
 ---
-title: Bank example
+title: Hedera Token Service Contracts
 ---
 classDiagram
     note for IHederaTokenService "Represents the methods\nsupported by HTS emulation"
@@ -142,13 +144,13 @@ classDiagram
         +burnToken(...)
     }
 
-    note for HtsSystemContractJson "HTS emulation that fills its state from a JSON data source"
+    note for HtsSystemContractJson "HTS emulation that fills its\nstate from a JSON data source"
     HtsSystemContract <|-- HtsSystemContractJson : inherits
     class HtsSystemContractJson{
         +setMirrorNodeProvider(...)
     }
 
-    note for MirrorNode "Represents a Mirror Node data provider, useful to abstract the data source"
+    note for MirrorNode "Represents a Mirror Node data provider,\nuseful to abstract the data source"
     class MirrorNode{
         <<abstract>>
         +fetch...()*
