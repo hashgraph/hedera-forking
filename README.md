@@ -185,14 +185,14 @@ For example, to query USDC information on mainnet you can use the following test
 
 ```javascript examples/hardhat-hts/test/usdc-info.test.js
 const { expect } = require('chai');
-const { ethers } = require('hardhat');
+const {
+  ethers: { getContractAt },
+} = require('hardhat');
 
 describe('USDC example -- informational', function () {
   it('should get name, symbol and decimals', async function () {
     // https://hashscan.io/mainnet/token/0.0.456858
-    const usdcAddress = '0x000000000000000000000000000000000006f89a';
-
-    const usdc = await ethers.getContractAt('IERC20', usdcAddress);
+    const usdc = await getContractAt('IERC20', '0x000000000000000000000000000000000006f89a');
     expect(await usdc['name']()).to.be.equal('USD Coin');
     expect(await usdc['symbol']()).to.be.equal('USDC');
     expect(await usdc['decimals']()).to.be.equal(6n);
@@ -204,6 +204,71 @@ Then run your Hardhat tests as usual
 
 ```console
 npx hardhat
+```
+
+You can also query an existing account's balance.
+For example using the `blockNumber` as shown above in [_Configuration_](#configuration),
+you can query the USDC balance for an existing account.
+
+```javascript examples/hardhat-hts/test/usdc-balance.test.js
+const { expect } = require('chai');
+const {
+  ethers: { getContractAt },
+} = require('hardhat');
+
+describe('USDC example -- balanceOf', function () {
+  it('should get `balanceOf` account holder', async function () {
+    // https://hashscan.io/mainnet/token/0.0.456858
+    const usdc = await getContractAt('IERC20', '0x000000000000000000000000000000000006f89a');
+
+    // https://hashscan.io/mainnet/account/0.0.6279
+    const holderAddress = '0x0000000000000000000000000000000000001887';
+    expect(await usdc['balanceOf'](holderAddress)).to.be.equal(31_166_366226);
+  });
+});
+```
+
+You can also perform modifications in the forked network.
+Let's see an example where we execute the `transfer` method from an existing account to a local Hardhat signer.
+It is usually paired with [Fixtures](https://hardhat.org/hardhat-network-helpers/docs/reference#fixtures),
+so that each test can start in a known state.
+Moreover, you can use the tools you are already familiar with, for example,
+[`hardhat_impersonateAccount`](https://hardhat.org/hardhat-network/docs/reference#hardhat_impersonateaccount).
+
+```javascript examples/hardhat-hts/test/usdc-transfer.test.js
+const { expect } = require('chai');
+const {
+  ethers: { getSigner, getSigners, getContractAt },
+  network: { provider },
+} = require('hardhat');
+const { loadFixture } = require('@nomicfoundation/hardhat-toolbox/network-helpers');
+
+describe('USDC example -- transfer', function () {
+  async function id() {
+    return [(await getSigners())[0]];
+  }
+
+  it("should `tranfer` tokens from account holder to one of Hardhat' signers", async function () {
+    const [receiver] = await loadFixture(id);
+
+    // https://hashscan.io/mainnet/account/0.0.6279
+    const holderAddress = '0x0000000000000000000000000000000000001887';
+    await provider.request({
+      method: 'hardhat_impersonateAccount',
+      params: [holderAddress],
+    });
+    const holder = await getSigner(holderAddress);
+
+    // https://hashscan.io/mainnet/token/0.0.456858
+    const usdc = await getContractAt('IERC20', '0x000000000000000000000000000000000006f89a');
+
+    expect(await usdc['balanceOf'](receiver.address)).to.be.equal(0n);
+
+    await usdc.connect(holder)['transfer'](receiver, 10_000_000n);
+
+    expect(await usdc['balanceOf'](receiver.address)).to.be.equal(10_000_000n);
+  });
+});
 ```
 
 ### Endpoints with Altered Behavior
