@@ -120,6 +120,57 @@ This project has two main parts
   Provides functions that can be hooked into the Relay to fetch the appropiate data when HTS System Contract (at address `0x167`) or Hedera Tokens are invoked.
   This package uses the compilation output of the `HtsSystemContract` contract to return its bytecode and to map storage slots to field names.
 
+```mermaid
+---
+title: Bank example
+---
+classDiagram
+    note for IHederaTokenService "Represents the methods\nsupported by HTS emulation"
+    class IHederaTokenService{
+        <<interface>>
+        +getTokenInfo(...)
+        +mintToken(...)
+        +burnToken(...)
+    }
+
+    note for HtsSystemContract "State agnostic HTS emulation"
+    IHederaTokenService <|.. HtsSystemContract : implements
+    class HtsSystemContract{
+        +tokenInfo
+        +getTokenInfo(...)
+        +mintToken(...)
+        +burnToken(...)
+    }
+
+    note for HtsSystemContractJson "HTS emulation that fills its state from a JSON data source"
+    HtsSystemContract <|-- HtsSystemContractJson : inherits
+    class HtsSystemContractJson{
+        +setMirrorNodeProvider(...)
+    }
+
+    note for MirrorNode "Represents a Mirror Node data provider, useful to abstract the data source"
+    class MirrorNode{
+        <<abstract>>
+        +fetch...()*
+        +get...()
+    }
+
+    note for MirrorNodeFFI "Fetches data from\nremote Mirror Node"
+    MirrorNode <|-- MirrorNodeFFI
+    class MirrorNodeFFI{
+        +fetch...()
+    }
+
+    note for MirrorNodeMock "Loads data from filesystem\nused only in tests"
+    MirrorNode <|-- MirrorNodeMock
+    class MirrorNodeMock{
+        <<test>>
+        +fetch...()
+    }
+
+    MirrorNode --o HtsSystemContractJson : has-a
+```
+
 ### How does it Work?
 
 The following sequence diagram showcases the messages sent between components when fork testing is activated within an Ethereum Development Environment, _e.g._, Foundry or Hardhat.
