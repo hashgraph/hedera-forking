@@ -38,7 +38,7 @@ This is achieved by using two JSON-RPC calls,
 [`evm_revert`](https://github.com/trufflesuite/ganache/blob/ef1858d5d6f27e4baeb75cccd57fb3dc77a45ae8/src/chains/ethereum/ethereum/RPC-METHODS.md#evm_revert), which are provided by the underlying development network such as EDR (Hardhat), Anvil (Foundry) or Ganache (Truffle).
 Developers can use `evm_snapshot` to capture a snapshot of the blockchain state at a specific block number, and `evm_revert` to revert to that snapshot later.
 
-Below is `fixture.ts`[https://github.com/TrueFiEng/Waffle/blob/master/waffle-provider/src/fixtures.ts] from the WaffleJS library to implement Fixtures.
+For example, below is [`fixture.ts`](https://github.com/TrueFiEng/Waffle/blob/238c11ccf9bcaf4b83c73eca16d25243c53f2210/waffle-provider/src/fixtures.ts) from the WaffleJS library to implement Fixtures.
 
 ```typescript
 import {providers, Wallet} from 'ethers';
@@ -80,13 +80,17 @@ export function createFixtureLoader(overrideWallets?: Wallet[], overrideProvider
 In the `createFixtureLoader()`, if a `snapshot` is not found, _i.e._, the fixture is created for the first time, Waffle creates a `snapshot` of the current state of the network.
 However, when a `snapshot` is found, Waffle `revert`s the network to the `snapshot.id` snapshot created earlier.
 
-### Can Hedera developers use Fork Testing?
+Both [Foundry](https://book.getfoundry.sh/forge/writing-tests#before-test-setups) and [Hardhat](https://hardhat.org/tutorial/testing-contracts#reusing-common-test-setups-with-fixtures) support fixtures out-of-the-box.
+Foundry's support is implicit given the state is reset for each test.
+Moreover, both [Foundry](https://book.getfoundry.sh/reference/anvil/#special-methods) and [Hardhat](https://hardhat.org/hardhat-network/docs/reference#evm_snapshot) support calling `evm_snapshot` and `evm_revert` directly.
 
-**Yes**, Fork Testing works well when the Smart Contracts are standard EVM Smart Contracts that do not involve Hedera-specific services.
+### Can Hedera developers use _out-of-the-box_ Fork Testing?
+
+**Yes**, out-of-the-box Fork Testing works well when the Smart Contracts are standard EVM Smart Contracts that do not involve Hedera-specific services.
 This is because fork testing is targeted at the local test network provided by the Ethereum Development Environment.
 These networks are replicas of the Ethereum network and do not support any Hedera-specific service.
 
-~~**No**~~, out-of-the-box Fork Testing will not work on Hedera for contracts that are specific to Hedera.
+**No**, out-of-the-box Fork Testing will not work on Hedera for contracts that are specific to Hedera.
 For example, when a contract includes a call to the `createFungibleToken` method on the HTS System Contract at `address(0x167)`.
 The internal local test network provided by the Development Environment does not have any runnable contract deployed at `address(0x167)`.
 This is because the local network tries to fetch the code at `address(0x167)`, for which the JSON-RPC Relay returns `0xfe`
