@@ -70,6 +70,7 @@ function main() {
                 content = content
                     .replace(license, '')
                     .replace(/\/\* eslint-.+ \*\//g, '')
+                    .replace(/^\s*\/\/\s*prettier-ignore$\n/gm, '')
                     .trim();
 
                 console.info('verbatim', c.cyan(marker.file));
