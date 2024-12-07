@@ -2,7 +2,7 @@
 
 ## Background
 
-**Fork Testing** (or **WaffleJS Fixtures**) is an Ethereum Development Environment feature that optimizes test execution for Smart Contracts.
+**Fork Testing** (sometimes referred as **Fixtures**) is an Ethereum Development Environment feature that optimizes test execution for Smart Contracts.
 It enables snapshotting of blockchain state, saving developement time by avoiding the recreation of the entire blockchain state for each test.
 Instead, tests can revert to a pre-defined snapshot, streamlining the testing process.
 Most populars Ethereum Development Environments provide this feature, such as
@@ -15,31 +15,33 @@ This feature is enabled by their underlaying Development network, for example
 - Foundry's [Anvil](https://github.com/foundry-rs/foundry/tree/master/crates/anvil)
 - [Ganache _(deprecated)_](https://github.com/trufflesuite/ganache)
 
-Please note that WaffleJS, when used directly as a library, _i.e._, not inside a Hardhat project,
+Please note that WaffleJS, a Smart Contracts testing library, when used it standalone, _i.e._, not inside a Hardhat project,
 [uses Ganache internally](https://github.com/TrueFiEng/Waffle/blob/238c11ccf9bcaf4b83c73eca16d25243c53f2210/waffle-provider/package.json#L47).
 
-On the other hand, Geth support some sort of snapshotting with <https://geth.ethereum.org/docs/interacting-with-geth/rpc/ns-debug#debugsethead>,
-but it’s not commonly used for development and testing of Smart Contracts.
+> [!NOTE]
+> On the other hand, Geth support some sort of snapshotting with <https://geth.ethereum.org/docs/interacting-with-geth/rpc/ns-debug#debugsethead>,
+> but it is not used for development and testing of Smart Contracts.
 
 Moreover, given that Fork testing runs on a local development network, users can use `console.log` in tests to ease the debugging process.
 With `console.log`, you can print logging messages and contract variables calling `console.log` from your Solidity code.
-Both [Foundry](https://book.getfoundry.sh/reference/forge-std/console-log) and [Hardhat](https://hardhat.org/tutorial/debugging-with-hardhat-network) support `console.log`.
-Not being able to use Forking (see below) implies also not being able to use `console.log` in tests,
-which cause frustration among Hedera users.
+Both [Foundry](https://book.getfoundry.sh/reference/forge-std/console-log) and [Hardhat](https://hardhat.org/tutorial/debugging-with-hardhat-network) support `console.log` (Ganache also supported `console.log`).
 
 ### Can Hedera developers use Fork Testing?
 
 **Yes**, Fork Testing works well when the Smart Contracts are standard EVM Smart Contracts that do not involve Hedera-specific services.
 This is because fork testing is targeted at the local test network provided by the Ethereum Development Environment.
-These networks are somewhat replicas of the Ethereum network and do not support Hedera-specific services.
+These networks are replicas of the Ethereum network and do not support any Hedera-specific service.
 
-**No**, Fork Testing will not work on Hedera for contracts that are specific to Hedera.
-For example, if a contract includes calls to the `createFungibleToken` method on the HTS System Contract at `address(0x167)`.
-This is because the internal local test network provided by the framework (`chainId: 1337`) does not have the precompiled HTS contract deployed at `address(0x167)`.
+~~**No**~~, Fork Testing will not work on Hedera for contracts that are specific to Hedera.
+For example, when a contract includes calls to the `createFungibleToken` method on the HTS System Contract at `address(0x167)`.
+This is because the internal local test network provided by the Development Environment does not have any contract deployed at `address(0x167)`.
+Not being able to use Fork Testing implies also not being able to use features such as `console.log` and Fixtures during testing,
+which cause frustration among Hedera users.
 
-This project is an attempt to solve this problem.
-It does so by providing an emulation layer for HTS written in Solidity.
-Given it is written in Solidity, it can executed in a development network environment, such as Foundry or Hardhat.
+> [!IMPORTANT]
+> This project is an attempt to fill this gap.
+> It does so by providing an emulation layer for HTS written in Solidity.
+> Given it is written in Solidity, it can executed in a development network environment, such as Foundry or Hardhat.
 
 ## Overview
 
