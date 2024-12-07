@@ -32,7 +32,8 @@ const connectAs = (contract, signer) =>
 
 describe('USDC example', function () {
     async function id() {
-        const [receiver, spender] = await ethers.getSigners();
+        // signers[0] is used in test `usdc-transfer.test`
+        const [, receiver, spender] = await ethers.getSigners();
         return { receiver, spender };
     }
 
