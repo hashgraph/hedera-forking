@@ -1,5 +1,108 @@
 # Internals
 
+## Background
+
+**Fork Testing** (or **WaffleJS Fixtures**) is an Ethereum Development Environment feature that optimizes test execution for Smart Contracts.
+It enables snapshotting of blockchain state, saving developement time by avoiding the recreation of the entire blockchain state for each test.
+Instead, tests can revert to a pre-defined snapshot, streamlining the testing process.
+Most populars Ethereum Development Environments provide this feature, such as
+[Foundry](https://book.getfoundry.sh/forge/fork-testing) and
+[Hardhat](https://hardhat.org/hardhat-network/docs/overview#mainnet-forking).
+
+This feature is enabled by their underlaying Development network, for example
+
+- Hardhat's [EJS (EthereumJS VM)](https://github.com/nomicfoundation/ethereumjs-vm) and [EDR (Ethereum Development Runtime)](https://github.com/NomicFoundation/edr)
+- Foundry's [Anvil](https://github.com/foundry-rs/foundry/tree/master/crates/anvil)
+- [Ganache _(deprecated)_](https://github.com/trufflesuite/ganache)
+
+Please note that WaffleJS, when used directly as a library, _i.e._, not inside a Hardhat project,
+[uses Ganache internally](https://github.com/TrueFiEng/Waffle/blob/238c11ccf9bcaf4b83c73eca16d25243c53f2210/waffle-provider/package.json#L47).
+
+On the other hand, Geth support some sort of snapshotting with <https://geth.ethereum.org/docs/interacting-with-geth/rpc/ns-debug#debugsethead>,
+but it’s not commonly used for development and testing of Smart Contracts.
+
+Moreover, given that Fork testing runs on a local development network, users can use `console.log` in tests to ease the debugging process.
+With `console.log`, you can print logging messages and contract variables calling `console.log` from your Solidity code.
+Both [Foundry](https://book.getfoundry.sh/reference/forge-std/console-log) and [Hardhat](https://hardhat.org/tutorial/debugging-with-hardhat-network) support `console.log`.
+Not being able to use Forking (see below) implies also not being able to use `console.log` in tests,
+which cause frustration among Hedera users.
+
+### Can Hedera developers use Fork Testing?
+
+**Yes**, Fork Testing works well when the Smart Contracts are standard EVM Smart Contracts that do not involve Hedera-specific services.
+This is because fork testing is targeted at the local test network provided by the Ethereum Development Environment.
+These networks are somewhat replicas of the Ethereum network and do not support Hedera-specific services.
+
+**No**, Fork Testing will not work on Hedera for contracts that are specific to Hedera.
+For example, if a contract includes calls to the `createFungibleToken` method on the HTS System Contract at `address(0x167)`.
+This is because the internal local test network provided by the framework (`chainId: 1337`) does not have the precompiled HTS contract deployed at `address(0x167)`.
+
+This project is an attempt to solve this problem.
+It does so by providing an emulation layer for HTS written in Solidity.
+Given it is written in Solidity, it can executed in a development network environment, such as Foundry or Hardhat.
+
+## Overview
+
+This project has two main parts
+
+- **[`HtsSystemContract.sol`](./src/HtsSystemContract.sol) Solidity Contract**.
+  This contract provides an emulator for the Hedera Token Service written in Solidity.
+  It is specially designed to work in a forked network.
+  Its storage reads and writes are crafted to be reversible in a way the `hedera-forking` package can fetch the appropriate data.
+- **[`@hashgraph/hedera-forking`](./index.js) CommonJS Package**.
+  Provides functions that can be hooked into the Relay to fetch the appropiate data when HTS System Contract (at address `0x167`) or Hedera Tokens are invoked.
+  This package uses the compilation output of the `HtsSystemContract` contract to return its bytecode and to map storage slots to field names.
+
+### How does it Work?
+
+The following sequence diagram showcases the messages sent between components when fork testing is activated within an Ethereum Development Environment, _e.g._, Foundry or Hardhat.
+
+> [!NOTE]
+> The JSON-RPC Relay service is not shown here because is not involved when performing a requests for a Token.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    box Local
+    actor user as User
+    participant client as Local Network<br/>Foundry's Anvil, Hardhat's EDR
+    participant hedera-forking as Hardhat Forking Plugin
+    end
+    box Remote
+    #participant relay as JSON-RPC Relay
+    participant mirror as Mirror Node
+    end
+
+    user->>+client: address(Token).totalSupply()
+    client->>+hedera-forking: eth_getCode(Token)
+    hedera-forking->>+mirror: API tokens/<tokenId>
+    mirror-->>-hedera-forking: Token {}
+    hedera-forking-->>-client: HIP-719 Token Proxy bytecode<br/>(delegate calls to 0x167)
+
+    client->> + hedera-forking: eth_getCode(0x167)
+    hedera-forking-->>-client: HtsSystemContract bytecode
+
+    client->>+hedera-forking: eth_getStorageAt(Token, slot<totalSupply>)
+    #relay ->> + hedera-forking: getHtsStorageAt(Token, slot)
+    hedera-forking -) + mirror: API tokens/<tokenId>
+    mirror --) - hedera-forking: Token{}
+    #hedera-forking -->> - relay: Token{}.totalSupply
+    hedera-forking-->>-client: Token{}.totalSupply
+
+    client->>-user: Token{}.totalSupply
+```
+
+The relevant interactions are
+
+- **(5).** This is the code defined by [HIP-719](https://hips.hedera.com/hip/hip-719#specification).
+  For reference, you can see the
+  [`hedera-services`](https://github.com/hashgraph/hedera-services/blob/fbac99e75c27bf9c70ebc78c5de94a9109ab1851/hedera-node/hedera-smart-contract-service-impl/src/main/java/com/hedera/node/app/service/contract/impl/state/DispatchingEvmFrameState.java#L96)
+  implementation.
+- **(6)**-**(7)**. This calls `getHtsCode` which in turn returns the bytecode compiled from `HtsSystemContract.sol`.
+- **(8)**-**(12)**. This calls `getHtsStorageAt` which uses the `HtsSystemContract`'s [Storage Layout](./INTERNALS.md#storage-layout) to fetch the appropriate state from the Mirror Node. The **(8)** JSON-RPC call is triggered as part of the `redirectForToken(address,bytes)` method call defined in HIP-719.
+  Even if the call from HIP-719 is custom encoded, this method call should support standard ABI encoding as well as defined in
+  [`hedera-services`](https://github.com/hashgraph/hedera-services/blob/b40f81234acceeac302ea2de14135f4c4185c37d/hedera-node/hedera-smart-contract-service-impl/src/main/java/com/hedera/node/app/service/contract/impl/exec/systemcontracts/common/AbstractCallAttempt.java#L91-L104).
+
 ## Storage Layout
 
 The Solidity compiler `solc` provides an option to generate detailed storage layout information as part of the build output.

@@ -172,13 +172,13 @@ For example
 ```
 
 > [!NOTE]
-> Unfortunately, these configuration settings cannot be set automatically by the Plugin.
+> These configuration settings cannot be set automatically by the Plugin.
 > This is because the way Hardhat plugins are loaded by Hardhat.
 > The main issue is _"since Hardhat needs to be loadable via `require` call, configuration must be synchronous"_.
 > See [here](https://github.com/NomicFoundation/hardhat/issues/3287) and [here](https://github.com/NomicFoundation/hardhat/issues/2496) for more details.
 >
-> We need to shift the setting of `chainId` and `workerPort` to the user,
 > Creating a Worker so we can hook into `eth_getCode` and `eth_getStorageAt` to provide HTS emulation and querying the `chainId` of a remote network are **asynchronous** operations.
+> That is why we need to shift the setting of `chainId` and `workerPort` to the user.
 
 ### Running Your Tests
 
@@ -265,25 +265,13 @@ describe('USDC example -- transfer', function () {
 });
 ```
 
-### Endpoints with Altered Behavior
-
-The first RPC call using the Hardhat provider will set up the HTS bytecode via the JSON RPC method `hardhat_setCode`.
-
-This operation will only work if the precompile address is not already occupied by an existing smart contract on your network. Forks of networks with no code deployed to the `0x167` address are required for this functionality.
-
-Each time the `eth_call` method is invoked, the target address will be checked to see if it represents a token by querying the MirrorNode. Its basic storage fields (such as name, balance, decimals, etc.) will be set using the `hardhat_setStorageAt` method.
-
-If the function selector in the `eth_call` request corresponds to any of the following functions, an additional operation will be performed, as described below:
-
-Additionally, by loading the HTS and token code into the EVM, the following methods can be called on the token's address, functioning similarly to how they would on the actual Hedera EVM:
-
 ## Hedera Token Service Supported Methods
 
 Given your HTS token address, you can invoke these functions whether the token is either fungible or non-fungible.
 
 ### Fungible Tokens
 
-The following methods are applicable to Fungible Tokens.
+The following methods and events are applicable to Fungible Tokens.
 
 #### ERC20 Interface
 
@@ -322,7 +310,7 @@ The following methods are applicable to Fungible Tokens.
 
 ### Non-Fungible Tokens
 
-The following methods are applicable to Non-Fungible Tokens.
+The following methods and events are applicable to Non-Fungible Tokens.
 
 > [!NOTE]
 > ERC721 support coming soon!
@@ -353,108 +341,9 @@ The following methods can be invoked on the Hedera Token Service contract locate
 
 <!-- -->
 
-## Background
+## Internals
 
-**Fork Testing** (or **WaffleJS Fixtures**) is an Ethereum Development Environment feature that optimizes test execution for Smart Contracts.
-It enables snapshotting of blockchain state, saving developement time by avoiding the recreation of the entire blockchain state for each test.
-Instead, tests can revert to a pre-defined snapshot, streamlining the testing process.
-Most populars Ethereum Development Environments provide this feature, such as
-[Foundry](https://book.getfoundry.sh/forge/fork-testing) and
-[Hardhat](https://hardhat.org/hardhat-network/docs/overview#mainnet-forking).
-
-This feature is enabled by their underlaying Development network, for example
-
-- Hardhat's [EJS (EthereumJS VM)](https://github.com/nomicfoundation/ethereumjs-vm) and [EDR (Ethereum Development Runtime)](https://github.com/NomicFoundation/edr)
-- Foundry's [Anvil](https://github.com/foundry-rs/foundry/tree/master/crates/anvil)
-- [Ganache _(deprecated)_](https://github.com/trufflesuite/ganache)
-
-Please note that WaffleJS, when used directly as a library, _i.e._, not inside a Hardhat project,
-[uses Ganache internally](https://github.com/TrueFiEng/Waffle/blob/238c11ccf9bcaf4b83c73eca16d25243c53f2210/waffle-provider/package.json#L47).
-
-On the other hand, Geth support some sort of snapshotting with <https://geth.ethereum.org/docs/interacting-with-geth/rpc/ns-debug#debugsethead>,
-but it’s not commonly used for development and testing of Smart Contracts.
-
-Moreover, given that Fork testing runs on a local development network, users can use `console.log` in tests to ease the debugging process.
-With `console.log`, you can print logging messages and contract variables calling `console.log` from your Solidity code.
-Both [Foundry](https://book.getfoundry.sh/reference/forge-std/console-log) and [Hardhat](https://hardhat.org/tutorial/debugging-with-hardhat-network) support `console.log`.
-Not being able to use Forking (see below) implies also not being able to use `console.log` in tests,
-which cause frustration among Hedera users.
-
-### Can Hedera developers use Fork Testing?
-
-**Yes**, Fork Testing works well when the Smart Contracts are standard EVM Smart Contracts that do not involve Hedera-specific services.
-This is because fork testing is targeted at the local test network provided by the Ethereum Development Environment.
-These networks are somewhat replicas of the Ethereum network and do not support Hedera-specific services.
-
-**No**, Fork Testing will not work on Hedera for contracts that are specific to Hedera.
-For example, if a contract includes calls to the `createFungibleToken` method on the HTS System Contract at `address(0x167)`.
-This is because the internal local test network provided by the framework (`chainId: 1337`) does not have the precompiled HTS contract deployed at `address(0x167)`.
-
-This project is an attempt to solve this problem.
-It does so by providing an emulation layer for HTS written in Solidity.
-Given it is written in Solidity, it can executed in a development network environment, such as Foundry or Hardhat.
-
-## Overview
-
-This project has two main parts
-
-- **[`HtsSystemContract.sol`](./src/HtsSystemContract.sol) Solidity Contract**.
-  This contract provides an emulator for the Hedera Token Service written in Solidity.
-  It is specially designed to work in a forked network.
-  Its storage reads and writes are crafted to be reversible in a way the `hedera-forking` package can fetch the appropriate data.
-- **[`@hashgraph/hedera-forking`](./index.js) CommonJS Package**.
-  Provides functions that can be hooked into the Relay to fetch the appropiate data when HTS System Contract (at address `0x167`) or Hedera Tokens are invoked.
-  This package uses the compilation output of the `HtsSystemContract` contract to return its bytecode and to map storage slots to field names.
-
-### How does it Work?
-
-The following sequence diagram showcases the messages sent between components when fork testing is activated within an Ethereum Development Environment, _e.g._, Foundry or Hardhat.
-
-> [!NOTE]
-> The JSON-RPC Relay service is not shown here because is not involved when performing a requests for a Token.
-
-```mermaid
-sequenceDiagram
-    autonumber
-    box Local
-    actor user as User
-    participant client as Local Network<br/>Foundry's Anvil, Hardhat's EDR
-    participant hedera-forking as Hardhat Forking Plugin
-    end
-    box Remote
-    #participant relay as JSON-RPC Relay
-    participant mirror as Mirror Node
-    end
-
-    user->>+client: address(Token).totalSupply()
-    client->>+hedera-forking: eth_getCode(Token)
-    hedera-forking->>+mirror: API tokens/<tokenId>
-    mirror-->>-hedera-forking: Token {}
-    hedera-forking-->>-client: HIP-719 Token Proxy bytecode<br/>(delegate calls to 0x167)
-
-    client->> + hedera-forking: eth_getCode(0x167)
-    hedera-forking-->>-client: HtsSystemContract bytecode
-
-    client->>+hedera-forking: eth_getStorageAt(Token, slot<totalSupply>)
-    #relay ->> + hedera-forking: getHtsStorageAt(Token, slot)
-    hedera-forking -) + mirror: API tokens/<tokenId>
-    mirror --) - hedera-forking: Token{}
-    #hedera-forking -->> - relay: Token{}.totalSupply
-    hedera-forking-->>-client: Token{}.totalSupply
-
-    client->>-user: Token{}.totalSupply
-```
-
-The relevant interactions are
-
-- **(5).** This is the code defined by [HIP-719](https://hips.hedera.com/hip/hip-719#specification).
-  For reference, you can see the
-  [`hedera-services`](https://github.com/hashgraph/hedera-services/blob/fbac99e75c27bf9c70ebc78c5de94a9109ab1851/hedera-node/hedera-smart-contract-service-impl/src/main/java/com/hedera/node/app/service/contract/impl/state/DispatchingEvmFrameState.java#L96)
-  implementation.
-- **(6)**-**(7)**. This calls `getHtsCode` which in turn returns the bytecode compiled from `HtsSystemContract.sol`.
-- **(8)**-**(12)**. This calls `getHtsStorageAt` which uses the `HtsSystemContract`'s [Storage Layout](./INTERNALS.md#storage-layout) to fetch the appropriate state from the Mirror Node. The **(8)** JSON-RPC call is triggered as part of the `redirectForToken(address,bytes)` method call defined in HIP-719.
-  Even if the call from HIP-719 is custom encoded, this method call should support standard ABI encoding as well as defined in
-  [`hedera-services`](https://github.com/hashgraph/hedera-services/blob/b40f81234acceeac302ea2de14135f4c4185c37d/hedera-node/hedera-smart-contract-service-impl/src/main/java/com/hedera/node/app/service/contract/impl/exec/systemcontracts/common/AbstractCallAttempt.java#L91-L104).
+For detailed information on how this project works, see [Internals](./INTERNALS.md).
 
 ## Build
 
@@ -548,14 +437,6 @@ forge test --fork-url http://localhost:7546 --no-storage-caching
 > The `--no-storage-caching` flag disables the JSON-RPC calls cache,
 > which is important to make sure the `json-rpc-mock.js` is reached in each JSON-RPC call.
 > See <https://book.getfoundry.sh/reference/forge/forge-test#description> for more information.
-
-### `HtsSystemContract` Solidity tests + Relay for storage emulation (with forking)
-
-These tests are the same of the section above, but instead of using the `json-rpc-mock.js` it uses the Relay with `hedera-forking` enabled pointing to `testnet`.
-
-## Internals
-
-For detailed information on how this project works, see [Internals](./INTERNALS.md).
 
 ## Support
 
