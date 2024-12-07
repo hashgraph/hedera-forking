@@ -404,6 +404,12 @@ the package `@hashgraph/hedera-forking` is not under test.
 
 ### `HtsSystemContract` Solidity tests + Mirror Node FFI (with mocked `curl`)
 
+This is used to test `HtsSystemContract`(`Json`)+`MirrorNodeFFI` contracts.
+It is the implementation used by Foundry users.
+
+We provide a `curl` mock in the `scripts` folder to avoid depending on a remote Mirror Node and thus making the tests more robust.
+By modifiying the `PATH` environment variable, the mocked `curl` is used instead.
+
 ```console
 PATH=./scripts:$PATH forge test --fork-url https://testnet.hashio.io/api --fork-block-number 8535327
 ```
@@ -417,8 +423,11 @@ cat scripts/curl.log
 ### `HtsSystemContract` Solidity tests + JSON-RPC mock server for storage emulation (_with_ forking)
 
 These Solidity tests are used to test both the `HtsSystemContract` and the `@hashgraph/hedera-forking` package.
+It is the implementation used by Hardhat users.
+
 Instead of starting a `local-node` or using a remote network,
-they use the [`json-rpc-mock.js`](./scripts/json-rpc-mock.js) script as a backend without the need for any additional service.
+they use the [`json-rpc-mock.js`](./scripts/json-rpc-mock.js) script as a backend without the need for any additional services,
+thus making the tests more robust.
 This is the network Foundry's Anvil is forking from.
 
 In a separate terminal run the JSON-RPC Mock Server
