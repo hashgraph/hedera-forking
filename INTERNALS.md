@@ -2,22 +2,24 @@
 
 ## Background
 
-**Fork Testing** (sometimes referred as **Fixtures**) is an Ethereum Development Environment feature that optimizes test execution for Smart Contracts.
+**Fork Testing**/**Fixtures** is an Ethereum Development Environment feature that optimizes test execution for Smart Contracts.
 It enables snapshotting of blockchain state, saving developement time by avoiding the recreation of the entire blockchain state for each test.
 Instead, tests can revert to a pre-defined snapshot, streamlining the testing process.
+Moreover, Fork Testing allows the developer to use a remote state as if was local.
+Any modification will only affect the local (forked) network, relieving the user to set up private keys to interact with a remote network.
+
 Most populars Ethereum Development Environments provide this feature, such as
 [Foundry](https://book.getfoundry.sh/forge/fork-testing) and
 [Hardhat](https://hardhat.org/hardhat-network/docs/overview#mainnet-forking).
-
 This feature is enabled by their underlaying Development network, for example
 
 - Hardhat's [EJS (EthereumJS VM)](https://github.com/nomicfoundation/ethereumjs-vm) and [EDR (Ethereum Development Runtime)](https://github.com/NomicFoundation/edr)
 - Foundry's [Anvil](https://github.com/foundry-rs/foundry/tree/master/crates/anvil)
 - [Ganache _(deprecated)_](https://github.com/trufflesuite/ganache)
 
-Please note that WaffleJS, a Smart Contracts testing library, when used it standalone, _i.e._, not inside a Hardhat project,
-[uses Ganache internally](https://github.com/TrueFiEng/Waffle/blob/238c11ccf9bcaf4b83c73eca16d25243c53f2210/waffle-provider/package.json#L47).
-
+> Please note that WaffleJS, a Smart Contracts testing library, when used it standalone, _i.e._, not inside a Hardhat project,
+> [uses Ganache internally](https://github.com/TrueFiEng/Waffle/blob/238c11ccf9bcaf4b83c73eca16d25243c53f2210/waffle-provider/package.json#L47).
+>
 > On the other hand, Geth support some sort of snapshotting with <https://geth.ethereum.org/docs/interacting-with-geth/rpc/ns-debug#debugsethead>,
 > but it is not used for development and testing of Smart Contracts.
 
@@ -25,15 +27,75 @@ Moreover, given that Fork testing runs on a local development network, users can
 With `console.log`, you can print logging messages and contract variables calling `console.log` from your Solidity code.
 Both [Foundry](https://book.getfoundry.sh/reference/forge-std/console-log) and [Hardhat](https://hardhat.org/tutorial/debugging-with-hardhat-network) support `console.log` (Ganache also supported `console.log`).
 
+### How do Fixtures technically work under the hood?
+
+Fixtures allow developers to define and reuse configurations within their test code.
+These configurations detail the necessary setup steps to prepare the test environment, such as creating mock contracts or loading test data.
+
+Fixture is a wrapper around [_Snapshot and Revert state_](https://archive.trufflesuite.com/blog/introducing-ganache-7/#4-snapshot-and-revert-state).
+This is achieved by using two JSON-RPC calls,
+[`evm_snapshot`](https://github.com/trufflesuite/ganache/blob/ef1858d5d6f27e4baeb75cccd57fb3dc77a45ae8/src/chains/ethereum/ethereum/RPC-METHODS.md#evm_snapshot) and
+[`evm_revert`](https://github.com/trufflesuite/ganache/blob/ef1858d5d6f27e4baeb75cccd57fb3dc77a45ae8/src/chains/ethereum/ethereum/RPC-METHODS.md#evm_revert), which are provided by the underlying development network such as EDR (Hardhat), Anvil (Foundry) or Ganache (Truffle).
+Developers can use `evm_snapshot` to capture a snapshot of the blockchain state at a specific block number, and `evm_revert` to revert to that snapshot later.
+
+Below is `fixture.ts`[https://github.com/TrueFiEng/Waffle/blob/master/waffle-provider/src/fixtures.ts] from the WaffleJS library to implement Fixtures.
+
+```typescript
+import {providers, Wallet} from 'ethers';
+import {MockProvider} from './MockProvider';
+
+export type Fixture<T> = (wallets: Wallet[], provider: MockProvider) => Promise<T>;
+interface Snapshot<T> {
+  fixture: Fixture<T>;
+  data: T;
+  id: string;
+  provider: providers.Web3Provider;
+  wallets: Wallet[];
+}
+
+export const loadFixture = createFixtureLoader();
+
+export function createFixtureLoader(overrideWallets?: Wallet[], overrideProvider?: MockProvider) {
+  const snapshots: Snapshot<any>[] = [];
+
+  return async function load<T>(fixture: Fixture<T>): Promise<T> {
+    const snapshot = snapshots.find((snapshot) => snapshot.fixture === fixture);
+    if (snapshot) {
+      await snapshot.provider.send('evm_revert', [snapshot.id]);
+      snapshot.id = await snapshot.provider.send('evm_snapshot', []);
+      return snapshot.data;
+    } else {
+      const provider = overrideProvider ?? new MockProvider();
+      const wallets = overrideWallets ?? provider.getWallets();
+
+      const data = await fixture(wallets, provider);
+      const id = await provider.send('evm_snapshot', []);
+      snapshots.push({fixture, data, id, provider, wallets});
+      return data;
+    }
+  };
+}
+```
+
+In the `createFixtureLoader()`, if a `snapshot` is not found, _i.e._, the fixture is created for the first time, Waffle creates a `snapshot` of the current state of the network.
+However, when a `snapshot` is found, Waffle `revert`s the network to the `snapshot.id` snapshot created earlier.
+
 ### Can Hedera developers use Fork Testing?
 
 **Yes**, Fork Testing works well when the Smart Contracts are standard EVM Smart Contracts that do not involve Hedera-specific services.
 This is because fork testing is targeted at the local test network provided by the Ethereum Development Environment.
 These networks are replicas of the Ethereum network and do not support any Hedera-specific service.
 
-~~**No**~~, Fork Testing will not work on Hedera for contracts that are specific to Hedera.
-For example, when a contract includes calls to the `createFungibleToken` method on the HTS System Contract at `address(0x167)`.
-This is because the internal local test network provided by the Development Environment does not have any contract deployed at `address(0x167)`.
+~~**No**~~, out-of-the-box Fork Testing will not work on Hedera for contracts that are specific to Hedera.
+For example, when a contract includes a call to the `createFungibleToken` method on the HTS System Contract at `address(0x167)`.
+The internal local test network provided by the Development Environment does not have any runnable contract deployed at `address(0x167)`.
+This is because the local network tries to fetch the code at `address(0x167)`, for which the JSON-RPC Relay returns `0xfe`
+
+```console
+$ cast code --rpc-url https://testnet.hashio.io/api 0x0000000000000000000000000000000000000167
+0xfe
+```
+
 Not being able to use Fork Testing implies also not being able to use features such as `console.log` and Fixtures during testing,
 which cause frustration among Hedera users.
 
