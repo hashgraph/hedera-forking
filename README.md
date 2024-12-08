@@ -22,6 +22,8 @@ See [Hedera Token Service Supported Methods](#hedera-token-service-supported-met
 
 We provide a Foundry library that enables fork testing when using HTS Tokens.
 
+> To see how this library works in details, see [_Foundry library_](./INTERNALS.md#foundry-library) in Internals.
+
 ### Installation
 
 First, install our library in your Foundry project
@@ -121,6 +123,8 @@ This plugin intercepts the calls made by Hardhat to fetch remote state, \_i.e.,
 `eth_getCode` and `eth_getStorageAt`, to provide emulation for HTS.
 It assigns the Hedera Token Service code to the `0x167` address.
 In your tests, you will be able to query Hedera Token data as if they were stored as regular Smart Contracts.
+
+> To see how this plugin works in details, see [_Hardhat plugin_](./INTERNALS.md#hardhat-plugin) in Internals.
 
 ### Installation
 
