@@ -1,5 +1,7 @@
 # Internals
 
+This document outlines
+
 ## Background
 
 **Fork Testing**/**Fixtures** is an Ethereum Development Environment feature that optimizes test execution for Smart Contracts.
@@ -96,7 +98,7 @@ The internal local test network provided by the Development Environment does not
 This is because the local network tries to fetch the code at `address(0x167)`, for which the JSON-RPC Relay returns `0xfe`
 
 ```console
-$ cast code --rpc-url https://testnet.hashio.io/api 0x0000000000000000000000000000000000000167
+$ cast code --rpc-url https://mainnet.hashio.io/api 0x0000000000000000000000000000000000000167
 0xfe
 ```
 
@@ -108,7 +110,57 @@ which cause frustration among Hedera users.
 > It does so by providing an emulation layer for HTS written in Solidity.
 > Given it is written in Solidity, it can executed in a development network environment, such as Foundry or Hardhat.
 
-## Overview
+## Design
+
+In the following, _Development fork_ refers to the Ethereum Development Environment used to simulate EVM state locally, _e.g._, Ganache, Hardhat's EDR or Foundry's Anvil.
+_Remote network_ refers to the Hedera network to pull EVM bytecode and state from.
+It can be either `mainnet`, `testnet`, `previewnet` or any local network, like local-node or solo.
+
+We need to enable fork testing when any of the Hedera Services, _e.g._, Hedera Token Service, are involved.
+
+For any solution to be successful, it needs to comply with the following requirements
+
+- ~~**Must be compatible with any Ethereum Development Environment, _e.g._, Ganache, Hardhat and foundry.** This means that a solution should not make any assumptions on the kind of network is running on. Moreover, ideally, it should not be implemented as a library or hook for the EDE, _e.g._, a Hardhat plugin. This in turn implies no extra setup or additional services that need to be executed by the user.~~
+  _To satisfy this requirement, at least we would have to modify the JSON-RPC Relay. To avoid overloading the Relay with more responsabilities and making it more complex, we decided to create specific solutions for Foundry and Hardhat._
+- **Must be non-intrusive.** Meaning developers should use the tools and workflows they are already familiar with when fork testing.
+
+> [!NOTE]
+> This section focuses on the _Hedera Token Service_ System Contract through `address` `0x167`.
+> Other Hedera Services, _e.g._ _Exchange Rate_ `0x168`, _PRNG_ `0x169` or _Hedera Account Service_ `0x16a`, should be solvable using the same mechanisms described here.
+
+When a Development network forks from a remote one, it uses the JSON-RPC interface to fetch code and state at a given point in time (when a block number is specified).
+
+The solution proposed to **emulate HTS** related calls using Solidity.
+We can use this mock implementation [`HtsSystemContractMock.sol`](https://github.com/hashgraph/hedera-smart-contracts/blob/8cc3ef8b59860ad27d043f38aa7254fa802d0acb/test/foundry/mocks/hts-precompile/HtsSystemContractMock.sol) in the `hedera-smart-contracts` as a starting point.
+
+Already created Tokens (existing in the remote network) have a bytecode representation.
+This bytecode comes from the contract specified in [HIP-719](https://hips.hedera.com/hip/hip-719).
+The actual implementation can be found [here](https://github.com/hashgraph/hedera-services/blob/fbac99e75c27bf9c70ebc78c5de94a9109ab1851/hedera-node/hedera-smart-contract-service-impl/src/main/java/com/hedera/node/app/service/contract/impl/state/DispatchingEvmFrameState.java#L96).
+See for example the bytecode for USDC Token on mainnet <https://hashscan.io/mainnet/token/0.0.456858>.
+
+```console
+$ cast code --rpc-url https://mainnet.hashio.io/api 0x000000000000000000000000000000000006f89a
+0x6080604052348015600f57600080fd5b506000610167905077618dc65e000000000000000000000000000000000006f89a600052366000602037600080366018016008845af43d806000803e8160008114605857816000f35b816000fdfea2646970667358221220d8378feed472ba49a0005514ef7087017f707b45fb9bf56bb81bb93ff19a238b64736f6c634300080b0033
+```
+
+In a nutshell, this bytecode does not have any state and redirects all incoming calls to `IHederaTokenService(0x167).redirectForToken(address,bytes)` where `address` is the token address and `bytes` is the function selector from the ERC20 or ERC721 interface + the bytes input for the function called.
+
+The main challenge to address is how to simulate the state already existing in the HTS remote network. The state is fetched by the Development fork using `eth_getStorageAt(address, slotNumber, blockNumber)`. We need to somehow match the calls made by the Development fork to to storage slots at `0x167`.
+
+### Constraints
+
+- Code returned for HTS Tokens should **not** be changed.
+- Avoid the need for developers to initiate extra processes, _e.g._, start `local-node` to enable forking.
+- Storage slots need to be consistent with existing tooling. For example, Foundry supports the `deal` cheatcode <https://book.getfoundry.sh/reference/forge-std/deal>, which allows users to change the balance of _any_ ERC20 token. Our forking support should be compatible with this use case.
+
+```solidity
+deal(address(dai), alice, 10000e18);
+assertEq(dai.balanceOf(alice), 10000e18);
+```
+
+We need to create a suitable implementation of HTS that needs to be returned by the Relay when `eth_getCode(0x167)` is invoked.
+
+## Project Overview
 
 This project has two main parts
 
@@ -116,7 +168,7 @@ This project has two main parts
   This contract provides an emulator for the Hedera Token Service written in Solidity.
   It is specially designed to work in a forked network.
   Its storage reads and writes are crafted to be reversible in a way the `hedera-forking` package can fetch the appropriate data.
-- **[`@hashgraph/hedera-forking`](./index.js) CommonJS Package**.
+- **[`@hashgraph/hedera-forking`](./index.js) JS Package**.
   Provides functions that can be hooked into the Relay to fetch the appropiate data when HTS System Contract (at address `0x167`) or Hedera Tokens are invoked.
   This package uses the compilation output of the `HtsSystemContract` contract to return its bytecode and to map storage slots to field names.
 
@@ -144,7 +196,7 @@ classDiagram
         +burnToken(...)
     }
 
-    note for HtsSystemContractJson "HTS emulation that fills its\nstate from a JSON data source"
+    note for HtsSystemContractJson "HTS emulation\nthat fills its state\nfrom a JSON data source"
     HtsSystemContract <|-- HtsSystemContractJson : inherits
     class HtsSystemContractJson{
         +setMirrorNodeProvider(...)
@@ -163,7 +215,7 @@ classDiagram
         +fetch...()
     }
 
-    note for MirrorNodeMock "Loads data from filesystem\nused only in tests"
+    note for MirrorNodeMock "Loads data from\nfilesystem used\nonly in tests"
     MirrorNode <|-- MirrorNodeMock
     class MirrorNodeMock{
         <<test>>
