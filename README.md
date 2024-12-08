@@ -1,7 +1,7 @@
 # Hedera Forking for System Contracts
 
 **This projects allows Smart Contract developers working on Hedera to use fork testing while using Hedera System Contracts.**
-It does so by providing an emulation layer for the [Hedera Token Service](https://hardhat.org/hardhat-network/docs/overview#mainnet-forking) _(more System Contracts to come)_ written in Solidity.
+It does so by providing an emulation layer for the [Hedera Token Service](https://hedera.com/token-service) _(more System Contracts to come)_ written in Solidity.
 Given it is written in Solidity, it can be executed in a forked network environment, such as
 [Foundry](https://book.getfoundry.sh/forge/fork-testing) or
 [Hardhat](https://hardhat.org/hardhat-network/docs/overview#mainnet-forking).
@@ -15,6 +15,8 @@ See [Hedera Token Service Supported Methods](#hedera-token-service-supported-met
 > The HTS emulation contract **DOES NOT** replicate Hedera Token Services fully.
 > That is, behavior might differ when switching from local development to a real Hedera network.
 > **Always test your contracts against a real Hedera network before launching your contracts.**
+
+> For detailed information on how this project works, see [Internals](./INTERNALS.md).
 
 ## Foundry
 
@@ -346,10 +348,6 @@ The following methods can be invoked on the Hedera Token Service contract locate
 | `mintToken(address token, int64 amount, bytes[] metadata)`      | Mints an amount of the token to the defined treasury account   |
 
 <!-- -->
-
-## Internals
-
-For detailed information on how this project works, see [Internals](./INTERNALS.md).
 
 ## Build
 
