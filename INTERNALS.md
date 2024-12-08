@@ -261,6 +261,8 @@ In turn `MirrorNodeFFI` uses [`curl`](https://curl.se/) through [`ffi`](https://
 Special care needs to be taken when storing data from the Mirror Node.
 To support `view` calls, \_i.e., [`staticcall` opcode](https://www.evm.codes/?#fa),
 prefetch data needs to be written using [`vm.store`](https://book.getfoundry.sh/cheatcodes/store) cheatcode instead of [`sstore`](https://www.evm.codes/?#55) to avoid `EvmError: StateChangeDuringStaticCall`.
+This restriction prevents us to write into fields using standard Solidity assignments (which generates `sstore` opcodes).
+That is why we need to manually compute field's slots and use `vm.store` to write into fields.
 
 ## Hardhat plugin
 
@@ -272,7 +274,7 @@ When Hardhat starts, it spins up a Worker, the JSON-RPC Forwarder, that intercep
 
 The main challenge to address is how to simulate the state already existing in the HTS remote network.
 The state is fetched by the Development fork using `eth_getStorageAt(address, slotNumber, blockNumber)`.
-We need to match the calls made by the Development fork to to storage slots at `0x167`.
+We need to match the calls made by the Development fork to storage slots at `0x167`.
 See [_Storage Layout_](#storage-layout) to see how this matching is performed.
 
 Our main HTS implementation `HtsSystemContract` is returned by the JSON-RPC Forwarder when `eth_getCode(0x167)` is invoked.
@@ -287,7 +289,7 @@ sequenceDiagram
     autonumber
     box Local
     actor user as User
-    participant client as Local Network<br/>Foundry's Anvil, Hardhat's EDR
+    participant client as Local Network<br/>Hardhat's EDR
     participant hedera-forking as Hardhat Forking Plugin
     end
     box Remote
@@ -321,7 +323,7 @@ The relevant interactions are
   [`hedera-services`](https://github.com/hashgraph/hedera-services/blob/fbac99e75c27bf9c70ebc78c5de94a9109ab1851/hedera-node/hedera-smart-contract-service-impl/src/main/java/com/hedera/node/app/service/contract/impl/state/DispatchingEvmFrameState.java#L96)
   implementation.
 - **(6)**-**(7)**. This calls `getHtsCode` which in turn returns the bytecode compiled from `HtsSystemContract.sol`.
-- **(8)**-**(12)**. This calls `getHtsStorageAt` which uses the `HtsSystemContract`'s [Storage Layout](./INTERNALS.md#storage-layout) to fetch the appropriate state from the Mirror Node. The **(8)** JSON-RPC call is triggered as part of the `redirectForToken(address,bytes)` method call defined in HIP-719.
+- **(8)**-**(12)**. This calls `getHtsStorageAt` which uses the `HtsSystemContract`'s [Storage Layout](#storage-layout) to fetch the appropriate state from the Mirror Node. The **(8)** JSON-RPC call is triggered as part of the `redirectForToken(address,bytes)` method call defined in HIP-719.
   Even if the call from HIP-719 is custom encoded, this method call should support standard ABI encoding as well as defined in
   [`hedera-services`](https://github.com/hashgraph/hedera-services/blob/b40f81234acceeac302ea2de14135f4c4185c37d/hedera-node/hedera-smart-contract-service-impl/src/main/java/com/hedera/node/app/service/contract/impl/exec/systemcontracts/common/AbstractCallAttempt.java#L91-L104).
 
@@ -331,8 +333,9 @@ The Solidity compiler `solc` provides an option to generate detailed storage lay
 This feature can be enabled by selecting the `storageLayout` option,
 which provides insights into how variables are stored in contract storage.
 
-We use the Storage Layout of the `HtsSystemContract` to automatically create a slot map from slot numbers to fields.
-This slot map allows us to retrieve the appropriate field value for a given slot number.
+To retrieve the `TokenInfo internal _tokenInfo` field,
+we use the Storage Layout of the `HtsSystemContract` to automatically create a slot map from slot numbers to struct members.
+This slot map allows us to retrieve the appropriate member value for a given slot number.
 
 #### Enabling Storage Layout
 
@@ -357,15 +360,16 @@ The storage layout is represented in JSON format with the following fields
 - **`slot`**. A integer representing the slot number in storage.
 - **`type`**. The type of the value stored in the slot.
 
-See <https://docs.soliditylang.org/en/latest/internals/layout_in_storage.html#json-output> for more information.
+See [_Layout of State Variables in Storage and Transient Storage, &sect; JSON Output_](https://docs.soliditylang.org/en/latest/internals/layout_in_storage.html#json-output) for more information.
 
 Understanding which fields are located in which specific slots is important to create a mapping that allows to retrieve the appropriate field given a slot number.
 
-See [_Constraints_](#constraints) for more details on why Solidity `mapping`s are not used.
+#### Handling `bytes` and `string`s
 
-#### Handling Long Bytes and Strings
+Fields of type `bytes` or `string` can occupy one or more slots dependending on the size of the string.
+When the size is less than `31` bytes, it takes only one slot.
 
-Handling `bytes` and `string`s longer than 31 bytes is more complex.
+However, handling `bytes` and `string` longer than `31` bytes requires multiple reads from storage.
 
 1. **Calculate the Slot Hash.** Start by calculating the keccak-256 hash of the slot number where the string is declared.
 
@@ -375,4 +379,46 @@ Handling `bytes` and `string`s longer than 31 bytes is more complex.
 
 2. **Retrieve the Value.** Access the value stored at this hash slot. If the string exceeds 32 bytes, retrieve the additional segments from consecutive slots (_e.g._, `hashSlot + 1`, `hashSlot + 2`, _etc._), until the entire string is reconstructed.
 
-This process requires multiple reads from storage to handle long strings properly.
+See [_Layout of State Variables in Storage and Transient Storage, &sect; `bytes` and `string`_](https://docs.soliditylang.org/en/latest/internals/layout_in_storage.html#bytes-and-string) for more information.
+
+#### Handling "dynamic" data
+
+However, when a slot represents "dynamic" data, _e.g._, `balanceOf` an account or the `allowances` for `owner`/`spender` pair, a different mechanism is used to decode the slot number into the desired data.
+See [_Constraints_](#constraints) for more details on why Solidity `mapping`s cannot be used.
+The slot number is decoded using the following general pattern
+
+```txt
+|31    28|27                                                      0|
+|selector|                              <1 or more account numbers>|
+```
+
+where `selector` is the selector of the method where this data is used,
+and [`account numbers`](https://docs.hedera.com/hedera/core-concepts/accounts/account-properties#account-number) represent the accounts being queried.
+
+> [!IMPORTANT]
+> Account Numbers were used instead of `address`es because it is not possible to pack more than one `address`(`20` bytes) into a storage slot (`32` bytes).
+> It is assumed that `<shardNum>` and `<realmNum>` are both `0`.
+> The Account Number is truncated up to `4` bytes to ensure several accounts can be packed into a single slot number.
+> We could increase the Account Number size to `8` bytes (as it is originally defined) in the future to avoid the risk of using the wrong Account Number due to truncation.
+
+For example, the selector of the `balanceOf` method is
+
+```console
+$ cast sig 'balanceOf(address)'
+0x70a08231
+```
+
+Thus, the following slot number will be used to query `balanceOf` of `accnum`.
+
+```txt
+|31    28|27                                             8|7      0|
+|70a08231|00000000000000000 zero padding 00000000000000000|  accnum|
+```
+
+As another example, given the `allowance` method contains two addresses,
+the slot to query an `allowance` will look like the following
+
+```txt
+|31    28|27                                    16|15     8|7      0|
+|dd62ed3e|0000000000000 zero padding 0000000000000| spender|   owner|
+```
