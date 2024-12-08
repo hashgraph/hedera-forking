@@ -6,7 +6,7 @@ Given it is written in Solidity, it can be executed in a forked network environm
 [Foundry](https://book.getfoundry.sh/forge/fork-testing) or
 [Hardhat](https://hardhat.org/hardhat-network/docs/overview#mainnet-forking).
 
-You can use either our [Foundry library](#foundry) or [Hardhat plugin](#hardhat) to enable HTS emulation in your project.
+You can use either our [Foundry library](#foundry-library) or [Hardhat plugin](#hardhat-plugin) to enable HTS emulation in your project.
 
 See [Hedera Token Service Supported Methods](#hedera-token-service-supported-methods) for a list of methods currently implemented as part of this project.
 
@@ -18,7 +18,7 @@ See [Hedera Token Service Supported Methods](#hedera-token-service-supported-met
 
 > For detailed information on how this project works, see [Internals](./INTERNALS.md).
 
-## Foundry
+## Foundry library
 
 We provide a Foundry library that enables fork testing when using HTS Tokens.
 
@@ -115,10 +115,12 @@ For example, the test above is known to work at block `72433403`
 forge test --fork-url https://mainnet.hashio.io/api --fork-block-number 72433403
 ```
 
-## Hardhat
+## Hardhat plugin
 
-This plugin intercepts the calls made by Hardhat to fetch remote state, \_i.e., `eth_getCode` and `eth_getStorageAt`, to provide emulation for HTS.
-It assigns the Hedera Token Service code to the `0x167` address. In your tests, you will be able to query Hedera Token data as if they were stored as regular Smart Contracts.
+This plugin intercepts the calls made by Hardhat to fetch remote state, \_i.e.,
+`eth_getCode` and `eth_getStorageAt`, to provide emulation for HTS.
+It assigns the Hedera Token Service code to the `0x167` address.
+In your tests, you will be able to query Hedera Token data as if they were stored as regular Smart Contracts.
 
 ### Installation
 

@@ -1,6 +1,6 @@
 # Internals
 
-This document outlines
+This document outlines the design decisions made and how this project is implemented.
 
 ## Background
 
@@ -86,6 +86,12 @@ Both [Foundry](https://book.getfoundry.sh/forge/writing-tests#before-test-setups
 Foundry's support is implicit given the state is reset for each test.
 Moreover, both [Foundry](https://book.getfoundry.sh/reference/anvil/#special-methods) and [Hardhat](https://hardhat.org/hardhat-network/docs/reference#evm_snapshot) support calling `evm_snapshot` and `evm_revert` directly.
 
+Note that this feature is integrated at the Development Environment level,
+not the network level.
+The ability to snapshot and revert network state through `evm_snapshot` and `evm_revert` is exclusive to local test networks provided by the development environments.
+These endpoints are not found in any official Ethereum network, _e.g._, Infura or Alchemy.
+Thus, in terms of _Ethereum equivalence_, it is not necessarily true to say that Hedera lacks this feature compared to Ethereum.
+
 ### Can Hedera developers use _out-of-the-box_ Fork Testing?
 
 **Yes**, out-of-the-box Fork Testing works well when the Smart Contracts are standard EVM Smart Contracts that do not involve Hedera-specific services.
@@ -103,14 +109,15 @@ $ cast code --rpc-url https://mainnet.hashio.io/api 0x00000000000000000000000000
 ```
 
 Not being able to use Fork Testing implies also not being able to use features such as `console.log` and Fixtures during testing,
-which cause frustration among Hedera users.
+which cause frustration among Hedera developers.
+It would save a lot of time for Hedera developers to have the ability to use fork testing and fixtures on Hedera-specific services.
 
 > [!IMPORTANT]
 > This project is an attempt to fill this gap.
 > It does so by providing an emulation layer for HTS written in Solidity.
 > Given it is written in Solidity, it can executed in a development network environment, such as Foundry or Hardhat.
 
-## Design
+## Rationale
 
 In the following, _Development fork_ refers to the Ethereum Development Environment used to simulate EVM state locally, _e.g._, Ganache, Hardhat's EDR or Foundry's Anvil.
 _Remote network_ refers to the Hedera network to pull EVM bytecode and state from.
@@ -130,7 +137,7 @@ For any solution to be successful, it needs to comply with the following require
 
 When a Development network forks from a remote one, it uses the JSON-RPC interface to fetch code and state at a given point in time (when a block number is specified).
 
-The solution proposed to **emulate HTS** related calls using Solidity.
+The solution proposes to **emulate HTS** related calls using Solidity.
 We can use this mock implementation [`HtsSystemContractMock.sol`](https://github.com/hashgraph/hedera-smart-contracts/blob/8cc3ef8b59860ad27d043f38aa7254fa802d0acb/test/foundry/mocks/hts-precompile/HtsSystemContractMock.sol) in the `hedera-smart-contracts` as a starting point.
 
 Already created Tokens (existing in the remote network) have a bytecode representation.
@@ -143,34 +150,42 @@ $ cast code --rpc-url https://mainnet.hashio.io/api 0x00000000000000000000000000
 0x6080604052348015600f57600080fd5b506000610167905077618dc65e000000000000000000000000000000000006f89a600052366000602037600080366018016008845af43d806000803e8160008114605857816000f35b816000fdfea2646970667358221220d8378feed472ba49a0005514ef7087017f707b45fb9bf56bb81bb93ff19a238b64736f6c634300080b0033
 ```
 
-In a nutshell, this bytecode does not have any state and redirects all incoming calls to `IHederaTokenService(0x167).redirectForToken(address,bytes)` where `address` is the token address and `bytes` is the function selector from the ERC20 or ERC721 interface + the bytes input for the function called.
-
-The main challenge to address is how to simulate the state already existing in the HTS remote network. The state is fetched by the Development fork using `eth_getStorageAt(address, slotNumber, blockNumber)`. We need to somehow match the calls made by the Development fork to to storage slots at `0x167`.
+In a nutshell, this bytecode does not have any state and redirects all incoming calls to `IHederaTokenService(0x167).redirectForToken(address,bytes)` where `address` is the token address and `bytes` is the function selector from the ERC20 or ERC721 interface + the input bytes for the function called.
 
 ### Constraints
 
-- Code returned for HTS Tokens should **not** be changed.
+- Code returned for HTS Tokens should **not** be changed. This will allow us to use the same mechanism and state for existing tokens in the remote network, or newly created tokens in the local network.
 - Avoid the need for developers to initiate extra processes, _e.g._, start `local-node` to enable forking.
 - Storage slots need to be consistent with existing tooling. For example, Foundry supports the `deal` cheatcode <https://book.getfoundry.sh/reference/forge-std/deal>, which allows users to change the balance of _any_ ERC20 token. Our forking support should be compatible with this use case.
 
-```solidity
-deal(address(dai), alice, 10000e18);
-assertEq(dai.balanceOf(alice), 10000e18);
-```
+  ```solidity
+  deal(address(dai), alice, 10000e18);
+  assertEq(dai.balanceOf(alice), 10000e18);
+  ```
 
-We need to create a suitable implementation of HTS that needs to be returned by the Relay when `eth_getCode(0x167)` is invoked.
+  Foundry's `deal` works by detecting which storage slot is read during the `balanceOf(address)` call. To work properly with `deal`, a `balanceOf` implementation must make only _one_ storage slot read. Afterwards, `deal` will store the desired amount in the detected slot.
+
+- Solidity `mapping`s are not allowed. Solidity `mapping`s compute storage slots that are not reversible. That is, given a storage slot that corresponds to a mapping value, it is not possible to know which inputs were given to compute that slot. That is, to access a specific value in a `mapping`, its storage slot is calculated by computing the keccak-256 hash of the concatenation of the _key_ (the mapped value) and the _slot_ number where the mapping is declared (the `baseSlotNumber`).
+
+  ```solidity
+  bytes32 storageSlot = keccak256(abi.encodePacked(key, uint256(baseSlotNumber)));
+  ```
+
+  This is crucial to retrieve the appropriate value when an `eth_getStorageAt` call is made.
 
 ## Project Overview
 
 This project has two main parts
 
-- **[`HtsSystemContract.sol`](./src/HtsSystemContract.sol) Solidity Contract**.
-  This contract provides an emulator for the Hedera Token Service written in Solidity.
+- **Solidity Contracts**.
+  These contracts provide the Hedera Token Service emulation written in Solidity.
   It is specially designed to work in a forked network.
-  Its storage reads and writes are crafted to be reversible in a way the `hedera-forking` package can fetch the appropriate data.
-- **[`@hashgraph/hedera-forking`](./index.js) JS Package**.
-  Provides functions that can be hooked into the Relay to fetch the appropiate data when HTS System Contract (at address `0x167`) or Hedera Tokens are invoked.
+  Its storage reads and writes are crafted to be reversible in a way the **JS Package** can fetch the appropriate data from the Mirror Node.
+  Moreover, **it provides a Foundry library to enable Foundry users to use HTS emulation in their projects.**
+- **JS Package**.
+  Provides the core functions that can be hooked into a JSON-RPC layer to fetch the appropiate data when HTS System Contract (at address `0x167`) or Hedera Tokens are invoked.
   This package uses the compilation output of the `HtsSystemContract` contract to return its bytecode and to map storage slots to field names.
+  Moreover, **it provides a Hardhat plugin to enable Hardhat users to use HTS emulation in their projects.**
 
 The following contract diagram depics the main contracts involved and their relationships.
 
@@ -179,7 +194,7 @@ The following contract diagram depics the main contracts involved and their rela
 title: Hedera Token Service Contracts
 ---
 classDiagram
-    note for IHederaTokenService "Represents the methods\nsupported by HTS emulation"
+    note for IHederaTokenService "Represents the methods\nsupported by HTS emulation.\nIt is a subset of the same interface in the hedera-smart-contracts repo."
     class IHederaTokenService{
         <<interface>>
         +getTokenInfo(...)
@@ -187,7 +202,7 @@ classDiagram
         +burnToken(...)
     }
 
-    note for HtsSystemContract "State agnostic HTS emulation"
+    note for HtsSystemContract "Main implementation of HTS emulation.\nIt is state agnostic,\nso it can used in both Foundry library and Hardhat plugin."
     IHederaTokenService <|.. HtsSystemContract : implements
     class HtsSystemContract{
         +tokenInfo
@@ -196,7 +211,7 @@ classDiagram
         +burnToken(...)
     }
 
-    note for HtsSystemContractJson "HTS emulation\nthat fills its state\nfrom a JSON data source"
+    note for HtsSystemContractJson "HTS emulation\nthat fills its state\nfrom a JSON data source.\nThis is used by the Foundry library."
     HtsSystemContract <|-- HtsSystemContractJson : inherits
     class HtsSystemContractJson{
         +setMirrorNodeProvider(...)
@@ -209,13 +224,13 @@ classDiagram
         +get...()
     }
 
-    note for MirrorNodeFFI "Fetches data from\nremote Mirror Node"
+    note for MirrorNodeFFI "Fetches data from\nremote Mirror Node\nThis is used by the Foundry library."
     MirrorNode <|-- MirrorNodeFFI
     class MirrorNodeFFI{
         +fetch...()
     }
 
-    note for MirrorNodeMock "Loads data from\nfilesystem used\nonly in tests"
+    note for MirrorNodeMock "Loads data from\nfilesystem, used\nonly in tests"
     MirrorNode <|-- MirrorNodeMock
     class MirrorNodeMock{
         <<test>>
@@ -225,7 +240,42 @@ classDiagram
     MirrorNode --o HtsSystemContractJson : has-a
 ```
 
-### How does it Work?
+Both the Foundry library and the Hardhat plugin use the main implementation `HtsSystemContract`.
+This contract provides the behavior of HTS, but it is state agnostic, meaning the HTS and token state can, and should, be provided elsewhere.
+
+Given Foundry and Hardhat provide different capabilities, they differ in how the state is provided to HTS.
+Hardhat does not allow us to hook into internal contract calls.
+See <https://github.com/hashgraph/hedera-forking/issues/56> for more details.
+That is why we needed to create a JSON-RPC forwarder to intercept `eth_getCode` and `eth_getStorageAt` calls to the remote network to remote token state.
+On the other hand, Foundry does not allow us to create a similar service.
+However, it does allows us to hook into internal contract calls.
+The Foundry library essentially prefetches remote token state from the Mirror Node before is it being used.
+
+## Foundry library
+
+In addition to the main implementation `HtsSystemContract`, the Foundry library uses both `HtsSystemContractJson` and `MirrorNodeFFI` contracts.
+
+The `HtsSystemContractJson` overrides slot accesses to prefetch remote token state from the Mirror Node using `MirrorNodeFFI`.
+In turn `MirrorNodeFFI` uses [`curl`](https://curl.se/) through [`ffi`](https://book.getfoundry.sh/cheatcodes/ffi) to fetch data from the Mirror Node.
+
+Special care needs to be taken when storing data from the Mirror Node.
+To support `view` calls, \_i.e., [`staticcall` opcode](https://www.evm.codes/?#fa),
+prefetch data needs to be written using [`vm.store`](https://book.getfoundry.sh/cheatcodes/store) cheatcode instead of [`sstore`](https://www.evm.codes/?#55) to avoid `EvmError: StateChangeDuringStaticCall`.
+
+## Hardhat plugin
+
+The Hardhat plugin is part of the JS package.
+This plugin intercepts the calls made by Hardhat to fetch remote state, \_i.e.,
+`eth_getCode` and `eth_getStorageAt`, to provide emulation for HTS.
+It assigns the Hedera Token Service code to the `0x167` address.
+When Hardhat starts, it spins up a Worker, the JSON-RPC Forwarder, that intercepts these calls.
+
+The main challenge to address is how to simulate the state already existing in the HTS remote network.
+The state is fetched by the Development fork using `eth_getStorageAt(address, slotNumber, blockNumber)`.
+We need to match the calls made by the Development fork to to storage slots at `0x167`.
+See [_Storage Layout_](#storage-layout) to see how this matching is performed.
+
+Our main HTS implementation `HtsSystemContract` is returned by the JSON-RPC Forwarder when `eth_getCode(0x167)` is invoked.
 
 The following sequence diagram showcases the messages sent between components when fork testing is activated within an Ethereum Development Environment, _e.g._, Foundry or Hardhat.
 
@@ -275,15 +325,18 @@ The relevant interactions are
   Even if the call from HIP-719 is custom encoded, this method call should support standard ABI encoding as well as defined in
   [`hedera-services`](https://github.com/hashgraph/hedera-services/blob/b40f81234acceeac302ea2de14135f4c4185c37d/hedera-node/hedera-smart-contract-service-impl/src/main/java/com/hedera/node/app/service/contract/impl/exec/systemcontracts/common/AbstractCallAttempt.java#L91-L104).
 
-## Storage Layout
+### Storage Layout
 
 The Solidity compiler `solc` provides an option to generate detailed storage layout information as part of the build output.
 This feature can be enabled by selecting the `storageLayout` option,
 which provides insights into how variables are stored in contract storage.
 
-### Enabling Storage Layout
+We use the Storage Layout of the `HtsSystemContract` to automatically create a slot map from slot numbers to fields.
+This slot map allows us to retrieve the appropriate field value for a given slot number.
 
-In a Foundry project, add the following line to your `foundry.toml` file
+#### Enabling Storage Layout
+
+In a Foundry project, add the following line to your `foundry.toml`
 
 ```toml
 extra_output = ["storageLayout"]
@@ -291,10 +344,7 @@ extra_output = ["storageLayout"]
 
 After building your project, _e.g._. `forge build`, the `storageLayout` object is included in the output file `out/<Contract name>.sol/<Contract name>.json`.
 
-> [!IMPORTANT]
-> This is the one used in this project.
-
-### Understanding the Storage Layout Format
+#### Understanding the Storage Layout Format
 
 The storage layout is represented in JSON format with the following fields
 
@@ -309,37 +359,15 @@ The storage layout is represented in JSON format with the following fields
 
 See <https://docs.soliditylang.org/en/latest/internals/layout_in_storage.html#json-output> for more information.
 
-### Application to Token Smart Contract Emulation
+Understanding which fields are located in which specific slots is important to create a mapping that allows to retrieve the appropriate field given a slot number.
 
-For the purpose of our implementation,
-understanding which variable names are stored in specific slots is sufficient to develop a functional emulator for the token smart contract.
+See [_Constraints_](#constraints) for more details on why Solidity `mapping`s are not used.
 
-### Issues with Storage for Mappings, Arrays, and Strings Longer than 31 Bytes
+#### Handling Long Bytes and Strings
 
-When dealing with mappings, arrays, and strings longer than 31 bytes in Solidity, these data types do not fit entirely within a single storage slot. This creates challenges when trying to access or compute their storage locations.
+Handling `bytes` and `string`s longer than 31 bytes is more complex.
 
-### Accessing Mappings
-
-For mappings, the value is not stored directly in the storage slot. Instead, to access a specific value in a mapping, you must first calculate the storage slot by computing the Keccak-256 hash of the concatenation of the "key" (the mapped value) and the "slot" number where the mapping is declared.
-
-```solidity
-bytes32 storageSlot = keccak256(abi.encodePacked(key, uint256(slotNumber)));
-```
-
-To reverse-engineer or retrieve the original key (e.g., an address or token ID) from a storage slot, you'd need to maintain a mapping of keys to their corresponding storage hashes, which can be cumbersome.
-
-### Calculating Storage for User Addresses and Token IDs
-
-For our current use case, where we need to calculate these values for user addresses and token IDs (which are integers), this is manageable
-
-- **User Addresses**: Since the number of user accounts is limited, their mapping can be stored and referenced as needed.
-- **Token IDs**: These are sequentially incremented integers, making it possible to precompute and store their corresponding storage slots on the Hedera JSON-RPC side.
-
-### Handling Long Strings
-
-Handling strings longer than 31 bytes is more complex
-
-1. **Calculate the Slot Hash.** Start by calculating the Keccak-256 hash of the slot number where the string is stored.
+1. **Calculate the Slot Hash.** Start by calculating the keccak-256 hash of the slot number where the string is declared.
 
    ```solidity
    bytes32 hashSlot = keccak256(abi.encodePacked(uint256(slotNumber)));
@@ -347,4 +375,4 @@ Handling strings longer than 31 bytes is more complex
 
 2. **Retrieve the Value.** Access the value stored at this hash slot. If the string exceeds 32 bytes, retrieve the additional segments from consecutive slots (_e.g._, `hashSlot + 1`, `hashSlot + 2`, _etc._), until the entire string is reconstructed.
 
-This process requires careful calculation and multiple reads from storage to handle longer strings properly.
+This process requires multiple reads from storage to handle long strings properly.
