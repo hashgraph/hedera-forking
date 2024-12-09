@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
+import {console} from "forge-std/Console.sol";
 import {IERC20Events, IERC20} from "./IERC20.sol";
 import {IERC721, IERC721Enumerable, IERC721Events, IERC721Metadata} from "./IERC721.sol";
 import {IHRC719} from "./IHRC719.sol";
@@ -166,7 +167,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         _initTokenData();
 
         // Redirect to the appropriate ERC20 method if the token type is fungible.
-        if (keccak256(abi.encode(tokenType)) == keccak256(abi.encode("FUNGIBLE_COMMON"))) {
+        if (keccak256(bytes(tokenType)) == keccak256(bytes("FUNGIBLE_COMMON"))) {
             result = __redirectForERC20(selector);
             if (keccak256(result) != keccak256(abi.encode("undefined"))) {
                 return result;
@@ -174,7 +175,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         }
 
         // Redirect to the appropriate ERC721 method if the token type is non-fungible.
-        if (keccak256(abi.encode(tokenType)) == keccak256(abi.encode("NON_FUNGIBLE_UNIQUE"))) {
+        if (keccak256(bytes(tokenType)) == keccak256(bytes("NON_FUNGIBLE_UNIQUE"))) {
             result = __redirectForERC721(selector);
             if (keccak256(result) != keccak256(abi.encode("undefined"))) {
                 return result;
@@ -265,14 +266,13 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
             return abi.encode(symbol);
         }
         if (selector == IERC721Metadata.tokenURI.selector) {
-            require(msg.data.length >= 60, "tokenURI: Not enough calldata");
+            require(msg.data.length >= 72, "tokenURI: Not enough calldata");
             // uint256 tokenId = uint256(bytes32(msg.data[40:72]));
             // TODO: No idea how this should be implemented
             return abi.encode("undefined");
         }
         // IERC721Enumerable
         if (selector == IERC721Enumerable.totalSupply.selector) {
-            require(msg.data.length >= 28, "totalSupply: Not enough calldata");
             return abi.encode(totalSupply);
         }
         // IERC721
@@ -282,7 +282,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
             return abi.encode(__balanceOf(owner));
         }
         if (selector == IERC721.ownerOf.selector) {
-            require(msg.data.length >= 60, "ownerOf: Not enough calldata");
+            require(msg.data.length >= 72, "ownerOf: Not enough calldata");
             uint256 tokenId = uint256(bytes32(msg.data[40:72]));
             return abi.encode(__ownerOf(tokenId));
         }
@@ -309,7 +309,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
             return abi.encode(true);
         }
         if (selector == IERC721.getApproved.selector) {
-            require(msg.data.length >= 60, "getApproved: Not enough calldata");
+            require(msg.data.length >= 72, "getApproved: Not enough calldata");
             uint256 tokenId = uint256(bytes32(msg.data[40:72]));
             return abi.encode(__getApproved(tokenId));
         }
