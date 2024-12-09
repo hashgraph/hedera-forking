@@ -374,6 +374,29 @@ However, you can type-check it by running
 npm run type-check
 ```
 
+The code examples and the tables for supported methods included in this `README` are automatically generated.
+Run the following command to generate them
+
+```console
+npm run make:readme
+```
+
+Code fences that contains a file name after the language definition, _e.g._,
+
+````markdown
+```solidity examples/foundry-hts/USDC.t.sol
+```
+````
+
+or comments such as
+
+```markdown
+<!-- !./scripts/abi-table.js out/IERC20.sol/IERC20.json out/IERC20.sol/IERC20Events.json -->
+<!-- -->
+```
+
+will be expanded with either the content of the file or, when the file descriptor starts with a `!`, with the standard output of the application.
+
 ## Tests
 
 > [!TIP]
