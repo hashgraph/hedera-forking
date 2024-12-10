@@ -6,6 +6,7 @@
     "singleQuote": true,
     "arrowParens": "avoid",
     "quoteProps": "preserve",
+    "embeddedLanguageFormatting": "off",
     "overrides": [
         {
             "files": "*.md",

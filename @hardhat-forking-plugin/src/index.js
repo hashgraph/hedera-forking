@@ -116,7 +116,7 @@ extendConfig((config, userConfig) => {
  * - https://github.com/NomicFoundation/hardhat/issues/3287
  * - https://github.com/NomicFoundation/hardhat/issues/2496
  *
- * That's why we need to shift the setting of `chainId` and `workerPort` to the user,
+ * That is why we need to shift the setting of `chainId` and `workerPort` to the user,
  * so we can update the `forking.url` if needed **synchronously**.
  */
 extendEnvironment(hre => {

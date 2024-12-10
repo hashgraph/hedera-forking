@@ -11,7 +11,8 @@
     "scripts": {
         "prepare": "husky",
         "type-check": "tsc",
-        "lint": "eslint"
+        "lint": "eslint",
+        "make:readme": "scripts/readme.js README.md"
     },
     "author": "2024 Hedera Hashgraph, LLC",
     "license": "Apache-2.0",

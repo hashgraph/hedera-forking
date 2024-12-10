@@ -1,38 +1,41 @@
-# Hedera Fork Testing Support
+# Hedera Forking for System Contracts
 
-## Sample Usage On forked networks
+**This projects allows Smart Contract developers working on Hedera to use fork testing while using Hedera System Contracts.**
+It does so by providing an emulation layer for the [Hedera Token Service](https://hedera.com/token-service) _(more System Contracts to come)_ written in Solidity.
+Given it is written in Solidity, it can be executed in a forked network environment, such as
+[Foundry](https://book.getfoundry.sh/forge/fork-testing) or
+[Hardhat](https://hardhat.org/hardhat-network/docs/overview#mainnet-forking).
 
-This repository includes the example Smart Contract referenced in this [issue](https://github.com/hashgraph/hedera-smart-contracts/issues/863).
+You can use either our [Foundry library](#foundry-library) or [Hardhat plugin](#hardhat-plugin) to enable HTS emulation in your project.
 
-### Fixing Your Tests
+See [Hedera Token Service Supported Methods](#hedera-token-service-supported-methods) for a list of methods currently implemented as part of this project.
 
-To set up and fix your Foundry tests with Hedera forking, follow these steps
+> [!IMPORTANT]
+> The HTS emulation contract **SHOULD BE ONLY** used to ease development workflow when working with Hedera Tokens.
+> The HTS emulation contract **DOES NOT** replicate Hedera Token Services fully.
+> That is, behavior might differ when switching from local development to a real Hedera network.
+> **Always test your contracts against a real Hedera network before launching your contracts.**
 
-1. **Install the Hedera Forking Library**
+> For detailed information on how this project works, see [Internals](./INTERNALS.md).
 
-   ```shell
-   forge install git@github.com:hashgraph/hedera-forking.git
-   ```
+## Foundry library
 
-2. **Add Setup Code in Your Test Files**
-   Include the following lines in the setup phase of your tests to deploy the required contract code and enable cheat codes:
+We provide a Foundry library that enables fork testing when using HTS Tokens.
 
-   ```solidity
-   deployCodeTo("HtsSystemContractInitialized.sol", address(0x167));
-   vm.allowCheatcodes(address(0x167));
-   ```
+> To see how this library works in details, see [_Foundry library_](./INTERNALS.md#foundry-library) in Internals.
 
-### Running the Tests
+### Installation
 
-To run the tests and observe the setup in action, use the following command
+First, install our library in your Foundry project
 
-```shell
-forge test --fork-url "https://mainnet.hashio.io/api" --chain 295 --match-contract DealCheatCodeIssueTest
+```console
+forge install hashgraph/hedera-forking
 ```
 
-### Requirements
+### Set up
 
-To use this library in your tests, you need to enable `ffi`. You can do this by adding the following lines to your `.toml` file:
+To use this library in your tests, you need to enable [`ffi`](https://book.getfoundry.sh/cheatcodes/ffi).
+You can do so by adding the following lines to your `.toml` file
 
 ```toml
 [profile.default]
@@ -40,132 +43,366 @@ ffi = true
 ```
 
 Alternatively, you can add the `--ffi` flag to your execution script.
-This is necessary because our library uses `surl`, which relies on `ffi` to make requests.
 
-## Background
+This is necessary because our library relies on [`curl`](https://curl.se/) to make HTTP requests to the Hedera remote network.
+This enables the library to fetch token state in the remote network.
+Given `curl` is an external command, `ffi` needs to be enabled.
 
-**Fork Testing** (or **WaffleJS Fixtures**) is an Ethereum Development Environment feature that optimizes test execution for Smart Contracts.
-It enables snapshotting of blockchain state, saving developement time by avoiding the recreation of the entire blockchain state for each test.
-Instead, tests can revert to a pre-defined snapshot, streamlining the testing process.
-Most populars Ethereum Development Environments provide this feature, such as
-[Foundry](https://book.getfoundry.sh/forge/fork-testing) and
-[Hardhat](https://hardhat.org/hardhat-network/docs/overview#mainnet-forking).
+To activate HTS emulation in your tests, you need to add the following setup code in your test files.
+Import our wrapper function to deploy HTS emulation and enable cheat codes for it.
 
-This feature is enabled by their underlaying Development network, for example
-
-- Hardhat's [EJS (EthereumJS VM)](https://github.com/nomicfoundation/ethereumjs-vm) and [EDR (Ethereum Development Runtime)](https://github.com/NomicFoundation/edr)
-- Foundry's [Anvil](https://github.com/foundry-rs/foundry/tree/master/crates/anvil)
-- [Ganache _(deprecated)_](https://github.com/trufflesuite/ganache)
-
-Please note that WaffleJS, when used directly as a library, _i.e._, not inside a Hardhat project,
-[uses Ganache internally](https://github.com/TrueFiEng/Waffle/blob/238c11ccf9bcaf4b83c73eca16d25243c53f2210/waffle-provider/package.json#L47).
-
-On the other hand, Geth support some sort of snapshotting with <https://geth.ethereum.org/docs/interacting-with-geth/rpc/ns-debug#debugsethead>,
-but it’s not commonly used for development and testing of Smart Contracts.
-
-Moreover, given that Fork testing runs on a local development network, users can use `console.log` in tests to ease the debugging process.
-With `console.log`, you can print logging messages and contract variables calling `console.log` from your Solidity code.
-Both [Foundry](https://book.getfoundry.sh/reference/forge-std/console-log) and [Hardhat](https://hardhat.org/tutorial/debugging-with-hardhat-network) support `console.log`.
-Not being able to use Forking (see below) implies also not being able to use `console.log` in tests,
-which cause frustration among Hedera users.
-
-### Can Hedera developers use Fork Testing?
-
-**Yes**, Fork Testing works well when the Smart Contracts are standard EVM Smart Contracts that do not involve Hedera-specific services.
-This is because fork testing is targeted at the local test network provided by the Ethereum Development Environment.
-These networks are somewhat replicas of the Ethereum network and do not support Hedera-specific services.
-
-**No**, Fork Testing will not work on Hedera for contracts that are specific to Hedera.
-For example, if a contract includes calls to the `createFungibleToken` method on the HTS System Contract at `address(0x167)`.
-This is because the internal local test network provided by the framework (`chainId: 1337`) does not have the precompiled HTS contract deployed at `address(0x167)`.
-
-This project is an attempt to solve this problem.
-It does so by providing an emulation layer for HTS written in Solidity.
-Given it is written in Solidity, it can executed in a development network environment, such as Foundry or Hardhat.
-
-## Overview
-
-This project has two main parts
-
-- **[`HtsSystemContract.sol`](./src/HtsSystemContract.sol) Solidity Contract**.
-  This contract provides an emulator for the Hedera Token Service written in Solidity.
-  It is specially designed to work in a forked network.
-  Its storage reads and writes are crafted to be reversible in a way the `hedera-forking` package can fetch the appropriate data.
-- **[`@hashgraph/hedera-forking`](./index.js) CommonJS Package**.
-  Provides functions that can be hooked into the Relay to fetch the appropiate data when HTS System Contract (at address `0x167`) or Hedera Tokens are invoked.
-  This package uses the compilation output of the `HtsSystemContract` contract to return its bytecode and to map storage slots to field names.
-
-> [!IMPORTANT]
-> The compilation output of `HtsSystemContract` is version controlled.
-> The benefit of including a generated file is that it allows the Relay to consume the JS package directly [from GitHub](https://docs.npmjs.com/cli/v10/configuring-npm/package-json#git-urls-as-dependencies).
-> This is also the reason we use [_JSDoc_](https://www.typescriptlang.org/docs/handbook/jsdoc-supported-types.html) instead of TypeScript, to avoid the compilation step.
-> This, in turn, avoids publishing an `npm` package.
-
-### How does it Work?
-
-The following sequence diagram showcases the messages sent between components when fork testing is activated within an Ethereum Development Environment, _e.g._, Foundry or Hardhat.
-
-> [!NOTE]
-> The JSON-RPC Relay service is not shown here because is not involved when performing a requests for a Token.
-
-```mermaid
-sequenceDiagram
-    autonumber
-    box Local
-    actor user as User
-    participant client as Local Network<br/>Foundry's Anvil, Hardhat's EDR
-    participant hedera-forking as Hardhat Forking Plugin
-    end
-    box Remote
-    #participant relay as JSON-RPC Relay
-    participant mirror as Mirror Node
-    end
-
-    user->>+client: address(Token).totalSupply()
-    client->>+hedera-forking: eth_getCode(Token)
-    hedera-forking->>+mirror: API tokens/<tokenId>
-    mirror-->>-hedera-forking: Token {}
-    hedera-forking-->>-client: HIP-719 Token Proxy bytecode<br/>(delegate calls to 0x167)
-
-    client->> + hedera-forking: eth_getCode(0x167)
-    hedera-forking-->>-client: HtsSystemContract bytecode
-
-    client->>+hedera-forking: eth_getStorageAt(Token, slot<totalSupply>)
-    #relay ->> + hedera-forking: getHtsStorageAt(Token, slot)
-    hedera-forking -) + mirror: API tokens/<tokenId>
-    mirror --) - hedera-forking: Token{}
-    #hedera-forking -->> - relay: Token{}.totalSupply
-    hedera-forking-->>-client: Token{}.totalSupply
-
-    client->>-user: Token{}.totalSupply
+```solidity
+import {htsSetup} from "hedera-forking/src/htsSetup.sol";
 ```
 
-The relevant interactions are
+and then invoke it in your [test setup](https://book.getfoundry.sh/forge/writing-tests)
 
-- **(5).** This is the code defined by [HIP-719](https://hips.hedera.com/hip/hip-719#specification).
-  For reference, you can see the
-  [`hedera-services`](https://github.com/hashgraph/hedera-services/blob/fbac99e75c27bf9c70ebc78c5de94a9109ab1851/hedera-node/hedera-smart-contract-service-impl/src/main/java/com/hedera/node/app/service/contract/impl/state/DispatchingEvmFrameState.java#L96)
-  implementation.
-- **(6)**-**(7)**. This calls `getHtsCode` which in turn returns the bytecode compiled from `HtsSystemContract.sol`.
-- **(8)**-**(12)**. This calls `getHtsStorageAt` which uses the `HtsSystemContract`'s [Storage Layout](#storage-layout) to fetch the appropriate state from the Mirror Node. The **(8)** JSON-RPC call is triggered as part of the `redirectForToken(address,bytes)` method call defined in HIP-719.
-  Even if the call from HIP-719 is custom encoded, this method call should support standard ABI encoding as well as defined in
-  [`hedera-services`](https://github.com/hashgraph/hedera-services/blob/b40f81234acceeac302ea2de14135f4c4185c37d/hedera-node/hedera-smart-contract-service-impl/src/main/java/com/hedera/node/app/service/contract/impl/exec/systemcontracts/common/AbstractCallAttempt.java#L91-L104).
+```solidity
+    function setUp() public {
+        htsSetup();
+    }
+```
+
+### Running your Tests
+
+Now you can use Hedera Token Services and remote tokens as if they were deployed locally when fork testing.
+For example
+
+```solidity examples/foundry-hts/USDC.t.sol
+// SPDX-License-Identifier: Apache-2.0
+pragma solidity ^0.8.0;
+
+import {Test} from "forge-std/Test.sol";
+import {htsSetup} from "hedera-forking/src/htsSetup.sol";
+import {IERC20} from "hedera-forking/src/IERC20.sol";
+
+contract USDCExampleTest is Test {
+    // https://hashscan.io/mainnet/token/0.0.456858
+    address USDC_mainnet = 0x000000000000000000000000000000000006f89a;
+
+    address private user1;
+
+    function setUp() external {
+        htsSetup();
+
+        user1 = makeAddr("user1");
+        deal(USDC_mainnet, user1, 1000 * 10e8);
+    }
+
+    function test_get_balance_of_existing_account() view external {
+        // https://hashscan.io/mainnet/account/0.0.1528
+        address usdcHolder = 0x00000000000000000000000000000000000005f8;
+        // Balance retrieved from mainnet at block 72433403
+        assertEq(IERC20(USDC_mainnet).balanceOf(usdcHolder), 28_525_752677);
+    }
+
+    function test_dealt_balance_of_local_account() view external {
+        assertEq(IERC20(USDC_mainnet).balanceOf(user1), 1000 * 10e8);
+    }
+}
+```
+
+To run your tests, use the usual command
+
+```console
+forge test --fork-url https://mainnet.hashio.io/api
+```
+
+You can also include a specific block number.
+For example, the test above is known to work at block `72433403`
+
+```console
+forge test --fork-url https://mainnet.hashio.io/api --fork-block-number 72433403
+```
+
+You can use all the tools and cheatcodes Foundry provides, _e.g._, `console.log`
+
+```solidity examples/foundry-hts/USDCConsole.t.sol
+// SPDX-License-Identifier: Apache-2.0
+pragma solidity ^0.8.0;
+
+import {Test, console} from "forge-std/Test.sol";
+import {htsSetup} from "hedera-forking/src/htsSetup.sol";
+import {IERC20} from "hedera-forking/src/IERC20.sol";
+
+contract USDCConsoleExampleTest is Test {
+    function setUp() external {
+        htsSetup();
+    }
+
+    function test_using_console_log() view external {
+        // https://hashscan.io/mainnet/token/0.0.456858
+        address USDC_mainnet = 0x000000000000000000000000000000000006f89a;
+
+        string memory name = IERC20(USDC_mainnet).name();
+        string memory symbol = IERC20(USDC_mainnet).symbol();
+        uint8 decimals = IERC20(USDC_mainnet).decimals();
+        assertEq(name, "USD Coin");
+        assertEq(symbol, "USDC");
+        assertEq(decimals, 6);
+
+        console.log("name: %s, symbol: %s, decimals: %d", name, symbol, decimals);
+    }
+}
+```
+
+## Hardhat plugin
+
+We provide a Hardhat plugin that enables fork testing when using HTS Tokens.
+
+In addition, this plugin provides the following features
+
+- **Sets up Hardfork history for Hedera networks.** This solves the issue
+  [`No known hardfork for execution on historical block`](https://hardhat.org/hardhat-network/docs/guides/forking-other-networks#using-a-custom-hardfork-history).
+- **Avoids `Missing access list` error.** Hardhat throws this error when a `blockNumber` is provided in the forking configuration. The plugin solves this issue.
+
+This plugin intercepts the calls made by Hardhat to fetch remote state, \_i.e.,
+`eth_getCode` and `eth_getStorageAt`, to provide emulation for HTS.
+It assigns the Hedera Token Service code to the `0x167` address.
+In your tests, you will be able to query Hedera Token data as if they were stored as regular Smart Contracts.
+
+> To see how this plugin works in details, see [_Hardhat plugin_](./INTERNALS.md#hardhat-plugin) in Internals.
+
+### Installation
+
+To use this plugin, install it via your package manager.
+
+If you are using **npm**
+
+```console
+npm install --save-dev @hashgraph/hardhat-forking-plugin
+```
+
+or using **yarn**
+
+```console
+yarn add --dev @hashgraph/hardhat-forking-plugin
+```
+
+### Set up
+
+Next, add the following line to the top of your Hardhat config file, _e.g._, `hardhat.config.js`
+
+```javascript
+require('@hashgraph/hardhat-forking-plugin');
+```
+
+or if you are using TypeScript, include the following line into your `hardhat.config.ts`
+
+```javascript
+import '@hashgraph/hardhat-forking-plugin';
+```
+
+This will automatically create a worker thread to intercept calls to fetch remote state.
+You can then proceed with writing your tests, and the plugin will allow you to query Hedera token data seamlessly.
+
+### Configuration
+
+By default, the plugin uses the Hedera Mirror Node based on the guessed chain ID from the currently forked network.
+
+Two additional values needs to be set in order to activate the plugin.
+
+- **`chainId`**. The call to `eth_chainId` of configuration parameter `hardhat.forking.url` needs to match the `chainId` configuration argument. Only chain IDs `295` (Mainnet), `296` (Testnet), and `297` (Previewnet) are supported.
+- **`workerPort`**. Any free port to start the worker to intercept Hardhat calls to fetch remote state.
+
+For example
+
+```javascript
+    networks: {
+        hardhat: {
+            forking: {
+                url: 'https://mainnet.hashio.io/api',
+                // This allows Hardhat to enable JSON-RPC's response cache.
+                // Forking from a block is not fully integrated yet into HTS emulation.
+                blockNumber: 70531900,
+                chainId: 295,
+                workerPort: 1235,
+            },
+        },
+    },
+```
+
+> [!NOTE]
+> These configuration settings cannot be set automatically by the Plugin.
+> This is because the way Hardhat plugins are loaded by Hardhat.
+> The main issue is _"since Hardhat needs to be loadable via `require` call, configuration must be synchronous"_.
+> See [here](https://github.com/NomicFoundation/hardhat/issues/3287) and [here](https://github.com/NomicFoundation/hardhat/issues/2496) for more details.
+>
+> Creating a Worker so we can hook into `eth_getCode` and `eth_getStorageAt` to provide HTS emulation and querying the `chainId` of a remote network are **asynchronous** operations.
+> That is why we need to shift the setting of `chainId` and `workerPort` to the user.
+
+### Running Your Tests
+
+For example, to query USDC information on mainnet you can use the following test
+
+```javascript examples/hardhat-hts/test/usdc-info.test.js
+const { expect } = require('chai');
+const { ethers: { getContractAt } } = require('hardhat');
+
+describe('USDC example -- informational', function () {
+    it('should get name, symbol and decimals', async function () {
+        // https://hashscan.io/mainnet/token/0.0.456858
+        const usdc = await getContractAt('IERC20', '0x000000000000000000000000000000000006f89a');
+        expect(await usdc['name']()).to.be.equal('USD Coin');
+        expect(await usdc['symbol']()).to.be.equal('USDC');
+        expect(await usdc['decimals']()).to.be.equal(6n);
+    });
+});
+```
+
+Then run your Hardhat tests as usual
+
+```console
+npx hardhat
+```
+
+You can also query an existing account's balance.
+For example using the `blockNumber` as shown above in [_Configuration_](#configuration),
+you can query the USDC balance for an existing account.
+
+```javascript examples/hardhat-hts/test/usdc-balance.test.js
+const { expect } = require('chai');
+const { ethers: { getContractAt } } = require('hardhat');
+
+describe('USDC example -- balanceOf', function () {
+    it('should get `balanceOf` account holder', async function () {
+        // https://hashscan.io/mainnet/token/0.0.456858
+        const usdc = await getContractAt('IERC20', '0x000000000000000000000000000000000006f89a');
+
+        // https://hashscan.io/mainnet/account/0.0.6279
+        const holderAddress = '0x0000000000000000000000000000000000001887';
+        expect(await usdc['balanceOf'](holderAddress)).to.be.equal(31_166_366226);
+    });
+});
+```
+
+You can also perform modifications in the forked network.
+Let's see an example where we execute the `transfer` method from an existing account to a local Hardhat signer.
+It is usually paired with [Fixtures](https://hardhat.org/hardhat-network-helpers/docs/reference#fixtures),
+so that each test can start in a known state.
+Moreover, you can use the tools you are already familiar with, for example,
+[`hardhat_impersonateAccount`](https://hardhat.org/hardhat-network/docs/reference#hardhat_impersonateaccount).
+
+```javascript examples/hardhat-hts/test/usdc-transfer.test.js
+const { expect } = require('chai');
+const { ethers: { getSigner, getSigners, getContractAt }, network: { provider } } = require('hardhat');
+const { loadFixture } = require('@nomicfoundation/hardhat-toolbox/network-helpers');
+
+describe('USDC example -- transfer', function () {
+    async function id() {
+        return [(await getSigners())[0]];
+    }
+
+    it("should `tranfer` tokens from account holder to one of Hardhat' signers", async function () {
+        const [receiver] = await loadFixture(id);
+
+        // https://hashscan.io/mainnet/account/0.0.6279
+        const holderAddress = '0x0000000000000000000000000000000000001887';
+        await provider.request({
+            method: 'hardhat_impersonateAccount',
+            params: [holderAddress],
+        });
+        const holder = await getSigner(holderAddress);
+
+        // https://hashscan.io/mainnet/token/0.0.456858
+        const usdc = await getContractAt('IERC20', '0x000000000000000000000000000000000006f89a');
+
+        expect(await usdc['balanceOf'](receiver.address)).to.be.equal(0n);
+
+        await usdc.connect(holder)['transfer'](receiver, 10_000_000n);
+
+        expect(await usdc['balanceOf'](receiver.address)).to.be.equal(10_000_000n);
+    });
+});
+```
+
+## Hedera Token Service Supported Methods
+
+Given your HTS token address, you can invoke these functions whether the token is either fungible or non-fungible.
+
+### Fungible Tokens
+
+The following methods and events are applicable to Fungible Tokens.
+
+#### ERC20 Interface
+
+<!-- !./scripts/abi-table.js out/IERC20.sol/IERC20.json out/IERC20.sol/IERC20Events.json -->
+
+| Function                                                          | Comment                                                                                                                                                                                                              |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `allowance(address owner, address spender) view`                  | Returns the remaining number of tokens that `spender` will be allowed to spend on behalf of `owner` through {transferFrom}. This is zero by default. This value changes when {approve} or {transferFrom} are called. |
+| `approve(address spender, uint256 amount)`                        | Sets a `value` amount of tokens as the allowance of `spender` over the caller's tokens. Returns a boolean value indicating whether the operation succeeded.                                                          |
+| `balanceOf(address account) view`                                 | Returns the value of tokens owned by `account`.                                                                                                                                                                      |
+| `decimals() view`                                                 | Returns the decimals places of the token.                                                                                                                                                                            |
+| `name() view`                                                     | Returns the name of the token.                                                                                                                                                                                       |
+| `symbol() view`                                                   | Returns the symbol of the token.                                                                                                                                                                                     |
+| `totalSupply() view`                                              | Returns the value of tokens in existence.                                                                                                                                                                            |
+| `transfer(address recipient, uint256 amount)`                     | Moves a `value` amount of tokens from the caller's account to `to`. Returns a boolean value indicating whether the operation succeeded.                                                                              |
+| `transferFrom(address sender, address recipient, uint256 amount)` | Moves a `value` amount of tokens from `from` to `to` using the allowance mechanism. `value` is then deducted from the caller's allowance. Returns a boolean value indicating whether the operation succeeded.        |
+
+| Event                                                                      | Comment                                                                                                               |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `Approval(address indexed owner, address indexed spender, uint256 amount)` | Emitted when the allowance of a `spender` for an `owner` is set by a call to {approve}. `value` is the new allowance. |
+| `Transfer(address indexed from, address indexed to, uint256 amount)`       | Emitted when `value` tokens are moved from one account (`from`) to another (`to`). Note that `value` may be zero.     |
+
+<!-- -->
+
+#### Association Methods Interface
+
+<!-- !./scripts/abi-table.js out/IHRC719.sol/IHRC719.json -->
+
+| Function              | Comment                                                                                                                        |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `associate()`         | Associates the calling account with the token This function allows an account to opt-in to receive the token                   |
+| `dissociate()`        | Dissociates the calling account from the token This function allows an account to opt-out from receiving the token             |
+| `isAssociated() view` | Checks if the calling account is associated with the token This function returns the association status of the calling account |
+
+<!-- -->
+
+### Non-Fungible Tokens
+
+The following methods and events are applicable to Non-Fungible Tokens.
+
+> [!NOTE]
+> ERC721 support coming soon!
+
+#### Association Methods Interface
+
+<!-- !./scripts/abi-table.js out/IHRC719.sol/IHRC719.json -->
+
+| Function              | Comment                                                                                                                        |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `associate()`         | Associates the calling account with the token This function allows an account to opt-in to receive the token                   |
+| `dissociate()`        | Dissociates the calling account from the token This function allows an account to opt-out from receiving the token             |
+| `isAssociated() view` | Checks if the calling account is associated with the token This function returns the association status of the calling account |
+
+<!-- -->
+
+### Hedera Token Service (located at address `0x167`)
+
+The following methods can be invoked on the Hedera Token Service contract located at address `0x167`.
+
+<!-- !./scripts/abi-table.js out/IHederaTokenService.sol/IHederaTokenService.json -->
+
+| Function                                                        | Comment                                                        |
+| --------------------------------------------------------------- | -------------------------------------------------------------- |
+| `burnToken(address token, int64 amount, int64[] serialNumbers)` | Burns an amount of the token from the defined treasury account |
+| `getTokenInfo(address token)`                                   | Query token info                                               |
+| `mintToken(address token, int64 amount, bytes[] metadata)`      | Mints an amount of the token to the defined treasury account   |
+
+<!-- -->
 
 ## Build
 
 This repo consists of two projects/packages.
 A Foundry project, to compile and test the `HtsSystemContract.sol` contract.
-And an `npm` package that implements the `eth_getCode` and `eth_getStorageAt` JSON-RPC calls when HTS emulation is involved.
+And an `npm` package that implements both `eth_getCode` and `eth_getStorageAt` JSON-RPC methods when HTS emulation is involved together with the Hardhat plugin that uses these methods.
 
-To compile the `HtsSystemContract` and test contracts
+To compile the `HtsSystemContract`, its dependencies and the test contracts run
 
 ```console
 forge build
 ```
-
-> [!TIP]
-> Keep in mind the compilation output of `HtsSystemContract` is versioned.
-> So it will appear as modified after `forge build` when `HtsSystemContract` has been changed.
 
 There is no compilation step to build the `@hashgraph/hedera-forking` package.
 However, you can type-check it by running
@@ -174,15 +411,40 @@ However, you can type-check it by running
 npm run type-check
 ```
 
+The code examples and the tables for supported methods included in this `README` are automatically generated.
+Run the following command to generate them
+
+```console
+npm run make:readme
+```
+
+This allow us to ensure that all examples and tables are never outdated (if we change them we just need to rerun the above command) and that the examples are executed properly (we run them on CI).
+
+Code fences that contains a file name after the language definition, _e.g._,
+
+````markdown
+```solidity examples/foundry-hts/USDC.t.sol
+```
+````
+
+or comments such as
+
+```markdown
+<!-- !./scripts/abi-table.js out/IERC20.sol/IERC20.json out/IERC20.sol/IERC20Events.json -->
+<!-- -->
+```
+
+will be expanded with either the content of the file or, when the file descriptor starts with a `!`, with the standard output of the application.
+
 ## Tests
 
 > [!TIP]
-> The [`launch-token`](./launch-token/) script was used to deploy Tokens using HTS to `testnet` for testing purposes.
+> The [`create-token.js`](./scripts/create-token.js) script was used to deploy Tokens using HTS to `testnet` for testing purposes.
 
-### `getHtsCode` and `getHtsStorageAt` Unit Tests
+### `getHtsCode`, `getHtsStorageAt` and `getHIP719Code` Unit Tests
 
-These tests only involve testing both `getHtsCode` and `getHtsStorageAt` functions.
-In other words, they do not use the `HtsSystemContract` bytecode, only its `storageLayout` definition.
+These tests only involve testing `getHtsCode`, `getHtsStorageAt` and `getHIP719Code` functions.
+In other words, they do not use the `HtsSystemContract` bytecode, only its `storageLayout` definition. To run them, execute
 
 ```console
 npm run test
@@ -190,24 +452,54 @@ npm run test
 
 ### `HtsSystemContract` Solidity tests + local storage emulation (_without_ forking)
 
-Foundry provides a Std Storage library, _"that makes manipulating storage easy"_.
-See <https://book.getfoundry.sh/reference/forge-std/std-storage> for more information.
-
-We use the Std Storage library to provide local storage emulation that allow us to run `HtsSystemContract` Solidity tests without starting out a separate JSON-RPC process.
+We use Foundry cheatcodes, _i.e._,
+[`vm.store`](https://book.getfoundry.sh/cheatcodes/store) and
+[`vm.load`](https://book.getfoundry.sh/cheatcodes/load),
+to provide local storage emulation that allow us to run `HtsSystemContract` Solidity tests without starting out a separate JSON-RPC process.
 
 ```console
 forge test
 ```
 
-> [!NOTE]
-> When running these tests **without** forking from a remote network,
-> the package `@hashgraph/hedera-forking` is not under test.
+> [!TIP]
+> You can use the `--match-contract` flag to filter the tests to be executed if needed.
+> In addition, usually when debugging the contract under test we are interested in getting the Solidity traces.
+> We can use the `forge` flag `-vvvv` to display them.
+> For example
+>
+> ```console
+> forge test --match-contract TokenTest -vvvv
+> ```
+
+When running these tests **without** forking from a remote network,
+the package `@hashgraph/hedera-forking` is not under test.
+
+### `HtsSystemContract` Solidity tests + Mirror Node FFI (with mocked `curl`)
+
+This is used to test `HtsSystemContract`(`Json`)+`MirrorNodeFFI` contracts.
+It is the implementation used by Foundry users.
+
+We provide a `curl` mock in the `scripts` folder to avoid depending on a remote Mirror Node and thus making the tests more robust.
+By modifiying the `PATH` environment variable, the mocked `curl` is used instead.
+
+```console
+PATH=./scripts:$PATH forge test --fork-url https://testnet.hashio.io/api --fork-block-number 8535327
+```
+
+In case needed, there is a trace log of requests made by mocked `curl` in `scripts/curl.log`
+
+```console
+cat scripts/curl.log
+```
 
 ### `HtsSystemContract` Solidity tests + JSON-RPC mock server for storage emulation (_with_ forking)
 
 These Solidity tests are used to test both the `HtsSystemContract` and the `@hashgraph/hedera-forking` package.
+It is the implementation used by Hardhat users.
+
 Instead of starting a `local-node` or using a remote network,
-they use the [`json-rpc-mock.js`](./scripts/json-rpc-mock.js) script as a backend without the need for any additional service.
+they use the [`json-rpc-mock.js`](./scripts/json-rpc-mock.js) script as a backend without the need for any additional services,
+thus making the tests more robust.
 This is the network Foundry's Anvil is forking from.
 
 In a separate terminal run the JSON-RPC Mock Server
@@ -226,121 +518,6 @@ forge test --fork-url http://localhost:7546 --no-storage-caching
 > The `--no-storage-caching` flag disables the JSON-RPC calls cache,
 > which is important to make sure the `json-rpc-mock.js` is reached in each JSON-RPC call.
 > See <https://book.getfoundry.sh/reference/forge/forge-test#description> for more information.
-
-You can use the `--match-contract` flag to filter the tests to be executed if needed.
-In addition, usually when debugging the contract under test we are interested in getting the Solidity traces.
-We can use the `forge` flag `-vvvv` to display them.
-For example
-
-```console
-forge test --match-contract TokenTest -vvvv
-```
-
-### `HtsSystemContract` Solidity tests + Relay for storage emulation (with forking)
-
-These tests are the same of the section above, but instead of using the `json-rpc-mock.js` it uses the Relay with `hedera-forking` enabled pointing to `testnet`.
-
-## Storage Layout
-
-The Solidity compiler `solc` provides an option to generate detailed storage layout information as part of the build output.
-This feature can be enabled by selecting the `storageLayout` option,
-which provides insights into how variables are stored in contract storage.
-
-### Enabling Storage Layout
-
-**In Hardhat.**
-
-To generate the storage layout using Hardhat,
-you need to modify the Hardhat configuration file `hardhat.config.js` as follows
-
-```javascript
-module.exports = {
-  solidity: {
-    settings: {
-      outputSelection: {
-        '*': {
-          '*': ['storageLayout'],
-        },
-      },
-    },
-  },
-};
-```
-
-With this configuration, the storage layout information will be included in the build artifacts.
-You can find this information in the following path within the build output
-
-```txt
-output -> contracts -> ContractName.sol -> ContractName -> storageLayout
-```
-
-**In Foundry.**
-
-Add the following line to your `foundry.toml` file
-
-```toml
-extra_output = ["storageLayout"]
-```
-
-The `storageLayout` object is included in the output file `out/<Contract name>.sol/<Contract name>.json`.
-
-> [!IMPORTANT]
-> This is the one used in this project.
-
-### Understanding the Storage Layout Format
-
-The storage layout is represented in JSON format with the following fields
-
-- **`astId`**. The identifier in the Abstract Syntax Tree (AST).
-- **`contract`**. The name of the contract.
-- **`label`**. The name of the instance variable.
-- **`offset`**. The starting location of the variable within a `uint256` storage word.
-  Multiple variables may be packed into a single memory slot when their types are smaller than a 32 bytes word.
-  In such cases, the `offset` value for the second and subsequent variables will differ from `0`.
-- **`slot`**. A integer representing the slot number in storage.
-- **`type`**. The type of the value stored in the slot.
-
-See <https://docs.soliditylang.org/en/latest/internals/layout_in_storage.html#json-output> for more information.
-
-### Application to Token Smart Contract Emulation
-
-For the purpose of our implementation,
-understanding which variable names are stored in specific slots is sufficient to develop a functional emulator for the token smart contract.
-
-### Issues with Storage for Mappings, Arrays, and Strings Longer than 31 Bytes
-
-When dealing with mappings, arrays, and strings longer than 31 bytes in Solidity, these data types do not fit entirely within a single storage slot. This creates challenges when trying to access or compute their storage locations.
-
-### Accessing Mappings
-
-For mappings, the value is not stored directly in the storage slot. Instead, to access a specific value in a mapping, you must first calculate the storage slot by computing the Keccak-256 hash of the concatenation of the "key" (the mapped value) and the "slot" number where the mapping is declared.
-
-```solidity
-bytes32 storageSlot = keccak256(abi.encodePacked(key, uint256(slotNumber)));
-```
-
-To reverse-engineer or retrieve the original key (e.g., an address or token ID) from a storage slot, you'd need to maintain a mapping of keys to their corresponding storage hashes, which can be cumbersome.
-
-### Calculating Storage for User Addresses and Token IDs
-
-For our current use case, where we need to calculate these values for user addresses and token IDs (which are integers), this is manageable
-
-- **User Addresses**: Since the number of user accounts is limited, their mapping can be stored and referenced as needed.
-- **Token IDs**: These are sequentially incremented integers, making it possible to precompute and store their corresponding storage slots on the Hedera JSON-RPC side.
-
-### Handling Long Strings
-
-Handling strings longer than 31 bytes is more complex
-
-1. **Calculate the Slot Hash.** Start by calculating the Keccak-256 hash of the slot number where the string is stored.
-
-   ```solidity
-   bytes32 hashSlot = keccak256(abi.encodePacked(uint256(slotNumber)));
-   ```
-
-2. **Retrieve the Value.** Access the value stored at this hash slot. If the string exceeds 32 bytes, retrieve the additional segments from consecutive slots (_e.g._, `hashSlot + 1`, `hashSlot + 2`, _etc._), until the entire string is reconstructed.
-
-This process requires careful calculation and multiple reads from storage to handle longer strings properly.
 
 ## Support
 
