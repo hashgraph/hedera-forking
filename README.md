@@ -418,41 +418,12 @@ Run the following command to generate them
 npm run make:readme
 ```
 
+This allow us to ensure that all examples and tables are never outdated (if we change them we just need to rerun the above command) and that the examples are executed properly (we run them on CI).
+
 Code fences that contains a file name after the language definition, _e.g._,
 
 ````markdown
 ```solidity examples/foundry-hts/USDC.t.sol
-// SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.0;
-
-import {Test} from "forge-std/Test.sol";
-import {htsSetup} from "hedera-forking/src/htsSetup.sol";
-import {IERC20} from "hedera-forking/src/IERC20.sol";
-
-contract USDCExampleTest is Test {
-    // https://hashscan.io/mainnet/token/0.0.456858
-    address USDC_mainnet = 0x000000000000000000000000000000000006f89a;
-
-    address private user1;
-
-    function setUp() external {
-        htsSetup();
-
-        user1 = makeAddr("user1");
-        deal(USDC_mainnet, user1, 1000 * 10e8);
-    }
-
-    function test_get_balance_of_existing_account() view external {
-        // https://hashscan.io/mainnet/account/0.0.1528
-        address usdcHolder = 0x00000000000000000000000000000000000005f8;
-        // Balance retrieved from mainnet at block 72433403
-        assertEq(IERC20(USDC_mainnet).balanceOf(usdcHolder), 28_525_752677);
-    }
-
-    function test_dealt_balance_of_local_account() view external {
-        assertEq(IERC20(USDC_mainnet).balanceOf(user1), 1000 * 10e8);
-    }
-}
 ```
 ````
 
@@ -460,24 +431,6 @@ or comments such as
 
 ```markdown
 <!-- !./scripts/abi-table.js out/IERC20.sol/IERC20.json out/IERC20.sol/IERC20Events.json -->
-
-| Function | Comment |
-|----------|---------|
-| `allowance(address owner, address spender) view` |  Returns the remaining number of tokens that `spender` will be allowed to spend on behalf of `owner` through {transferFrom}. This is zero by default. This value changes when {approve} or {transferFrom} are called. |
-| `approve(address spender, uint256 amount)` |  Sets a `value` amount of tokens as the allowance of `spender` over the caller's tokens. Returns a boolean value indicating whether the operation succeeded. |
-| `balanceOf(address account) view` |  Returns the value of tokens owned by `account`. |
-| `decimals() view` |  Returns the decimals places of the token. |
-| `name() view` |  Returns the name of the token. |
-| `symbol() view` |  Returns the symbol of the token. |
-| `totalSupply() view` |  Returns the value of tokens in existence. |
-| `transfer(address recipient, uint256 amount)` |  Moves a `value` amount of tokens from the caller's account to `to`. Returns a boolean value indicating whether the operation succeeded. |
-| `transferFrom(address sender, address recipient, uint256 amount)` |  Moves a `value` amount of tokens from `from` to `to` using the allowance mechanism. `value` is then deducted from the caller's allowance. Returns a boolean value indicating whether the operation succeeded. |
-
-| Event | Comment |
-|----------|---------|
-| `Approval(address indexed owner, address indexed spender, uint256 amount)` |  Emitted when the allowance of a `spender` for an `owner` is set by a call to {approve}. `value` is the new allowance. |
-| `Transfer(address indexed from, address indexed to, uint256 amount)` |  Emitted when `value` tokens are moved from one account (`from`) to another (`to`). Note that `value` may be zero. |
-
 <!-- -->
 ```
 

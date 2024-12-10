@@ -45,7 +45,7 @@ function main() {
     const write = (/** @type string */ line) => (output += line + '\n');
 
     for (const line of readme.split('\n')) {
-        const trimmedLine = line.trim();
+        const trimmedLine = line.trimEnd();
         const found = MARKERS.map(marker => ({
             ...marker,
             match: trimmedLine.match(marker.begin),
