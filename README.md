@@ -119,6 +119,14 @@ forge test --fork-url https://mainnet.hashio.io/api --fork-block-number 72433403
 
 ## Hardhat plugin
 
+We provide a Hardhat plugin that enables fork testing when using HTS Tokens.
+
+In addition, this plugin provides the following features
+
+- **Sets up Hardfork history for Hedera networks.** This solves the issue
+  [`No known hardfork for execution on historical block`](https://hardhat.org/hardhat-network/docs/guides/forking-other-networks#using-a-custom-hardfork-history).
+- **Avoids `Missing access list` error.** Hardhat throws this error when a `blockNumber` is provided in the forking configuration. The plugin solves this issue.
+
 This plugin intercepts the calls made by Hardhat to fetch remote state, \_i.e.,
 `eth_getCode` and `eth_getStorageAt`, to provide emulation for HTS.
 It assigns the Hedera Token Service code to the `0x167` address.
