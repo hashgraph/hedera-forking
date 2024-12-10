@@ -13,7 +13,7 @@ Vm constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
  * @notice Sets up the HTS emulation contract.
  * The HTS emulation contract will be deployed at `0x167` address using `vm.etch`.
  *
- * Remember to enable [ffi](https://book.getfoundry.sh/cheatcodes/ffi)
+ * Remember to enable [`ffi`](https://book.getfoundry.sh/cheatcodes/ffi)
  * in your Foundry project to use HTS contract in your tests.
  * You can do this by adding the following lines to your `.toml` file
  *
@@ -30,7 +30,7 @@ Vm constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
  * > The HTS emulation contract **SHOULD BE ONLY** used to ease development workflow when working with Hedera Tokens.
  * > The HTS emulation contract **DOES NOT** replicate Hedera Token Services fully.
  * > That is, behavior might differ when switching from local development to a real Hedera network.
- * > Always test your contracts against a real Hedera network before launching your contracts.
+ * > **Always test your contracts against a real Hedera network before launching your contracts.**
  */
 function htsSetup() {
     htsSetup(new MirrorNodeFFI());
