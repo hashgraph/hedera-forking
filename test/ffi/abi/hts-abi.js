@@ -58,29 +58,6 @@ export const htsAbi = {
       ],
     },
     { name: 'initialTotalSupply', type: 'int64' },
-    { name: 'decimals', type: 'int32' },
-    {
-      name: 'fixedFees',
-      type: 'tuple[]',
-      components: [
-        { name: 'amount', type: 'int64' },
-        { name: 'tokenId', type: 'address' },
-        { name: 'useHbarsForPayment', type: 'bool' },
-        { name: 'useCurrentTokenForPayment', type: 'bool' },
-        { name: 'feeCollector', type: 'address' },
-      ],
-    },
-    {
-      name: 'fractionalFees',
-      type: 'tuple[]',
-      components: [
-        { name: 'numerator', type: 'int64' },
-        { name: 'denominator', type: 'int64' },
-        { name: 'minimumAmount', type: 'int64' },
-        { name: 'maximumAmount', type: 'int64' },
-        { name: 'netOfTransfers', type: 'bool' },
-        { name: 'feeCollector', type: 'address' },
-      ],
-    },
+    { name: 'decimals', type: 'int32' }
   ],
 };

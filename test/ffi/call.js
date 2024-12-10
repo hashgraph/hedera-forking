@@ -1,15 +1,9 @@
 import Web3 from 'web3';
-import { AccessListEIP2930Transaction } from '@ethereumjs/tx';
-import { Common } from '@ethereumjs/common';
-import { Address } from '@ethereumjs/util';
-import { ethers } from 'ethers';
 import {
     Client,
     PrivateKey,
-    EthereumTransaction,
     Hbar,
     AccountId,
-    TransactionId,
     TokenSupplyType,
     AccountInfoQuery, AccountCreateTransaction, TokenCreateTransaction, TokenType,
 } from '@hashgraph/sdk';
@@ -26,8 +20,8 @@ if (!OPERATOR_PRIVATE_KEY || !RELAY_ENDPOINT) {
     process.exit(1);
 }
 const args = process.argv.slice(2);
-if (args.length < 4) {
-    console.error('Usage: node call.js <inputData> <fromAddress> <toAddress> <gasLimit>');
+if (args.length < 3) {
+    console.error('Usage: node call.js <inputData> <fromAddress> <toAddress>');
     process.exit(1);
 }
 const operatorKey = PrivateKey.fromStringDer('302e020100300506032b65700422042091132178e72057a1d7528025956fe39b0b847f200ab59b2fdd367017f3087137');
@@ -37,18 +31,8 @@ const client = Client.forNetwork({
 });
 client.setOperator(operatorAccountId, operatorKey);
 
-// @ts-ignore
 const web3 = new Web3(RELAY_ENDPOINT);
-const [inputData, fromAddress, toAddress, gasLimit] = args;
-const privateKey = Buffer.from(OPERATOR_PRIVATE_KEY.substring(2), 'hex');
-const txParams = {
-    nonce: BigInt(0),
-    gasPrice: BigInt(0),
-    gasLimit: BigInt(parseInt(gasLimit, 16)),
-    to: Address.fromString(toAddress),
-    value: BigInt(0),
-    data: ethers.toUtf8Bytes(inputData),
-};
+const [inputData, fromAddress, toAddress] = args;
 
 async function createAccountIfDoesNotExist(evmAddress) {
     try {
@@ -92,14 +76,13 @@ function decodeTokenParameters(bytecode) {
 
 
 async function createAndSignTransaction() {
+    // The selector of: createFungibleToken((string,string,address,string,bool,int64,bool,(uint256,(bool,address,bytes,bytes,address))[],(int64,address,int64)),int64,int32)
     const methodSignature = '0x0fb65bf3';
     if (inputData.startsWith(methodSignature)) {
         const decodedParams = web3.eth.abi.decodeParameters(
             htsAbi.createNonFungibleToken,
             `0x${inputData.substring(methodSignature.length)}`
-        );
-
-
+        )
         const tokenData = decodedParams['0']; // Primary token data
         const tokenCreateTx = new TokenCreateTransaction()
             .setTokenType(TokenType.FungibleCommon)
@@ -125,26 +108,6 @@ async function createAndSignTransaction() {
                 }
             }
         }
-        if (Array.isArray(tokenData.fixedFees)) {
-            for (const fee of tokenData.fixedFees) {
-                tokenCreateTx.setCustomFees([{
-                    fixedFee: Number(fee.amount),
-                    feeCollectorAccountId: AccountId.fromString(fee.feeCollector),
-                }]);
-            }
-        }
-        /*
-             if (Array.isArray(tokenData.fractionalFees)) {
-                 for (const fee of tokenData.fractionalFees) {
-                     tokenCreateTx.customFees([{
-                         numerator: Number(fee.numerator),
-                         denominator: Number(fee.denominator),
-                         minimumAmount: Number(fee.minimumAmount),
-                         maximumAmount: Number(fee.maximumAmount),
-                         feeCollectorAccountId: AccountId.fromString(fee.feeCollector),
-                     }]);
-                 }
-             }*/
         if (tokenData.expiry) {
       //      tokenCreateTx.setAutoRenewAccountId(AccountId.fromString(tokenData.expiry.autoRenewAccount))
       //          .setAutoRenewPeriod(Number(tokenData.expiry.autoRenewPeriod));
@@ -170,30 +133,7 @@ async function createAndSignTransaction() {
 
         return;
     }
-
-    txParams.nonce = await web3.eth.getTransactionCount(fromAddress, 'latest');
-    txParams.gasPrice = await web3.eth.getGasPrice();
-    const chainId = 298;//await web3.eth.getChainId();
-    const common = Common.custom(
-        {
-            name: "hedera-local",
-            chainId,
-            networkId: chainId,
-        },
-        { baseChain: "mainnet" }
-    );
-    const tx = AccessListEIP2930Transaction.fromTxData(txParams, { common });
-    const signedTx = tx.sign(privateKey);
-    const serializedTx = signedTx.serialize();
-    const txId = TransactionId.generate(operatorAccountId)
-    const ethereumTransaction = await new EthereumTransaction()
-        .setTransactionId(txId)
-        .setEthereumData(serializedTx)
-        .setMaxGasAllowanceHbar(new Hbar(1000000000))
-        .freezeWith(client)
-        .sign(operatorKey);
-    const response = await ethereumTransaction.execute(client);
-    const receipt = await response.getReceipt(client);
+    process.exit();
 }
 createAndSignTransaction().catch((result) => {
     console.error(result);
