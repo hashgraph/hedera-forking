@@ -230,4 +230,4 @@ jobs:
         run: forge build --remappings hedera-forking=.
 
       - name: Run Forge example tests using remote network with a pinned block number
-        run: forge test --remappings hedera-forking=. --fork-url https://mainnet.hashio.io/api --fork-block-number 72433403
+        run: forge test --remappings hedera-forking=. -vv --fork-url https://mainnet.hashio.io/api --fork-block-number 72433403
