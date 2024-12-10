@@ -48,9 +48,7 @@ This is necessary because our library relies on [`curl`](https://curl.se/) to ma
 This enables the library to fetch token state in the remote network.
 Given `curl` is an external command, `ffi` needs to be enabled.
 
-### Usage
-
-To enable HTS in your tests, you need to add the following setup code in your test files.
+To activate HTS emulation in your tests, you need to add the following setup code in your test files.
 Import our wrapper function to deploy HTS emulation and enable cheat codes for it.
 
 ```solidity
@@ -65,7 +63,9 @@ and then invoke it in your [test setup](https://book.getfoundry.sh/forge/writing
     }
 ```
 
-Now you can use HTS and remote tokens as if they were deployed locally when fork testing.
+### Running your Tests
+
+Now you can use Hedera Token Services and remote tokens as if they were deployed locally when fork testing.
 For example
 
 ```solidity examples/foundry-hts/USDC.t.sol
@@ -102,9 +102,7 @@ contract USDCExampleTest is Test {
 }
 ```
 
-### Running your Tests
-
-To run the tests, use the following command
+To run your tests, use the usual command
 
 ```console
 forge test --fork-url https://mainnet.hashio.io/api
@@ -115,6 +113,37 @@ For example, the test above is known to work at block `72433403`
 
 ```console
 forge test --fork-url https://mainnet.hashio.io/api --fork-block-number 72433403
+```
+
+You can use all the tools and cheatcodes Foundry provides, _e.g._, `console.log`
+
+```solidity examples/foundry-hts/USDCConsole.t.sol
+// SPDX-License-Identifier: Apache-2.0
+pragma solidity ^0.8.0;
+
+import {Test, console} from "forge-std/Test.sol";
+import {htsSetup} from "hedera-forking/src/htsSetup.sol";
+import {IERC20} from "hedera-forking/src/IERC20.sol";
+
+contract USDCConsoleExampleTest is Test {
+    function setUp() external {
+        htsSetup();
+    }
+
+    function test_using_console_log() view external {
+        // https://hashscan.io/mainnet/token/0.0.456858
+        address USDC_mainnet = 0x000000000000000000000000000000000006f89a;
+
+        string memory name = IERC20(USDC_mainnet).name();
+        string memory symbol = IERC20(USDC_mainnet).symbol();
+        uint8 decimals = IERC20(USDC_mainnet).decimals();
+        assertEq(name, "USD Coin");
+        assertEq(symbol, "USDC");
+        assertEq(decimals, 6);
+
+        console.log("name: %s, symbol: %s, decimals: %d", name, symbol, decimals);
+    }
+}
 ```
 
 ## Hardhat plugin
@@ -393,6 +422,37 @@ Code fences that contains a file name after the language definition, _e.g._,
 
 ````markdown
 ```solidity examples/foundry-hts/USDC.t.sol
+// SPDX-License-Identifier: Apache-2.0
+pragma solidity ^0.8.0;
+
+import {Test} from "forge-std/Test.sol";
+import {htsSetup} from "hedera-forking/src/htsSetup.sol";
+import {IERC20} from "hedera-forking/src/IERC20.sol";
+
+contract USDCExampleTest is Test {
+    // https://hashscan.io/mainnet/token/0.0.456858
+    address USDC_mainnet = 0x000000000000000000000000000000000006f89a;
+
+    address private user1;
+
+    function setUp() external {
+        htsSetup();
+
+        user1 = makeAddr("user1");
+        deal(USDC_mainnet, user1, 1000 * 10e8);
+    }
+
+    function test_get_balance_of_existing_account() view external {
+        // https://hashscan.io/mainnet/account/0.0.1528
+        address usdcHolder = 0x00000000000000000000000000000000000005f8;
+        // Balance retrieved from mainnet at block 72433403
+        assertEq(IERC20(USDC_mainnet).balanceOf(usdcHolder), 28_525_752677);
+    }
+
+    function test_dealt_balance_of_local_account() view external {
+        assertEq(IERC20(USDC_mainnet).balanceOf(user1), 1000 * 10e8);
+    }
+}
 ```
 ````
 
@@ -400,6 +460,24 @@ or comments such as
 
 ```markdown
 <!-- !./scripts/abi-table.js out/IERC20.sol/IERC20.json out/IERC20.sol/IERC20Events.json -->
+
+| Function | Comment |
+|----------|---------|
+| `allowance(address owner, address spender) view` |  Returns the remaining number of tokens that `spender` will be allowed to spend on behalf of `owner` through {transferFrom}. This is zero by default. This value changes when {approve} or {transferFrom} are called. |
+| `approve(address spender, uint256 amount)` |  Sets a `value` amount of tokens as the allowance of `spender` over the caller's tokens. Returns a boolean value indicating whether the operation succeeded. |
+| `balanceOf(address account) view` |  Returns the value of tokens owned by `account`. |
+| `decimals() view` |  Returns the decimals places of the token. |
+| `name() view` |  Returns the name of the token. |
+| `symbol() view` |  Returns the symbol of the token. |
+| `totalSupply() view` |  Returns the value of tokens in existence. |
+| `transfer(address recipient, uint256 amount)` |  Moves a `value` amount of tokens from the caller's account to `to`. Returns a boolean value indicating whether the operation succeeded. |
+| `transferFrom(address sender, address recipient, uint256 amount)` |  Moves a `value` amount of tokens from `from` to `to` using the allowance mechanism. `value` is then deducted from the caller's allowance. Returns a boolean value indicating whether the operation succeeded. |
+
+| Event | Comment |
+|----------|---------|
+| `Approval(address indexed owner, address indexed spender, uint256 amount)` |  Emitted when the allowance of a `spender` for an `owner` is set by a call to {approve}. `value` is the new allowance. |
+| `Transfer(address indexed from, address indexed to, uint256 amount)` |  Emitted when `value` tokens are moved from one account (`from`) to another (`to`). Note that `value` may be zero. |
+
 <!-- -->
 ```
 
