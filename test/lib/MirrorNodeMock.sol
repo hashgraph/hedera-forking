@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {Vm} from "forge-std/Vm.sol";
-import {MirrorNode} from "../../src/MirrorNode.sol";
+import {MirrorNode} from "../../contracts/MirrorNode.sol";
 
 contract MirrorNodeMock is MirrorNode {
 

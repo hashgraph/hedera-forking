@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 
 import {Test, console} from "lib/forge-std/src/Test.sol";
 import {TestSetup} from "./lib/TestSetup.sol";
-import {IHRC719} from "src/IHRC719.sol";
+import {IHRC719} from "../contracts/IHRC719.sol";
 
 contract IHRC719TokenAssociationTest is Test, TestSetup {
     function setUp() external {

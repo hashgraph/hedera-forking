@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {Test, console} from "forge-std/Test.sol";
-import {MirrorNodeFFI} from "../src/MirrorNodeFFI.sol";
+import {MirrorNodeFFI} from "../contracts/MirrorNodeFFI.sol";
 
 contract MirrorNodeFFITest is Test {
 
