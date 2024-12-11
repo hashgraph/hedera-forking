@@ -157,13 +157,13 @@ jobs:
           forge build
 
       - name: Mock curl
-        run: echo "./scripts" >> "$GITHUB_PATH"
+        run: echo "./test/scripts" >> "$GITHUB_PATH"
 
       - name: Run Forge tests using JSON-RPC Mainnet and Testnet servers (with forking)
         run: forge test -vvv --fork-url https://testnet.hashio.io/api --fork-block-number 8535327
 
       - name: Show Mocked curl Requests
-        run: cat scripts/curl.log
+        run: cat test/scripts/curl.log
 
   sol-tests-json-rpc-mock:
     name: 'Forge tests w/RPC mock server'
@@ -198,8 +198,7 @@ jobs:
           forge build
 
       - name: Start JSON-RPC mock server
-        working-directory: ./@hts-forking
-        run: node scripts/json-rpc-mock.js &
+        run: node test/scripts/json-rpc-mock.js &
 
       - name: Run Forge tests using JSON-RPC mock server for storage emulation (with forking)
         run: forge test -vvv --fork-url http://localhost:7546 --no-storage-caching
