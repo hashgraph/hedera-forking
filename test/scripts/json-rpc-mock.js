@@ -194,7 +194,7 @@ const eth = {
      * @type {EthHandler}
      */
     eth_getBlockByNumber: async ([blockNumber, _transactionDetails]) =>
-        require(`./mock/eth_getBlockByNumber_${blockNumber}.json`),
+        require(`./eth_getBlockByNumber_${blockNumber}.json`),
 
     /**
      * https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_gettransactioncount
