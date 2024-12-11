@@ -25,7 +25,7 @@ contract MirrorNodeFFITest is Test {
             vm.roll(8535327);
 
             string memory PATH = vm.envString("PATH");
-            vm.setEnv("PATH", string.concat("./scripts:", PATH));
+            vm.setEnv("PATH", string.concat("./test/scripts:", PATH));
 
             _mirrorNode = new MirrorNodeFFI();
         }
