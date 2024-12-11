@@ -22,14 +22,14 @@ const { Worker } = require('worker_threads');
 const { expect } = require('chai');
 const ethers = require('ethers');
 
-const IERC20 = require('../../out/IERC20.sol/IERC20.json');
+const IERC20 = require('../out/IERC20.sol/IERC20.json');
 
 /**
  * @returns {Promise<string>}
  */
 function jsonRpcMock() {
     return new Promise(resolve => {
-        const scriptPath = path.resolve(__dirname, '../scripts/json-rpc-mock');
+        const scriptPath = path.resolve(__dirname, 'scripts/json-rpc-mock');
         const worker = new Worker(scriptPath);
         worker.on('error', err => console.log(err));
         worker.on('exit', code => console.log(`JSON-RPC Mock Worker exited with code ${code}`));

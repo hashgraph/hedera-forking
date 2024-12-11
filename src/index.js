@@ -21,7 +21,7 @@ const debug = require('util').debuglog('hts-forking');
 
 const { ZERO_HEX_32_BYTE, toIntHex256 } = require('./utils');
 const { slotMapOf } = require('./slotmap');
-const { deployedBytecode } = require('../resources/HtsSystemContract.json');
+const { deployedBytecode } = require('../out/HtsSystemContract.sol/HtsSystemContract.json');
 
 const HTSAddress = '0x0000000000000000000000000000000000000167';
 

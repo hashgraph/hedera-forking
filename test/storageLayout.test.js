@@ -20,7 +20,7 @@ const { expect } = require('chai');
 
 const {
     storageLayout: { storage, types },
-} = require('../resources/HtsSystemContract.json');
+} = require('../out/HtsSystemContract.sol/HtsSystemContract.json');
 
 describe('::storageLayout', function () {
     describe('storage', function () {

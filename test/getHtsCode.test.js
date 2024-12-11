@@ -18,7 +18,7 @@
 
 const { expect } = require('chai');
 
-const { getHtsCode } = require('@hashgraph/hts-forking');
+const { getHtsCode } = require('@hashgraph/system-contracts-forking');
 
 describe('::getHtsCode', function () {
     it('should be larger than `0xfe` (invalid instruction bytecode)', function () {

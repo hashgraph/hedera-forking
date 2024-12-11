@@ -31,11 +31,11 @@ const {
     getHIP719Code,
     getHtsCode,
     getHtsStorageAt,
-} = require('@hashgraph/hts-forking');
-const { ZERO_HEX_32_BYTE } = require('../src/utils');
-const { tokens } = require('../test/data');
+} = require('@hashgraph/system-contracts-forking');
+const { ZERO_HEX_32_BYTE } = require('../../src/utils');
+const { tokens } = require('../data');
 
-/** @import { IMirrorNodeClient } from '@hashgraph/hts-forking' */
+/** @import { IMirrorNodeClient } from '@hashgraph/system-contracts-forking' */
 
 /** ANSI colors functions to avoid any external dependency. */
 const c = {
@@ -73,7 +73,7 @@ const isHIP719Contract = address =>
  */
 const requireOrDefault = (path, defaultValue) => {
     try {
-        return require(`../test/data/${path}`);
+        return require(`../data/${path}`);
     } catch (err) {
         assert(err instanceof Error);
         // https://nodejs.org/api/errors.html#module_not_found
@@ -97,7 +97,7 @@ const mirrorNodeClient = {
     async getTokenById(tokenId) {
         this.append('getTokenById', tokenId);
         if (tokens[tokenId] === undefined) return null;
-        return require(`../test/data/${tokens[tokenId].symbol}/getToken.json`);
+        return require(`../data/${tokens[tokenId].symbol}/getToken.json`);
     },
     async getAccount(idOrAliasOrEvmAddress) {
         assert(!idOrAliasOrEvmAddress.startsWith('0x'));

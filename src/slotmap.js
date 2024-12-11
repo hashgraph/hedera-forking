@@ -22,7 +22,7 @@ const { keccak256 } = require('ethers');
 const { toIntHex256, toSnakeCase } = require('./utils');
 const {
     storageLayout: { storage, types },
-} = require('../resources/HtsSystemContract.json');
+} = require('../out/HtsSystemContract.sol/HtsSystemContract.json');
 
 /**
  * Represents the value in the `SlotMap`.

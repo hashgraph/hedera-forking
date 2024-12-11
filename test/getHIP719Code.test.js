@@ -17,7 +17,7 @@
  */
 
 const { expect } = require('chai');
-const { getHIP719Code } = require('@hashgraph/hts-forking');
+const { getHIP719Code } = require('@hashgraph/system-contracts-forking');
 
 describe('::getHIP719Code', function () {
     ['', '1234', '0x', '0x1234'].forEach(address => {

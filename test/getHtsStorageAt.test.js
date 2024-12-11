@@ -20,12 +20,16 @@ const { strict: assert } = require('assert');
 const { expect, config } = require('chai');
 const { keccak256, id } = require('ethers');
 
-const { HTSAddress, LONG_ZERO_PREFIX, getHtsStorageAt } = require('@hashgraph/hts-forking');
+const {
+    HTSAddress,
+    LONG_ZERO_PREFIX,
+    getHtsStorageAt,
+} = require('@hashgraph/system-contracts-forking');
 const { ZERO_HEX_32_BYTE, toIntHex256, toSnakeCase } = require('../src/utils');
 const { tokens } = require('../test/data');
-const { storageLayout } = require('../resources/HtsSystemContract.json');
+const { storageLayout } = require('../out/HtsSystemContract.sol/HtsSystemContract.json');
 
-/** @import { IMirrorNodeClient } from '@hashgraph/hts-forking' */
+/** @import { IMirrorNodeClient } from '@hashgraph/system-contracts-forking' */
 
 config.truncateThreshold = 0;
 

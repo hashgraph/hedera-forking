@@ -21,7 +21,7 @@ const { expect } = require('chai');
 const { slotMapOf } = require('../src/slotmap');
 
 const mirrorNode =
-    /** @type{Pick<import('@hashgraph/hts-forking').IMirrorNodeClient, 'getAccount'>} */ ({
+    /** @type{Pick<import('@hashgraph/system-contracts-forking').IMirrorNodeClient, 'getAccount'>} */ ({
         getAccount: async address => ({ account: '', evm_address: address?.replace('0.0.', '') }),
     });
 
