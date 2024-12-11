@@ -9,7 +9,7 @@ contract MirrorNodeMock is MirrorNode {
     mapping (address => string) private _symbolOf;
 
     function deployHIP719Proxy(address token, string memory symbol) external {
-        string memory template = vm.replace(vm.trim(vm.readFile("./@hts-forking/src/HIP719.bytecode.json")), "\"", "");
+        string memory template = vm.replace(vm.trim(vm.readFile("./src/HIP719.bytecode.json")), "\"", "");
         string memory placeholder = "fefefefefefefefefefefefefefefefefefefefe";
         string memory addressString = vm.replace(vm.toString(token), "0x", "");
         string memory proxyBytecode = vm.replace(template, placeholder, addressString);
@@ -20,14 +20,14 @@ contract MirrorNodeMock is MirrorNode {
 
     function fetchTokenData(address token) isValid(token) external override view returns (string memory) {
         string memory symbol = _symbolOf[token];
-        string memory path = string.concat("./@hts-forking/test/data/", symbol, "/getToken.json");
+        string memory path = string.concat("./test/data/", symbol, "/getToken.json");
         return vm.readFile(path);
     }
 
     function fetchBalance(address token, uint32 accountNum) isValid(token) external override view returns (string memory) {
         string memory symbol = _symbolOf[token];
         string memory accountId = vm.toString(accountNum);
-        string memory path = string.concat("./@hts-forking/test/data/", symbol, "/getBalanceOfToken_0.0.", accountId, ".json");
+        string memory path = string.concat("./test/data/", symbol, "/getBalanceOfToken_0.0.", accountId, ".json");
         return vm.readFile(path);
     }
 
@@ -35,18 +35,18 @@ contract MirrorNodeMock is MirrorNode {
         string memory symbol = _symbolOf[token];
         string memory ownerId = vm.toString(ownerNum);
         string memory spenderId = vm.toString(spenderNum);
-        string memory path = string.concat("./@hts-forking/test/data/", symbol, "/getAllowanceForToken_0.0.", ownerId, "_0.0.", spenderId, ".json");
+        string memory path = string.concat("./test/data/", symbol, "/getAllowanceForToken_0.0.", ownerId, "_0.0.", spenderId, ".json");
         return vm.readFile(path);
     }
 
     function fetchAccount(string memory account) external override view returns (string memory) {
-        string memory path = string.concat("./@hts-forking/test/data/getAccount_", vm.toLowercase(account), ".json");
+        string memory path = string.concat("./test/data/getAccount_", vm.toLowercase(account), ".json");
         return vm.readFile(path);
     }
 
     function fetchTokenRelationshipOfAccount(string memory idOrAliasOrEvmAddress, address token) external override view returns (string memory) {
         string memory symbol = _symbolOf[token];
-        string memory path = string.concat("./@hts-forking/test/data/", symbol, "/getTokenRelationship_", vm.toLowercase(idOrAliasOrEvmAddress), ".json");
+        string memory path = string.concat("./test/data/", symbol, "/getTokenRelationship_", vm.toLowercase(idOrAliasOrEvmAddress), ".json");
         return vm.readFile(path);
     }
 }
