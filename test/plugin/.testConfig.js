@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+require('@hashgraph/system-contracts-forking/plugin');
+
 module.exports = {
     /**
      * Shared config for Hardhat test projects.

@@ -17,7 +17,7 @@
  */
 
 const { expect } = require('chai');
-const { getAddresses } = require('../src/hardhat-addresses');
+const { getAddresses } = require('../../src/plugin/hardhat-addresses');
 
 describe('::hardhat-addresses', function () {
     it('should get addresses from HD Wallet configuration', function () {

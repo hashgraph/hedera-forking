@@ -17,9 +17,9 @@
  */
 
 const { expect } = require('chai');
-const path = require('path');
+const { resolve } = require('path');
 const { Worker } = require('worker_threads');
-const { HTSAddress } = require('@hashgraph/hts-forking');
+const { HTSAddress } = require('@hashgraph/system-contracts-forking');
 
 class Provider {
     /**
@@ -54,7 +54,7 @@ describe('::json-rpc-forwarder', function () {
     let provider;
 
     before(async function () {
-        const scriptPath = path.resolve(__dirname, '..', 'src', './json-rpc-forwarder');
+        const scriptPath = resolve(__dirname, '..', '..', 'src', 'plugin', 'json-rpc-forwarder');
         const port = await new Promise(resolve =>
             new Worker(scriptPath, {
                 workerData: {

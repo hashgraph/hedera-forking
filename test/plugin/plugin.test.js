@@ -20,7 +20,7 @@ const { expect } = require('chai');
 const { resetHardhatContext } = require('hardhat/plugins-testing');
 const path = require('path');
 
-describe('::projects', function () {
+describe('::plugin', function () {
     this.timeout(30000);
 
     [

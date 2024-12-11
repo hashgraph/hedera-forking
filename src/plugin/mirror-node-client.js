@@ -18,7 +18,7 @@
 
 const debug = require('util').debuglog('hedera-forking-mirror');
 
-/** @import { IMirrorNodeClient } from '@hashgraph/hts-forking' */
+/** @import { IMirrorNodeClient } from '@hashgraph/system-contracts-forking' */
 
 /**
  * Class representing a client for interacting with the Hedera Mirror Node API.

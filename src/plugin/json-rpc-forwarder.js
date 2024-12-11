@@ -23,13 +23,7 @@ const debug = require('util').debuglog('hedera-forking-rpc');
 const c = require('ansi-colors');
 
 const { MirrorNodeClient } = require('./mirror-node-client');
-const {
-    getHtsCode,
-    getHtsStorageAt,
-    HTSAddress,
-    LONG_ZERO_PREFIX,
-    getHIP719Code,
-} = require('../../@hts-forking/src');
+const { getHtsCode, getHtsStorageAt, HTSAddress, LONG_ZERO_PREFIX, getHIP719Code } = require('..');
 
 /** @type {Partial<import('hardhat/types').HardhatNetworkForkingConfig>} */
 const { url: forkingUrl, mirrorNodeUrl, workerPort, localAccounts = [] } = workerData;

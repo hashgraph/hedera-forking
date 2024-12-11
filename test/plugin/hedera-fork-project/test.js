@@ -18,7 +18,7 @@
 
 const { strict: assert } = require('assert');
 const { expect } = require('chai');
-const { getHIP719Code } = require('@hashgraph/hts-forking');
+const { getHIP719Code } = require('@hashgraph/system-contracts-forking');
 const sinon = require('sinon');
 const { JsonRpcProvider } = require('ethers');
 const hre = require('hardhat');
