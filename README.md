@@ -170,13 +170,13 @@ To use this plugin, install it via your package manager.
 If you are using **npm**
 
 ```console
-npm install --save-dev @hashgraph/hardhat-forking-plugin
+npm install --save-dev @hashgraph/system-contracts-forking
 ```
 
 or using **yarn**
 
 ```console
-yarn add --dev @hashgraph/hardhat-forking-plugin
+yarn add --dev @hashgraph/system-contracts-forking
 ```
 
 ### Set up
@@ -184,13 +184,13 @@ yarn add --dev @hashgraph/hardhat-forking-plugin
 Next, add the following line to the top of your Hardhat config file, _e.g._, `hardhat.config.js`
 
 ```javascript
-require('@hashgraph/hardhat-forking-plugin');
+require('@hashgraph/system-contracts-forking/plugin');
 ```
 
 or if you are using TypeScript, include the following line into your `hardhat.config.ts`
 
 ```javascript
-import '@hashgraph/hardhat-forking-plugin';
+import '@hashgraph/system-contracts-forking/plugin';
 ```
 
 This will automatically create a worker thread to intercept calls to fetch remote state.
@@ -394,8 +394,8 @@ The following methods can be invoked on the Hedera Token Service contract locate
 
 ## Build
 
-This repo consists of two projects/packages.
-A Foundry project, to compile and test the `HtsSystemContract.sol` contract.
+This repo consists of a Foundry project and an `npm` package.
+A Foundry project, to compile and test the [`HtsSystemContract.sol`](./contracts/HtsSystemContract.sol) contract.
 And an `npm` package that implements both `eth_getCode` and `eth_getStorageAt` JSON-RPC methods when HTS emulation is involved together with the Hardhat plugin that uses these methods.
 
 To compile the `HtsSystemContract`, its dependencies and the test contracts run
@@ -404,7 +404,7 @@ To compile the `HtsSystemContract`, its dependencies and the test contracts run
 forge build
 ```
 
-There is no compilation step to build the `@hashgraph/hedera-forking` package.
+There is no compilation step to build the `npm` package.
 However, you can type-check it by running
 
 ```console
@@ -439,7 +439,7 @@ will be expanded with either the content of the file or, when the file descripto
 ## Tests
 
 > [!TIP]
-> The [`create-token.js`](./scripts/create-token.js) script was used to deploy Tokens using HTS to `testnet` for testing purposes.
+> The `scripts/create-token.js` file was used to deploy Tokens using HTS to `testnet` for testing purposes.
 
 ### `getHtsCode`, `getHtsStorageAt` and `getHIP719Code` Unit Tests
 
@@ -449,6 +449,15 @@ In other words, they do not use the `HtsSystemContract` bytecode, only its `stor
 ```console
 npm run test
 ```
+
+> [!TIP]
+> If you want to run the `npm` tests without the Hardhat plugin tests, you use the `--grep` flag together with `--invert`, _e.g._,
+>
+> ```console
+> npm run test -- --grep ::plugin --invert
+> ```
+
+All top-level `mocha`'s `describe`s should be prefixed with `::` so it can be easy to filter by tests.
 
 ### `HtsSystemContract` Solidity tests + local storage emulation (_without_ forking)
 
@@ -476,36 +485,36 @@ the package `@hashgraph/hedera-forking` is not under test.
 
 ### `HtsSystemContract` Solidity tests + Mirror Node FFI (with mocked `curl`)
 
-This is used to test `HtsSystemContract`(`Json`)+`MirrorNodeFFI` contracts.
+This is used to test [`HtsSystemContract`(`Json`)](./contracts/HtsSystemContractJson.sol)+[`MirrorNodeFFI`](./contracts/MirrorNodeFFI.sol) contracts.
 It is the implementation used by Foundry users.
 
-We provide a `curl` mock in the `scripts` folder to avoid depending on a remote Mirror Node and thus making the tests more robust.
+We provide a [`curl`](./test/scripts/curl) mock in the `test/scripts` folder to avoid depending on a remote Mirror Node and thus making the tests more robust.
 By modifiying the `PATH` environment variable, the mocked `curl` is used instead.
 
 ```console
-PATH=./scripts:$PATH forge test --fork-url https://testnet.hashio.io/api --fork-block-number 8535327
+PATH=./test/scripts:$PATH forge test --fork-url https://testnet.hashio.io/api --fork-block-number 8535327
 ```
 
 In case needed, there is a trace log of requests made by mocked `curl` in `scripts/curl.log`
 
 ```console
-cat scripts/curl.log
+cat test/scripts/curl.log
 ```
 
 ### `HtsSystemContract` Solidity tests + JSON-RPC mock server for storage emulation (_with_ forking)
 
-These Solidity tests are used to test both the `HtsSystemContract` and the `@hashgraph/hedera-forking` package.
+These Solidity tests are used to test both the `HtsSystemContract` and the `npm` package.
 It is the implementation used by Hardhat users.
 
 Instead of starting a `local-node` or using a remote network,
-they use the [`json-rpc-mock.js`](./scripts/json-rpc-mock.js) script as a backend without the need for any additional services,
+they use the [`json-rpc-mock.js`](./test/scripts/json-rpc-mock.js) script as a backend without the need for any additional services,
 thus making the tests more robust.
 This is the network Foundry's Anvil is forking from.
 
 In a separate terminal run the JSON-RPC Mock Server
 
 ```console
-./scripts/json-rpc-mock.js
+./test/scripts/json-rpc-mock.js
 ```
 
 Then run
