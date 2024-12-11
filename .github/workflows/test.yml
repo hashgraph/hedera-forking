@@ -93,7 +93,7 @@ jobs:
         run: npm ci
 
       - name: Run Unit Tests
-        run: npm run test --workspace=@hts-forking
+        run: npm run test
 
   sol-tests-local-storage:
     name: 'Forge tests w/storage emulation'
