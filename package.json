@@ -2,7 +2,9 @@
     "name": "@hashgraph/system-contracts-forking",
     "version": "0.0.1",
     "description": "Hashgraph System Contracts and Hardhat plugin to support fork testing",
-    "repository": "github:hashgraph/hedera-forking",
+    "repository": {
+        "url": "git+https://github.com/hashgraph/hedera-forking.git"
+    },
     "author": "2024 Hedera Hashgraph, LLC",
     "license": "Apache-2.0",
     "keywords": [
@@ -19,7 +21,9 @@
     ],
     "files": [
         "src/",
-        "out/HtsSystemContract.sol/"
+        "out/HtsSystemContract.sol/",
+        "contracts/",
+        "*.md"
     ],
     "exports": {
         ".": "./src/index.js",
