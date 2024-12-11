@@ -38,7 +38,6 @@ module.exports = [
             },
         },
     },
-    // @ts-expect-error: Could not find a declaration file for module '@eslint/js'
     require('@eslint/js').configs.recommended,
     // @ts-expect-error: Could not find a declaration file for module 'eslint-plugin-mocha'
     require('eslint-plugin-mocha').configs.flat.recommended,
