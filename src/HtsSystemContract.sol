@@ -29,6 +29,29 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
     }
 
     /**
+     * @dev Modifier which handles calls to methods of the HRC-719 interface.
+     */
+    modifier redirectForHRC719(bytes4 selector) {
+        if (selector == IHRC719.associate.selector) {
+            bytes32 slot = _isAssociatedSlot(msg.sender);
+            assembly { sstore(slot, true) }
+            return abi.encode(true);
+        }
+        if (selector == IHRC719.dissociate.selector) {
+            bytes32 slot = _isAssociatedSlot(msg.sender);
+            assembly { sstore(slot, false) }
+            return abi.encode(true);
+        }
+        if (selector == IHRC719.isAssociated.selector) {
+            bytes32 slot = _isAssociatedSlot(msg.sender);
+            bool res;
+            assembly { res := sload(slot) }
+            return abi.encode(res);
+        }
+        _;
+    }
+
+    /**
      * @dev Returns the account id (omitting both shard and realm numbers) of the given `address`.
      * The storage adapter, _i.e._, `getHtsStorageAt`, assumes that both shard and realm numbers are zero.
      * Thus, they can be omitted from the account id.
@@ -163,41 +186,28 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
      */
     function __redirectForToken() internal virtual returns (bytes memory) {
         bytes4 selector = bytes4(msg.data[24:28]);
-        bytes memory result = abi.encode(false);
+
         _initTokenData();
+
+        // Internal redirects for HTS methods.
+        if (msg.sender == HTS_ADDRESS) {
+            return __redirectForHTS(selector);
+        }
 
         // Redirect to the appropriate ERC20 method if the token type is fungible.
         if (keccak256(bytes(tokenType)) == keccak256(bytes("FUNGIBLE_COMMON"))) {
-            result = __redirectForERC20(selector);
-            if (keccak256(result) != keccak256(abi.encode("undefined"))) {
-                return result;
-            }
+            return __redirectForERC20(selector);
         }
 
         // Redirect to the appropriate ERC721 method if the token type is non-fungible.
         if (keccak256(bytes(tokenType)) == keccak256(bytes("NON_FUNGIBLE_UNIQUE"))) {
-            result = __redirectForERC721(selector);
-            if (keccak256(result) != keccak256(abi.encode("undefined"))) {
-                return result;
-            }
-        }
-
-        // Common methods for fungible and non-fungible tokens.
-        result = __redirectForHRC719(selector);
-        if (keccak256(result) != keccak256(abi.encode("undefined"))) {
-            return result;
-        }
-
-        // Internal redirects for HTS methods.
-        result = __redirectForHTS(selector);
-        if (keccak256(result) != keccak256(abi.encode("undefined"))) {
-            return result;
+            return __redirectForERC721(selector);
         }
 
         revert ("redirectForToken: not supported");
     }
 
-    function __redirectForERC20(bytes4 selector) internal virtual returns (bytes memory) {
+    function __redirectForERC20(bytes4 selector) redirectForHRC719(selector) internal virtual returns (bytes memory) {
         if (selector == IERC20.name.selector) {
             return abi.encode(name);
         }
@@ -254,10 +264,10 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
             emit Approval(owner, spender, amount);
             return abi.encode(true);
         }
-        return abi.encode("undefined");
+        revert ("redirectForERC20: not supported");
     }
 
-    function __redirectForERC721(bytes4 selector) internal virtual returns (bytes memory) {
+    function __redirectForERC721(bytes4 selector) redirectForHRC719(selector) internal virtual returns (bytes memory) {
         // IERC721Metadata
         if (selector == IERC721Metadata.name.selector) {
             return abi.encode(name);
@@ -319,44 +329,23 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
             address operator = address(bytes20(msg.data[72:92]));
             return abi.encode(__isApprovedForAll(owner, operator));
         }
-        return abi.encode("undefined");
-    }
-
-    function __redirectForHRC719(bytes4 selector) internal virtual returns (bytes memory) {
-        if (selector == IHRC719.associate.selector) {
-            bytes32 slot = _isAssociatedSlot(msg.sender);
-            assembly { sstore(slot, true) }
-            return abi.encode(true);
-        }
-        if (selector == IHRC719.dissociate.selector) {
-            bytes32 slot = _isAssociatedSlot(msg.sender);
-            assembly { sstore(slot, false) }
-            return abi.encode(true);
-        }
-        if (selector == IHRC719.isAssociated.selector) {
-            bytes32 slot = _isAssociatedSlot(msg.sender);
-            bool res;
-            assembly { res := sload(slot) }
-            return abi.encode(res);
-        }
-        return abi.encode("undefined");
+        revert ("redirectForERC721: not supported");
     }
 
     function __redirectForHTS(bytes4 selector) internal virtual returns (bytes memory) {
+        require(msg.sender == HTS_ADDRESS, "redirectForHTS: unauthorized");
         if (selector == this.getTokenInfo.selector) {
             require(msg.data.length >= 28, "getTokenInfo: Not enough calldata");
-            require(msg.sender == HTS_ADDRESS, "getTokenInfo: unauthorized");
             return abi.encode(22, _tokenInfo);
         } else if (selector == this._update.selector) {
             require(msg.data.length >= 124, "update: Not enough calldata");
-            require(msg.sender == HTS_ADDRESS, "update: unauthorized");
             address from = address(bytes20(msg.data[40:60]));
             address to = address(bytes20(msg.data[72:92]));
             uint256 amount = uint256(bytes32(msg.data[92:124]));
             _update(from, to, amount);
             return abi.encode(true);
         }
-        return abi.encode("undefined");
+        revert ("redirectForHTS: not supported");
     }
 
     function _initTokenData() internal virtual {
