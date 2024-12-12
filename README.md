@@ -451,7 +451,8 @@ npm run test
 ```
 
 > [!TIP]
-> If you want to run the `npm` tests without the Hardhat plugin tests, you use the `--grep` flag together with `--invert`, _e.g._,
+> You may want to run the `npm` tests without the Hardhat plugin tests.
+> To do so, you can use the [`--fgrep`](https://mochajs.org/#-fgrep-string-f-string) or [`--grep`](https://mochajs.org/#-grep-regexp-g-regexp) flags together with [`--invert`](https://mochajs.org/#-invert), for example
 >
 > ```console
 > npm run test -- --grep ::plugin --invert
