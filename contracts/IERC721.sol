@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
-import {IERC20Events} from "./IERC20.sol";
+import {IERC20Events} from "../contracts/IERC20.sol";
 
 /**
  * See https://ethereum.org/en/developers/docs/standards/tokens/erc-721/#events for more information.

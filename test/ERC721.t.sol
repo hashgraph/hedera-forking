@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
-import {HtsSystemContract, HTS_ADDRESS} from "../src/HtsSystemContract.sol";
+import {HtsSystemContract, HTS_ADDRESS} from "../contracts/HtsSystemContract.sol";
 import {Test, console} from "forge-std/Test.sol";
-import {IERC721, IERC721Events} from "../src/IERC721.sol";
-import {IERC20Events} from "../src/IERC20.sol";
+import {IERC721, IERC721Events} from "../contracts/IERC721.sol";
+import {IERC20Events} from "../contracts/IERC20.sol";
 import {TestSetup} from "./lib/TestSetup.sol";
 
 contract ERC721TokenTest is Test, TestSetup, IERC721Events, IERC20Events {
