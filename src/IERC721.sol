@@ -4,11 +4,9 @@ pragma solidity ^0.8.0;
 import {IERC20Events} from "./IERC20.sol";
 
 /**
- * These events should be emitted by `transferFrom`, `approve` and `setApprovalForAll` respectively.
- *
  * See https://ethereum.org/en/developers/docs/standards/tokens/erc-721/#events for more information.
  */
-interface IERC721Events is IERC20Events {
+interface IERC721Events {
     event ApprovalForAll(address indexed owner, address indexed operator, bool approved);
 }
 
@@ -19,6 +17,26 @@ interface IERC721Events is IERC20Events {
  * https://hips.hedera.com/hip/hip-376
  */
 interface IERC721 {
+    /**
+     * @dev Returns the token collection name.
+     */
+    function name() external view returns (string memory);
+
+    /**
+     * @dev Returns the token collection symbol.
+     */
+    function symbol() external view returns (string memory);
+
+    /**
+     * @dev Returns the Uniform Resource Identifier (URI) for `tokenId` token.
+     */
+    function tokenURI(uint256 tokenId) external view returns (string memory);
+
+    /**
+     * @dev Returns the total amount of tokens stored by the contract.
+     */
+    function totalSupply() external view returns (uint256);
+
     /**
      * @dev Returns the number of tokens in `owner`'s account.
      */
@@ -84,29 +102,4 @@ interface IERC721 {
      * See {setApprovalForAll}
      */
     function isApprovedForAll(address owner, address operator) external view returns (bool);
-}
-
-
-interface IERC721Metadata is IERC721 {
-    /**
-     * @dev Returns the token collection name.
-     */
-    function name() external view returns (string memory);
-
-    /**
-     * @dev Returns the token collection symbol.
-     */
-    function symbol() external view returns (string memory);
-
-    /**
-     * @dev Returns the Uniform Resource Identifier (URI) for `tokenId` token.
-     */
-    function tokenURI(uint256 tokenId) external view returns (string memory);
-}
-
-interface IERC721Enumerable is IERC721 {
-    /**
-     * @dev Returns the total amount of tokens stored by the contract.
-     */
-    function totalSupply() external view returns (uint256);
 }

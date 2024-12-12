@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import {console} from "forge-std/Console.sol";
 import {IERC20Events, IERC20} from "./IERC20.sol";
-import {IERC721, IERC721Enumerable, IERC721Events, IERC721Metadata} from "./IERC721.sol";
+import {IERC721, IERC721Events} from "./IERC721.sol";
 import {IHRC719} from "./IHRC719.sol";
 import {IHederaTokenService} from "./IHederaTokenService.sol";
 
@@ -25,29 +25,6 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
      */
     modifier htsCall() {
         require(address(this) == HTS_ADDRESS, "htsCall: delegated call");
-        _;
-    }
-
-    /**
-     * @dev Modifier which handles calls to methods of the HRC-719 interface.
-     */
-    modifier redirectForHRC719(bytes4 selector) {
-        if (selector == IHRC719.associate.selector) {
-            bytes32 slot = _isAssociatedSlot(msg.sender);
-            assembly { sstore(slot, true) }
-            return abi.encode(true);
-        }
-        if (selector == IHRC719.dissociate.selector) {
-            bytes32 slot = _isAssociatedSlot(msg.sender);
-            assembly { sstore(slot, false) }
-            return abi.encode(true);
-        }
-        if (selector == IHRC719.isAssociated.selector) {
-            bytes32 slot = _isAssociatedSlot(msg.sender);
-            bool res;
-            assembly { res := sload(slot) }
-            return abi.encode(res);
-        }
         _;
     }
 
@@ -207,7 +184,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         revert ("redirectForToken: not supported");
     }
 
-    function __redirectForERC20(bytes4 selector) redirectForHRC719(selector) internal virtual returns (bytes memory) {
+    function __redirectForERC20(bytes4 selector) internal virtual returns (bytes memory) {
         if (selector == IERC20.name.selector) {
             return abi.encode(name);
         }
@@ -264,28 +241,25 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
             emit Approval(owner, spender, amount);
             return abi.encode(true);
         }
-        revert ("redirectForERC20: not supported");
+        return __redirectForHRC719(selector);
     }
 
-    function __redirectForERC721(bytes4 selector) redirectForHRC719(selector) internal virtual returns (bytes memory) {
-        // IERC721Metadata
-        if (selector == IERC721Metadata.name.selector) {
+    function __redirectForERC721(bytes4 selector) internal virtual returns (bytes memory) {
+        if (selector == IERC721.name.selector) {
             return abi.encode(name);
         }
-        if (selector == IERC721Metadata.symbol.selector) {
+        if (selector == IERC721.symbol.selector) {
             return abi.encode(symbol);
         }
-        if (selector == IERC721Metadata.tokenURI.selector) {
+        if (selector == IERC721.tokenURI.selector) {
             require(msg.data.length >= 72, "tokenURI: Not enough calldata");
             // uint256 tokenId = uint256(bytes32(msg.data[40:72]));
             // TODO: No idea how this should be implemented
             return abi.encode("undefined");
         }
-        // IERC721Enumerable
-        if (selector == IERC721Enumerable.totalSupply.selector) {
+        if (selector == IERC721.totalSupply.selector) {
             return abi.encode(totalSupply);
         }
-        // IERC721
         if (selector == IERC721.balanceOf.selector) {
             require(msg.data.length >= 60, "balanceOf: Not enough calldata");
             address owner = address(bytes20(msg.data[40:60]));
@@ -329,7 +303,27 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
             address operator = address(bytes20(msg.data[72:92]));
             return abi.encode(__isApprovedForAll(owner, operator));
         }
-        revert ("redirectForERC721: not supported");
+        return __redirectForHRC719(selector);
+    }
+
+    function __redirectForHRC719(bytes4 selector) internal returns (bytes memory) {
+        if (selector == IHRC719.associate.selector) {
+            bytes32 slot = _isAssociatedSlot(msg.sender);
+            assembly { sstore(slot, true) }
+            return abi.encode(true);
+        }
+        if (selector == IHRC719.dissociate.selector) {
+            bytes32 slot = _isAssociatedSlot(msg.sender);
+            assembly { sstore(slot, false) }
+            return abi.encode(true);
+        }
+        if (selector == IHRC719.isAssociated.selector) {
+            bytes32 slot = _isAssociatedSlot(msg.sender);
+            bool res;
+            assembly { res := sload(slot) }
+            return abi.encode(res);
+        }
+        revert("redirectForHRC719: not supported");
     }
 
     function __redirectForHTS(bytes4 selector) internal virtual returns (bytes memory) {

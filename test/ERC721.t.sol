@@ -3,28 +3,29 @@ pragma solidity ^0.8.0;
 
 import {HtsSystemContract, HTS_ADDRESS} from "../src/HtsSystemContract.sol";
 import {Test, console} from "forge-std/Test.sol";
-import {IERC721, IERC721Events, IERC721Metadata, IERC721Enumerable} from "../src/IERC721.sol";
+import {IERC721, IERC721Events} from "../src/IERC721.sol";
+import {IERC20Events} from "../src/IERC20.sol";
 import {TestSetup} from "./lib/TestSetup.sol";
 
-contract ERC721TokenTest is Test, TestSetup, IERC721Events {
+contract ERC721TokenTest is Test, TestSetup, IERC721Events, IERC20Events {
 
     function setUp() external {
         setUpMockStorageForNonFork();
     }
 
-    function test_ERC721_name() external {
-        assertEq(IERC721Metadata(CFNFTFF).name(), "Custom Fee NFT (Fixed Fee)");
+    function test_ERC721_name() external view {
+        assertEq(IERC721(CFNFTFF).name(), "Custom Fee NFT (Fixed Fee)");
     }
 
-    function test_ERC721_symbol() external {
-        assertEq(IERC721Metadata(CFNFTFF).symbol(), "CFNFTFF");
+    function test_ERC721_symbol() external view {
+        assertEq(IERC721(CFNFTFF).symbol(), "CFNFTFF");
     }
 
-    function test_ERC721_totalSupply() external {
-        assertEq(IERC721Enumerable(CFNFTFF).totalSupply(), 2);
+    function test_ERC721_totalSupply() external view {
+        assertEq(IERC721(CFNFTFF).totalSupply(), 2);
     }
 
-    function test_ERC721_balanceOf() external {
+    function test_ERC721_balanceOf() external view {
         address treasury = CFNFTFF_TREASURY;
         assertEq(IERC721(CFNFTFF).balanceOf(treasury), 2);
     }
@@ -95,7 +96,6 @@ contract ERC721TokenTest is Test, TestSetup, IERC721Events {
     function test_ERC721_isApprovedForAll() external {
         address owner = CFNFTFF_TREASURY;
         address operator = makeAddr("operator");
-        uint256 tokenId = 1;
         uint160 pad = 0x0;
         uint32 ownerId = HtsSystemContract(HTS_ADDRESS).getAccountId(owner);
         uint32 operatorId = HtsSystemContract(HTS_ADDRESS).getAccountId(operator);
