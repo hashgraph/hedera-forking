@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {Test} from "forge-std/Test.sol";
-import {storeString, storeBytes, storeUint, storeInt, storeBool, storeAddress, storeBytes32} from "../src/StrStore.sol";
+import {storeString, storeBytes, storeUint, storeInt, storeBool, storeAddress, storeBytes32} from "../contracts/StrStore.sol";
 
 contract StrStoreTest is Test {
 

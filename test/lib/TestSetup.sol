@@ -3,10 +3,10 @@ pragma solidity ^0.8.0;
 
 import {console} from "forge-std/console.sol";
 
-import {htsSetup} from "../../src/htsSetup.sol";
-import {HTS_ADDRESS} from "../../src/HtsSystemContractJson.sol";
-import {MirrorNode} from "../../src/MirrorNode.sol";
-import {MirrorNodeFFI} from "../../src/MirrorNodeFFI.sol";
+import {htsSetup} from "../../contracts/htsSetup.sol";
+import {HTS_ADDRESS} from "../../contracts/HtsSystemContractJson.sol";
+import {MirrorNode} from "../../contracts/MirrorNode.sol";
+import {MirrorNodeFFI} from "../../contracts/MirrorNodeFFI.sol";
 import {MirrorNodeMock} from "./MirrorNodeMock.sol";
 
 abstract contract TestSetup {

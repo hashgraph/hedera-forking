@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {Test, console} from "forge-std/Test.sol";
-import {IERC20Events, IERC20} from "../src/IERC20.sol";
+import {IERC20Events, IERC20} from "../contracts/IERC20.sol";
 import {TestSetup} from "./lib/TestSetup.sol";
 
 interface MethodNotSupported {
