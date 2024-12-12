@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {Test, console} from "forge-std/Test.sol";
-import {MirrorNodeFFI} from "../src/MirrorNodeFFI.sol";
+import {MirrorNodeFFI} from "../contracts/MirrorNodeFFI.sol";
 
 contract MirrorNodeFFITest is Test {
 
@@ -25,7 +25,7 @@ contract MirrorNodeFFITest is Test {
             vm.roll(8535327);
 
             string memory PATH = vm.envString("PATH");
-            vm.setEnv("PATH", string.concat("./scripts:", PATH));
+            vm.setEnv("PATH", string.concat("./test/scripts:", PATH));
 
             _mirrorNode = new MirrorNodeFFI();
         }

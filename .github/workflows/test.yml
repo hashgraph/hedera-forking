@@ -60,8 +60,8 @@ jobs:
       - name: Run ESLint
         run: npm run lint
 
-  unit-test:
-    name: 'NPM Unit Tests'
+  npm-test:
+    name: 'NPM Unit and Hardhat plugin Tests'
     runs-on: smart-contracts-linux-medium
     steps:
       - name: Harden Runner
@@ -93,7 +93,7 @@ jobs:
         run: npm ci
 
       - name: Run Unit Tests
-        run: npm run test --workspace=@hts-forking
+        run: npm run test
 
   sol-tests-local-storage:
     name: 'Forge tests w/storage emulation'
@@ -125,8 +125,7 @@ jobs:
           forge build
 
       - name: Run Forge tests using local storage emulation (without forking)
-        run: |
-          forge test -vvv
+        run: forge test -vvv
 
   sol-tests-ffi-mock:
     name: 'Forge tests w/FFI curl process mock'
@@ -158,14 +157,13 @@ jobs:
           forge build
 
       - name: Mock curl
-        run: echo "./scripts" >> "$GITHUB_PATH"
+        run: echo "./test/scripts" >> "$GITHUB_PATH"
 
       - name: Run Forge tests using JSON-RPC Mainnet and Testnet servers (with forking)
-        run: |
-          forge test -vvv --fork-url https://testnet.hashio.io/api --fork-block-number 8535327
+        run: forge test -vvv --fork-url https://testnet.hashio.io/api --fork-block-number 8535327
 
       - name: Show Mocked curl Requests
-        run: cat scripts/curl.log
+        run: cat test/scripts/curl.log
 
   sol-tests-json-rpc-mock:
     name: 'Forge tests w/RPC mock server'
@@ -200,9 +198,35 @@ jobs:
           forge build
 
       - name: Start JSON-RPC mock server
-        working-directory: ./@hts-forking
-        run: node scripts/json-rpc-mock.js &
+        run: node test/scripts/json-rpc-mock.js &
 
       - name: Run Forge tests using JSON-RPC mock server for storage emulation (with forking)
-        run: |
-          forge test -vvv --fork-url http://localhost:7546 --no-storage-caching
+        run: forge test -vvv --fork-url http://localhost:7546 --no-storage-caching
+
+  foundry-example-tests:
+    name: 'Foundry example tests w/mainnet'
+    runs-on: smart-contracts-linux-medium
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@5c7944e73c4c2a096b17a9cb74d65b6c2bbafbde # v2.9.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout Code
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: step-security/foundry-toolchain@01e2d127ea061e2ce8fa34340de71ca8518f093e # v1.2.1
+        with:
+          version: nightly
+
+      - name: Patch Foundry's config file to run only Foundry HTS examples
+        run: echo 'test="examples/foundry-hts"' >> foundry.toml
+
+      - name: Run Forge build with custom remappings
+        run: forge build --remappings hedera-forking=.
+
+      - name: Run Forge example tests using remote network with a pinned block number
+        run: forge test --remappings hedera-forking=. -vv --fork-url https://mainnet.hashio.io/api --fork-block-number 72433403

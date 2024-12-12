@@ -31,8 +31,15 @@ const connectAs = (contract, signer) =>
     /**@type{import('ethers').Contract}*/ (contract.connect(signer));
 
 describe('USDC example', function () {
+    /**
+     * `signers[0]` is used in test `usdc-transfer.test`
+     * Signers need to be different because otherwise the state is shared between test suites.
+     * This is because to use the same fixture, the `id` function needs to be shared among them.
+     *
+     * See https://hardhat.org/hardhat-network-helpers/docs/reference#fixtures for more details.
+     */
     async function id() {
-        const [receiver, spender] = await ethers.getSigners();
+        const [, receiver, spender] = await ethers.getSigners();
         return { receiver, spender };
     }
 

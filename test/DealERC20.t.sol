@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {Test} from "forge-std/Test.sol";
-import {IERC20} from "../src/IERC20.sol";
+import {IERC20} from "../contracts/IERC20.sol";
 import {TestSetup} from "./lib/TestSetup.sol";
 
 contract DealERC20Test is Test, TestSetup {
