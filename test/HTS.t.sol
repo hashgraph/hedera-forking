@@ -184,7 +184,7 @@ contract HTSTest is Test, TestSetup {
 
     function test_HTS_getTokenInfo_should_revert_when_called_from_outside_of_HTS() external {
         address token = USDC;
-        vm.expectRevert(bytes("getTokenInfo: unauthorized"));
+        vm.expectRevert(bytes("redirectForHRC719: not supported"));
         HtsSystemContract(token).getTokenInfo(token);
     }
 

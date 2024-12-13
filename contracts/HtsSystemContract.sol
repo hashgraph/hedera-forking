@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
-import {console} from "forge-std/Console.sol";
 import {IERC20Events, IERC20} from "./IERC20.sol";
 import {IERC721, IERC721Events} from "./IERC721.sol";
 import {IHRC719} from "./IHRC719.sol";
@@ -168,23 +167,34 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
 
         // Internal redirects for HTS methods.
         if (msg.sender == HTS_ADDRESS) {
-            return __redirectForHTS(selector);
+            if (selector == this.getTokenInfo.selector) {
+                require(msg.data.length >= 28, "getTokenInfo: Not enough calldata");
+                return abi.encode(22, _tokenInfo);
+            }
+            if (selector == this._update.selector) {
+                require(msg.data.length >= 124, "update: Not enough calldata");
+                address from = address(bytes20(msg.data[40:60]));
+                address to = address(bytes20(msg.data[72:92]));
+                uint256 amount = uint256(bytes32(msg.data[92:124]));
+                _update(from, to, amount);
+                return abi.encode(true);
+            }
         }
 
         // Redirect to the appropriate ERC20 method if the token type is fungible.
         if (keccak256(bytes(tokenType)) == keccak256(bytes("FUNGIBLE_COMMON"))) {
-            return __redirectForERC20(selector);
+            return _redirectForERC20(selector);
         }
 
         // Redirect to the appropriate ERC721 method if the token type is non-fungible.
         if (keccak256(bytes(tokenType)) == keccak256(bytes("NON_FUNGIBLE_UNIQUE"))) {
-            return __redirectForERC721(selector);
+            return _redirectForERC721(selector);
         }
 
         revert ("redirectForToken: not supported");
     }
 
-    function __redirectForERC20(bytes4 selector) internal virtual returns (bytes memory) {
+    function _redirectForERC20(bytes4 selector) private returns (bytes memory) {
         if (selector == IERC20.name.selector) {
             return abi.encode(name);
         }
@@ -241,10 +251,10 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
             emit Approval(owner, spender, amount);
             return abi.encode(true);
         }
-        return __redirectForHRC719(selector);
+        return _redirectForHRC719(selector);
     }
 
-    function __redirectForERC721(bytes4 selector) internal virtual returns (bytes memory) {
+    function _redirectForERC721(bytes4 selector) private returns (bytes memory) {
         if (selector == IERC721.name.selector) {
             return abi.encode(name);
         }
@@ -266,8 +276,8 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
             return abi.encode(__balanceOf(owner));
         }
         if (selector == IERC721.ownerOf.selector) {
-            require(msg.data.length >= 72, "ownerOf: Not enough calldata");
-            uint256 tokenId = uint256(bytes32(msg.data[40:72]));
+            require(msg.data.length >= 60, "ownerOf: Not enough calldata");
+            uint256 tokenId = uint256(bytes32(msg.data[28:60]));
             return abi.encode(__ownerOf(tokenId));
         }
         if (selector == IERC721.transferFrom.selector) {
@@ -293,8 +303,8 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
             return abi.encode(true);
         }
         if (selector == IERC721.getApproved.selector) {
-            require(msg.data.length >= 72, "getApproved: Not enough calldata");
-            uint256 tokenId = uint256(bytes32(msg.data[40:72]));
+            require(msg.data.length >= 60, "getApproved: Not enough calldata");
+            uint256 tokenId = uint256(bytes32(msg.data[28:60]));
             return abi.encode(__getApproved(tokenId));
         }
         if (selector == IERC721.isApprovedForAll.selector) {
@@ -303,10 +313,10 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
             address operator = address(bytes20(msg.data[72:92]));
             return abi.encode(__isApprovedForAll(owner, operator));
         }
-        return __redirectForHRC719(selector);
+        return _redirectForHRC719(selector);
     }
 
-    function __redirectForHRC719(bytes4 selector) internal returns (bytes memory) {
+    function _redirectForHRC719(bytes4 selector) private returns (bytes memory) {
         if (selector == IHRC719.associate.selector) {
             bytes32 slot = _isAssociatedSlot(msg.sender);
             assembly { sstore(slot, true) }
@@ -324,22 +334,6 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
             return abi.encode(res);
         }
         revert("redirectForHRC719: not supported");
-    }
-
-    function __redirectForHTS(bytes4 selector) internal virtual returns (bytes memory) {
-        require(msg.sender == HTS_ADDRESS, "redirectForHTS: unauthorized");
-        if (selector == this.getTokenInfo.selector) {
-            require(msg.data.length >= 28, "getTokenInfo: Not enough calldata");
-            return abi.encode(22, _tokenInfo);
-        } else if (selector == this._update.selector) {
-            require(msg.data.length >= 124, "update: Not enough calldata");
-            address from = address(bytes20(msg.data[40:60]));
-            address to = address(bytes20(msg.data[72:92]));
-            uint256 amount = uint256(bytes32(msg.data[92:124]));
-            _update(from, to, amount);
-            return abi.encode(true);
-        }
-        revert ("redirectForHTS: not supported");
     }
 
     function _initTokenData() internal virtual {

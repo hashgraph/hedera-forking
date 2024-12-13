@@ -112,7 +112,8 @@ describe('::anvil', function () {
             name: 'USD Coin',
             symbol: 'USDC',
             decimals: 6n,
-            // 4 requests for the `name`, `symbol`, `decimals`, and `tokenType` fields
+            // 1 request for each field: `tokenType` (implicit), `name`, `symbol` and `decimals` (4)
+            // (both `name` and `symbol` have less than 32 bytes)
             nrequests: 4,
         },
         /**
@@ -124,8 +125,8 @@ describe('::anvil', function () {
             name: 'My Crypto Token is the name which the string length is greater than 31',
             symbol: 'Token symbol must be exactly 32!',
             decimals: 0n,
-            // 4 requests for the `name`, `symbol`, `decimals`, and `tokenType` fields
-            // (plus 4 from the previous token = 8)
+            // 1 request for each field: `tokenType` (implicit), `name`, `symbol` and `decimals` (4)
+            // plus (3) for additional `name` words and (1) for additional `symbol` word
             nrequests: 8,
         },
     ].forEach(({ address, name, symbol, decimals, nrequests }) => {
