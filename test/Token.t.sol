@@ -49,7 +49,7 @@ contract TokenTest is Test, TestSetup, IERC20Events {
     }
 
     function test_ERC20_should_revert_for_method_not_supported() external {
-        vm.expectRevert(bytes("redirectForHRC719: not supported"));
+        vm.expectRevert(bytes("redirectForToken: not supported"));
         MethodNotSupported(USDC).methodNotSupported();
     }
 

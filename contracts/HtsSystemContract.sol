@@ -165,6 +165,10 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
 
         _initTokenData();
 
+        if (keccak256(bytes(tokenType)) == keccak256(bytes("NOT_FOUND"))) {
+            revert("redirectForToken: token not found");
+        }
+
         // Internal redirects for HTS methods.
         if (msg.sender == HTS_ADDRESS) {
             if (selector == this.getTokenInfo.selector) {
@@ -191,7 +195,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
             return _redirectForERC721(selector);
         }
 
-        revert ("redirectForToken: not supported");
+        revert ("redirectForToken: token type not supported");
     }
 
     function _redirectForERC20(bytes4 selector) private returns (bytes memory) {
@@ -333,7 +337,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
             assembly { res := sload(slot) }
             return abi.encode(res);
         }
-        revert("redirectForHRC719: not supported");
+        revert("redirectForToken: not supported");
     }
 
     function _initTokenData() internal virtual {
