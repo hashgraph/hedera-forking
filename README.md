@@ -48,6 +48,10 @@ This is necessary because our library relies on [`curl`](https://curl.se/) to ma
 This enables the library to fetch token state in the remote network.
 Given `curl` is an external command, `ffi` needs to be enabled.
 
+> [!NOTE]
+> The Foundry library assumes it is running on a Unix-like operating system.
+> In addition to `curl`, it uses `bash`, `tail`, `sed` and `tr` and to make requests and parse responses.
+
 To activate HTS emulation in your tests, you need to add the following setup code in your test files.
 Import our wrapper function to deploy HTS emulation and enable cheat codes for it.
 
@@ -391,6 +395,23 @@ The following methods can be invoked on the Hedera Token Service contract locate
 | `mintToken(address token, int64 amount, bytes[] metadata)`      | Mints an amount of the token to the defined treasury account   |
 
 <!-- -->
+
+## JS Library
+
+Service and application builders can use the core state emulation library.
+These functions can be embedded in a JSON-RPC implementation to enable System Contracts fork testing without using the Hardhat plugin.
+
+```javascript
+const { getHtsCode, getHtsStorageAt, getHIP719Code } = require('@hashgraph/system-contracts-forking');
+```
+
+- **`getHtsCode`**. Gets the runtime bytecode for the Solidity implementation of the HTS System Contract.
+- **`getHtsStorageAt`**. Allows the user to query the state of an HTS Token as if it were a standard smart contract.
+- **`getHIP719Code`**. Returns the token proxy contract bytecode for the given `address`. Based on the proxy contract defined by [HIP-719](https://hips.hedera.com/hip/hip-719).
+
+See [`index.d.ts`](./src/index.d.ts) for more details.
+
+At its core, the [_Hardhat plugin_](#hardhat-plugin) is supported by these functions.
 
 ## Build
 

@@ -148,11 +148,15 @@ export const LONG_ZERO_PREFIX: string;
 export function getHIP719Code(address: string): string;
 
 /**
- * Gets the bytecode for the Solidity implementation of the HTS System Contract.
+ * Gets the runtime bytecode for the Solidity implementation of the HTS System Contract.
+ *
+ * This bytecode is meant to be deployed at address `0x167`.
  */
 export function getHtsCode(): string;
 
 /**
+ * Allows the user to query the state of an HTS Token as if it were a standard smart contract.
+ *
  * This function should not throw, provided the `mirrorNodeClient` does not throw either.
  * If the `mirrorNodeClient` throws, _e.g._, due to connection issues,
  * error should be handled by the caller.
@@ -160,15 +164,15 @@ export function getHtsCode(): string;
  * When the token ID corresponding to `address` does not exist,
  * the respective calls on `mirrorNodeClient` should return `null`.
  *
- * The storage mechanism for `balanceOf` and `allowance` use a map between addresses and account IDs.
+ * The storage mechanism for _"dynamic"_ slots, _e.g._, `balanceOf` or `allowance`, use a map between addresses and account IDs.
  * This allow the contract to reduce the space to marshal an account:
  * `32 bits` (or even `64 bits` if longer IDs are needed) using `accountid` (omitting the `shardId` and `realmId`) against `160 bits` using `address`.
  * This mechanism in turn allow us to marshal more than one account used in storage slots, _e.g._, `allowance`.
  *
- * @param address
- * @param slot
- * @param blockNumber
- * @param mirrorNodeClient
+ * @param address can be either a Token address or the HTS address (`0x167`).
+ * @param slot corresponds to the slots defined by the Storage Layout of `HtsSystemContract` or a _"dynamic"_ slot.
+ * @param blockNumber specifies the point in time to fetch the requested `slot` from the Mirror Node.
+ * @param mirrorNodeClient the client used to fetch Token data from the Mirror Node.
  */
 export function getHtsStorageAt(
     address: string,
