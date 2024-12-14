@@ -38,6 +38,7 @@
     },
     "devDependencies": {
         "@eslint/js": "^9.13.0",
+        "@hashgraph/hedera-local": "^2.32.6",
         "@hashgraph/sdk": "^2.55.1",
         "@nomicfoundation/ethereumjs-util": "^9.0.4",
         "@nomicfoundation/hardhat-chai-matchers": "^2.0.8",
@@ -65,6 +66,8 @@
         "lint": "eslint",
         "test": "mocha",
         "test:e2e": "mocha test/*.e2e.js --fgrep ::e2e",
-        "make:readme": "scripts/readme.js README.md"
+        "make:readme": "scripts/readme.js README.md",
+        "hedera:start": "hedera start",
+        "hedera:stop": "hedera stop"
     }
 }
