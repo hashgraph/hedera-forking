@@ -42,13 +42,13 @@ declare module 'hardhat/types/config' {
          * They **should not** have any associated code nor balance in the remote network.
          * It is intended as a way to make fewer requests to the remote JSON-RPC Relay.
          */
-        localAccounts?: string[];
+        localAddresses?: string[];
     }
 }
 
 declare module 'hardhat/types/runtime' {
     interface HardhatRuntimeEnvironment {
-        jsonRPCForwarder?: Promise<import('worker_threads').Worker>;
+        jsonRPCForwarder?: Promise<import('worker_threads').Worker & { host: string }>;
     }
 }
 

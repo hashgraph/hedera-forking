@@ -16,16 +16,17 @@
  * limitations under the License.
  */
 
-const path = require('path');
+const { strict: assert } = require('assert');
 const debug = require('util').debuglog('hedera-forking');
-const { Worker } = require('worker_threads');
 const { extendConfig, extendEnvironment } = require('hardhat/config');
+const { jsonRPCForwarder } = require('../forwarder');
 const { getAddresses } = require('./hardhat-addresses');
 
 const chains = {
     295: 'https://mainnet-public.mirrornode.hedera.com/api/v1/',
     296: 'https://testnet.mirrornode.hedera.com/api/v1/',
     297: 'https://previewnet.mirrornode.hedera.com/api/v1/',
+    298: 'http://localhost:5551/api/v1/',
 };
 
 /**
@@ -89,7 +90,7 @@ extendConfig((config, userConfig) => {
                 forkingConfig.chainId = chainId;
                 forkingConfig.mirrorNodeUrl = mirrorNodeUrl;
                 forkingConfig.workerPort = workerPort;
-                forkingConfig.localAccounts = getAddresses(config.networks.hardhat.accounts);
+                forkingConfig.localAddresses = getAddresses(config.networks.hardhat.accounts);
                 debug(`HTS emulation configured`);
             }
         } else {
@@ -125,22 +126,9 @@ extendEnvironment(hre => {
     if ('forking' in hre.network.config) {
         const forking = hre.network.config.forking;
         if (forking.chainId !== undefined) {
-            const scriptPath = path.resolve(__dirname, './json-rpc-forwarder');
-            debug(`Creating JSON-RPC Forwarder server from \`${scriptPath}\``);
-            const worker = new Worker(scriptPath, { workerData: forking });
-            worker.on('error', err => console.log(err));
-            worker.on('exit', code => debug(`Worker exited with code ${code}`));
-
-            hre.jsonRPCForwarder = new Promise(resolve => {
-                worker.on('message', message => {
-                    if (message.listening) {
-                        debug(`JSON-RPC Forwarder listening on port :${message.port}...`);
-                        resolve(worker);
-                    }
-                });
-            });
-            worker.unref();
-            process.on('exit', code => debug(`Main process exited with code ${code}`));
+            const { url, mirrorNodeUrl, workerPort, localAddresses } = forking;
+            assert(mirrorNodeUrl !== undefined);
+            hre.jsonRPCForwarder = jsonRPCForwarder(url, mirrorNodeUrl, workerPort, localAddresses);
             forking.url = `http://127.0.0.1:${forking.workerPort}`;
         }
     }

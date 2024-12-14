@@ -17,16 +17,16 @@
  */
 
 const { expect } = require('chai');
-const { resolve } = require('path');
-const { Worker } = require('worker_threads');
 const { HTSAddress } = require('@hashgraph/system-contracts-forking');
+
+const { jsonRPCForwarder } = require('../src/forwarder');
 
 class Provider {
     /**
-     * @param {number} port
+     * @param {string} host
      */
-    constructor(port) {
-        this.port = port;
+    constructor(host) {
+        this.host = host;
         this.id = 1;
     }
 
@@ -37,7 +37,7 @@ class Provider {
     async request(method, params) {
         const id = this.id++;
         const body = { jsonrpc: '2.0', id, method, params };
-        const response = await fetch(`http://127.0.0.1:${this.port}`, {
+        const response = await fetch(this.host, {
             method: 'POST',
             body: JSON.stringify(body),
         });
@@ -49,27 +49,16 @@ class Provider {
     }
 }
 
-describe('::json-rpc-forwarder', function () {
+describe('::forwarder', function () {
     /** @type {Provider} */
     let provider;
 
     before(async function () {
-        const scriptPath = resolve(__dirname, '..', '..', 'src', 'plugin', 'json-rpc-forwarder');
-        const port = await new Promise(resolve =>
-            new Worker(scriptPath, {
-                workerData: {
-                    mirrorNodeUrl: '',
-                    localAccounts: ['0x70997970c51812dc3a010c7d01b50e0d17dc79c8'],
-                },
-            })
-                .on('message', message => {
-                    if (message.listening) {
-                        resolve(message.port);
-                    }
-                })
-                .unref()
-        );
-        provider = new Provider(port);
+        const forkUrl = /**@type{string}*/ (/**@type{unknown}*/ (undefined));
+        const { host } = await jsonRPCForwarder(forkUrl, '', undefined, [
+            '0x70997970c51812dc3a010c7d01b50e0d17dc79c8',
+        ]);
+        provider = new Provider(host);
     });
 
     it('should return code for HTS emulation', async function () {
@@ -85,7 +74,7 @@ describe('::json-rpc-forwarder', function () {
         expect(result).to.be.equal('0x');
     });
 
-    it('should return no native token balance for any Hardhat addressi', async function () {
+    it('should return no native token balance for any Hardhat address', async function () {
         const result = await provider.request('eth_getBalance', [
             '0x70997970c51812dc3a010c7d01b50e0d17dc79c8',
         ]);
