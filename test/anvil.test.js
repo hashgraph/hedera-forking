@@ -35,7 +35,7 @@ function jsonRpcMock() {
         worker.on('exit', code => console.log(`JSON-RPC Mock Worker exited with code ${code}`));
         worker.on('message', message => {
             if (message.listening) {
-                resolve(`localhost:${message.port}`);
+                resolve(`http://localhost:${message.port}`);
             }
         });
         worker.unref();
@@ -55,10 +55,10 @@ describe('::anvil', function () {
         console.log('Anvil listening on', anvilHost);
 
         // Disable batch requests because `json-rpc-mock` does not support them
-        mockProvider = new ethers.JsonRpcProvider(`http://${mockHost}`, undefined, {
+        mockProvider = new ethers.JsonRpcProvider(mockHost, undefined, {
             batchMaxCount: 1,
         });
-        anvilProvider = new ethers.JsonRpcProvider(`http://${anvilHost}`);
+        anvilProvider = new ethers.JsonRpcProvider(anvilHost);
 
         const n = await anvilProvider.getNetwork();
         console.log("Anvil's chain id", n.chainId);

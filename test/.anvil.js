@@ -31,7 +31,7 @@ const { spawn } = require('child_process');
  *
  * ```javascript
  * const anvilHost = await anvil('localhost:7546');
- * console.log(anvilHost); // 127.0.0.1:51319
+ * console.log(anvilHost); // http://127.0.0.1:51319
  * ```
  *
  * @param {string} forkUrl the URL to fork from
@@ -57,7 +57,7 @@ function anvil(forkUrl) {
                 child.stderr.destroy();
                 child.stdout.unpipe();
                 child.stdout.destroy();
-                resolve(host);
+                resolve(`http://${host}`);
             }
         });
         child.stderr.on('data', err => {
