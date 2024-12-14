@@ -94,6 +94,8 @@ async function main() {
     const tokenId = receipt.tokenId;
     console.log(`The new token ID is ${tokenId}`);
     console.log(`https://hashscan.io/testnet/token/${tokenId}`);
+
+    client.close();
 }
 
 main().catch(console.error);
