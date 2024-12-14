@@ -38,7 +38,7 @@
     },
     "devDependencies": {
         "@eslint/js": "^9.13.0",
-        "@hashgraph/sdk": "^2.54.2",
+        "@hashgraph/sdk": "^2.55.1",
         "@nomicfoundation/ethereumjs-util": "^9.0.4",
         "@nomicfoundation/hardhat-chai-matchers": "^2.0.8",
         "@nomicfoundation/hardhat-ethers": "^3.0.8",
