@@ -24,7 +24,10 @@ const { Contract, JsonRpcProvider } = require('ethers');
 const { Hbar, Client, PrivateKey, TokenCreateTransaction } = require('@hashgraph/sdk');
 const { HTSAddress, getHIP719Code } = require('@hashgraph/system-contracts-forking');
 
-const { jsonRPCForwarder } = require('@hashgraph/system-contracts-forking/forwarder');
+const {
+    jsonRPCForwarder,
+    MirrorNodeClient,
+} = require('@hashgraph/system-contracts-forking/forwarder');
 const { anvil } = require('./.anvil.js');
 const IHederaTokenService = require('../out/IHederaTokenService.sol/IHederaTokenService.json');
 const IERC20 = require('../out/IERC20.sol/IERC20.json');
@@ -34,10 +37,16 @@ const accountId = '0.0.2';
 const privateKey =
     '302e020100300506032b65700422042091132178e72057a1d7528025956fe39b0b847f200ab59b2fdd367017f3087137';
 
-const treasury = {
-    id: '0.0.1021',
-    evmAddress: '0x17b2b8c63fa35402088640e426c6709a254c7ffb',
-    primaryKey: '0xeae4e00ece872dd14fb6dc7a04f390563c7d69d16326f2a703ec8e0934060cc7',
+const ft = {
+    name: 'Fungible Token to test HTS emulation',
+    symbol: 'HTSFT',
+    totalSupply: 50_000,
+    decimals: 8,
+    treasury: {
+        id: '0.0.1021',
+        evmAddress: '0x17b2b8c63fa35402088640e426c6709a254c7ffb',
+        primaryKey: '0xeae4e00ece872dd14fb6dc7a04f390563c7d69d16326f2a703ec8e0934060cc7',
+    },
 };
 
 async function createToken() {
@@ -45,44 +54,62 @@ async function createToken() {
         .setOperator(accountId, PrivateKey.fromStringDer(privateKey))
         .setDefaultMaxTransactionFee(new Hbar(100))
         .setDefaultMaxQueryPayment(new Hbar(50));
-
-    const transaction = new TokenCreateTransaction()
-        .setTokenName('Fungible Token to test HTS emulation')
-        .setTokenSymbol('HTSFT')
-        .setTreasuryAccountId(treasury.id)
-        .setInitialSupply(50000)
+    const transaction = await new TokenCreateTransaction()
+        .setTokenName(ft.name)
+        .setTokenSymbol(ft.symbol)
+        .setTreasuryAccountId(ft.treasury.id)
+        .setInitialSupply(ft.totalSupply)
+        .setDecimals(ft.decimals)
         .setAdminKey(PrivateKey.fromStringDer(privateKey))
-        .freezeWith(client);
-
-    const response = await (
-        await transaction.sign(PrivateKey.fromStringECDSA(treasury.primaryKey))
-    ).execute(client);
-    const receipt = await response.getReceipt(client);
+        .freezeWith(client)
+        .sign(PrivateKey.fromStringECDSA(ft.treasury.primaryKey));
+    const receipt = await (await transaction.execute(client)).getReceipt(client);
+    const tokenId = receipt.tokenId;
     client.close();
 
-    const tokenId = receipt.tokenId;
     assert(tokenId !== null);
-    console.info(
-        `HTS Token ID ${tokenId} @ 0x${tokenId?.toSolidityAddress()} http://localhost:8080/devnet/token/${tokenId}`
-    );
-
     return tokenId;
 }
 
 /**
- *
  * @param {number} time
+ * @param {string} why
  * @returns
  */
-function sleep(time) {
+function sleep(time, why) {
+    console.log(why, `(${time} ms)`);
     return new Promise(resolve => setTimeout(resolve, time));
 }
 
 describe('::e2e', function () {
-    this.timeout(60000);
+    this.timeout(5 * 60 * 1000);
 
     const rpcRelayUrl = 'http://localhost:7546';
     const mirrorNodeUrl = 'http://localhost:5551/api/v1/';
+    const mirrorNodeClient = new MirrorNodeClient(mirrorNodeUrl);
+
+    /**
+     * @param {string} tokenId
+     */
+    const getToken = async tokenId => {
+        return (await fetch(`${mirrorNodeUrl}tokens/${tokenId}`)).json();
+    };
+
+    /**
+     * @param {string} timestamp
+     */
+    const getBlocks = async timestamp =>
+        (await fetch(`${mirrorNodeUrl}blocks?timestamp=gte:${timestamp}&order=asc&limit=1`)).json();
+
+    const getLatestBlock = async () =>
+        (await fetch(`${mirrorNodeUrl}blocks?order=desc&limit=1`)).json();
+
+    /**
+     * @param {string} timestamp
+     * @param {{from: string, to: string}} blockTimestamp
+     * @returns
+     */
+    const inBlock = (timestamp, { from, to }) => from <= timestamp && timestamp <= to;
 
     /** @type {string} */ let tokenId;
     /** @type {string} */ let erc20Address;
@@ -92,8 +119,43 @@ describe('::e2e', function () {
         tokenId = tokenId_.toString();
         erc20Address = `0x${tokenId_.toSolidityAddress()}`;
 
-        console.log('waiting for token to propagate');
-        await sleep(20000);
+        await sleep(1000, 'Waiting for created token to propagate to Mirror Node');
+        const { created_timestamp } = await getToken(tokenId);
+        const {
+            blocks: [block],
+        } = await getBlocks(created_timestamp);
+        assert(
+            inBlock(created_timestamp, block.timestamp),
+            "Token created timestamp is not in block's timestamp span"
+        );
+        console.log('== Token Creation Block ==', block);
+        console.info(`Token ID ${tokenId}|${erc20Address} @ ${created_timestamp}|${block.number}`);
+
+        assert((await mirrorNodeClient.getTokenById(tokenId, block.number - 1)) === null);
+        assert((await mirrorNodeClient.getTokenById(tokenId, block.number)) !== null);
+
+        // This is returning empty balances? Why?
+        // However, doing an `eth_call` to get this balance works fine.
+        // See "local-node/should retrieve `balanceOf` treasury account" test.
+        let balances = await mirrorNodeClient.getBalanceOfToken(
+            tokenId,
+            ft.treasury.id,
+            block.number
+        );
+        console.log('== Treasury Balance at Creation Block ==', balances);
+
+        // However, after ~100 blocks the balance information is visible from the Mirror Node.
+        // How can we shorten this time for test purposes?
+        await sleep(100 * 1000, 'Waiting for token balances to propagate?');
+        const {
+            blocks: [latestBlock],
+        } = await getLatestBlock();
+        balances = await mirrorNodeClient.getBalanceOfToken(
+            tokenId,
+            ft.treasury.id,
+            latestBlock.number
+        );
+        console.log('== Treasury Balance at Latest Block ==', latestBlock, balances);
     });
 
     [
@@ -104,8 +166,6 @@ describe('::e2e', function () {
         {
             name: /**@type{const}*/ ('anvil/local-node'),
             host: async () => {
-                const token = await (await fetch(`${mirrorNodeUrl}tokens/${tokenId}`)).json();
-                console.log(token);
                 const { host: forwarderUrl } = await jsonRPCForwarder(rpcRelayUrl, mirrorNodeUrl);
                 const anvilHost = await anvil(forwarderUrl);
 
@@ -126,19 +186,18 @@ describe('::e2e', function () {
                 const provider = new JsonRpcProvider(await host(), undefined, { batchMaxCount: 1 });
                 HTS = new Contract(HTSAddress, IHederaTokenService.abi, provider);
                 ERC20 = new Contract(erc20Address, IERC20.abi, provider);
-
-                // await sleep(3000);
             });
 
             it("should retrieve token's `name`, `symbol` and `totalSupply`", async function () {
-                expect(await ERC20['name']()).to.be.equal('Fungible Token to test HTS emulation');
-                expect(await ERC20['symbol']()).to.be.equal('HTSFT');
-                expect(await ERC20['totalSupply']()).to.be.equal(50_000n);
+                expect(await ERC20['name']()).to.be.equal(ft.name);
+                expect(await ERC20['symbol']()).to.be.equal(ft.symbol);
+                expect(await ERC20['totalSupply']()).to.be.equal(BigInt(ft.totalSupply));
+                expect(await ERC20['decimals']()).to.be.equal(BigInt(ft.decimals));
             });
 
             it('should retrieve `balanceOf` treasury account', async function () {
                 if (name === 'anvil/local-node') this.skip();
-                expect(await ERC20['balanceOf'](treasury.evmAddress)).to.be.equal(50_000n);
+                expect(await ERC20['balanceOf'](ft.treasury.evmAddress)).to.be.equal(50_000n);
             });
 
             it.skip("should token's metadata through `getTokenInfo`", async function () {
