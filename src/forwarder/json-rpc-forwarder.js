@@ -26,14 +26,14 @@ const { MirrorNodeClient } = require('./mirror-node-client');
 const { getHtsCode, getHtsStorageAt, HTSAddress, LONG_ZERO_PREFIX, getHIP719Code } = require('..');
 
 /** @type {Partial<import('hardhat/types').HardhatNetworkForkingConfig>} */
-const { url: forkingUrl, mirrorNodeUrl, workerPort, localAccounts = [] } = workerData;
+const { url: forkUrl, mirrorNodeUrl, workerPort, localAddresses = [] } = workerData;
 
 assert(mirrorNodeUrl !== undefined, 'json-rpc-forwarder: Missing Mirror Node URL');
 
 debug(
-    c.yellow('Starting JSON-RPC Forwarder on :%d, forking url=%s mirror node url=%s'),
+    c.yellow('Starting JSON-RPC Forwarder on :%s, forking url=%s mirror node url=%s'),
     workerPort,
-    forkingUrl,
+    forkUrl,
     mirrorNodeUrl
 );
 
@@ -58,12 +58,12 @@ const eth = {
     /** @type {EthHandler} */
     eth_getBalance: async ([address, _blockNumber]) => {
         assert(typeof address === 'string');
-        return localAccounts.includes(address.toLowerCase()) ? '0x0' : null;
+        return localAddresses.includes(address.toLowerCase()) ? '0x0' : null;
     },
     /** @type {EthHandler} */
     eth_getCode: async ([address, blockNumber]) => {
         assert(typeof address === 'string');
-        if (localAccounts.includes(address.toLowerCase())) {
+        if (localAddresses.includes(address.toLowerCase())) {
             return '0x';
         }
         if (address === HTSAddress) {
@@ -110,8 +110,8 @@ const server = http.createServer(function (req, res) {
                 }
             }
             debug('fetch request', c.dim(id), c.blue(method), params);
-            assert(forkingUrl !== undefined);
-            const result = await fetch(forkingUrl, { method: 'POST', body });
+            assert(forkUrl !== undefined);
+            const result = await fetch(forkUrl, { method: 'POST', body });
 
             if (method === 'eth_getBlockByNumber') {
                 const json = await result.json();
