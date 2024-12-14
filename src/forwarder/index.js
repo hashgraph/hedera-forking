@@ -32,7 +32,7 @@ const debug = require('util').debuglog('hedera-forking-rpc');
  * @param {string} mirrorNodeUrl used to fetch Hedera entity data.
  * @param {number=} workerPort a TCP port where the JSON-RPC Forwarder will listen. If not provided, a default value will be used.
  * @param {string[]=} localAddresses List of local addresses used by the local Network when forking.
- * @returns {Promise<Worker & {host: string}>}
+ * @returns {Promise<Worker & {host: string}>} the running worker together with `host` the forwarder is listening on.
  */
 function jsonRPCForwarder(forkUrl, mirrorNodeUrl, workerPort, localAddresses) {
     return new Promise(resolve => {
