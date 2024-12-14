@@ -63,6 +63,7 @@
         "type-check": "tsc",
         "lint": "eslint",
         "test": "mocha",
+        "test:e2e": "mocha test/*.e2e.js --fgrep ::e2e",
         "make:readme": "scripts/readme.js README.md"
     }
 }
