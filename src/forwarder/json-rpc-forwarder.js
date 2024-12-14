@@ -140,5 +140,5 @@ server.listen(workerPort, () => {
         listening: true,
         ...address,
     });
-    debug(`JSON-RPC Relay Forwarder server listening on port ${address.port}`);
+    debug(`JSON-RPC Forwarder listening on port :${address.port}`);
 });

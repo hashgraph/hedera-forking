@@ -50,7 +50,6 @@ function jsonRPCForwarder(forkUrl, mirrorNodeUrl, workerPort, localAddresses) {
         worker.on('exit', code => debug(`JSON-RPC Forwarder Worker exited with code ${code}`));
         worker.on('message', message => {
             if (message.listening) {
-                debug(`JSON-RPC Forwarder listening on port :${message.port}...`);
                 const host = `http://127.0.0.1:${message.port}`;
                 resolve(Object.assign(worker, { host }));
             }
