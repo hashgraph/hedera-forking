@@ -26,6 +26,7 @@ const {
     CustomFixedFee,
     CustomFractionalFee,
     FeeAssessmentMethod,
+    // @ts-expect-error https://github.com/hashgraph/hedera-sdk-js/issues/2722
 } = require('@hashgraph/sdk');
 
 async function main() {

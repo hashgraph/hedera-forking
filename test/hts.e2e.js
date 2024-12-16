@@ -20,7 +20,7 @@ const { strict: assert } = require('assert');
 const { expect } = require('chai');
 const { Contract, JsonRpcProvider } = require('ethers');
 
-// @ts-expect-error issue with sdk
+// @ts-expect-error https://github.com/hashgraph/hedera-sdk-js/issues/2722
 const { Hbar, Client, PrivateKey, TokenCreateTransaction } = require('@hashgraph/sdk');
 const { HTSAddress, getHIP719Code } = require('@hashgraph/system-contracts-forking');
 
