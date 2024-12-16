@@ -162,7 +162,7 @@ function visit(slot, baseSlot, obj, path, map) {
         );
     } else if (!label.startsWith('__gap')) {
         const prop = obj[toSnakeCase(label)];
-        if (prop === undefined) return;
+        assert(prop !== undefined);
         const [value, ...chunks] = _types[type](/**@type{string}*/ (prop));
         map.store(computedSlot, value, path, type);
 
