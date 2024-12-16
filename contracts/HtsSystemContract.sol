@@ -267,8 +267,8 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         }
         if (selector == IERC721.tokenURI.selector) {
             require(msg.data.length >= 72, "tokenURI: Not enough calldata");
-            // uint256 tokenId = uint256(bytes32(msg.data[40:72]));
-            // TODO: No idea how this should be implemented
+            // uint256 serialId = uint256(bytes32(msg.data[40:72]));
+            // TODO: Implement this in another PR
             return abi.encode("undefined");
         }
         if (selector == IERC721.totalSupply.selector) {
@@ -281,22 +281,22 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         }
         if (selector == IERC721.ownerOf.selector) {
             require(msg.data.length >= 60, "ownerOf: Not enough calldata");
-            uint256 tokenId = uint256(bytes32(msg.data[28:60]));
-            return abi.encode(__ownerOf(tokenId));
+            uint256 serialId = uint256(bytes32(msg.data[28:60]));
+            return abi.encode(__ownerOf(serialId));
         }
         if (selector == IERC721.transferFrom.selector) {
             require(msg.data.length >= 124, "transferFrom: Not enough calldata");
             address from = address(bytes20(msg.data[40:60]));
             address to = address(bytes20(msg.data[72:92]));
-            uint256 tokenId = uint256(bytes32(msg.data[92:124]));
-            _transferNFT(from, to, tokenId);
+            uint256 serialId = uint256(bytes32(msg.data[92:124]));
+            _transferNFT(from, to, serialId);
             return abi.encode(true);
         }
         if (selector == IERC721.approve.selector) {
             require(msg.data.length >= 92, "approve: Not enough calldata");
             address spender = address(bytes20(msg.data[40:60]));
-            uint256 tokenId = uint256(bytes32(msg.data[60:92]));
-            _approve(spender, tokenId, true);
+            uint256 serialId = uint256(bytes32(msg.data[60:92]));
+            _approve(spender, serialId, true);
             return abi.encode(true);
         }
         if (selector == IERC721.setApprovalForAll.selector) {
@@ -308,8 +308,8 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         }
         if (selector == IERC721.getApproved.selector) {
             require(msg.data.length >= 60, "getApproved: Not enough calldata");
-            uint256 tokenId = uint256(bytes32(msg.data[28:60]));
-            return abi.encode(__getApproved(tokenId));
+            uint256 serialId = uint256(bytes32(msg.data[28:60]));
+            return abi.encode(__getApproved(serialId));
         }
         if (selector == IERC721.isApprovedForAll.selector) {
             require(msg.data.length >= 92, "isApprovedForAll: Not enough calldata");
@@ -365,16 +365,16 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         return bytes32(abi.encodePacked(selector, pad, accountId));
     }
 
-    function _ownerOfSlot(uint32 tokenId) internal virtual returns (bytes32) {
+    function _ownerOfSlot(uint32 serialId) internal virtual returns (bytes32) {
         bytes4 selector = IERC721.ownerOf.selector;
         uint192 pad = 0x0;
-        return bytes32(abi.encodePacked(selector, pad, tokenId));
+        return bytes32(abi.encodePacked(selector, pad, serialId));
     }
 
-    function _getApprovedSlot(uint32 tokenId) internal virtual returns (bytes32) {
+    function _getApprovedSlot(uint32 serialId) internal virtual returns (bytes32) {
         bytes4 selector = IERC721.getApproved.selector;
         uint192 pad = 0x0;
-        return bytes32(abi.encodePacked(selector, pad, tokenId));
+        return bytes32(abi.encodePacked(selector, pad, serialId));
     }
 
     function _isApprovedForAllSlot(address owner, address operator) internal virtual returns (bytes32) {
@@ -395,13 +395,13 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         assembly { amount := sload(slot) }
     }
 
-    function __ownerOf(uint256 tokenId) private returns (address owner) {
-        bytes32 slot = _ownerOfSlot(uint32(tokenId));
+    function __ownerOf(uint256 serialId) private returns (address owner) {
+        bytes32 slot = _ownerOfSlot(uint32(serialId));
         assembly { owner := sload(slot) }
     }
 
-    function __getApproved(uint256 tokenId) private returns (address approved) {
-        bytes32 slot = _getApprovedSlot(uint32(tokenId));
+    function __getApproved(uint256 serialId) private returns (address approved) {
+        bytes32 slot = _getApprovedSlot(uint32(serialId));
         assembly { approved := sload(slot) }
     }
 
@@ -417,23 +417,23 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         emit Transfer(from, to, amount);
     }
 
-    function _transferNFT(address from, address to, uint256 tokenId) private {
+    function _transferNFT(address from, address to, uint256 serialId) private {
         require(from != address(0), "hts: invalid sender");
         require(to != address(0), "hts: invalid receiver");
 
         // Check if the sender is the owner of the token
-        bytes32 slot = _ownerOfSlot(uint32(tokenId));
+        bytes32 slot = _ownerOfSlot(uint32(serialId));
         address owner;
         assembly { owner := sload(slot) }
         require(owner == from, "hts: sender is not owner");
 
         // If the sender is not the owner, check if the sender is approved
         if (msg.sender != from) {
-            require(msg.sender == __getApproved(tokenId) || __isApprovedForAll(from, msg.sender), "hts: unauthorized");
+            require(msg.sender == __getApproved(serialId) || __isApprovedForAll(from, msg.sender), "hts: unauthorized");
         }
 
         // Clear approval
-        bytes32 approvalSlot = _getApprovedSlot(uint32(tokenId));
+        bytes32 approvalSlot = _getApprovedSlot(uint32(serialId));
         assembly { sstore(approvalSlot, 0) }
 
         // Clear approval for all
@@ -442,7 +442,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
 
         // Set the new owner
         assembly { sstore(slot, to) }
-        emit Transfer(from, to, tokenId);
+        emit Transfer(from, to, serialId);
     }
 
     function _update(address from, address to, uint256 amount) public {
@@ -476,16 +476,16 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         assembly { sstore(allowanceSlot, amount) }
     }
 
-    function _approve(address spender, uint256 tokenId, bool isApproved) private {
+    function _approve(address spender, uint256 serialId, bool isApproved) private {
         // The caller must own the token or be an approved operator.
-        address owner = __ownerOf(tokenId);
-        require(msg.sender == owner || __getApproved(tokenId) == msg.sender || __isApprovedForAll(owner, msg.sender), "_approve: unauthorized");
+        address owner = __ownerOf(serialId);
+        require(msg.sender == owner || __getApproved(serialId) == msg.sender || __isApprovedForAll(owner, msg.sender), "_approve: unauthorized");
 
-        bytes32 slot = _getApprovedSlot(uint32(tokenId));
+        bytes32 slot = _getApprovedSlot(uint32(serialId));
         address newApproved = isApproved ? spender : address(0);
         assembly { sstore(slot, newApproved) }
 
-        emit Approval(owner, spender, tokenId);
+        emit Approval(owner, spender, serialId);
     }
 
     /**

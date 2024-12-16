@@ -26,9 +26,9 @@ interface IERC721 {
     function symbol() external view returns (string memory);
 
     /**
-     * @dev Returns the Uniform Resource Identifier (URI) for `tokenId` token.
+     * @dev Returns the Uniform Resource Identifier (URI) for `serialId` token.
      */
-    function tokenURI(uint256 tokenId) external view returns (string memory);
+    function tokenURI(uint256 serialId) external view returns (string memory);
 
     /**
      * @dev Returns the total amount of tokens stored by the contract.
@@ -41,39 +41,39 @@ interface IERC721 {
     function balanceOf(address owner) external view returns (uint256 balance);
 
     /**
-     * @dev Returns the owner of the `tokenId` token.
+     * @dev Returns the owner of the `serialId` token.
      *
      * Requirements:
-     * - `tokenId` must exist.
+     * - `serialId` must exist.
      */
-    function ownerOf(uint256 tokenId) external view returns (address);
+    function ownerOf(uint256 serialId) external view returns (address);
 
     /**
-     * @dev Transfers `tokenId` token from `sender` to `recipient`.
+     * @dev Transfers `serialId` token from `sender` to `recipient`.
      *
      * Requirements:
      * - `sender` cannot be the zero address.
      * - `recipient` cannot be the zero address.
-     * - `tokenId` token must be owned by `sender`.
+     * - `serialId` token must be owned by `sender`.
      * - If the caller is not `sender`, it must be approved to move this token by either {approve} or {setApprovalForAll}.
      *
      * Emits a {Transfer} event.
      */
-    function transferFrom(address sender, address recipient, uint256 tokenId) external payable;
+    function transferFrom(address sender, address recipient, uint256 serialId) external payable;
 
     /**
-     * @dev Gives permission to `spender` to transfer `tokenId` token to another account.
+     * @dev Gives permission to `spender` to transfer `serialId` token to another account.
      * The approval is cleared when the token is transferred.
      *
      * Only a single account can be approved at a time, so approving the zero address clears previous approvals.
      *
      * Requirements:
      * - The caller must own the token or be an approved operator.
-     * - `tokenId` must exist.
+     * - `serialId` must exist.
      *
      * Emits an {Approval} event.
      */
-    function approve(address spender, uint256 tokenId) external payable;
+    function approve(address spender, uint256 serialId) external payable;
 
     /**
      * @dev Approve or remove `operator` as an operator for the caller.
@@ -87,12 +87,12 @@ interface IERC721 {
     function setApprovalForAll(address operator, bool approved) external;
 
     /**
-     * @dev Returns the account approved for `tokenId` token.
+     * @dev Returns the account approved for `serialId` token.
      *
      * Requirements:
-     * - `tokenId` must exist.
+     * - `serialId` must exist.
      */
-    function getApproved(uint256 tokenId) external view returns (address operator);
+    function getApproved(uint256 serialId) external view returns (address operator);
 
     /**
      * @dev Returns if the `operator` is allowed to manage all of the assets of `owner`.

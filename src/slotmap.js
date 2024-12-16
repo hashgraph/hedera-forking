@@ -162,7 +162,6 @@ function visit(slot, baseSlot, obj, path, map) {
         );
     } else if (!label.startsWith('__gap')) {
         const prop = obj[toSnakeCase(label)];
-        assert(prop !== undefined);
         const [value, ...chunks] = _types[type](/**@type{string}*/ (prop));
         map.store(computedSlot, value, path, type);
 
@@ -191,7 +190,12 @@ function visit(slot, baseSlot, obj, path, map) {
  */
 function slotMapOf(token) {
     token['token_type'] = token['type'];
+    token['token_supply_type'] = token['supply_type'] === 'FINITE';
     token['default_kyc_status'] = false;
+    // TODO: Decide what we will do with these hardcoded fields
+    // token['contract_id'] = zeroAddress();
+    // token['inherit_account_key'] = ZERO_HEX_32_BYTE;
+    // token['delegatable_contract_id'] = zeroAddress();
     token['treasury'] = token['treasury_account_id'];
     token['ledger_id'] = '0x00';
     // Every inner `struct` will be flattened by `visit`,
