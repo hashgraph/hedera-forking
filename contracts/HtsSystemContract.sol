@@ -5,7 +5,6 @@ import {IERC20Events, IERC20} from "./IERC20.sol";
 import {IERC721, IERC721Events} from "./IERC721.sol";
 import {IHRC719} from "./IHRC719.sol";
 import {IHederaTokenService} from "./IHederaTokenService.sol";
-import {readString} from "./StrRead.sol";
 
 address constant HTS_ADDRESS = address(0x167);
 
@@ -403,7 +402,9 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
 
     function __tokenURI(uint256 serialId) private returns (string memory uri) {
         bytes32 slot = _tokenUriSlot(uint32(serialId));
-        uri = readString(slot);
+        string storage _uri;
+        assembly { _uri.slot := slot }
+        uri = _uri;
     }
 
     function __ownerOf(uint256 serialId) private returns (address owner) {
