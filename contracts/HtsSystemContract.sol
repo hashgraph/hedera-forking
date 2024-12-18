@@ -266,10 +266,9 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
             return abi.encode(symbol);
         }
         if (selector == IERC721.tokenURI.selector) {
-            require(msg.data.length >= 72, "tokenURI: Not enough calldata");
-            // uint256 serialId = uint256(bytes32(msg.data[40:72]));
-            // TODO: Implement this in another PR
-            return abi.encode("undefined");
+            require(msg.data.length >= 60, "tokenURI: Not enough calldata");
+            uint256 serialId = uint256(bytes32(msg.data[28:60]));
+            return abi.encode(__tokenURI(serialId));
         }
         if (selector == IERC721.totalSupply.selector) {
             return abi.encode(totalSupply);
@@ -365,6 +364,12 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         return bytes32(abi.encodePacked(selector, pad, accountId));
     }
 
+    function _tokenUriSlot(uint32 serialId) internal virtual returns (bytes32) {
+        bytes4 selector = IERC721.tokenURI.selector;
+        uint192 pad = 0x0;
+        return bytes32(abi.encodePacked(selector, pad, serialId));
+    }
+
     function _ownerOfSlot(uint32 serialId) internal virtual returns (bytes32) {
         bytes4 selector = IERC721.ownerOf.selector;
         uint192 pad = 0x0;
@@ -393,6 +398,13 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
     function __allowance(address owner, address spender) private returns (uint256 amount) {
         bytes32 slot = _allowanceSlot(owner, spender);
         assembly { amount := sload(slot) }
+    }
+
+    function __tokenURI(uint256 serialId) private returns (string memory uri) {
+        bytes32 slot = _tokenUriSlot(uint32(serialId));
+        string storage _uri;
+        assembly { _uri.slot := slot }
+        uri = _uri;
     }
 
     function __ownerOf(uint256 serialId) private returns (address owner) {

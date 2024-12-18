@@ -6,6 +6,7 @@ import {Test, console} from "forge-std/Test.sol";
 import {IERC721, IERC721Events} from "../contracts/IERC721.sol";
 import {IERC20Events} from "../contracts/IERC20.sol";
 import {TestSetup} from "./lib/TestSetup.sol";
+import {storeString} from "../contracts/StrStore.sol";
 
 contract ERC721TokenTest is Test, TestSetup, IERC721Events, IERC20Events {
 
@@ -103,5 +104,25 @@ contract ERC721TokenTest is Test, TestSetup, IERC721Events, IERC20Events {
         vm.store(CFNFTFF, slot, bytes32(uint256(1)));
 
         assertTrue(IERC721(CFNFTFF).isApprovedForAll(owner, operator));
+    }
+
+    function test_ERC721_tokenURI_shorter_than_31_bytes() external {
+        uint256 serialId = 1;
+        uint192 pad = 0x0;
+        string memory uri = "https://example.com/1";
+        bytes32 slot = bytes32(abi.encodePacked(IERC721.tokenURI.selector, pad, uint32(serialId)));
+        storeString(CFNFTFF, uint256(slot), uri);
+
+        assertEq(IERC721(CFNFTFF).tokenURI(serialId), uri);
+    }
+
+    function test_ERC721_tokenURI_longer_than_31_bytes() external {
+        uint256 serialId = 1;
+        uint192 pad = 0x0;
+        string memory uri = "https://very-long-string-just-to-make-sure-that-it-exceeds-31-bytes-and-requires-mulyiple-storage-slots.com/1";
+        bytes32 slot = bytes32(abi.encodePacked(IERC721.tokenURI.selector, pad, uint32(serialId)));
+        storeString(CFNFTFF, uint256(slot), uri);
+
+        assertEq(IERC721(CFNFTFF).tokenURI(serialId), uri);
     }
 }
