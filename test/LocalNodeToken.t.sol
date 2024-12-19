@@ -15,6 +15,7 @@ contract LocalNodeTokenTest is Test, TestSetup, IERC20Events {
     address HTS_ADDRESS = 0x0000000000000000000000000000000000000167;
 
     function setUp() external {
+        if (!_hederaServicesExists()) return;
         deployCodeTo("HtsSystemContractLocalNode.sol", HTS_ADDRESS);
         vm.allowCheatcodes(HTS_ADDRESS);
 
@@ -29,19 +30,23 @@ contract LocalNodeTokenTest is Test, TestSetup, IERC20Events {
         assertEq(responseCode, 22);
     }
 
-    function test_ERC20_name() external view {
+    function test_ERC20_name() external {
+        if (!_hederaServicesExists()) return;
         assertEq(IERC20(_tokenAddress).name(), "Some really really long name, just for testing purposes to prove it is not an issue");
     }
 
-    function test_ERC20_decimals() external view {
+    function test_ERC20_decimals() external {
+        if (!_hederaServicesExists()) return;
         assertEq(IERC20(_tokenAddress).decimals(), uint256(2));
     }
 
-    function test_ERC20_symbol() external view {
+    function test_ERC20_symbol() external {
+        if (!_hederaServicesExists()) return;
         assertEq(IERC20(_tokenAddress).symbol(), "SAMPLE");
     }
 
-    function test_ERC20_balanceOf() external view {
+    function test_ERC20_balanceOf() external {
+        if (!_hederaServicesExists()) return;
         assertEq(IERC20(_tokenAddress).balanceOf(address(0x167)), 0);
     }
 
@@ -89,5 +94,15 @@ contract LocalNodeTokenTest is Test, TestSetup, IERC20Events {
             keys,
             expiry
         );
+    }
+
+    function _hederaServicesExists() private returns (bool) {
+        string[] memory inputs = new string[](3);
+        inputs[0] = "bash";
+        inputs[1] = "-c";
+        inputs[2] = "command -v -- hedera-services &> /dev/null && echo true || echo false";
+
+        bytes memory result = vm.ffi(inputs);
+        return keccak256(result) == keccak256(bytes("true\n"));
     }
 }
