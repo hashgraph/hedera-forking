@@ -95,6 +95,7 @@ async function createToken() {
         .setInitialSupply(ft.totalSupply)
         .setDecimals(ft.decimals)
         .setAdminKey(PrivateKey.fromStringDer(privateKey))
+        .setSupplyKey(PrivateKey.fromStringECDSA(ft.treasury.privateKey))
         .freezeWith(client)
         .sign(PrivateKey.fromStringECDSA(ft.treasury.privateKey));
     const receipt = await (await transaction.execute(client)).getReceipt(client);
@@ -318,6 +319,22 @@ describe('::e2e', function () {
                     treasuryBalance - amount
                 );
                 expect(await ERC20['balanceOf'](alice.address)).to.be.equal(amount);
+            });
+
+            it('should mint to treasury account', async function () {
+                const amount = 1_000_000n;
+
+                const treasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
+
+                await (
+                    await connectAs(HTS, treasury)['mintToken'](erc20Address, amount, [], {
+                        gasLimit: 1_000_000,
+                    })
+                ).wait();
+
+                expect(await ERC20['balanceOf'](ft.treasury.evmAddress)).to.be.equal(
+                    treasuryBalance + amount
+                );
             });
         });
     });
