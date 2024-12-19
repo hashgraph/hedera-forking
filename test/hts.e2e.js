@@ -18,7 +18,8 @@
 
 const { strict: assert } = require('assert');
 const { expect } = require('chai');
-const { Contract, JsonRpcProvider, Wallet, ContractFactory } = require('ethers');
+const { Contract, JsonRpcProvider, Wallet } = require('ethers');
+const c = require('ansi-colors');
 
 // @ts-expect-error https://github.com/hashgraph/hedera-sdk-js/issues/2722
 const { Hbar, Client, PrivateKey, TokenCreateTransaction } = require('@hashgraph/sdk');
@@ -30,8 +31,6 @@ const { anvil } = require('./.anvil.js');
 const IHederaTokenService = require('../out/IHederaTokenService.sol/IHederaTokenService.json');
 const IERC20 = require('../out/IERC20.sol/IERC20.json');
 const IHRC719 = require('../out/IHRC719.sol/IHRC719.json');
-
-const TokenCreator = require('../out/TokenCreator.sol/TokenCreator.json');
 
 const RedirectAbi = [
     'function redirectForToken(address token, bytes memory encodedFunctionSelector) external returns (int64 responseCode, bytes memory response)',
@@ -79,7 +78,7 @@ const aliasKeys = /**@type{const}*/ ([
     [1021, '0xeae4e00ece872dd14fb6dc7a04f390563c7d69d16326f2a703ec8e0934060cc7'],
 ]);
 
-async function _createToken() {
+async function createToken() {
     // https://github.com/hashgraph/hedera-local-node?tab=readme-ov-file#network-variables
     const accountId = '0.0.2';
     const privateKey =
@@ -109,15 +108,22 @@ async function _createToken() {
 /**
  * @param {number} time
  * @param {string} why
+ * @param {Mocha.Context|undefined} ctx
  * @returns
  */
-function sleep(time, why) {
-    console.info(why, `(${time} ms)`);
+function sleep(time, why, ctx) {
+    if (ctx === undefined) {
+        console.info(c.dim(why), `(${time} ms)`);
+    } else {
+        assert(ctx.currentTest !== undefined);
+        ctx.currentTest.title += ` (${why}, ${time} ms)`;
+    }
+
     return new Promise(resolve => setTimeout(resolve, time));
 }
 
 describe('::e2e', function () {
-    this.timeout(1000 * 1000);
+    this.timeout(100 * 1000);
 
     const rpcRelayUrl = 'http://localhost:7546';
     const mirrorNodeUrl = 'http://localhost:5551/api/v1/';
@@ -137,67 +143,51 @@ describe('::e2e', function () {
     /**
      * @param {string} ts
      */
-    const getBlocks = async ts => _fetch(`blocks?timestamp=gte:${ts}&order=asc&limit=1`);
+    const getBlocks = ts => _fetch(`blocks?timestamp=gte:${ts}&order=asc&limit=1`);
+
+    /**
+     * @param {string} tokenId
+     * @param {string} accountId
+     * @param {string} ts
+     */
+    const getBalance = (tokenId, accountId, ts) =>
+        _fetch(`tokens/${tokenId}/balances?account.id=${accountId}&timestamp=lte:${ts}`);
 
     /** @type {string} */ let tokenId;
     /** @type {string} */ let erc20Address;
     const nonAssocAddress0 = '0x0000000000000000000000000000000001234567';
     const nonAssocAddress1 = '0xdadB0d80178819F2319190D340ce9A924f783711';
 
+    let skipAnvilTests = false;
+
     before(async function () {
-        const provider = new JsonRpcProvider(rpcRelayUrl, undefined, { batchMaxCount: 1 });
-        const treasury = new Wallet(ft.treasury.privateKey, provider);
-
-        const cpk = treasury.signingKey.compressedPublicKey.replace('0x', '');
-        const publicKey = Buffer.from(cpk, 'hex');
-
-        const factory = new ContractFactory(TokenCreator.abi, TokenCreator.bytecode, treasury);
-        const tokenCreator = await factory.deploy();
-        const tx = await tokenCreator.waitForDeployment();
-        console.log(tx);
-
-        // @ts-expect-error wip
-        const x = await connectAs(tokenCreator, treasury)['createFungibleToken'](
-            treasury.address,
-            publicKey,
-            {
-                value: 50000000000000000000n,
-                gasLimit: 1_000_000,
-            }
-        );
-        console.log(x);
-        const receipt = await x.wait();
-        console.log(receipt.logs);
-
-        // @ts-expect-error wip
-        const log = receipt.logs.find(e => e.fragment.name === 'TokenCreated');
-        console.log(log);
-        const tokenAddress = log.args[0];
-
-        tokenId = `0.0.${BigInt(tokenAddress)}`;
-        console.log(tokenId);
-        // this.skip();
-
-        await sleep(60_000, 'propagate?');
-        const [latest] = (await getLatestBlock()).blocks;
-        console.info('Running on block', latest.number, '...');
-
-        // if (process.env['TOKEN_ID'] === undefined) {
-        //     tokenId = await createToken();
-        //     await sleep(1000, `Waiting for created token ${tokenId} to propagate to Mirror Node`);
-        // } else {
-        // tokenId = process.env['TOKEN_ID'];
-        // }
-
-        erc20Address = toAddress(tokenId);
-        const token = await getToken(tokenId);
-        if ('_status' in token) {
-            console.info('Token has not been propagated yet, skipping tests');
+        if (process.env['TOKEN_ID'] === undefined) {
+            console.info('The `TOKEN_ID` environment variable was not provided, creating token...');
+            const tokenId = await createToken();
+            console.info(`Token \`${tokenId}\` created`);
+            console.info('Next test run using this token needs to be after snapshot balances');
+            console.info(c.magenta(`Set \`TOKEN_ID=${tokenId}\` to run tests next time`));
+            console.info(c.dim('Skipping tests...'));
             this.skip();
         }
 
+        tokenId = process.env['TOKEN_ID'];
+        const token = await getToken(tokenId);
+        expect('_status' in token, `Test HTS Token \`${tokenId}\` not found`).to.be.false;
+
         const [block] = (await getBlocks(token.created_timestamp)).blocks;
-        console.info(`Token name='${token.name}' symbol='${token.symbol}' @`, block.number);
+        console.info(`Token name="${token.name}" symbol="${token.symbol}" @`, block.number);
+        const [latest] = (await getLatestBlock()).blocks;
+        console.info('Running on block', latest.number, '...');
+
+        const treasuryId = token.treasury_account_id;
+        const { balances } = await getBalance(tokenId, treasuryId, latest.timestamp.to);
+        console.info(`Treasury's \`${treasuryId}\` balance`, balances);
+        if (balances.length === 0) {
+            skipAnvilTests = true;
+        }
+
+        erc20Address = toAddress(tokenId);
     });
 
     [
@@ -221,19 +211,37 @@ describe('::e2e', function () {
         },
     ].forEach(({ name, host }) => {
         describe(name, function () {
+            /** @type {JsonRpcProvider} */ let rpc;
             /** @type {Contract} */ let HTS;
             /** @type {Contract} */ let ERC20;
             /** @type {Wallet} */ let treasury;
             /** @type {{ [accountNum: number]: Wallet}} */ let wallets;
 
             before(async function () {
-                const p = new JsonRpcProvider(await host(), undefined, { batchMaxCount: 1 });
-                HTS = new Contract(HTSAddress, [...IHederaTokenService.abi, ...RedirectAbi], p);
-                ERC20 = new Contract(erc20Address, [...IERC20.abi, ...IHRC719.abi], p);
-                treasury = new Wallet(ft.treasury.privateKey, p);
+                if (name === 'anvil/local-node' && skipAnvilTests) {
+                    console.info('    *No balance found for treasury, wait for snapshot, skipping');
+                    this.skip();
+                }
+
+                rpc = new JsonRpcProvider(await host(), undefined, { batchMaxCount: 1 });
+                HTS = new Contract(HTSAddress, [...IHederaTokenService.abi, ...RedirectAbi], rpc);
+                treasury = new Wallet(ft.treasury.privateKey, rpc);
                 wallets = Object.fromEntries(
-                    aliasKeys.map(([accId, pk]) => [accId, new Wallet(pk, p)])
+                    aliasKeys.map(([accId, pk]) => [accId, new Wallet(pk, rpc)])
                 );
+            });
+
+            beforeEach(async function () {
+                let tid;
+                if (name === 'local-node') {
+                    tid = await createToken();
+                    await sleep(1500, `wait for Token ${tid} to propagate to Mirror Node`, this);
+                } else {
+                    tid = tokenId;
+                }
+
+                erc20Address = toAddress(tid);
+                ERC20 = new Contract(erc20Address, [...IERC20.abi, ...IHRC719.abi], rpc);
             });
 
             it("should retrieve token's `name`, `symbol` and `totalSupply`", async function () {
@@ -259,8 +267,12 @@ describe('::e2e', function () {
             });
 
             it('should get not `isAssociated` for existing non-associated account', async function () {
-                const value = await ERC20['isAssociated']({ from: toAddress('0.0.1002') });
-                expect(value).to.be.equal(false);
+                expect(await ERC20['isAssociated']({ from: toAddress('0.0.1002') })).to.be.equal(
+                    false
+                );
+                expect(await ERC20['isAssociated']({ from: wallets[1012].address })).to.be.equal(
+                    false
+                );
             });
 
             // These reverts instead of returning `false`.
@@ -277,34 +289,35 @@ describe('::e2e', function () {
                 await HTS['getTokenInfo'](erc20Address);
             });
 
-            it('should transfer', async function () {
+            it('should transfer from treasury to account', async function () {
+                const amount = 200_000n;
                 const alice = wallets[1012];
 
-                let treasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
-                let accountBalance = await ERC20['balanceOf'](alice.address);
-                console.log(treasuryBalance, accountBalance);
+                const treasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
+                expect(treasuryBalance).to.be.equal(BigInt(ft.totalSupply));
+                expect(await ERC20['balanceOf'](alice.address)).to.be.equal(0n);
 
-                const tx = await connectAs(ERC20, alice)['associate']();
-                console.log('tx response', tx);
-                const r = await tx.wait();
-                console.log('receipt', r);
+                // const tx = await connectAs(ERC20, alice)['associate']();
+                // await tx.wait();
+                // console.log('receipt', r);
 
-                const isassoc = await ERC20['isAssociated']({ from: alice.address });
-                console.log('isassoc', isassoc);
+                // const isassoc = await ERC20['isAssociated']({ from: alice.address });
+                // console.log('isassoc', isassoc);
 
-                const x = await connectAs(ERC20, treasury)['transfer'](alice.address, 200_000, {
-                    gasLimit: 10_000_000,
+                const x = await connectAs(ERC20, treasury)['transfer'](alice.address, amount, {
+                    gasLimit: 1_000_000,
                 });
-                console.log(x);
-                if (name !== 'anvil/local-node') {
-                    const y = await x.wait();
-                    console.log(y);
-                }
-                // await connectAs(ERC20, treasury)['transfer'].send(toAddress('0.0.1002'), 200_000, { gasLimit: 550_000 });
+                // console.log(x);
+                // if (name !== 'anvil/local-node') {
+                // const y =
+                await x.wait();
+                // console.log(y);
+                // }
 
-                treasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
-                accountBalance = await ERC20['balanceOf'](alice.address);
-                console.log(treasuryBalance, accountBalance);
+                expect(await ERC20['balanceOf'](ft.treasury.evmAddress)).to.be.equal(
+                    treasuryBalance - amount
+                );
+                expect(await ERC20['balanceOf'](alice.address)).to.be.equal(amount);
             });
         });
     });
