@@ -21,6 +21,7 @@ contract HtsSystemContractLocalNode {
         inputs[2] = _getBashScript();
         bytes memory res = vm.ffi(inputs);
         (uint256 status, bytes memory response) = abi.decode(res, (uint256, bytes));
+        require(status == 200 || status == 404, string(response));
         bytes memory result = vm.parseJsonBytes(string(response), ".result");
         _handleResult(result);
         return result;
@@ -45,7 +46,7 @@ contract HtsSystemContractLocalNode {
         }
     }
 
-    function _getBashScript() private returns (string memory) {
+    function _getBashScript() private view returns (string memory) {
         address sender = msg.sender;
         bytes memory data = msg.data;
         if (_isViewCall()) {
@@ -77,7 +78,7 @@ contract HtsSystemContractLocalNode {
         );
     }
 
-    function _isViewCall() private returns (bool) {
+    function _isViewCall() private pure returns (bool) {
         bytes4 selector = bytes4(msg.data[24:28]);
         return
             selector == IERC20.name.selector ||
