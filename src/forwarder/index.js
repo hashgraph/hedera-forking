@@ -59,4 +59,4 @@ function jsonRPCForwarder(forkUrl, mirrorNodeUrl, workerPort, localAddresses) {
     });
 }
 
-module.exports = { jsonRPCForwarder, ...require('./mirror-node-client') };
+module.exports = { jsonRPCForwarder };
