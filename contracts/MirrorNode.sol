@@ -28,6 +28,37 @@ abstract contract MirrorNode {
 
     function fetchTokenRelationshipOfAccount(string memory account, address token) external virtual returns (string memory json);
 
+    function fetchNonFungibleToken(address token, uint32 serial) external virtual returns (string memory json);
+
+    function getNftMetadata(address token, uint32 serial) external returns (string memory) {
+        try this.fetchNonFungibleToken(token, serial) returns (string memory json) {
+            if (vm.keyExistsJson(json, ".metadata")) {
+                return vm.parseJsonString(json, ".metadata");
+            }
+        } catch {}
+        return "";
+    }
+
+    function getNftOwner(address token, uint32 serial) external returns (address) {
+        try this.fetchNonFungibleToken(token, serial) returns (string memory json) {
+            if (vm.keyExistsJson(json, ".account_id")) {
+                string memory owner = vm.parseJsonString(json, ".account_id");
+                return getAccountAddress(owner);
+            }
+        } catch {}
+        return address(0);
+    }
+
+    function getNftSpender(address token, uint32 serial) external returns (address) {
+        try this.fetchNonFungibleToken(token, serial) returns (string memory json) {
+            if (vm.keyExistsJson(json, ".spender")) {
+                string memory spender = vm.parseJsonString(json, ".spender");
+                return getAccountAddress(spender);
+            }
+        } catch {}
+        return address(0);
+    }
+
     function getBalance(address token, address account) external returns (uint256) {
         uint32 accountNum = _getAccountNum(account);
         if (accountNum == 0) return 0;
@@ -65,7 +96,7 @@ abstract contract MirrorNode {
         return false;
     }
 
-    function getAccountAddress(string memory accountId) external returns (address) {
+    function getAccountAddress(string memory accountId) public returns (address) {
         if (bytes(accountId).length == 0
             || keccak256(bytes(accountId)) == keccak256(bytes("null"))
             || keccak256(abi.encodePacked(accountId)) == keccak256(abi.encodePacked(bytes32(0)))) {
