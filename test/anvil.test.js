@@ -17,11 +17,11 @@
  */
 
 const path = require('path');
-const { spawn } = require('child_process');
 const { Worker } = require('worker_threads');
 const { expect } = require('chai');
 const ethers = require('ethers');
 
+const { anvil } = require('./.anvil.js');
 const IERC20 = require('../out/IERC20.sol/IERC20.json');
 
 /**
@@ -35,48 +35,10 @@ function jsonRpcMock() {
         worker.on('exit', code => console.log(`JSON-RPC Mock Worker exited with code ${code}`));
         worker.on('message', message => {
             if (message.listening) {
-                resolve(`localhost:${message.port}`);
+                resolve(`http://localhost:${message.port}`);
             }
         });
         worker.unref();
-    });
-}
-
-/**
- *
- * @param {*} forkUrl
- * @returns {Promise<string>}
- */
-function anvil(forkUrl = 'localhost:7546') {
-    const args = ['--port=0', `--fork-url=${forkUrl}`, '--no-storage-caching'];
-    return new Promise((resolve, reject) => {
-        const child = spawn('anvil', args, {
-            detached: true,
-            stdio: ['ignore', 'pipe', 'pipe'],
-        });
-        child.stdout.on('data', data => {
-            /** @type {string} */
-            const message = data.toString();
-            const match = message.match(/^Listening on (.+:\d+)$/m);
-            if (match !== null) {
-                const host = match[1];
-                child.stderr.unpipe();
-                child.stderr.destroy();
-                child.stdout.unpipe();
-                child.stdout.destroy();
-                resolve(host);
-            }
-        });
-        child.stderr.on('data', err => {
-            reject(err.toString());
-        });
-
-        process.on('exit', () => {
-            const result = child.kill();
-            console.log('terminated', result);
-        });
-
-        child.unref();
     });
 }
 
@@ -93,13 +55,13 @@ describe('::anvil', function () {
         console.log('Anvil listening on', anvilHost);
 
         // Disable batch requests because `json-rpc-mock` does not support them
-        mockProvider = new ethers.JsonRpcProvider(`http://${mockHost}`, undefined, {
+        mockProvider = new ethers.JsonRpcProvider(mockHost, undefined, {
             batchMaxCount: 1,
         });
-        anvilProvider = new ethers.JsonRpcProvider(`http://${anvilHost}`);
+        anvilProvider = new ethers.JsonRpcProvider(anvilHost);
 
         const n = await anvilProvider.getNetwork();
-        console.log(n.chainId);
+        console.log("Anvil's chain id", n.chainId);
     });
 
     [
