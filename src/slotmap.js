@@ -40,7 +40,7 @@ const {
  */
 class SlotMap {
     constructor() {
-        /** @type {Map<bigint, {value: Value, path: string, type: string}>} */
+        /** @type {Map<bigint, {offset: number, value: Value, path: string, type: string}[]>} */
         this._map = new Map();
     }
 
@@ -51,15 +51,28 @@ class SlotMap {
      * so reassigning an already existing slot will throw an error.
      *
      * @param {bigint} slot
+     * @param {number|null} offset
      * @param {Value} value
      * @param {string} path
      * @param {string} type
      */
-    store(slot, value, path, type) {
-        const prev = this._map.get(slot);
-        if (prev !== undefined)
-            throw new Error(`Slot \`${slot}\` in use by ${JSON.stringify(prev)}: ${value}@${path}`);
-        this._map.set(slot, { value, path, type });
+    store(slot, offset, value, path, type) {
+        let values = this._map.get(slot);
+        if (offset === null) {
+            if (values !== undefined)
+                throw new Error(`Slot ${slot} used by ${JSON.stringify(values)}: ${value}@${path}`);
+            this._map.set(slot, [{ offset: 0, value, path, type }]);
+        } else {
+            if (values === undefined) {
+                values = [];
+                this._map.set(slot, values);
+            } else {
+                if (values.find(val => val.offset === offset) !== undefined) {
+                    throw new Error(`Slot ${slot}:${offset} used by ${JSON.stringify(values)}`);
+                }
+            }
+            values.push({ offset, value, path, type });
+        }
     }
 
     /**
@@ -68,6 +81,21 @@ class SlotMap {
     load(slot) {
         return this._map.get(slot);
     }
+}
+
+/**
+ * @param {{offset: number, value: string}[]} values
+ * @returns {string}
+ */
+function packValues(values) {
+    assert(values.length > 0, 'values must not be empty');
+
+    let data = 0n;
+    for (const { offset, value } of values) {
+        const shifted = BigInt(`0x${value}`) << BigInt(offset * 8);
+        data = data | shifted;
+    }
+    return toIntHex256(data);
 }
 
 /**
@@ -106,6 +134,7 @@ const _types = {
     t_uint8: val => [toIntHex256(val)],
     t_uint256: val => [toIntHex256(val)],
     t_int256: str => [toIntHex256(str ?? 0)],
+    t_int64: str => [toIntHex256(str ?? 0)],
     t_address: str => [
         str
             ? (mirrorNode, blockNumber) =>
@@ -128,7 +157,7 @@ const _types = {
  * These gaps are declared only to avoid packing multiple fields in the same storage slot.
  * These "gap" fields must start with `__gap` to avoid retrieving an inexisting value.
  *
- * @param {{label: string;slot: string;type: string;}} slot the starting slot to compute storage slots.
+ * @param {{label: string;slot: string;type: string; offset: number;}} slot the starting slot to compute storage slots.
  * @param {bigint} baseSlot the base slot that `slot` is instantiated from.
  * @param {Record<string, unknown>} obj the current object to extract values from. It may change when visiting arrays.
  * @param {string} path represents the current `path` to extract a primitive value.
@@ -137,7 +166,7 @@ const _types = {
 function visit(slot, baseSlot, obj, path, map) {
     const computedSlot = BigInt(slot.slot) + baseSlot;
     path += `.${slot.label}`;
-    const { label, type } = slot;
+    const { label, type, offset } = slot;
 
     const ty = types[/**@type{keyof typeof types}*/ (type)];
     if ('members' in ty) {
@@ -147,26 +176,26 @@ function visit(slot, baseSlot, obj, path, map) {
         const arr = obj[toSnakeCase(label)];
         assert(Array.isArray(arr));
 
-        map.store(computedSlot, toIntHex256(arr.length), `${path}{len}`, type);
+        map.store(computedSlot, null, toIntHex256(arr.length), `${path}{len}`, type);
         const baseKeccak = BigInt(keccak256(`0x${toIntHex256(computedSlot)}`));
         const { numberOfBytes } = types[/**@type{keyof typeof types}*/ (base)];
         assert(parseInt(numberOfBytes) % 32 === 0);
         arr.forEach((item, i) =>
             visit(
-                { label: '_', type: base, slot: '0' },
+                { label: '_', type: base, slot: '0', offset: 0 },
                 baseKeccak + BigInt(i) * (BigInt(numberOfBytes) / 32n),
                 item,
                 `${path}[${i}]`,
                 map
             )
         );
-    } else if (!label.startsWith('__gap')) {
+    } else {
         const prop = obj[toSnakeCase(label)];
         const [value, ...chunks] = _types[type](/**@type{string}*/ (prop));
-        map.store(computedSlot, value, path, type);
+        map.store(computedSlot, offset, value, path, type);
 
         const baseKeccak = BigInt(keccak256(`0x${toIntHex256(computedSlot)}`));
-        chunks.forEach((c, i) => map.store(baseKeccak + BigInt(i), c, `${path}{${i}}`, type));
+        chunks.forEach((c, i) => map.store(baseKeccak + BigInt(i), null, c, `${path}{${i}}`, type));
     }
 }
 
@@ -244,4 +273,4 @@ function slotMapOf(token) {
     return map;
 }
 
-module.exports = { slotMapOf };
+module.exports = { slotMapOf, packValues };
