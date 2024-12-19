@@ -19,7 +19,10 @@
         "noImplicitThis": true,
         "noPropertyAccessFromIndexSignature": true,
         "noUnusedLocals": true,
-        "noUnusedParameters": true
+        "noUnusedParameters": true,
+
+        // Until https://github.com/hashgraph/hedera-sdk-js/issues/2722 gets fixed
+        "skipLibCheck": true
     },
-    "exclude": ["./scripts/create-token.js", "./examples/"]
+    "exclude": ["./examples/"]
 }
