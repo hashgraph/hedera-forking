@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import {Vm} from "forge-std/Vm.sol";
 import {IERC20} from "./IERC20.sol";
 import {IHRC719} from "./IHRC719.sol";
-import {IHederaTokenService} from "./IHederaTokenService.sol";
+import {IHTSDefinitions} from "../contracts/IHTSDefinitions.sol";
 
 contract HtsSystemContractLocalNode {
     Vm private constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
@@ -30,10 +30,10 @@ contract HtsSystemContractLocalNode {
     function _handleResult(bytes memory response) private {
         bytes4 selector = bytes4(msg.data[0:4]);
         if (
-            selector == IHederaTokenService.createFungibleToken.selector ||
-            selector == IHederaTokenService.createNonFungibleToken.selector ||
-            selector == IHederaTokenService.createFungibleTokenWithCustomFees.selector ||
-            selector == IHederaTokenService.createNonFungibleTokenWithCustomFees.selector
+            selector == IHTSDefinitions.createFungibleToken.selector ||
+            selector == IHTSDefinitions.createNonFungibleToken.selector ||
+            selector == IHTSDefinitions.createFungibleTokenWithCustomFees.selector ||
+            selector == IHTSDefinitions.createNonFungibleTokenWithCustomFees.selector
         ) {
             (int responseCode, address tokenAddress) = abi.decode(response, (int, address));
             if (responseCode == 22) {

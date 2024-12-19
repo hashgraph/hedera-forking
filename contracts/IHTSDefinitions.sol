@@ -2,7 +2,7 @@
 pragma solidity >=0.4.9 <0.9.0;
 pragma experimental ABIEncoderV2;
 
-interface IHederaTokenService {
+interface IHTSDefinitions {
 
     /// Transfers cryptocurrency among two or more accounts by making the desired adjustments to their
     /// balances. Each transfer list can specify up to 10 adjustments. Each negative amount is withdrawn
@@ -807,12 +807,12 @@ interface IHederaTokenService {
     /// @param fixedFees Set of fixed fees for `token`
     /// @param fractionalFees Set of fractional fees for `token`
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
-    function updateFungibleTokenCustomFees(address token,  IHederaTokenService.FixedFee[] memory fixedFees, IHederaTokenService.FractionalFee[] memory fractionalFees) external returns (int64 responseCode);
+    function updateFungibleTokenCustomFees(address token,  IHTSDefinitions.FixedFee[] memory fixedFees, IHTSDefinitions.FractionalFee[] memory fractionalFees) external returns (int64 responseCode);
 
     /// Update the custom fees for a non-fungible token
     /// @param token The token address
     /// @param fixedFees Set of fixed fees for `token`
     /// @param royaltyFees Set of royalty fees for `token`
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
-    function updateNonFungibleTokenCustomFees(address token, IHederaTokenService.FixedFee[] memory fixedFees, IHederaTokenService.RoyaltyFee[] memory royaltyFees) external returns (int64 responseCode);
+    function updateNonFungibleTokenCustomFees(address token, IHTSDefinitions.FixedFee[] memory fixedFees, IHTSDefinitions.RoyaltyFee[] memory royaltyFees) external returns (int64 responseCode);
 }
