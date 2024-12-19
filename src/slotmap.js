@@ -84,6 +84,8 @@ class SlotMap {
 }
 
 /**
+ * Packs values into a single slot shifting according to their offsets.
+ *
  * @param {{offset: number, value: string}[]} values
  * @returns {string}
  */
@@ -133,7 +135,6 @@ const _types = {
     },
     t_uint8: val => [toIntHex256(val)],
     t_uint256: val => [toIntHex256(val)],
-    t_int256: str => [toIntHex256(str ?? 0)],
     t_int64: str => [toIntHex256(str ?? 0)],
     t_address: str => [
         str

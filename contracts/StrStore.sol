@@ -44,11 +44,6 @@ function storeUint(address target, uint256 slot, uint256 value) {
     storeBytes32(target, slot, uintData);
 }
 
-function storeInt(address target, uint256 slot, int256 value) {
-    bytes32 intData = bytes32(abi.encodePacked(value));
-    storeBytes32(target, slot, intData);
-}
-
 function storeInt64(address target, uint256 slot, int64 value) {
     bytes32 data = bytes32(abi.encodePacked(value));
     storeBytes32(target, slot, data);

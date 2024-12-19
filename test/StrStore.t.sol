@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {Test, console} from "forge-std/Test.sol";
-import {storeString, storeBytes, storeUint, storeInt, storeInt64, storeBool, storeAddress, storeBytes32} from "../contracts/StrStore.sol";
+import {storeString, storeBytes, storeUint, storeInt64, storeBool, storeAddress, storeBytes32} from "../contracts/StrStore.sol";
 
 contract StrStoreTest is Test {
 
@@ -19,14 +19,14 @@ contract StrStoreTest is Test {
         storeString(address(_c), 2, value);
         assertEq(_c.symbol(), value);
 
-        assertEq(_c.gap(), 0);
+        assertEq(_c.gap1(), 0);
     }
 
     function storeBytesTest(bytes memory value) private {
         storeBytes(address(_c), 3, value);
         assertEq(_c.someBytes(), value);
 
-        assertEq(_c.someInt(), 0);
+        assertEq(_c.gap2(), 0);
 
         storeBytes(address(_c), 5, value);
         assertEq(_c.someOtherBytes(), value);
@@ -34,19 +34,9 @@ contract StrStoreTest is Test {
 
     function storeUintTest(uint256 value) private {
         storeUint(address(_c), 1, value);
-        assertEq(_c.gap(), value);
+        assertEq(_c.gap1(), value);
         assertEq(_c.name(), "");
         assertEq(_c.symbol(), "");
-    }
-
-    function storeIntTest(int256 value) private {
-        storeInt(address(_c), 4, value);
-        assertEq(_c.someInt(), value);
-        assertEq(_c.someBytes(), new bytes(0));
-        assertEq(_c.someOtherBytes(), new bytes(0));
-
-        storeInt(address(_c), 9, value);
-        assertEq(_c.someOtherInt(), value);
     }
 
     function storeBoolTest(bool value) private {
@@ -59,7 +49,7 @@ contract StrStoreTest is Test {
     function storeAddressTest(address value) private {
         storeAddress(address(_c), 8, value);
         assertEq(_c.someAddress(), value);
-        assertEq(_c.someOtherInt(), 0);
+        assertEq(_c.gap3(), 0);
         assertEq(_c.someBytes32(), bytes32(0));
     }
 
@@ -122,20 +112,6 @@ contract StrStoreTest is Test {
 
     function test_store_uint_max() external {
         storeUintTest(type(uint256).max);
-    }
-
-    // Integers
-
-    function test_store_int_zero() external {
-        storeIntTest(0);
-    }
-
-    function test_store_int_max() external {
-        storeIntTest(type(int256).max);
-    }
-
-    function test_store_int_min() external {
-        storeIntTest(type(int256).min);
     }
 
     // Booleans
@@ -232,15 +208,15 @@ struct Slot {
 
 contract C {
     string public name;
-    uint256 public gap;
+    uint256 public gap1;
     string public symbol;
     bytes public someBytes;
-    int256 public someInt;
+    uint256 public gap2;
     bytes public someOtherBytes;
     bool public someBool;
     bytes32 public someBytes32;
     address public someAddress;
-    int256 public someOtherInt;
+    uint256 public gap3;
 
     bool public offsetBool1;
     function offsetBool1Slot() external pure returns (Slot memory) {

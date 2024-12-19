@@ -6,7 +6,7 @@ import {HtsSystemContract, HTS_ADDRESS} from "./HtsSystemContract.sol";
 import {IERC20} from "./IERC20.sol";
 import {MirrorNode} from "./MirrorNode.sol";
 import {IMirrorNodeResponses} from "./IMirrorNodeResponses.sol";
-import {storeAddress, storeBool, storeBytes, storeInt, storeInt64, storeString, storeUint} from "./StrStore.sol";
+import {storeAddress, storeBool, storeBytes, storeInt64, storeString, storeUint} from "./StrStore.sol";
 
 contract HtsSystemContractJson is HtsSystemContract {
     Vm private constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
