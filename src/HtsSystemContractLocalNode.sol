@@ -73,7 +73,7 @@ contract HtsSystemContractLocalNode {
             ' ',
             vm.toString(sender),
             ' ',
-            vm.toString(address(0x167))
+            vm.toString(address(this))
         );
     }
 

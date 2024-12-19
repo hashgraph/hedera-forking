@@ -17,47 +17,52 @@
  */
 
 export const htsAbi = {
-  createNonFungibleToken: [
-    {
-      type: 'tuple',
-      components: [
-        { name: 'name', type: 'string' },
-        { name: 'symbol', type: 'string' },
-        { name: 'treasury', type: 'address' },
-        { name: 'memo', type: 'string' },
-        { name: 'tokenSupplyType', type: 'bool' },
-        { name: 'maxSupply', type: 'int64' },
-        { name: 'freezeDefault', type: 'bool' },
+    transferFrom: [
+        { name: 'from', type: 'address' },
+        { name: 'to', type: 'address' },
+        { name: 'amount', type: 'uint256' },
+    ],
+    createNonFungibleToken: [
         {
-          name: 'tokenKeys',
-          type: 'tuple[]',
-          components: [
-            { name: 'keyType', type: 'uint256' },
-            {
-              name: 'key',
-              type: 'tuple',
-              components: [
-                { name: 'inheritAccountKey', type: 'bool' },
-                { name: 'contractId', type: 'address' },
-                { name: 'ed25519', type: 'bytes' },
-                { name: 'ECDSA_secp256k1', type: 'bytes' },
-                { name: 'delegatableContractId', type: 'address' },
-              ],
-            },
-          ],
+            type: 'tuple',
+            components: [
+                { name: 'name', type: 'string' },
+                { name: 'symbol', type: 'string' },
+                { name: 'treasury', type: 'address' },
+                { name: 'memo', type: 'string' },
+                { name: 'tokenSupplyType', type: 'bool' },
+                { name: 'maxSupply', type: 'int64' },
+                { name: 'freezeDefault', type: 'bool' },
+                {
+                    name: 'tokenKeys',
+                    type: 'tuple[]',
+                    components: [
+                        { name: 'keyType', type: 'uint256' },
+                        {
+                            name: 'key',
+                            type: 'tuple',
+                            components: [
+                                { name: 'inheritAccountKey', type: 'bool' },
+                                { name: 'contractId', type: 'address' },
+                                { name: 'ed25519', type: 'bytes' },
+                                { name: 'ECDSA_secp256k1', type: 'bytes' },
+                                { name: 'delegatableContractId', type: 'address' },
+                            ],
+                        },
+                    ],
+                },
+                {
+                    name: 'expiry',
+                    type: 'tuple',
+                    components: [
+                        { name: 'second', type: 'int64' },
+                        { name: 'autoRenewAccount', type: 'address' },
+                        { name: 'autoRenewPeriod', type: 'int64' },
+                    ],
+                },
+            ],
         },
-        {
-          name: 'expiry',
-          type: 'tuple',
-          components: [
-            { name: 'second', type: 'int64' },
-            { name: 'autoRenewAccount', type: 'address' },
-            { name: 'autoRenewPeriod', type: 'int64' },
-          ],
-        },
-      ],
-    },
-    { name: 'initialTotalSupply', type: 'int64' },
-    { name: 'decimals', type: 'int32' }
-  ],
+        { name: 'initialTotalSupply', type: 'int64' },
+        { name: 'decimals', type: 'int32' },
+    ],
 };
