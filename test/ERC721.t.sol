@@ -6,7 +6,7 @@ import {Test, console} from "forge-std/Test.sol";
 import {IERC721, IERC721Events} from "../contracts/IERC721.sol";
 import {IERC20Events} from "../contracts/IERC20.sol";
 import {TestSetup} from "./lib/TestSetup.sol";
-import {storeString} from "../contracts/StrStore.sol";
+import {storeString, storeBool} from "../contracts/StrStore.sol";
 
 contract ERC721TokenTest is Test, TestSetup, IERC721Events, IERC20Events {
 
@@ -36,6 +36,7 @@ contract ERC721TokenTest is Test, TestSetup, IERC721Events, IERC20Events {
         uint192 pad = 0x0;
         bytes32 slot = bytes32(abi.encodePacked(IERC721.ownerOf.selector, pad, uint32(tokenId)));
         vm.store(CFNFTFF, slot, bytes32(uint256(uint160(CFNFTFF_TREASURY))));
+        vm.store(address(bytes20(keccak256(abi.encode(CFNFTFF)))), slot, bytes32(uint(1)));
 
         assertEq(IERC721(CFNFTFF).ownerOf(tokenId), CFNFTFF_TREASURY);
     }
@@ -62,6 +63,7 @@ contract ERC721TokenTest is Test, TestSetup, IERC721Events, IERC20Events {
         uint192 pad = 0x0;
         bytes32 slot = bytes32(abi.encodePacked(IERC721.ownerOf.selector, pad, uint32(tokenId)));
         vm.store(CFNFTFF, slot, bytes32(uint256(uint160(CFNFTFF_TREASURY))));
+        vm.store(address(bytes20(keccak256(abi.encode(CFNFTFF)))), slot, bytes32(uint(1)));
 
         vm.startPrank(CFNFTFF_TREASURY);
         vm.expectEmit(CFNFTFF);
@@ -90,6 +92,7 @@ contract ERC721TokenTest is Test, TestSetup, IERC721Events, IERC20Events {
         uint192 pad = 0x0;
         bytes32 slot = bytes32(abi.encodePacked(IERC721.getApproved.selector, pad, uint32(tokenId)));
         vm.store(CFNFTFF, slot, bytes32(uint256(uint160(approvedUser))));
+        vm.store(address(bytes20(keccak256(abi.encode(CFNFTFF)))), slot, bytes32(uint(1)));
 
         assertEq(IERC721(CFNFTFF).getApproved(tokenId), approvedUser);
     }
@@ -102,6 +105,7 @@ contract ERC721TokenTest is Test, TestSetup, IERC721Events, IERC20Events {
         uint32 operatorId = HtsSystemContract(HTS_ADDRESS).getAccountId(operator);
         bytes32 slot = bytes32(abi.encodePacked(IERC721.isApprovedForAll.selector, pad, ownerId, operatorId));
         vm.store(CFNFTFF, slot, bytes32(uint256(1)));
+        vm.store(address(bytes20(keccak256(abi.encode(CFNFTFF)))), slot, bytes32(uint(1)));
 
         assertTrue(IERC721(CFNFTFF).isApprovedForAll(owner, operator));
     }
@@ -112,6 +116,7 @@ contract ERC721TokenTest is Test, TestSetup, IERC721Events, IERC20Events {
         string memory uri = "https://example.com/1";
         bytes32 slot = bytes32(abi.encodePacked(IERC721.tokenURI.selector, pad, uint32(serialId)));
         storeString(CFNFTFF, uint256(slot), uri);
+        vm.store(address(bytes20(keccak256(abi.encode(CFNFTFF)))), slot, bytes32(uint(1)));
 
         assertEq(IERC721(CFNFTFF).tokenURI(serialId), uri);
     }
@@ -122,6 +127,7 @@ contract ERC721TokenTest is Test, TestSetup, IERC721Events, IERC20Events {
         string memory uri = "https://very-long-string-just-to-make-sure-that-it-exceeds-31-bytes-and-requires-mulyiple-storage-slots.com/1";
         bytes32 slot = bytes32(abi.encodePacked(IERC721.tokenURI.selector, pad, uint32(serialId)));
         storeString(CFNFTFF, uint256(slot), uri);
+        vm.store(address(bytes20(keccak256(abi.encode(CFNFTFF)))), slot, bytes32(uint(1)));
 
         assertEq(IERC721(CFNFTFF).tokenURI(serialId), uri);
     }
