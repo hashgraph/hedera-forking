@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
-import {Test} from "forge-std/Test.sol";
-import {storeString, storeBytes, storeUint, storeInt, storeBool, storeAddress, storeBytes32} from "../contracts/StrStore.sol";
+import {Test, console} from "forge-std/Test.sol";
+import {storeString, storeBytes, storeUint, storeInt, storeInt64, storeBool, storeAddress, storeBytes32} from "../contracts/StrStore.sol";
 
 contract StrStoreTest is Test {
 
@@ -166,6 +166,68 @@ contract StrStoreTest is Test {
     function test_store_bytes32_some_bytes32() external {
         storeBytes32Test(bytes32("some bytes32"));
     }
+
+    function assert_offset_values(bool bool1, bool bool2, address addr, int64 val) view private {
+        assertEq(_c.offsetBool1(), bool1);
+        assertEq(_c.offsetBool2(), bool2);
+        assertEq(_c.offsetAddress(), addr);
+        assertEq(_c.offsetInt64(), val);
+    }
+
+    function test_store_with_offsets() external {
+        Slot memory offsetBool1 = _c.offsetBool1Slot();
+        Slot memory offsetBool2 = _c.offsetBool2Slot();
+        Slot memory offsetAddress = _c.offsetAddressSlot();
+        Slot memory offsetInt64 = _c.offsetInt64Slot();
+        console.log("offsetBool1 slot:%d offset:%d", offsetBool1.slot, offsetBool1.offset);
+        console.log("offsetBool2 slot:%d offset:%d", offsetBool2.slot, offsetBool2.offset);
+        console.log("offsetAddress slot:%d offset:%d", offsetAddress.slot, offsetAddress.offset);
+        console.log("offsetInt64 slot:%d offset:%d", offsetInt64.slot, offsetInt64.offset);
+
+        assert_offset_values(false, false, address(0), 0);
+
+        storeBool(address(_c), offsetBool1.slot, offsetBool1.offset, true);
+        assert_offset_values(true, false, address(0), 0);
+
+        storeBool(address(_c), offsetBool2.slot, offsetBool2.offset, true);
+        assert_offset_values(true, true, address(0), 0);
+
+        storeBool(address(_c), offsetBool1.slot, offsetBool1.offset, false);
+        assert_offset_values(false, true, address(0), 0);
+
+        storeAddress(address(_c), offsetAddress.slot, offsetAddress.offset, address(0x1234567890));
+        assert_offset_values(false, true, address(0x1234567890), 0);
+
+        storeAddress(address(_c), offsetAddress.slot, offsetAddress.offset, address(0x12345));
+        assert_offset_values(false, true, address(0x12345), 0);
+
+        storeAddress(address(_c), offsetAddress.slot, offsetAddress.offset, address(0x12345));
+        assert_offset_values(false, true, address(0x12345), 0);
+
+        storeInt64(address(_c), offsetInt64.slot, offsetInt64.offset, 0x1122334455667788);
+        assert_offset_values(false, true, address(0x12345), 0x1122334455667788);
+
+        storeInt64(address(_c), offsetInt64.slot, offsetInt64.offset, 0x12345678);
+        assert_offset_values(false, true, address(0x12345), 0x12345678);
+
+        storeInt64(address(_c), offsetInt64.slot, offsetInt64.offset, 0x0);
+        assert_offset_values(false, true, address(0x12345), 0x0);
+    }
+
+    function test_store_offset_at_end_of_slot() external {
+        Slot memory offset12 = _c.offset12Slot();
+        console.log("offset12 slot:%d offset:%d", offset12.slot, offset12.offset);
+
+        assertEq(_c.offset12(), address(0));
+
+        storeAddress(address(_c), offset12.slot, offset12.offset, address(0x1234567890));
+        assertEq(_c.offset12(), address(0x1234567890));
+    }
+}
+
+struct Slot {
+    uint256 slot;
+    uint8 offset;
 }
 
 contract C {
@@ -179,4 +241,55 @@ contract C {
     bytes32 public someBytes32;
     address public someAddress;
     int256 public someOtherInt;
+
+    bool public offsetBool1;
+    function offsetBool1Slot() external pure returns (Slot memory) {
+        uint256 slot; uint8 offset;
+        assembly {
+            slot := offsetBool1.slot
+            offset := offsetBool1.offset
+        }
+        return Slot(slot, offset);
+    }
+
+    bool public offsetBool2;
+    function offsetBool2Slot() external pure returns (Slot memory) {
+        uint256 slot; uint8 offset;
+        assembly {
+            slot := offsetBool2.slot
+            offset := offsetBool2.offset
+        }
+        return Slot(slot, offset);
+    }
+
+    address public offsetAddress;
+    function offsetAddressSlot() external pure returns (Slot memory) {
+        uint256 slot; uint8 offset;
+        assembly {
+            slot := offsetAddress.slot
+            offset := offsetAddress.offset
+        }
+        return Slot(slot, offset);
+    }
+
+    int64 public offsetInt64;
+    function offsetInt64Slot() external pure returns (Slot memory) {
+        uint256 slot; uint8 offset;
+        assembly {
+            slot := offsetInt64.slot
+            offset := offsetInt64.offset
+        }
+        return Slot(slot, offset);
+    }
+
+    uint96 public __12_offset_span;
+    address public offset12;
+    function offset12Slot() external pure returns (Slot memory) {
+        uint256 slot; uint8 offset;
+        assembly {
+            slot := offset12.slot
+            offset := offset12.offset
+        }
+        return Slot(slot, offset);
+    }
 }
