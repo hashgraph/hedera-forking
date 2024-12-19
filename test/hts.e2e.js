@@ -18,7 +18,7 @@
 
 const { strict: assert } = require('assert');
 const { expect } = require('chai');
-const { Contract, JsonRpcProvider, Wallet } = require('ethers');
+const { Contract, JsonRpcProvider, Wallet, ContractFactory } = require('ethers');
 
 // @ts-expect-error https://github.com/hashgraph/hedera-sdk-js/issues/2722
 const { Hbar, Client, PrivateKey, TokenCreateTransaction } = require('@hashgraph/sdk');
@@ -30,6 +30,8 @@ const { anvil } = require('./.anvil.js');
 const IHederaTokenService = require('../out/IHederaTokenService.sol/IHederaTokenService.json');
 const IERC20 = require('../out/IERC20.sol/IERC20.json');
 const IHRC719 = require('../out/IHRC719.sol/IHRC719.json');
+
+const TokenCreator = require('../out/TokenCreator.sol/TokenCreator.json');
 
 const RedirectAbi = [
     'function redirectForToken(address token, bytes memory encodedFunctionSelector) external returns (int64 responseCode, bytes memory response)',
@@ -77,7 +79,7 @@ const aliasKeys = /**@type{const}*/ ([
     [1021, '0xeae4e00ece872dd14fb6dc7a04f390563c7d69d16326f2a703ec8e0934060cc7'],
 ]);
 
-async function createToken() {
+async function _createToken() {
     // https://github.com/hashgraph/hedera-local-node?tab=readme-ov-file#network-variables
     const accountId = '0.0.2';
     const privateKey =
@@ -115,7 +117,7 @@ function sleep(time, why) {
 }
 
 describe('::e2e', function () {
-    this.timeout(100 * 1000);
+    this.timeout(1000 * 1000);
 
     const rpcRelayUrl = 'http://localhost:7546';
     const mirrorNodeUrl = 'http://localhost:5551/api/v1/';
@@ -143,15 +145,49 @@ describe('::e2e', function () {
     const nonAssocAddress1 = '0xdadB0d80178819F2319190D340ce9A924f783711';
 
     before(async function () {
+        const provider = new JsonRpcProvider(rpcRelayUrl, undefined, { batchMaxCount: 1 });
+        const treasury = new Wallet(ft.treasury.privateKey, provider);
+
+        const cpk = treasury.signingKey.compressedPublicKey.replace('0x', '');
+        const publicKey = Buffer.from(cpk, 'hex');
+
+        const factory = new ContractFactory(TokenCreator.abi, TokenCreator.bytecode, treasury);
+        const tokenCreator = await factory.deploy();
+        const tx = await tokenCreator.waitForDeployment();
+        console.log(tx);
+
+        // @ts-expect-error wip
+        const x = await connectAs(tokenCreator, treasury)['createFungibleToken'](
+            treasury.address,
+            publicKey,
+            {
+                value: 50000000000000000000n,
+                gasLimit: 1_000_000,
+            }
+        );
+        console.log(x);
+        const receipt = await x.wait();
+        console.log(receipt.logs);
+
+        // @ts-expect-error wip
+        const log = receipt.logs.find(e => e.fragment.name === 'TokenCreated');
+        console.log(log);
+        const tokenAddress = log.args[0];
+
+        tokenId = `0.0.${BigInt(tokenAddress)}`;
+        console.log(tokenId);
+        // this.skip();
+
+        await sleep(60_000, 'propagate?');
         const [latest] = (await getLatestBlock()).blocks;
         console.info('Running on block', latest.number, '...');
 
-        if (process.env['TOKEN_ID'] === undefined) {
-            tokenId = await createToken();
-            await sleep(1000, `Waiting for created token ${tokenId} to propagate to Mirror Node`);
-        } else {
-            tokenId = process.env['TOKEN_ID'];
-        }
+        // if (process.env['TOKEN_ID'] === undefined) {
+        //     tokenId = await createToken();
+        //     await sleep(1000, `Waiting for created token ${tokenId} to propagate to Mirror Node`);
+        // } else {
+        // tokenId = process.env['TOKEN_ID'];
+        // }
 
         erc20Address = toAddress(tokenId);
         const token = await getToken(tokenId);
