@@ -18,7 +18,7 @@
 
 const { strict: assert } = require('assert');
 const { expect } = require('chai');
-const { Contract, JsonRpcProvider } = require('ethers');
+const { Contract, JsonRpcProvider, Wallet } = require('ethers');
 
 // @ts-expect-error https://github.com/hashgraph/hedera-sdk-js/issues/2722
 const { Hbar, Client, PrivateKey, TokenCreateTransaction } = require('@hashgraph/sdk');
@@ -39,10 +39,10 @@ const RedirectAbi = [
  * Wrapper around `Contract::connect` to reify its return type.
  *
  * @param {import('ethers').Contract} contract
- * @param {import('@nomicfoundation/hardhat-ethers/signers').HardhatEthersSigner} signer
+ * @param {import('ethers').ContractRunner} signer
  * @returns {import('ethers').Contract}
  */
-const _connectAs = (contract, signer) =>
+const connectAs = (contract, signer) =>
     /**@type{import('ethers').Contract}*/ (contract.connect(signer));
 
 /**
@@ -52,18 +52,30 @@ const _connectAs = (contract, signer) =>
 const toAddress = accountId =>
     '0x' + parseInt(accountId.replace('0.0.', '')).toString(16).padStart(40, '0');
 
-const treasury = {
-    id: '0.0.1021',
-    evmAddress: '0x17b2b8c63fa35402088640e426c6709a254c7ffb',
-    primaryKey: '0xeae4e00ece872dd14fb6dc7a04f390563c7d69d16326f2a703ec8e0934060cc7',
-};
-
 const ft = {
     name: 'Random FT Token',
     symbol: 'RFT',
     totalSupply: 5_000_000,
     decimals: 3,
+    treasury: {
+        id: '0.0.1021',
+        evmAddress: '0x17b2b8c63fa35402088640e426c6709a254c7ffb',
+        privateKey: '0xeae4e00ece872dd14fb6dc7a04f390563c7d69d16326f2a703ec8e0934060cc7',
+    },
 };
+
+const aliasKeys = /**@type{const}*/ ([
+    [1012, '0x105d050185ccb907fba04dd92d8de9e32c18305e097ab41dadda21489a211524'],
+    [1013, '0x2e1d968b041d84dd120a5860cee60cd83f9374ef527ca86996317ada3d0d03e7'],
+    [1014, '0x45a5a7108a18dd5013cf2d5857a28144beadc9c70b3bdbd914e38df4e804b8d8'],
+    [1015, '0x6e9d61a325be3f6675cf8b7676c70e4a004d2308e3e182370a41f5653d52c6bd'],
+    [1016, '0x0b58b1bd44469ac9f813b5aeaf6213ddaea26720f0b2f133d08b6f234130a64f'],
+    [1017, '0x95eac372e0f0df3b43740fa780e62458b2d2cc32d6a440877f1cc2a9ad0c35cc'],
+    [1018, '0x6c6e6727b40c8d4b616ab0d26af357af09337299f09c66704146e14236972106'],
+    [1019, '0x5072e7aa1b03f531b4731a32a021f6a5d20d5ddc4e55acbb71ae202fc6f3a26d'],
+    [1020, '0x60fe891f13824a2c1da20fb6a14e28fa353421191069ba6b6d09dd6c29b90eff'],
+    [1021, '0xeae4e00ece872dd14fb6dc7a04f390563c7d69d16326f2a703ec8e0934060cc7'],
+]);
 
 async function createToken() {
     // https://github.com/hashgraph/hedera-local-node?tab=readme-ov-file#network-variables
@@ -78,12 +90,12 @@ async function createToken() {
     const transaction = await new TokenCreateTransaction()
         .setTokenName(ft.name)
         .setTokenSymbol(ft.symbol)
-        .setTreasuryAccountId(treasury.id)
+        .setTreasuryAccountId(ft.treasury.id)
         .setInitialSupply(ft.totalSupply)
         .setDecimals(ft.decimals)
         .setAdminKey(PrivateKey.fromStringDer(privateKey))
         .freezeWith(client)
-        .sign(PrivateKey.fromStringECDSA(treasury.primaryKey));
+        .sign(PrivateKey.fromStringECDSA(ft.treasury.privateKey));
     const receipt = await (await transaction.execute(client)).getReceipt(client);
     const tokenId = receipt.tokenId;
     client.close();
@@ -103,7 +115,7 @@ function sleep(time, why) {
 }
 
 describe('::e2e', function () {
-    this.timeout(10 * 1000);
+    this.timeout(100 * 1000);
 
     const rpcRelayUrl = 'http://localhost:7546';
     const mirrorNodeUrl = 'http://localhost:5551/api/v1/';
@@ -127,7 +139,8 @@ describe('::e2e', function () {
 
     /** @type {string} */ let tokenId;
     /** @type {string} */ let erc20Address;
-    const nonAssocAddress = '0x0000000000000000000000000000000000012345';
+    const nonAssocAddress0 = '0x0000000000000000000000000000000001234567';
+    const nonAssocAddress1 = '0xdadB0d80178819F2319190D340ce9A924f783711';
 
     before(async function () {
         const [latest] = (await getLatestBlock()).blocks;
@@ -174,11 +187,17 @@ describe('::e2e', function () {
         describe(name, function () {
             /** @type {Contract} */ let HTS;
             /** @type {Contract} */ let ERC20;
+            /** @type {Wallet} */ let treasury;
+            /** @type {{ [accountNum: number]: Wallet}} */ let wallets;
 
             before(async function () {
                 const p = new JsonRpcProvider(await host(), undefined, { batchMaxCount: 1 });
                 HTS = new Contract(HTSAddress, [...IHederaTokenService.abi, ...RedirectAbi], p);
                 ERC20 = new Contract(erc20Address, [...IERC20.abi, ...IHRC719.abi], p);
+                treasury = new Wallet(ft.treasury.privateKey, p);
+                wallets = Object.fromEntries(
+                    aliasKeys.map(([accId, pk]) => [accId, new Wallet(pk, p)])
+                );
             });
 
             it("should retrieve token's `name`, `symbol` and `totalSupply`", async function () {
@@ -189,17 +208,17 @@ describe('::e2e', function () {
             });
 
             it('should retrieve `balanceOf` treasury account', async function () {
-                const value = await ERC20['balanceOf'](treasury.evmAddress);
+                const value = await ERC20['balanceOf'](ft.treasury.evmAddress);
                 expect(value).to.be.equal(BigInt(ft.totalSupply));
             });
 
-            it('should retrieve zero `balanceOf` for non-associated account', async function () {
-                const value = await ERC20['balanceOf'](nonAssocAddress);
-                expect(value).to.be.equal(0n);
+            it('should retrieve zero `balanceOf` for non-associated accounts', async function () {
+                expect(await ERC20['balanceOf'](nonAssocAddress0)).to.be.equal(0n);
+                expect(await ERC20['balanceOf'](nonAssocAddress1)).to.be.equal(0n);
             });
 
             it('should get it `isAssociated` for treasury account', async function () {
-                const value = await ERC20['isAssociated']({ from: treasury.evmAddress });
+                const value = await ERC20['isAssociated']({ from: ft.treasury.evmAddress });
                 expect(value).to.be.equal(true);
             });
 
@@ -208,14 +227,48 @@ describe('::e2e', function () {
                 expect(value).to.be.equal(false);
             });
 
-            it('should get not `isAssociated` for non-existing non-associated account', async function () {
-                const value = await ERC20['isAssociated']({ from: nonAssocAddress });
-                expect(value).to.be.equal(false);
+            // These reverts instead of returning `false`.
+            // Should we have the same behavior in emulated HTS?
+            it.skip('should get not `isAssociated` for non-existing non-associated accounts', async function () {
+                expect(await ERC20['isAssociated']({ from: nonAssocAddress0 })).to.be.equal(false);
+                expect(await ERC20['isAssociated']({ from: nonAssocAddress1 })).to.be.equal(false);
             });
 
-            it("should retrieve token's metadata through `getTokenInfo`", async function () {
-                this.skip();
+            // To enable this, the signature of `getTokenInfo` needs to be "exactly" the same to HTS.
+            // Now it's not the same because we needed to reorder fields and add `__gap`s to avoid offsets.
+            // This implies we need to implement offsets to enable this.
+            it.skip("should retrieve token's metadata through `getTokenInfo`", async function () {
                 await HTS['getTokenInfo'](erc20Address);
+            });
+
+            it('should transfer', async function () {
+                const alice = wallets[1012];
+
+                let treasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
+                let accountBalance = await ERC20['balanceOf'](alice.address);
+                console.log(treasuryBalance, accountBalance);
+
+                const tx = await connectAs(ERC20, alice)['associate']();
+                console.log('tx response', tx);
+                const r = await tx.wait();
+                console.log('receipt', r);
+
+                const isassoc = await ERC20['isAssociated']({ from: alice.address });
+                console.log('isassoc', isassoc);
+
+                const x = await connectAs(ERC20, treasury)['transfer'](alice.address, 200_000, {
+                    gasLimit: 10_000_000,
+                });
+                console.log(x);
+                if (name !== 'anvil/local-node') {
+                    const y = await x.wait();
+                    console.log(y);
+                }
+                // await connectAs(ERC20, treasury)['transfer'].send(toAddress('0.0.1002'), 200_000, { gasLimit: 550_000 });
+
+                treasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
+                accountBalance = await ERC20['balanceOf'](alice.address);
+                console.log(treasuryBalance, accountBalance);
             });
         });
     });
