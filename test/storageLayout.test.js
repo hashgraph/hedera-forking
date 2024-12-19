@@ -43,14 +43,5 @@ describe('::storageLayout', function () {
             const encodings = new Set(Object.values(types).map(({ encoding }) => encoding));
             expect([...encodings]).to.be.have.members(['inplace', 'bytes', 'dynamic_array']);
         });
-
-        it('should have all its struct members with offset `0` to avoid field packing', function () {
-            Object.values(types)
-                .filter(ty => 'members' in ty)
-                .flatMap(ty => ty.members)
-                .forEach(member => {
-                    expect(member.offset).to.be.equal(0, member.label);
-                });
-        });
     });
 });

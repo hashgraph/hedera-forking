@@ -20,7 +20,7 @@ const { strict: assert } = require('assert');
 const debug = require('util').debuglog('hts-forking');
 
 const { ZERO_HEX_32_BYTE, toIntHex256 } = require('./utils');
-const { slotMapOf } = require('./slotmap');
+const { slotMapOf, packValues } = require('./slotmap');
 const { deployedBytecode } = require('../out/HtsSystemContract.sol/HtsSystemContract.json');
 
 const HTSAddress = '0x0000000000000000000000000000000000000167';
@@ -140,14 +140,17 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
 
     const token = await mirrorNodeClient.getTokenById(tokenId, blockNumber);
     if (token === null) return ret(ZERO_HEX_32_BYTE, `Token \`${tokenId}\` not found`);
-    const entry = slotMapOf(token).load(nrequestedSlot);
-    if (entry === undefined)
+    const unresolvedValues = slotMapOf(token).load(nrequestedSlot);
+    if (unresolvedValues === undefined)
         return ret(ZERO_HEX_32_BYTE, `Requested slot does not match any field slots`);
-    const value =
-        typeof entry.value === 'function'
-            ? await entry.value(mirrorNodeClient, blockNumber)
-            : entry.value;
-    return ret(`0x${value}`, `Slot matches ${entry.path}: ${entry.type}`);
+    const values = await Promise.all(
+        unresolvedValues.map(async ({ offset, path, value }) => ({
+            offset,
+            path,
+            value: typeof value === 'function' ? await value(mirrorNodeClient, blockNumber) : value,
+        }))
+    );
+    return ret(`0x${packValues(values)}`, `Slot matches ${values.map(v => v.path).join('|')}`);
 }
 
 module.exports = { HTSAddress, LONG_ZERO_PREFIX, getHIP719Code, getHtsCode, getHtsStorageAt };
