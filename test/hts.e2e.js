@@ -111,84 +111,32 @@ async function createToken() {
 /**
  * @param {number} time
  * @param {string} why
- * @param {Mocha.Context|undefined} ctx
  * @returns
  */
-function sleep(time, why, ctx) {
-    if (ctx === undefined) {
-        console.info(c.dim(why), `(${time} ms)`);
-    } else {
-        assert(ctx.currentTest !== undefined);
-        ctx.currentTest.title += ` (${why}, ${time} ms)`;
-    }
-
+function sleep(time, why) {
+    console.info(c.dim(why), `(${time} ms)`);
     return new Promise(resolve => setTimeout(resolve, time));
 }
 
 describe('::e2e', function () {
-    this.timeout(100 * 1000);
+    this.timeout(30000);
 
     const rpcRelayUrl = 'http://localhost:7546';
     const mirrorNodeUrl = 'http://localhost:5551/api/v1/';
-
-    /**
-     * @param {string} endpoint
-     */
-    const _fetch = async endpoint => (await fetch(`${mirrorNodeUrl}${endpoint}`)).json();
-
-    const getLatestBlock = () => _fetch('blocks?order=desc&limit=1');
-
-    /**
-     * @param {string} tokenId
-     */
-    const getToken = tokenId => _fetch(`tokens/${tokenId}`);
-
-    /**
-     * @param {string} ts
-     */
-    const getBlocks = ts => _fetch(`blocks?timestamp=gte:${ts}&order=asc&limit=1`);
-
-    /**
-     * @param {string} tokenId
-     * @param {string} accountId
-     * @param {string} ts
-     */
-    const getBalance = (tokenId, accountId, ts) =>
-        _fetch(`tokens/${tokenId}/balances?account.id=${accountId}&timestamp=lte:${ts}`);
 
     /** @type {string} */ let tokenId;
     /** @type {string} */ let erc20Address;
     const nonAssocAddress0 = '0x0000000000000000000000000000000001234567';
     const nonAssocAddress1 = '0xdadB0d80178819F2319190D340ce9A924f783711';
 
-    let skipAnvilTests = false;
-
     before(async function () {
-        if (process.env['TOKEN_ID'] === undefined) {
-            console.info('The `TOKEN_ID` environment variable was not provided, creating token...');
-            const tokenId = await createToken();
-            console.info(`Token \`${tokenId}\` created`);
-            console.info('Next test run using this token needs to be after snapshot balances');
-            console.info(c.magenta(`Set \`TOKEN_ID=${tokenId}\` to run tests next time`));
-            console.info(c.dim('Skipping tests...'));
-            this.skip();
-        }
+        process.env['DEBUG_DISABLE_BALANCE_BLOCKNUMBER'] = '1';
 
-        tokenId = process.env['TOKEN_ID'];
-        const token = await getToken(tokenId);
+        tokenId = await createToken();
+        await sleep(1000, `Token \`${tokenId}\` created, waiting to propagate to Mirror Node`);
+
+        const token = await (await fetch(`${mirrorNodeUrl}tokens/${tokenId}`)).json();
         expect('_status' in token, `Test HTS Token \`${tokenId}\` not found`).to.be.false;
-
-        const [block] = (await getBlocks(token.created_timestamp)).blocks;
-        console.info(`Token name="${token.name}" symbol="${token.symbol}" @`, block.number);
-        const [latest] = (await getLatestBlock()).blocks;
-        console.info('Running on block', latest.number, '...');
-
-        const treasuryId = token.treasury_account_id;
-        const { balances } = await getBalance(tokenId, treasuryId, latest.timestamp.to);
-        console.info(`Treasury's \`${treasuryId}\` balance`, balances);
-        if (balances.length === 0) {
-            skipAnvilTests = true;
-        }
 
         erc20Address = toAddress(tokenId);
     });
@@ -197,7 +145,7 @@ describe('::e2e', function () {
 
     [
         {
-            name: /**@type{const}*/ ('anvil/local-node'),
+            network: /**@type{const}*/ ('anvil/local-node'),
             host: async () => {
                 const { host: forwarderUrl } = await jsonRPCForwarder(rpcRelayUrl, mirrorNodeUrl);
                 const anvilHost = await anvil(forwarderUrl);
@@ -211,41 +159,23 @@ describe('::e2e', function () {
             },
         },
         {
-            name: /**@type{const}*/ ('local-node'),
+            network: /**@type{const}*/ ('local-node'),
             host: async () => rpcRelayUrl,
         },
-    ].forEach(({ name, host }) => {
-        describe(name, function () {
-            /** @type {JsonRpcProvider} */ let rpc;
+    ].forEach(({ network, host }) =>
+        describe(network, function () {
             /** @type {Contract} */ let HTS;
             /** @type {Contract} */ let ERC20;
             /** @type {Wallet} */ let treasury;
             /** @type {{ [accountNum: number]: Wallet}} */ let wallets;
 
             before(async function () {
-                if (name === 'anvil/local-node' && skipAnvilTests) {
-                    console.info('    *No balance found for treasury, wait for snapshot, skipping');
-                    this.skip();
-                }
-
-                rpc = new JsonRpcProvider(await host(), undefined, { batchMaxCount: 1 });
+                const rpc = new JsonRpcProvider(await host(), undefined, { batchMaxCount: 1 });
                 HTS = new Contract(HTSAddress, [...IHederaTokenService.abi, ...RedirectAbi], rpc);
                 treasury = new Wallet(ft.treasury.privateKey, rpc);
                 wallets = Object.fromEntries(
                     aliasKeys.map(([accId, pk]) => [accId, new Wallet(pk, rpc)])
                 );
-            });
-
-            beforeEach(async function () {
-                let tid;
-                if (name === 'local-node') {
-                    tid = await createToken();
-                    await sleep(1500, `wait for Token ${tid} to propagate to Mirror Node`, this);
-                } else {
-                    tid = tokenId;
-                }
-
-                erc20Address = toAddress(tid);
                 ERC20 = new Contract(erc20Address, [...IERC20.abi, ...IHRC719.abi], rpc);
             });
 
@@ -306,22 +236,10 @@ describe('::e2e', function () {
                 expect(treasuryBalance).to.be.equal(BigInt(ft.totalSupply));
                 expect(await ERC20['balanceOf'](alice.address)).to.be.equal(0n);
 
-                // const tx = await connectAs(ERC20, alice)['associate']();
-                // await tx.wait();
-                // console.log('receipt', r);
-
-                // const isassoc = await ERC20['isAssociated']({ from: alice.address });
-                // console.log('isassoc', isassoc);
-
                 const x = await connectAs(ERC20, treasury)['transfer'](alice.address, amount, {
                     gasLimit: 1_000_000,
                 });
-                // console.log(x);
-                // if (name !== 'anvil/local-node') {
-                // const y =
                 await x.wait();
-                // console.log(y);
-                // }
 
                 expect(await ERC20['balanceOf'](ft.treasury.evmAddress)).to.be.equal(
                     treasuryBalance - amount
@@ -344,6 +262,6 @@ describe('::e2e', function () {
                     treasuryBalance + amount
                 );
             });
-        });
-    });
+        })
+    );
 });

@@ -18,6 +18,11 @@
 
 const debug = require('util').debuglog('hedera-forking-mirror');
 
+/**
+ *
+ */
+const DEBUG_DISABLE_BALANCE_BLOCKNUMBER = !!process.env['DEBUG_DISABLE_BALANCE_BLOCKNUMBER'];
+
 /** @import { IMirrorNodeClient } from '@hashgraph/system-contracts-forking' */
 
 /**
@@ -74,8 +79,10 @@ class MirrorNodeClient {
      * @returns {Promise<{ balances: { balance: number }[] } | null>} A `Promise` resolving to the account's token balance.
      */
     async getBalanceOfToken(tokenId, accountId, blockNumber) {
-        const timestamp = await this.getBlockQueryParam(blockNumber);
-        return this._get(`tokens/${tokenId}/balances?account.id=${accountId}&${timestamp}`);
+        const timestamp = DEBUG_DISABLE_BALANCE_BLOCKNUMBER
+            ? ''
+            : `&${await this.getBlockQueryParam(blockNumber)}`;
+        return this._get(`tokens/${tokenId}/balances?account.id=${accountId}${timestamp}`);
     }
 
     /**
