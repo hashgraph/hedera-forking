@@ -550,6 +550,30 @@ forge test --fork-url http://localhost:7546 --no-storage-caching
 > which is important to make sure the `json-rpc-mock.js` is reached in each JSON-RPC call.
 > See <https://book.getfoundry.sh/reference/forge/forge-test#description> for more information.
 
+### Validating HTS emulation end-to-end test
+
+The goal of this test is to validate that our HTS emulation matches the behavior of the real HTS.
+
+You need a Local Node running in order to execute this test.
+See [Local Node _&sect; Requirements_](https://github.com/hashgraph/hedera-local-node?tab=readme-ov-file#requirements) for tools needed to run it.
+To do so, run the following
+
+```console
+npm run hedera:start
+```
+
+> Alternatively, once you are done with this test, you can stop the Local Node using
+>
+> ```console
+> npm run hedera:stop
+> ```
+
+Once Local Node is up and running, run the validation tests with
+
+```console
+npm run test:e2e
+```
+
 ## Support
 
 If you have a question on how to use the product, please see our
