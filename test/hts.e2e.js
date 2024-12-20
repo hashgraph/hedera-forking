@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+const { inspect } = require('util');
+
 const { strict: assert } = require('assert');
 const { expect } = require('chai');
 const { Contract, JsonRpcProvider, Wallet } = require('ethers');
@@ -191,6 +193,8 @@ describe('::e2e', function () {
         erc20Address = toAddress(tokenId);
     });
 
+    /**@type{unknown}*/ let tokenInfo = undefined;
+
     [
         {
             name: /**@type{const}*/ ('anvil/local-node'),
@@ -283,11 +287,15 @@ describe('::e2e', function () {
                 expect(await ERC20['isAssociated']({ from: nonAssocAddress1 })).to.be.equal(false);
             });
 
-            // To enable this, the signature of `getTokenInfo` needs to be "exactly" the same to HTS.
-            // Now it's not the same because we needed to reorder fields and add `__gap`s to avoid offsets.
-            // This implies we need to implement offsets to enable this.
+            // To enable this, we need to change `getTokenInfo` to a `view` function
             it.skip("should retrieve token's metadata through `getTokenInfo`", async function () {
-                await HTS['getTokenInfo'](erc20Address);
+                const info = await HTS['getTokenInfo'](erc20Address);
+                console.log(inspect(info, { depth: null }));
+                if (tokenInfo === undefined) {
+                    tokenInfo = info;
+                } else {
+                    expect(info).to.be.deep.equal(tokenInfo);
+                }
             });
 
             it('should transfer from treasury to account', async function () {
