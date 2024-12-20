@@ -555,7 +555,7 @@ forge test --fork-url http://localhost:7546 --no-storage-caching
 The goal of this test is to validate that our HTS emulation matches the behavior of the real HTS.
 
 You need a Local Node running in order to execute this test.
-See [Local Node _&sect; Requirements_](https://github.com/hashgraph/hedera-local-node?tab=readme-ov-file#requirements) for tools needed to run it.
+See [Hedera Local Node, _&sect; Requirements_](https://github.com/hashgraph/hedera-local-node?tab=readme-ov-file#requirements) for tools needed to run it.
 To do so, run the following
 
 ```console
