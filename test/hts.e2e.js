@@ -45,8 +45,22 @@ const RedirectAbi = [
  * @param {import('ethers').ContractRunner} signer
  * @returns {import('ethers').Contract}
  */
-const connectAs = (contract, signer) =>
-    /**@type{import('ethers').Contract}*/ (contract.connect(signer));
+function sendAs(contract, signer) {
+    return /**@type{import('ethers').Contract}*/ (contract.connect(signer));
+}
+
+/**
+ * @param {Promise<import('ethers').ContractTransactionResponse>} promise
+ * @returns {Promise<void>}
+ */
+async function waitForTx(promise) {
+    const tx = await promise;
+    await tx.wait();
+}
+
+const OPTS = {
+    gasLimit: 500_000,
+};
 
 /**
  * @param {string} accountId
@@ -119,7 +133,7 @@ function sleep(time, why) {
 }
 
 describe('::e2e', function () {
-    this.timeout(30000);
+    this.timeout(60000);
 
     const rpcRelayUrl = 'http://localhost:7546';
     const mirrorNodeUrl = 'http://localhost:5551/api/v1/';
@@ -133,7 +147,7 @@ describe('::e2e', function () {
         process.env['DEBUG_DISABLE_BALANCE_BLOCKNUMBER'] = '1';
 
         tokenId = await createToken();
-        await sleep(1000, `Token \`${tokenId}\` created, waiting to propagate to Mirror Node`);
+        await sleep(2000, `Token \`${tokenId}\` created, waiting to propagate to Mirror Node`);
 
         const token = await (await fetch(`${mirrorNodeUrl}tokens/${tokenId}`)).json();
         expect('_status' in token, `Test HTS Token \`${tokenId}\` not found`).to.be.false;
@@ -228,39 +242,48 @@ describe('::e2e', function () {
                 }
             });
 
-            it('should transfer from treasury to account', async function () {
+            it('should transfer from treasury to account and leave total supply untouched', async function () {
                 const amount = 200_000n;
                 const alice = wallets[1012];
 
-                const treasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
-                expect(treasuryBalance).to.be.equal(BigInt(ft.totalSupply));
+                const preTreasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
+                expect(preTreasuryBalance).to.be.equal(BigInt(ft.totalSupply));
                 expect(await ERC20['balanceOf'](alice.address)).to.be.equal(0n);
+                const preTotalSupply = await ERC20['totalSupply']();
 
-                const x = await connectAs(ERC20, treasury)['transfer'](alice.address, amount, {
-                    gasLimit: 1_000_000,
-                });
-                await x.wait();
+                await waitForTx(sendAs(ERC20, treasury)['transfer'](alice.address, amount, OPTS));
 
-                expect(await ERC20['balanceOf'](ft.treasury.evmAddress)).to.be.equal(
-                    treasuryBalance - amount
-                );
+                const postTreasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
+                expect(postTreasuryBalance).to.be.equal(preTreasuryBalance - amount);
                 expect(await ERC20['balanceOf'](alice.address)).to.be.equal(amount);
+                const postTotalSupply = await ERC20['totalSupply']();
+                expect(postTotalSupply).to.be.equal(preTotalSupply);
             });
 
-            it('should mint to treasury account', async function () {
+            it('should mint to treasury account and increase total supply', async function () {
+                const preTreasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
+                const preTotalSupply = await ERC20['totalSupply']();
+
                 const amount = 1_000_000n;
+                await waitForTx(sendAs(HTS, treasury)['mintToken'](erc20Address, amount, [], OPTS));
 
-                const treasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
+                const postTreasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
+                expect(postTreasuryBalance).to.be.equal(preTreasuryBalance + amount);
+                const postTotalSupply = await ERC20['totalSupply']();
+                expect(postTotalSupply).to.be.equal(preTotalSupply + amount);
+            });
 
-                await (
-                    await connectAs(HTS, treasury)['mintToken'](erc20Address, amount, [], {
-                        gasLimit: 1_000_000,
-                    })
-                ).wait();
+            it('should burn from treasury account and decrease total supply', async function () {
+                const preTreasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
+                const preTotalSupply = await ERC20['totalSupply']();
 
-                expect(await ERC20['balanceOf'](ft.treasury.evmAddress)).to.be.equal(
-                    treasuryBalance + amount
-                );
+                const amount = 500_000n;
+                await waitForTx(sendAs(HTS, treasury)['burnToken'](erc20Address, amount, [], OPTS));
+
+                const postTreasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
+                expect(postTreasuryBalance).to.be.equal(preTreasuryBalance - amount);
+                const postTotalSupply = await ERC20['totalSupply']();
+                expect(postTotalSupply).to.be.equal(preTotalSupply - amount);
             });
         })
     );
