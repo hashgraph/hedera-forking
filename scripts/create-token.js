@@ -26,6 +26,7 @@ const {
     CustomFixedFee,
     CustomFractionalFee,
     FeeAssessmentMethod,
+    // @ts-expect-error https://github.com/hashgraph/hedera-sdk-js/issues/2722
 } = require('@hashgraph/sdk');
 
 async function main() {
@@ -94,6 +95,8 @@ async function main() {
     const tokenId = receipt.tokenId;
     console.log(`The new token ID is ${tokenId}`);
     console.log(`https://hashscan.io/testnet/token/${tokenId}`);
+
+    client.close();
 }
 
 main().catch(console.error);

@@ -550,6 +550,41 @@ forge test --fork-url http://localhost:7546 --no-storage-caching
 > which is important to make sure the `json-rpc-mock.js` is reached in each JSON-RPC call.
 > See <https://book.getfoundry.sh/reference/forge/forge-test#description> for more information.
 
+### Validating HTS emulation end-to-end test
+
+The goal of this test is to validate that our HTS emulation matches the behavior of the real HTS (provided by Hedera Services).
+The test works as follow.
+It first creates an HTS token on a Local Node.
+Then, it proceeds to start a local network (Foundry's Anvil) forked from the Local Node after token creation.
+The same test cases are executed on both networks, first on Anvil, and then on Local Node, where they yield the same result.
+
+> [!NOTE]
+> The test sets the `DEBUG_DISABLE_BALANCE_BLOCKNUMBER` environment variable used by the Mirror Node client.
+> This flag was introduced **just** for this test.
+> It makes the Mirror Node client retrieve balances without honoring the block number.
+> This in turn fetches the correct balance in the case where the Mirror Node did not get the latest balance snapshot from the Consensus Node.
+> This simplifies the validation tests considerably, and allows to compare behavior of real HTS and emulated HTS more easily.
+
+You need a Local Node running in order to execute this test.
+See [Hedera Local Node, _&sect; Requirements_](https://github.com/hashgraph/hedera-local-node?tab=readme-ov-file#requirements) for tools needed to run it.
+To do so, run the following
+
+```console
+npm run hedera:start
+```
+
+> Alternatively, once you are done with this test, you can stop the Local Node using
+>
+> ```console
+> npm run hedera:stop
+> ```
+
+Once Local Node is up and running, run the validation tests with
+
+```console
+npm run test:e2e
+```
+
 ## Support
 
 If you have a question on how to use the product, please see our

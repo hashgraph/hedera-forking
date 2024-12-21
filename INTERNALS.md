@@ -360,7 +360,7 @@ The storage layout is represented in JSON format with the following fields
 - **`slot`**. A integer representing the slot number in storage.
 - **`type`**. The type of the value stored in the slot.
 
-See [_Layout of State Variables in Storage and Transient Storage, &sect; JSON Output_](https://docs.soliditylang.org/en/latest/internals/layout_in_storage.html#json-output) for more information.
+See [Layout of State Variables in Storage and Transient Storage, _&sect; JSON Output_](https://docs.soliditylang.org/en/latest/internals/layout_in_storage.html#json-output) for more information.
 
 Understanding which fields are located in which specific slots is important to create a mapping that allows to retrieve the appropriate field given a slot number.
 
@@ -379,7 +379,7 @@ However, handling `bytes` and `string` longer than `31` bytes requires multiple 
 
 2. **Retrieve the Value.** Access the value stored at this hash slot. If the string exceeds 32 bytes, retrieve the additional segments from consecutive slots (_e.g._, `hashSlot + 1`, `hashSlot + 2`, _etc._), until the entire string is reconstructed.
 
-See [_Layout of State Variables in Storage and Transient Storage, &sect; `bytes` and `string`_](https://docs.soliditylang.org/en/latest/internals/layout_in_storage.html#bytes-and-string) for more information.
+See [Layout of State Variables in Storage and Transient Storage, _&sect; `bytes` and `string`_](https://docs.soliditylang.org/en/latest/internals/layout_in_storage.html#bytes-and-string) for more information.
 
 #### Handling "dynamic" data
 
