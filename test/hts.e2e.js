@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+/* eslint-disable mocha/no-skipped-tests */
 const { inspect } = require('util');
 
 const { strict: assert } = require('assert');
@@ -56,6 +57,7 @@ function sendAs(contract, signer) {
 async function waitForTx(promise) {
     const tx = await promise;
     await tx.wait();
+    // console.log(tx)
 }
 
 const OPTS = {
@@ -94,7 +96,12 @@ const aliasKeys = /**@type{const}*/ ([
     [1021, '0xeae4e00ece872dd14fb6dc7a04f390563c7d69d16326f2a703ec8e0934060cc7'],
 ]);
 
-async function createToken() {
+/**
+ *
+ * @param {*} options
+ * @returns
+ */
+async function createToken({ noSupplyKey } = {}) {
     // https://github.com/hashgraph/hedera-local-node?tab=readme-ov-file#network-variables
     const accountId = '0.0.2';
     const privateKey =
@@ -104,14 +111,18 @@ async function createToken() {
         .setOperator(accountId, PrivateKey.fromStringDer(privateKey))
         .setDefaultMaxTransactionFee(new Hbar(100))
         .setDefaultMaxQueryPayment(new Hbar(50));
-    const transaction = await new TokenCreateTransaction()
+    let transaction = new TokenCreateTransaction()
         .setTokenName(ft.name)
         .setTokenSymbol(ft.symbol)
         .setTreasuryAccountId(ft.treasury.id)
         .setInitialSupply(ft.totalSupply)
         .setDecimals(ft.decimals)
-        .setAdminKey(PrivateKey.fromStringDer(privateKey))
-        .setSupplyKey(PrivateKey.fromStringECDSA(ft.treasury.privateKey))
+        .setAdminKey(PrivateKey.fromStringDer(privateKey));
+    if (!noSupplyKey) {
+        transaction = transaction.setSupplyKey(PrivateKey.fromStringECDSA(ft.treasury.privateKey));
+    }
+
+    transaction = await transaction
         .freezeWith(client)
         .sign(PrivateKey.fromStringECDSA(ft.treasury.privateKey));
     const receipt = await (await transaction.execute(client)).getReceipt(client);
@@ -135,155 +146,207 @@ function sleep(time, why) {
 describe('::e2e', function () {
     this.timeout(60000);
 
-    const rpcRelayUrl = 'http://localhost:7546';
+    const jsonRpcRelayUrl = 'http://localhost:7546';
     const mirrorNodeUrl = 'http://localhost:5551/api/v1/';
 
-    /** @type {string} */ let tokenId;
-    /** @type {string} */ let erc20Address;
-    const nonAssocAddress0 = '0x0000000000000000000000000000000001234567';
-    const nonAssocAddress1 = '0xdadB0d80178819F2319190D340ce9A924f783711';
+    /** @type {string} */
+    let anvilHost;
 
     before(async function () {
         process.env['DEBUG_DISABLE_BALANCE_BLOCKNUMBER'] = '1';
 
-        tokenId = await createToken();
-        await sleep(2000, `Token \`${tokenId}\` created, waiting to propagate to Mirror Node`);
+        for (const suite of suites) {
+            suite.tokenId = await suite.create();
+            suite.tokenAddress = toAddress(suite.tokenId);
+            console.info(`Token "${suite.title}" ${suite.tokenId} @ ${suite.tokenAddress} created`);
+        }
 
-        const token = await (await fetch(`${mirrorNodeUrl}tokens/${tokenId}`)).json();
-        expect('_status' in token, `Test HTS Token \`${tokenId}\` not found`).to.be.false;
+        await sleep(2000, `Waiting for tokens to propagate to Mirror Node`);
 
-        erc20Address = toAddress(tokenId);
+        for (const { title, tokenId } of suites) {
+            const token = await (await fetch(`${mirrorNodeUrl}tokens/${tokenId}`)).json();
+            expect('_status' in token, `Token "${title}" \`${tokenId}\` not found`).to.be.false;
+        }
+
+        const { host: forwarderUrl } = await jsonRPCForwarder(jsonRpcRelayUrl, mirrorNodeUrl);
+        anvilHost = await anvil(forwarderUrl);
+
+        // Ensure HTS emulation is reachable
+        const provider = new JsonRpcProvider(anvilHost, undefined, { batchMaxCount: 1 });
+        expect(await provider.getCode(HTSAddress)).to.have.length.greaterThan(4);
+        for (const { tokenAddress } of suites)
+            expect(await provider.getCode(tokenAddress)).to.be.equal(getHIP719Code(tokenAddress));
     });
 
-    /**@type{unknown}*/ let tokenInfo = undefined;
+    /** @type {string} */ let tokenAddress;
+    /** @type {Contract} */ let HTS;
+    /** @type {Contract} */ let ERC20;
+    /** @type {Wallet} */ let treasury;
+    /** @type {{ [accountNum: number]: Wallet}} */ let wallets;
 
-    [
+    const suites = [
         {
-            network: /**@type{const}*/ ('anvil/local-node'),
-            host: async () => {
-                const { host: forwarderUrl } = await jsonRPCForwarder(rpcRelayUrl, mirrorNodeUrl);
-                const anvilHost = await anvil(forwarderUrl);
+            title: 'with Fungible Token',
+            create: () => createToken(),
+            tokenInfo: undefined,
+            tests() {
+                const nonAssocAddress0 = '0x0000000000000000000000000000000001234567';
+                const nonAssocAddress1 = '0xdadB0d80178819F2319190D340ce9A924f783711';
+                // eslint-disable-next-line @typescript-eslint/no-this-alias
+                const self = this;
 
-                // Ensure HTS emulation is reachable
-                const provider = new JsonRpcProvider(anvilHost, undefined, { batchMaxCount: 1 });
-                assert((await provider.getCode(erc20Address)) === getHIP719Code(erc20Address));
-                assert((await provider.getCode(HTSAddress)).length > 4);
+                it("should retrieve token's `name`, `symbol` and `totalSupply`", async function () {
+                    expect(await ERC20['name']()).to.be.equal(ft.name);
+                    expect(await ERC20['symbol']()).to.be.equal(ft.symbol);
+                    expect(await ERC20['totalSupply']()).to.be.equal(BigInt(ft.totalSupply));
+                    expect(await ERC20['decimals']()).to.be.equal(BigInt(ft.decimals));
+                });
 
-                return anvilHost;
+                it('should retrieve `balanceOf` treasury account', async function () {
+                    const value = await ERC20['balanceOf'](ft.treasury.evmAddress);
+                    expect(value).to.be.equal(BigInt(ft.totalSupply));
+                });
+
+                it('should retrieve zero `balanceOf` for non-associated accounts', async function () {
+                    expect(await ERC20['balanceOf'](nonAssocAddress0)).to.be.equal(0n);
+                    expect(await ERC20['balanceOf'](nonAssocAddress1)).to.be.equal(0n);
+                });
+
+                it('should get it `isAssociated` for treasury account', async function () {
+                    const value = await ERC20['isAssociated']({ from: ft.treasury.evmAddress });
+                    expect(value).to.be.equal(true);
+                });
+
+                it('should get not `isAssociated` for existing non-associated account', async function () {
+                    expect(
+                        await ERC20['isAssociated']({ from: toAddress('0.0.1002') })
+                    ).to.be.equal(false);
+                    expect(
+                        await ERC20['isAssociated']({ from: wallets[1012].address })
+                    ).to.be.equal(false);
+                });
+
+                // These reverts instead of returning `false`.
+                // Should we have the same behavior in emulated HTS?
+                it.skip('should get not `isAssociated` for non-existing non-associated accounts', async function () {
+                    expect(await ERC20['isAssociated']({ from: nonAssocAddress0 })).to.be.equal(
+                        false
+                    );
+                    expect(await ERC20['isAssociated']({ from: nonAssocAddress1 })).to.be.equal(
+                        false
+                    );
+                });
+
+                // To enable this, we need to change `getTokenInfo` to a `view` function
+                it.skip("should retrieve token's metadata through `getTokenInfo`", async function () {
+                    const info = await HTS['getTokenInfo'](tokenAddress);
+                    console.log(inspect(info, { depth: null }));
+                    if (self.tokenInfo === undefined) {
+                        self.tokenInfo = info;
+                    } else {
+                        expect(info).to.be.deep.equal(self.tokenInfo);
+                    }
+                });
+
+                it('should transfer from treasury to account and leave total supply untouched', async function () {
+                    const amount = 200_000n;
+                    const alice = wallets[1012];
+
+                    const preTreasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
+                    expect(preTreasuryBalance).to.be.equal(BigInt(ft.totalSupply));
+                    expect(await ERC20['balanceOf'](alice.address)).to.be.equal(0n);
+                    const preTotalSupply = await ERC20['totalSupply']();
+
+                    await waitForTx(
+                        sendAs(ERC20, treasury)['transfer'](alice.address, amount, OPTS)
+                    );
+
+                    const postTreasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
+                    expect(postTreasuryBalance).to.be.equal(preTreasuryBalance - amount);
+                    expect(await ERC20['balanceOf'](alice.address)).to.be.equal(amount);
+                    const postTotalSupply = await ERC20['totalSupply']();
+                    expect(postTotalSupply).to.be.equal(preTotalSupply);
+                });
+
+                it('should mint to treasury account and increase total supply', async function () {
+                    const preTreasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
+                    const preTotalSupply = await ERC20['totalSupply']();
+
+                    const amount = 1_000_000n;
+                    await waitForTx(
+                        sendAs(HTS, treasury)['mintToken'](tokenAddress, amount, [], OPTS)
+                    );
+
+                    const postTreasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
+                    expect(postTreasuryBalance).to.be.equal(preTreasuryBalance + amount);
+                    const postTotalSupply = await ERC20['totalSupply']();
+                    expect(postTotalSupply).to.be.equal(preTotalSupply + amount);
+                });
+
+                it('should burn from treasury account and decrease total supply', async function () {
+                    const preTreasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
+                    const preTotalSupply = await ERC20['totalSupply']();
+
+                    const amount = 500_000n;
+                    await waitForTx(
+                        sendAs(HTS, treasury)['burnToken'](tokenAddress, amount, [], OPTS)
+                    );
+
+                    const postTreasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
+                    expect(postTreasuryBalance).to.be.equal(preTreasuryBalance - amount);
+                    const postTotalSupply = await ERC20['totalSupply']();
+                    expect(postTotalSupply).to.be.equal(preTotalSupply - amount);
+                });
             },
         },
+
         {
-            network: /**@type{const}*/ ('local-node'),
-            host: async () => rpcRelayUrl,
+            title: 'with Fungible Token with no supply key',
+            create: () => createToken({ noSupplyKey: true }),
+            tests: () => {
+                // https://github.com/hashgraph/hedera-forking/issues/167
+                it.skip('should not mint because there is no supply key', async function () {
+                    const preTreasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
+                    const preTotalSupply = await ERC20['totalSupply']();
+
+                    const amount = 1_000_000n;
+                    await waitForTx(
+                        sendAs(HTS, treasury)['mintToken'](tokenAddress, amount, [], OPTS)
+                    );
+
+                    const postTreasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
+                    expect(postTreasuryBalance).to.be.equal(preTreasuryBalance);
+                    const postTotalSupply = await ERC20['totalSupply']();
+                    expect(postTotalSupply).to.be.equal(preTotalSupply);
+                });
+            },
         },
-    ].forEach(({ network, host }) =>
-        describe(network, function () {
-            /** @type {Contract} */ let HTS;
-            /** @type {Contract} */ let ERC20;
-            /** @type {Wallet} */ let treasury;
-            /** @type {{ [accountNum: number]: Wallet}} */ let wallets;
+    ].map(suite => ({ ...suite, tokenId: '', tokenAddress: '' }));
 
-            before(async function () {
-                const rpc = new JsonRpcProvider(await host(), undefined, { batchMaxCount: 1 });
-                HTS = new Contract(HTSAddress, [...IHederaTokenService.abi, ...RedirectAbi], rpc);
-                treasury = new Wallet(ft.treasury.privateKey, rpc);
-                wallets = Object.fromEntries(
-                    aliasKeys.map(([accId, pk]) => [accId, new Wallet(pk, rpc)])
-                );
-                ERC20 = new Contract(erc20Address, [...IERC20.abi, ...IHRC719.abi], rpc);
-            });
+    suites.forEach(suite =>
+        describe(suite.title, function () {
+            [
+                /**@type{const}*/ (['anvil/local-node', () => anvilHost]),
+                /**@type{const}*/ (['local-node', () => jsonRpcRelayUrl]),
+            ].forEach(([network, host]) => {
+                describe(network, function () {
+                    before(async function () {
+                        tokenAddress = suite.tokenAddress;
+                        const rpc = new JsonRpcProvider(host(), undefined, { batchMaxCount: 1 });
+                        HTS = new Contract(
+                            HTSAddress,
+                            [...IHederaTokenService.abi, ...RedirectAbi],
+                            rpc
+                        );
+                        treasury = new Wallet(ft.treasury.privateKey, rpc);
+                        wallets = Object.fromEntries(
+                            aliasKeys.map(([accId, pk]) => [accId, new Wallet(pk, rpc)])
+                        );
+                        ERC20 = new Contract(tokenAddress, [...IERC20.abi, ...IHRC719.abi], rpc);
+                    });
 
-            it("should retrieve token's `name`, `symbol` and `totalSupply`", async function () {
-                expect(await ERC20['name']()).to.be.equal(ft.name);
-                expect(await ERC20['symbol']()).to.be.equal(ft.symbol);
-                expect(await ERC20['totalSupply']()).to.be.equal(BigInt(ft.totalSupply));
-                expect(await ERC20['decimals']()).to.be.equal(BigInt(ft.decimals));
-            });
-
-            it('should retrieve `balanceOf` treasury account', async function () {
-                const value = await ERC20['balanceOf'](ft.treasury.evmAddress);
-                expect(value).to.be.equal(BigInt(ft.totalSupply));
-            });
-
-            it('should retrieve zero `balanceOf` for non-associated accounts', async function () {
-                expect(await ERC20['balanceOf'](nonAssocAddress0)).to.be.equal(0n);
-                expect(await ERC20['balanceOf'](nonAssocAddress1)).to.be.equal(0n);
-            });
-
-            it('should get it `isAssociated` for treasury account', async function () {
-                const value = await ERC20['isAssociated']({ from: ft.treasury.evmAddress });
-                expect(value).to.be.equal(true);
-            });
-
-            it('should get not `isAssociated` for existing non-associated account', async function () {
-                expect(await ERC20['isAssociated']({ from: toAddress('0.0.1002') })).to.be.equal(
-                    false
-                );
-                expect(await ERC20['isAssociated']({ from: wallets[1012].address })).to.be.equal(
-                    false
-                );
-            });
-
-            // These reverts instead of returning `false`.
-            // Should we have the same behavior in emulated HTS?
-            it.skip('should get not `isAssociated` for non-existing non-associated accounts', async function () {
-                expect(await ERC20['isAssociated']({ from: nonAssocAddress0 })).to.be.equal(false);
-                expect(await ERC20['isAssociated']({ from: nonAssocAddress1 })).to.be.equal(false);
-            });
-
-            // To enable this, we need to change `getTokenInfo` to a `view` function
-            it.skip("should retrieve token's metadata through `getTokenInfo`", async function () {
-                const info = await HTS['getTokenInfo'](erc20Address);
-                console.log(inspect(info, { depth: null }));
-                if (tokenInfo === undefined) {
-                    tokenInfo = info;
-                } else {
-                    expect(info).to.be.deep.equal(tokenInfo);
-                }
-            });
-
-            it('should transfer from treasury to account and leave total supply untouched', async function () {
-                const amount = 200_000n;
-                const alice = wallets[1012];
-
-                const preTreasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
-                expect(preTreasuryBalance).to.be.equal(BigInt(ft.totalSupply));
-                expect(await ERC20['balanceOf'](alice.address)).to.be.equal(0n);
-                const preTotalSupply = await ERC20['totalSupply']();
-
-                await waitForTx(sendAs(ERC20, treasury)['transfer'](alice.address, amount, OPTS));
-
-                const postTreasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
-                expect(postTreasuryBalance).to.be.equal(preTreasuryBalance - amount);
-                expect(await ERC20['balanceOf'](alice.address)).to.be.equal(amount);
-                const postTotalSupply = await ERC20['totalSupply']();
-                expect(postTotalSupply).to.be.equal(preTotalSupply);
-            });
-
-            it('should mint to treasury account and increase total supply', async function () {
-                const preTreasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
-                const preTotalSupply = await ERC20['totalSupply']();
-
-                const amount = 1_000_000n;
-                await waitForTx(sendAs(HTS, treasury)['mintToken'](erc20Address, amount, [], OPTS));
-
-                const postTreasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
-                expect(postTreasuryBalance).to.be.equal(preTreasuryBalance + amount);
-                const postTotalSupply = await ERC20['totalSupply']();
-                expect(postTotalSupply).to.be.equal(preTotalSupply + amount);
-            });
-
-            it('should burn from treasury account and decrease total supply', async function () {
-                const preTreasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
-                const preTotalSupply = await ERC20['totalSupply']();
-
-                const amount = 500_000n;
-                await waitForTx(sendAs(HTS, treasury)['burnToken'](erc20Address, amount, [], OPTS));
-
-                const postTreasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
-                expect(postTreasuryBalance).to.be.equal(preTreasuryBalance - amount);
-                const postTotalSupply = await ERC20['totalSupply']();
-                expect(postTotalSupply).to.be.equal(preTotalSupply - amount);
+                    suite.tests();
+                });
             });
         })
     );
