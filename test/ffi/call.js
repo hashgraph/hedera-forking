@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import dotenv from 'dotenv';
 import {
     AccountId,
     AccountInfoQuery,
@@ -29,6 +30,8 @@ import {
     PrivateKey,
     TokenId,
 } from '@hashgraph/sdk';
+import { eth, utils } from 'web3';
+
 import { htsAbi } from './abi/hts-abi.js';
 
 /**
@@ -65,9 +68,6 @@ import { htsAbi } from './abi/hts-abi.js';
  */
 
 process.removeAllListeners('warning');
-
-import dotenv from 'dotenv';
-import { eth, utils } from 'web3';
 dotenv.config();
 const OPERATOR_PRIVATE_KEY = process.env['OPERATOR_PRIVATE_KEY'] || '';
 
