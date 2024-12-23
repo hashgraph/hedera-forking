@@ -6,16 +6,12 @@ import {IERC20Events, IERC20} from "../contracts/IERC20.sol";
 import {IHTSDefinitions} from "../contracts/IHTSDefinitions.sol";
 import {TestSetup} from "./lib/TestSetup.sol";
 
-interface MethodNotSupported {
-    function methodNotSupported() external view returns (uint256);
-}
-
 contract LocalNodeTokenTest is Test, TestSetup, IERC20Events {
     address _tokenAddress;
     address HTS_ADDRESS = 0x0000000000000000000000000000000000000167;
 
     function setUp() external {
-        if (!_hederaServicesExists()) return;
+        if (!_hederaCallExists()) return;
         deployCodeTo("HtsSystemContractLocalNode.sol", HTS_ADDRESS);
         vm.allowCheatcodes(HTS_ADDRESS);
 
@@ -30,23 +26,24 @@ contract LocalNodeTokenTest is Test, TestSetup, IERC20Events {
         assertEq(responseCode, 22);
     }
 
-    function test_ERC20_name() external {
-        if (!_hederaServicesExists()) return;
+    modifier hasInstalledHederaCall() {
+        vm.skip(!_hederaCallExists());
+        _;
+    }
+
+    function test_ERC20_name() hasInstalledHederaCall external {
         assertEq(IERC20(_tokenAddress).name(), "Some really really long name, just for testing purposes to prove it is not an issue");
     }
 
-    function test_ERC20_decimals() external {
-        if (!_hederaServicesExists()) return;
+    function test_ERC20_decimals() hasInstalledHederaCall external {
         assertEq(IERC20(_tokenAddress).decimals(), uint256(2));
     }
 
-    function test_ERC20_symbol() external {
-        if (!_hederaServicesExists()) return;
+    function test_ERC20_symbol() hasInstalledHederaCall external {
         assertEq(IERC20(_tokenAddress).symbol(), "SAMPLE");
     }
 
-    function test_ERC20_balanceOf() external {
-        if (!_hederaServicesExists()) return;
+    function test_ERC20_balanceOf() hasInstalledHederaCall external {
         assertEq(IERC20(_tokenAddress).balanceOf(address(0x167)), 0);
     }
 
@@ -60,7 +57,7 @@ contract LocalNodeTokenTest is Test, TestSetup, IERC20Events {
      */
 
     /**
-     * function test_ERC20_transfer() external {
+     * function test_ERC20_transfer() hasInstalledHederaCall external {
      *   IERC20(_tokenAddress).transferFrom(address(0x67D8d32E9Bf1a9968a5ff53B87d777Aa8EBBEe69), address(0x17b2B8c63Fa35402088640e426c6709A254c7fFb), 100);
      * }
     */
@@ -96,13 +93,12 @@ contract LocalNodeTokenTest is Test, TestSetup, IERC20Events {
         );
     }
 
-    function _hederaServicesExists() private returns (bool) {
+    function _hederaCallExists() private returns (bool) {
         string[] memory inputs = new string[](3);
         inputs[0] = "bash";
         inputs[1] = "-c";
-        inputs[2] = "command -v -- hedera-services &> /dev/null && echo true || echo false";
-
+        inputs[2] = "command -v -- hedera-call &> /dev/null && echo true || echo false";
         bytes memory result = vm.ffi(inputs);
-        return keccak256(result) == keccak256(bytes("true\n"));
+        return keccak256(result) == keccak256(bytes("true"));
     }
 }

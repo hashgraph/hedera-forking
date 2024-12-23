@@ -37,7 +37,7 @@ contract HtsSystemContractLocalNode {
         ) {
             (int responseCode, address tokenAddress) = abi.decode(response, (int, address));
             if (responseCode == 22) {
-                string memory template = vm.replace(vm.trim(vm.readFile("./@hts-forking/src/HIP719.bytecode.json")), "\"", "");
+                string memory template = vm.replace(vm.trim(vm.readFile("./src/HIP719.bytecode.json")), "\"", "");
                 string memory placeholder = "fefefefefefefefefefefefefefefefefefefefe";
                 string memory addressString = vm.replace(vm.toString(tokenAddress), "0x", "");
                 string memory proxyBytecode = vm.replace(template, placeholder, addressString);
