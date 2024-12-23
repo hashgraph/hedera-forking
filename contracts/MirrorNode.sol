@@ -91,13 +91,17 @@ abstract contract MirrorNode {
 
     function getAccountAddress(string memory accountId) public returns (address) {
         if (bytes(accountId).length == 0
-            || keccak256(bytes(accountId)) == keccak256(bytes("null"))
+        || keccak256(bytes(accountId)) == keccak256(bytes("null"))
             || keccak256(abi.encodePacked(accountId)) == keccak256(abi.encodePacked(bytes32(0)))) {
             return address(0);
         }
-        string memory json = this.fetchAccount(accountId);
-        if (vm.keyExistsJson(json, ".evm_address")) {
-            return vm.parseJsonAddress(json, ".evm_address");
+
+        try this.fetchAccount(accountId) returns (string memory json) {
+            if (vm.keyExistsJson(json, ".evm_address")) {
+                return vm.parseJsonAddress(json, ".evm_address");
+            }
+        } catch {
+            // Do nothing
         }
 
         // ignore the first 4 characters ("0.0.") to get the account number string
@@ -113,10 +117,13 @@ abstract contract MirrorNode {
         if ((uint160(account) >> 32) == 0) {
             return uint32(uint160(account));
         }
-        string memory json = this.fetchAccount(vm.toString(account));
-        if (vm.keyExistsJson(json, ".account")) {
-            return uint32(vm.parseUint(vm.replace(vm.parseJsonString(json, ".account"), "0.0.", "")));
-        }
+
+        try this.fetchAccount(vm.toString(account)) returns (string memory json) {
+            if (vm.keyExistsJson(json, ".account")) {
+                return uint32(vm.parseUint(vm.replace(vm.parseJsonString(json, ".account"), "0.0.", "")));
+            }
+        } catch {}
+
         return 0;
     }
 }
