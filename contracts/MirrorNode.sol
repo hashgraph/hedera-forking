@@ -31,43 +31,38 @@ abstract contract MirrorNode {
     function fetchNonFungibleToken(address token, uint32 serial) external virtual returns (string memory json);
 
     function getNftMetadata(address token, uint32 serial) external returns (string memory) {
-        try this.fetchNonFungibleToken(token, serial) returns (string memory json) {
-            if (vm.keyExistsJson(json, ".metadata")) {
-                return vm.parseJsonString(json, ".metadata");
-            }
-        } catch {}
+        string memory json = this.fetchNonFungibleToken(token, serial);
+        if (vm.keyExistsJson(json, ".metadata")) {
+            return vm.parseJsonString(json, ".metadata");
+        }
         return "";
     }
 
     function getNftOwner(address token, uint32 serial) external returns (address) {
-        try this.fetchNonFungibleToken(token, serial) returns (string memory json) {
-            if (vm.keyExistsJson(json, ".account_id")) {
-                string memory owner = vm.parseJsonString(json, ".account_id");
-                return getAccountAddress(owner);
-            }
-        } catch {}
+        string memory json = this.fetchNonFungibleToken(token, serial);
+        if (vm.keyExistsJson(json, ".account_id")) {
+            string memory owner = vm.parseJsonString(json, ".account_id");
+            return getAccountAddress(owner);
+        }
         return address(0);
     }
 
     function getNftSpender(address token, uint32 serial) external returns (address) {
-        try this.fetchNonFungibleToken(token, serial) returns (string memory json) {
-            if (vm.keyExistsJson(json, ".spender")) {
-                string memory spender = vm.parseJsonString(json, ".spender");
-                return getAccountAddress(spender);
-            }
-        } catch {}
+        string memory json = this.fetchNonFungibleToken(token, serial);
+        if (vm.keyExistsJson(json, ".spender")) {
+            string memory spender = vm.parseJsonString(json, ".spender");
+            return getAccountAddress(spender);
+        }
         return address(0);
     }
 
     function getBalance(address token, address account) external returns (uint256) {
         uint32 accountNum = _getAccountNum(account);
         if (accountNum == 0) return 0;
-
-        try this.fetchBalance(token, accountNum) returns (string memory json) {
-            if (vm.keyExistsJson(json, ".balances[0].balance")) {
-                return vm.parseJsonUint(json, ".balances[0].balance");
-            }
-        } catch {}
+        string memory json = this.fetchBalance(token, accountNum);
+        if (vm.keyExistsJson(json, ".balances[0].balance")) {
+            return vm.parseJsonUint(json, ".balances[0].balance");
+        }
         return 0;
     }
 
@@ -76,12 +71,10 @@ abstract contract MirrorNode {
         if (ownerNum == 0) return 0;
         uint32 spenderNum = _getAccountNum(spender);
         if (spenderNum == 0) return 0;
-
-        try this.fetchAllowance(token, ownerNum, spenderNum) returns (string memory json) {
-            if (vm.keyExistsJson(json, ".allowances[0].amount")) {
-                return vm.parseJsonUint(json, ".allowances[0].amount");
-            }
-        } catch {}
+        string memory json = this.fetchAllowance(token, ownerNum, spenderNum);
+        if (vm.keyExistsJson(json, ".allowances[0].amount")) {
+            return vm.parseJsonUint(json, ".allowances[0].amount");
+        }
         return 0;
     }
 
@@ -102,13 +95,9 @@ abstract contract MirrorNode {
             || keccak256(abi.encodePacked(accountId)) == keccak256(abi.encodePacked(bytes32(0)))) {
             return address(0);
         }
-
-        try this.fetchAccount(accountId) returns (string memory json) {
-            if (vm.keyExistsJson(json, ".evm_address")) {
-                return vm.parseJsonAddress(json, ".evm_address");
-            }
-        } catch {
-            // Do nothing
+        string memory json = this.fetchAccount(accountId);
+        if (vm.keyExistsJson(json, ".evm_address")) {
+            return vm.parseJsonAddress(json, ".evm_address");
         }
 
         // ignore the first 4 characters ("0.0.") to get the account number string
@@ -124,13 +113,10 @@ abstract contract MirrorNode {
         if ((uint160(account) >> 32) == 0) {
             return uint32(uint160(account));
         }
-
-        try this.fetchAccount(vm.toString(account)) returns (string memory json) {
-            if (vm.keyExistsJson(json, ".account")) {
-                return uint32(vm.parseUint(vm.replace(vm.parseJsonString(json, ".account"), "0.0.", "")));
-            }
-        } catch {}
-
+        string memory json = this.fetchAccount(vm.toString(account));
+        if (vm.keyExistsJson(json, ".account")) {
+            return uint32(vm.parseUint(vm.replace(vm.parseJsonString(json, ".account"), "0.0.", "")));
+        }
         return 0;
     }
 }

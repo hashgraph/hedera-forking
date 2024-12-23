@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
-import {HtsSystemContract, HTS_ADDRESS} from "../contracts/HtsSystemContract.sol";
+import {HtsSystemContract} from "../contracts/HtsSystemContract.sol";
 import {Test, console} from "forge-std/Test.sol";
 import {IERC721, IERC721Events} from "../contracts/IERC721.sol";
 import {IERC20Events} from "../contracts/IERC20.sol";
 import {TestSetup} from "./lib/TestSetup.sol";
-import {storeString, storeBool} from "../contracts/StrStore.sol";
 
 contract ERC721TokenTest is Test, TestSetup, IERC721Events, IERC20Events {
 
@@ -27,108 +26,64 @@ contract ERC721TokenTest is Test, TestSetup, IERC721Events, IERC20Events {
     }
 
     function test_ERC721_balanceOf() external view {
-        address treasury = CFNFTFF_TREASURY;
-        assertEq(IERC721(CFNFTFF).balanceOf(treasury), 2);
+        assertEq(IERC721(CFNFTFF).balanceOf(CFNFTFF_TREASURY), 2);
     }
 
-    function test_ERC721_ownerOf() external {
+    function test_ERC721_ownerOf() external view {
         uint256 tokenId = 1;
-        uint192 pad = 0x0;
-        bytes32 slot = bytes32(abi.encodePacked(IERC721.ownerOf.selector, pad, uint32(tokenId)));
-        vm.store(CFNFTFF, slot, bytes32(uint256(uint160(CFNFTFF_TREASURY))));
-        vm.store(address(bytes20(keccak256(abi.encode(CFNFTFF)))), slot, bytes32(uint(1)));
-
         assertEq(IERC721(CFNFTFF).ownerOf(tokenId), CFNFTFF_TREASURY);
     }
 
     function test_ERC721_transferFrom() external {
         address to = makeAddr("recipient");
         uint256 tokenId = 1;
-        uint192 pad = 0x0;
-        bytes32 slot = bytes32(abi.encodePacked(IERC721.ownerOf.selector, pad, uint32(tokenId)));
-        vm.store(CFNFTFF, slot, bytes32(uint256(uint160(CFNFTFF_TREASURY))));
-
         vm.startPrank(CFNFTFF_TREASURY);
         vm.expectEmit(CFNFTFF);
         emit Transfer(CFNFTFF_TREASURY, to, tokenId);
         IERC721(CFNFTFF).transferFrom(CFNFTFF_TREASURY, to, tokenId);
         vm.stopPrank();
-
         assertEq(IERC721(CFNFTFF).ownerOf(tokenId), to);
     }
 
     function test_ERC721_approve() external {
         address spender = makeAddr("spender");
         uint256 tokenId = 1;
-        uint192 pad = 0x0;
-        bytes32 slot = bytes32(abi.encodePacked(IERC721.ownerOf.selector, pad, uint32(tokenId)));
-        vm.store(CFNFTFF, slot, bytes32(uint256(uint160(CFNFTFF_TREASURY))));
-        vm.store(address(bytes20(keccak256(abi.encode(CFNFTFF)))), slot, bytes32(uint(1)));
-
         vm.startPrank(CFNFTFF_TREASURY);
         vm.expectEmit(CFNFTFF);
         emit Approval(CFNFTFF_TREASURY, spender, tokenId);
         IERC721(CFNFTFF).approve(spender, tokenId);
         vm.stopPrank();
-
         assertEq(IERC721(CFNFTFF).getApproved(tokenId), spender);
     }
 
     function test_ERC721_setApprovalForAll() external {
-        address owner = CFNFTFF_TREASURY;
         address operator = makeAddr("operator");
-
-        vm.prank(owner);
+        vm.prank(CFNFTFF_TREASURY);
         vm.expectEmit(CFNFTFF);
-        emit ApprovalForAll(owner, operator, true);
+        emit ApprovalForAll(CFNFTFF_TREASURY, operator, true);
         IERC721(CFNFTFF).setApprovalForAll(operator, true);
-
-        assertTrue(IERC721(CFNFTFF).isApprovedForAll(owner, operator));
+        assertTrue(IERC721(CFNFTFF).isApprovedForAll(CFNFTFF_TREASURY, operator));
     }
 
-    function test_ERC721_getApproved() external {
-        address approvedUser = makeAddr("approved user");
+    function test_ERC721_getApproved() external view {
         uint256 tokenId = 1;
-        uint192 pad = 0x0;
-        bytes32 slot = bytes32(abi.encodePacked(IERC721.getApproved.selector, pad, uint32(tokenId)));
-        vm.store(CFNFTFF, slot, bytes32(uint256(uint160(approvedUser))));
-        vm.store(address(bytes20(keccak256(abi.encode(CFNFTFF)))), slot, bytes32(uint(1)));
-
-        assertEq(IERC721(CFNFTFF).getApproved(tokenId), approvedUser);
+        assertEq(IERC721(CFNFTFF).getApproved(tokenId), CFNFTFF_ALLOWED_SPENDER);
     }
 
     function test_ERC721_isApprovedForAll() external {
-        address owner = CFNFTFF_TREASURY;
         address operator = makeAddr("operator");
-        uint160 pad = 0x0;
-        uint32 ownerId = HtsSystemContract(HTS_ADDRESS).getAccountId(owner);
-        uint32 operatorId = HtsSystemContract(HTS_ADDRESS).getAccountId(operator);
-        bytes32 slot = bytes32(abi.encodePacked(IERC721.isApprovedForAll.selector, pad, ownerId, operatorId));
-        vm.store(CFNFTFF, slot, bytes32(uint256(1)));
-        vm.store(address(bytes20(keccak256(abi.encode(CFNFTFF)))), slot, bytes32(uint(1)));
-
-        assertTrue(IERC721(CFNFTFF).isApprovedForAll(owner, operator));
+        assertFalse(IERC721(CFNFTFF).isApprovedForAll(CFNFTFF_TREASURY, operator));
     }
 
-    function test_ERC721_tokenURI_shorter_than_31_bytes() external {
-        uint256 serialId = 1;
-        uint192 pad = 0x0;
+    function test_ERC721_tokenURI_shorter_than_31_bytes() external view {
+        uint256 serialId = 2;
         string memory uri = "https://example.com/1";
-        bytes32 slot = bytes32(abi.encodePacked(IERC721.tokenURI.selector, pad, uint32(serialId)));
-        storeString(CFNFTFF, uint256(slot), uri);
-        vm.store(address(bytes20(keccak256(abi.encode(CFNFTFF)))), slot, bytes32(uint(1)));
-
         assertEq(IERC721(CFNFTFF).tokenURI(serialId), uri);
     }
 
-    function test_ERC721_tokenURI_longer_than_31_bytes() external {
+    function test_ERC721_tokenURI_longer_than_31_bytes() external view {
         uint256 serialId = 1;
-        uint192 pad = 0x0;
-        string memory uri = "https://very-long-string-just-to-make-sure-that-it-exceeds-31-bytes-and-requires-mulyiple-storage-slots.com/1";
-        bytes32 slot = bytes32(abi.encodePacked(IERC721.tokenURI.selector, pad, uint32(serialId)));
-        storeString(CFNFTFF, uint256(slot), uri);
-        vm.store(address(bytes20(keccak256(abi.encode(CFNFTFF)))), slot, bytes32(uint(1)));
-
+        string memory uri = "https://very-long-string-which-exceeds-31-bytes-and-requires-multiple-storage-slots.com/1";
         assertEq(IERC721(CFNFTFF).tokenURI(serialId), uri);
     }
 }

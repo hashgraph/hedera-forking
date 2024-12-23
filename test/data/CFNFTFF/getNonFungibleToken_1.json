@@ -1,11 +1,11 @@
 {
-  "account_id": "0.0.741192",
-  "created_timestamp": "1713918026.797567283",
-  "delegating_spender": null,
-  "deleted": false,
-  "metadata": "aXBmczovL2JhZmtyZWlmbGl0aW5wM2xjamF6YTZrNHd1d3p4Y3Fwc3V6N3dkNnBnYjVyZXFocDN6bW5tbm50bmpp",
-  "modified_timestamp": "1734576187.651221000",
-  "serial_number": 1,
-  "spender": null,
-  "token_id": "0.0.4271533"
+    "account_id": "0.0.4436613",
+    "created_timestamp": "1734948254.215424000",
+    "delegating_spender": null,
+    "deleted": false,
+    "metadata": "aHR0cHM6Ly92ZXJ5LWxvbmctc3RyaW5nLXdoaWNoLWV4Y2VlZHMtMzEtYnl0ZXMtYW5kLXJlcXVpcmVzLW11bHRpcGxlLXN0b3JhZ2Utc2xvdHMuY29tLzE=",
+    "modified_timestamp": "1734948257.045141590",
+    "serial_number": 1,
+    "spender": "0.0.4454450",
+    "token_id": "0.0.5308378"
 }
