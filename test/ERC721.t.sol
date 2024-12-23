@@ -57,7 +57,7 @@ contract ERC721TokenTest is Test, TestSetup, IERC721Events, IERC20Events {
     }
 
     function test_ERC721_setApprovalForAll() external {
-        address operator = makeAddr("operator");
+        address operator = CFNFTFF_ALLOWED_SPENDER;
         vm.prank(CFNFTFF_TREASURY);
         vm.expectEmit(CFNFTFF);
         emit ApprovalForAll(CFNFTFF_TREASURY, operator, true);
@@ -71,8 +71,7 @@ contract ERC721TokenTest is Test, TestSetup, IERC721Events, IERC20Events {
     }
 
     function test_ERC721_isApprovedForAll() external {
-        address operator = makeAddr("operator");
-        assertFalse(IERC721(CFNFTFF).isApprovedForAll(CFNFTFF_TREASURY, operator));
+        assertFalse(IERC721(CFNFTFF).isApprovedForAll(CFNFTFF_TREASURY, CFNFTFF_ALLOWED_SPENDER));
     }
 
     function test_ERC721_tokenURI_shorter_than_31_bytes() external view {

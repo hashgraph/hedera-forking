@@ -473,7 +473,8 @@ contract HtsSystemContractJson is HtsSystemContract {
     function _isApprovedForAllSlot(address owner, address operator) internal override virtual returns (bytes32) {
         bytes32 slot = super._isApprovedForAllSlot(owner, operator);
         if (vm.load(_scratchAddr(), slot) == bytes32(0)) {
-            // TODO: Implement this
+            bool approved = mirrorNode().isApprovedForAll(address(this), owner, operator);
+            _setValue(slot, bytes32(uint256(approved ? 1 : 0)));
         }
         return slot;
     }
