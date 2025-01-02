@@ -33,6 +33,23 @@ interface IMirrorNodeClient {
     getTokenById(tokenId: string, blockNumber: number): Promise<Record<string, unknown> | null>;
 
     /**
+     * Get NFT by token id and serial id.
+     *
+     * Returns token NFT entity information given the token id and serial id.
+     *
+     * This method should call the Mirror Node API endpoint `GET /api/v1/tokens/{tokenId}/nft/{serialId}`.
+     *
+     * @param tokenId The ID of the token to return information for.
+     * @param serialId The serial id of the NFT.
+     * @param blockNumber
+     */
+    getNftByTokenIdAndNumber(
+        tokenId: string,
+        serialId: number,
+        blockNumber: number
+    ): Promise<Record<string, unknown> | null>;
+
+    /**
      * Get token relationship for an account.
      *
      * This method should call the Mirror Node API endpoint: `GET /api/v1/accounts/{idOrAliasOrEvmAddress}/tokens`.

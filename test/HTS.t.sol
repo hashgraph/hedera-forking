@@ -91,7 +91,10 @@ contract HTSTest is Test, TestSetup {
         assertEq(tokenInfo.token.tokenKeys[4].key.ECDSA_secp256k1, bytes(""));
         assertEq(tokenInfo.token.tokenKeys[4].key.delegatableContractId, address(0));
         // Expiry
-        assertEq(tokenInfo.token.expiry.second, 1706825707000718000);
+        int64 divisor = 10 ** 3;
+        // Reducing the precision to match JavaScript's Number type,
+        // as a JS mock server may lose precision beyond 15–16 significant digits.
+        assertEq(tokenInfo.token.expiry.second / divisor, 1706825707000718075 / divisor);
         assertEq(tokenInfo.token.expiry.autoRenewAccount, address(0));
         assertEq(tokenInfo.token.expiry.autoRenewPeriod, 0);
         assertEq(tokenInfo.totalSupply, 10000000005000000);

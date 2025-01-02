@@ -48,6 +48,9 @@ describe('::getHtsStorageAt', function () {
         async getTokenRelationship(_idOrAliasOrEvmAddress, _tokenId) {
             throw Error('Not implemented');
         },
+        async getNftByTokenIdAndNumber(_tokenId, _serialId) {
+            throw Error('Not implemented');
+        },
         async getAccount(_idOrAliasOrEvmAddress) {
             throw Error('Not implemented');
         },

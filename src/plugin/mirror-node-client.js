@@ -51,6 +51,19 @@ class MirrorNodeClient {
     }
 
     /**
+     * Fetches information about an NFT by its token ID and serial ID.
+     *
+     * @param {string} tokenId the token ID to fetch.
+     * @param {number} serialId the serial ID of the NFT to fetch.
+     * @param {number} blockNumber
+     * @returns {Promise<Record<string, unknown> | null>} a `Promise` resolving to the token information or null if not found.
+     */
+    async getNftByTokenIdAndNumber(tokenId, serialId, blockNumber) {
+        const timestamp = await this.getBlockQueryParam(blockNumber);
+        return this._get(`tokens/${tokenId}/nft/${serialId}?${timestamp}`);
+    }
+
+    /**
      * Get token relationship for an account.
      *
      * @param {string} idOrAliasOrEvmAddress The ID or alias or EVM address of the account
