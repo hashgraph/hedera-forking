@@ -218,12 +218,15 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
             );
         persistentSlotMapOf(tokenId).store(nrequestedSlot, atob(metadata));
     }
-    const token = await mirrorNodeClient.getTokenById(tokenId, blockNumber);
-    if (token === null) return ret(ZERO_HEX_32_BYTE, `Token \`${tokenId}\` not found`);
-    const unresolvedValues =
-        persistentSlotMapOf(tokenId).load(nrequestedSlot) || slotMapOf(token).load(nrequestedSlot);
-    if (unresolvedValues === undefined)
-        return ret(ZERO_HEX_32_BYTE, `Requested slot does not match any field slots`);
+    let unresolvedValues = persistentSlotMapOf(tokenId).load(nrequestedSlot);
+    if (unresolvedValues === undefined) {
+        const token = await mirrorNodeClient.getTokenById(tokenId, blockNumber);
+        if (token === null) return ret(ZERO_HEX_32_BYTE, `Token \`${tokenId}\` not found`);
+        unresolvedValues = slotMapOf(token).load(nrequestedSlot);
+
+        if (unresolvedValues === undefined)
+            return ret(ZERO_HEX_32_BYTE, `Requested slot does not match any field slots`);
+    }
     const values = await Promise.all(
         unresolvedValues.map(async ({ offset, path, value }) => ({
             offset,
