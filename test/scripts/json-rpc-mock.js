@@ -130,6 +130,15 @@ const mirrorNodeClient = {
             noAllowance
         );
     },
+    async getAllowanceForNFT(accountId, tokenId, operatorId) {
+        this.append('getAllowanceForNFT', accountId, tokenId, operatorId);
+        const noAllowance = { allowances: [] };
+        if (tokens[tokenId] === undefined) return noAllowance;
+        return requireOrDefault(
+            `${tokens[tokenId].symbol}/getAllowanceForToken_${accountId}_${operatorId}.json`,
+            noAllowance
+        );
+    },
     async getTokenRelationship(idOrAliasOrEvmAddress, tokenId) {
         this.append('getTokenRelationship', idOrAliasOrEvmAddress, tokenId);
         const noTokens = { tokens: [] };

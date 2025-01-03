@@ -24,6 +24,8 @@ abstract contract MirrorNode {
 
     function fetchAllowance(address token, uint32 ownerNum, uint32 spenderNum) external virtual returns (string memory json);
 
+    function fetchNftAllowance(address token, uint32 ownerNum, uint32 operatorNum) external virtual returns (string memory json);
+
     function fetchAccount(string memory account) external virtual returns (string memory json);
 
     function fetchTokenRelationshipOfAccount(string memory account, address token) external virtual returns (string memory json);
@@ -54,6 +56,16 @@ abstract contract MirrorNode {
             return getAccountAddress(spender);
         }
         return address(0);
+    }
+
+    function isApprovedForAll(address token, address owner, address operator) external returns (bool) {
+        uint32 ownerNum = _getAccountNum(owner);
+        if (ownerNum == 0) return false;
+        uint32 operatorNum = _getAccountNum(operator);
+        if (operatorNum == 0) return false;
+        string memory json = this.fetchNftAllowance(token, ownerNum, operatorNum);
+        return vm.keyExistsJson(json, ".allowances[0].approved_for_all")
+            && vm.parseJsonBool(json, ".allowances[0].approved_for_all");
     }
 
     function getBalance(address token, address account) external returns (uint256) {

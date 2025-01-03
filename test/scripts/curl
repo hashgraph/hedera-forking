@@ -92,6 +92,17 @@ for (const [re, fn] of /** @type {const} */([
             return undefined;
         }
     }],
+    [/^accounts\/(0\.0\.\d+)\/allowances\/nfts/, accountId => {
+        assert(typeof accountId === 'string');
+        const tokenId = searchParams.get('token.id');
+        assert(tokenId !== null);
+        const spenderId = searchParams.get('account.id');
+        assert(spenderId !== null);
+        const token = tokens[tokenId];
+        if (token === undefined)
+            return { allowances: [], links: { next: null } };
+        return require(`../data/${token.symbol}/getAllowanceForToken_${accountId}_${spenderId}.json`);
+    }],
     [/^accounts\/((0x[0-9a-fA-F]{40})|(0\.0\.\d+))\/tokens/, idOrAliasOrEvmAddress => {
         assert(typeof idOrAliasOrEvmAddress === 'string');
         const tokenId = searchParams.get('token.id');
