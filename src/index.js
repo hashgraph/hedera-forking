@@ -197,6 +197,29 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
         );
     }
 
+    // Encoded `address(tokenId).isApprovedForAll(owner, operator)` slot
+    // slot(256) = `isApprovedForAll`selector(32) + padding(160) + ownerId(32) + operatorId(32)
+    if (nrequestedSlot >> 64n === 0xe985e9c5_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000n) {
+        const operatorId = `0.0.${parseInt(requestedSlot.slice(-8), 16)}`;
+        const ownerId = `0.0.${parseInt(requestedSlot.slice(-16, -8), 16)}`;
+        const { allowances } = (await mirrorNodeClient.getAllowanceForNFT(
+            ownerId,
+            tokenId,
+            operatorId
+        )) ?? { allowances: [] };
+
+        if (allowances.length === 0)
+            return ret(
+                ZERO_HEX_32_BYTE,
+                `${tokenId}.isApprovedForAll(${ownerId},${operatorId}) not found`
+            );
+        const value = allowances[0].approved_for_all ? 1 : 0;
+        return ret(
+            `0x${value.toString(16).padStart(64, '0')}`,
+            `Requested slot matches ${tokenId}.isApprovedForAll(${ownerId},${operatorId})`
+        );
+    }
+
     // Encoded `address(tokenId).tokenURI(serialId)` slot
     // slot(256) = `tokenURI`selector(32) + padding(192) + serialId(32)
     if (

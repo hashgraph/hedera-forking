@@ -60,6 +60,9 @@ describe('::getHtsStorageAt', function () {
         async getAllowanceForToken(_accountId, _tokenId, _spenderId) {
             throw Error('Not implemented');
         },
+        async getAllowanceForNFT(_accountId, _tokenId, _operatorId) {
+            throw Error('Not implemented');
+        },
     };
 
     const slotsByLabel = storageLayout.storage.reduce(

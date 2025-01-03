@@ -101,6 +101,20 @@ class MirrorNodeClient {
     }
 
     /**
+     * Fetches token allowances for a specific account, token, and operator.
+     *
+     * @param {string} accountId The owner's account ID.
+     * @param {string} tokenId The token ID.
+     * @param {string} operatorId The operator's account ID.
+     * @returns {Promise<{ allowances: { approved_for_all: boolean }[] } | null>} A `Promise` resolving to the approval.
+     */
+    getAllowanceForNFT(accountId, tokenId, operatorId) {
+        return this._get(
+            `accounts/${accountId}/allowances/nfts?token.id=${tokenId}&account.id=${operatorId}`
+        );
+    }
+
+    /**
      * Fetches account information by account ID, alias, or EVM address.
      *
      * @param {string} idOrAliasOrEvmAddress The account ID, alias, or EVM address to fetch.

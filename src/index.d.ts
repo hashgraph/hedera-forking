@@ -109,6 +109,26 @@ interface IMirrorNodeClient {
     } | null>;
 
     /**
+     * Returns information for non-fungible token allowances for an account.
+     *
+     * NOTE: `blockNumber` is not yet included until we fix issue
+     * https://github.com/hashgraph/hedera-forking/issues/89.
+     *
+     * @param accountId Account alias or account id or evm address.
+     * @param tokenId The ID of the token to return information for.
+     * @param operatorId The ID of the operator to return information for.
+     */
+    getAllowanceForNFT(
+        accountId: string,
+        tokenId: string,
+        operatorId: string
+    ): Promise<{
+        allowances: {
+            approved_for_all: boolean;
+        }[];
+    } | null>;
+
+    /**
      * Get account by alias, id, or evm address.
      *
      * Return the account transactions and balance information given an account alias, an account id, or an evm address.

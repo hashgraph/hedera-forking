@@ -71,8 +71,7 @@ contract ERC721TokenTest is Test, TestSetup, IERC721Events, IERC20Events {
     }
 
     function test_ERC721_isApprovedForAll() external {
-        address operator = makeAddr("operator");
-        assertFalse(IERC721(CFNFTFF).isApprovedForAll(CFNFTFF_TREASURY, operator));
+        assertTrue(IERC721(CFNFTFF).isApprovedForAll(CFNFTFF_TREASURY, CFNFTFF_ALLOWED_SPENDER));
     }
 
     function test_ERC721_tokenURI_shorter_than_31_bytes() external view {
