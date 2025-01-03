@@ -46,7 +46,7 @@ for (const [re, fn] of /** @type {const} */([
 
         return require(`../data/${token.symbol}/getBalanceOfToken_${accountId}.json`);
     }],
-    [/^tokens\/([\w.]+)\/nfts\/([0-9]{1,2})$/, (tokenId, nftNumber) => {
+    [/^tokens\/([\w.]+)\/nfts\/(\d+)$/, (tokenId, nftNumber) => {
         assert(typeof tokenId === 'string');
         const token = tokens[tokenId];
         if (token === undefined)
