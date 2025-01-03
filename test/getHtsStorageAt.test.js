@@ -171,6 +171,45 @@ describe('::getHtsStorageAt', function () {
      * @returns {string}
      */
     const padAccountId = accountId => accountId.toString(16).padStart(8, '0');
+
+    /**
+     * Pads `accountId` to be encoded within a storage slot.
+     *
+     * @param {string|null} result Response returned by eth_getStorageAt
+     * @param {string} expectedString Expected string.
+     * @param {IMirrorNodeClient} client Mirror node client, to compare all slots taken by long strings
+     * @param {string} slot Base slot, to compare all slots taken by long string
+     * @param {string} address Address, to compare all slots taken by long string
+     */
+    const expectCorrectString = async (result, expectedString, client, slot, address) => {
+        if (expectedString.length > 31) {
+            const len = (expectedString.length * 2 + 1).toString(16).padStart(2, '0');
+            assert(result !== null);
+            expect(result.slice(2)).to.be.equal('0'.repeat(62) + len);
+
+            const baseSlot = BigInt(keccak256('0x' + toIntHex256(slot)));
+            let value = '';
+            for (let i = 0; i < (expectedString.length >> 5) + 1; i++) {
+                const result = await _getHtsStorageAt(
+                    address,
+                    `0x${(baseSlot + BigInt(i)).toString(16)}`,
+                    client
+                );
+                assert(result !== null);
+                value += result.slice(2);
+            }
+            const decoded = Buffer.from(value, 'hex')
+                .subarray(0, expectedString.length)
+                .toString('utf8');
+            expect(decoded).to.be.equal(expectedString);
+        } else {
+            const value = Buffer.from(expectedString).toString('hex').padEnd(62, '0');
+            const len = (expectedString.length * 2).toString(16).padStart(2, '0');
+            assert(result !== null);
+            expect(result.slice(2)).to.be.equal(value + len);
+        }
+    };
+
     Object.values(tokens)
         .filter(t => ['USDC', 'MFCT', 'CFNFTFF'].includes(t.symbol))
         .forEach(({ symbol, address }) => {
@@ -206,31 +245,8 @@ describe('::getHtsStorageAt', function () {
                         if (str.length > 31) {
                             assert(this.test !== undefined);
                             this.test.title += ' (large string)';
-                            const len = (str.length * 2 + 1).toString(16).padStart(2, '0');
-                            assert(result !== null);
-                            expect(result.slice(2)).to.be.equal('0'.repeat(62) + len);
-
-                            const baseSlot = BigInt(keccak256('0x' + toIntHex256(slot)));
-                            let value = '';
-                            for (let i = 0; i < (str.length >> 5) + 1; i++) {
-                                const result = await _getHtsStorageAt(
-                                    address,
-                                    `0x${(baseSlot + BigInt(i)).toString(16)}`,
-                                    mirrorNodeClient
-                                );
-                                assert(result !== null);
-                                value += result.slice(2);
-                            }
-                            const decoded = Buffer.from(value, 'hex')
-                                .subarray(0, str.length)
-                                .toString('utf8');
-                            expect(decoded).to.be.equal(str);
-                        } else {
-                            const value = Buffer.from(str).toString('hex').padEnd(62, '0');
-                            const len = (str.length * 2).toString(16).padStart(2, '0');
-                            assert(result !== null);
-                            expect(result.slice(2)).to.be.equal(value + len);
                         }
+                        await expectCorrectString(result, str, mirrorNodeClient, slot, address);
                     });
                 });
 
@@ -376,7 +392,7 @@ describe('::getHtsStorageAt', function () {
             });
         });
     Object.values(tokens)
-        .filter(t => ['CFNFTFF'].includes(t.symbol))
+        .filter(t => t.symbol === 'CFNFTFF')
         .forEach(({ symbol, address }) => {
             describe(`\`${symbol}(${address})\` token (NFT)`, function () {
                 [1, 2].forEach(serialId => {
@@ -472,31 +488,8 @@ describe('::getHtsStorageAt', function () {
                         if (str.length > 31) {
                             assert(this.test !== undefined);
                             this.test.title += ' (large string)';
-                            const len = (str.length * 2 + 1).toString(16).padStart(2, '0');
-                            assert(result !== null);
-                            expect(result.slice(2)).to.be.equal('0'.repeat(62) + len);
-
-                            const baseSlot = BigInt(keccak256('0x' + toIntHex256(slot)));
-                            let value = '';
-                            for (let i = 0; i < (str.length >> 5) + 1; i++) {
-                                const result = await _getHtsStorageAt(
-                                    address,
-                                    `0x${(baseSlot + BigInt(i)).toString(16)}`,
-                                    mirrorNodeClient
-                                );
-                                assert(result !== null);
-                                value += result.slice(2);
-                            }
-                            const decoded = Buffer.from(value, 'hex')
-                                .subarray(0, str.length)
-                                .toString('utf8');
-                            expect(decoded).to.be.equal(str);
-                        } else {
-                            const value = Buffer.from(str).toString('hex').padEnd(62, '0');
-                            const len = (str.length * 2).toString(16).padStart(2, '0');
-                            assert(result !== null);
-                            expect(result.slice(2)).to.be.equal(value + len);
                         }
+                        await expectCorrectString(result, str, mirrorNodeClient, slot, address);
                     });
                 });
             });
