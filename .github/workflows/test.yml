@@ -160,7 +160,7 @@ jobs:
         run: echo "./test/scripts" >> "$GITHUB_PATH"
 
       - name: Run Forge tests using JSON-RPC Mainnet and Testnet servers (with forking)
-        run: forge test -vvv --fork-url https://testnet.hashio.io/api --fork-block-number 8535327
+        run: forge test -vvv --fork-url https://testnet.hashio.io/api --fork-block-number 13890397
 
       - name: Show Mocked curl Requests
         run: cat test/scripts/curl.log

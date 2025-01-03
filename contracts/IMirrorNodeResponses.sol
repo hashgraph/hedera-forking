@@ -51,4 +51,16 @@ interface IMirrorNodeResponses {
         string freeze_status;
         string kyc_status;
     }
+
+    struct NonFungibleToken {
+        string account_id;
+        string created_timestamp;
+        string delegating_spender;
+        bool deleted;
+        string metadata;
+        string modified_timestamp;
+        uint32 serial_number;
+        string spender;
+        string token_id;
+    }
 }

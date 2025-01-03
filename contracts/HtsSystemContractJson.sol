@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {Vm} from "forge-std/Vm.sol";
+import {decode} from './Base64.sol';
 import {HtsSystemContract, HTS_ADDRESS} from "./HtsSystemContract.sol";
 import {IERC20} from "./IERC20.sol";
 import {MirrorNode} from "./MirrorNode.sol";
@@ -423,6 +424,43 @@ contract HtsSystemContractJson is HtsSystemContract {
         if (vm.load(_scratchAddr(), slot) == bytes32(0)) {
             bool associated = mirrorNode().isAssociated(address(this), account);
             _setValue(slot, bytes32(uint256(associated ? 1 : 0)));
+        }
+        return slot;
+    }
+
+    function _tokenUriSlot(uint32 serialId) internal override virtual returns (bytes32) {
+        bytes32 slot = super._tokenUriSlot(serialId);
+        if (vm.load(_scratchAddr(), slot) == bytes32(0)) {
+            string memory metadata = mirrorNode().getNftMetadata(address(this), serialId);
+            string memory uri = string(decode(metadata));
+            storeString(address(this), uint256(slot), uri);
+        }
+        return slot;
+    }
+
+    function _ownerOfSlot(uint32 serialId) internal override virtual returns (bytes32) {
+        bytes32 slot = super._ownerOfSlot(serialId);
+        if (vm.load(_scratchAddr(), slot) == bytes32(0)) {
+            address owner = mirrorNode().getNftOwner(address(this), serialId);
+            _setValue(slot, bytes32(uint256(uint160(owner))));
+        }
+        return slot;
+    }
+
+    function _getApprovedSlot(uint32 serialId) internal override virtual returns (bytes32) {
+        bytes32 slot = super._getApprovedSlot(serialId);
+        if (vm.load(_scratchAddr(), slot) == bytes32(0)) {
+            address approved = mirrorNode().getNftSpender(address(this), serialId);
+            _setValue(slot, bytes32(uint256(uint160(approved))));
+        }
+        return slot;
+    }
+
+    function _isApprovedForAllSlot(address owner, address operator) internal override virtual returns (bytes32) {
+        bytes32 slot = super._isApprovedForAllSlot(owner, operator);
+        if (vm.load(_scratchAddr(), slot) == bytes32(0)) {
+            bool approved = mirrorNode().isApprovedForAll(address(this), owner, operator);
+            _setValue(slot, bytes32(uint256(approved ? 1 : 0)));
         }
         return slot;
     }

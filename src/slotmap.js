@@ -274,4 +274,60 @@ function slotMapOf(token) {
     return map;
 }
 
-module.exports = { slotMapOf, packValues };
+/**
+ * Represents the value in the `PersistentStorage`.
+ * Each token has its own SlotMap. Any value can be assigned to this storage
+ * ad-hoc. It can be used for dynamically determined keys needed to be persistent.
+ *
+ * @typedef {Object} PersistentStorage
+ * @property {SlotMap} slotMap - The SlotMap instance.
+ * @property {string} target - The target string.
+ */
+
+/**
+ * Represents the value in the `Storage`.
+ * Each token has its own SlotMap. Any value can be assigned to this storage
+ * ad-hoc. It can be used for dynamically determined keys needed to be persistent.
+ *
+ * @typedef {Object} PersistentSlotMap
+ * @property {function(bigint): Array<{
+ *   offset: number;
+ *   value:Value;
+ *   path:string;
+ *   type:string;
+ * }>|undefined} load - Loads the value associated with a slot.
+ * @property {function(bigint, string): void} store - Stores a value in the slot map.
+ */
+
+/**
+ * @type {Array<PersistentStorage>}
+ */
+const persistentStorage = [];
+
+/**
+ * Slot map of token, but persistent, will not be removed between multiple separate requests.
+ *
+ * @param {string} target
+ * @returns {PersistentSlotMap} An object with `load` and `store` methods.
+ */
+function persistentSlotMapOf(target) {
+    const found = persistentStorage.filter(occupiedSlot => occupiedSlot.target === target);
+    const initialized = {
+        target,
+        slotMap: found.length > 0 && found[0] ? found[0].slotMap : new SlotMap(),
+    };
+    persistentStorage.push(initialized);
+    return {
+        load: slot => initialized.slotMap.load(slot),
+        store: (slot, value) =>
+            visit(
+                { label: 'value', slot: slot.toString(), type: 't_string_storage', offset: 0 },
+                0n,
+                { value },
+                '',
+                initialized.slotMap
+            ),
+    };
+}
+
+module.exports = { packValues, persistentSlotMapOf, slotMapOf };

@@ -514,7 +514,7 @@ We provide a [`curl`](./test/scripts/curl) mock in the `test/scripts` folder to 
 By modifiying the `PATH` environment variable, the mocked `curl` is used instead.
 
 ```console
-PATH=./test/scripts:$PATH forge test --fork-url https://testnet.hashio.io/api --fork-block-number 8535327
+PATH=./test/scripts:$PATH forge test --fork-url https://testnet.hashio.io/api --fork-block-number 13890397
 ```
 
 In case needed, there is a trace log of requests made by mocked `curl` in `scripts/curl.log`
