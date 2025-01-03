@@ -1,7 +1,7 @@
 {
     "allowances": [
         {
-            "approved_for_all": true,
+            "approved_for_all": false,
             "amount": 5000000,
             "amount_granted": 5000000,
             "owner": "0.0.4436613",
