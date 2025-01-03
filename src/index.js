@@ -19,7 +19,7 @@
 const { strict: assert } = require('assert');
 const debug = require('util').debuglog('hts-forking');
 
-const { ZERO_HEX_20_BYTE, ZERO_HEX_32_BYTE, toIntHex256 } = require('./utils');
+const { ZERO_HEX_32_BYTE, toIntHex256 } = require('./utils');
 const { slotMapOf, packValues, persistentSlotMapOf } = require('./slotmap');
 const { deployedBytecode } = require('../out/HtsSystemContract.sol/HtsSystemContract.json');
 
@@ -149,13 +149,13 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
             (await mirrorNodeClient.getNftByTokenIdAndNumber(tokenId, serialId, blockNumber)) ?? {};
         if (typeof spender !== 'string')
             return ret(
-                ZERO_HEX_20_BYTE,
+                ZERO_HEX_32_BYTE,
                 `NFT ${tokenId}#${serialId} is not approved to any address`
             );
         const account = await mirrorNodeClient.getAccount(spender, blockNumber);
         if (account === null)
             return ret(
-                ZERO_HEX_20_BYTE,
+                ZERO_HEX_32_BYTE,
                 `NFT ${tokenId}#${serialId} is approved to address \`${spender}\`, failed to get its EVM Alias`
             );
 
@@ -181,13 +181,13 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
         };
         if (typeof nft['account_id'] !== 'string')
             return ret(
-                ZERO_HEX_20_BYTE,
+                ZERO_HEX_32_BYTE,
                 `Failed to determine an owner of the NFT ${tokenId}#${serialId}`
             );
         const account = await mirrorNodeClient.getAccount(`${nft['account_id']}`, blockNumber);
         if (account === null)
             return ret(
-                ZERO_HEX_20_BYTE,
+                ZERO_HEX_32_BYTE,
                 `NFT ${tokenId}#${serialId} belongs to \`${nft['account_id']}\`, failed to get its EVM Alias`
             );
 
@@ -213,7 +213,7 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
         };
         if (typeof metadata !== 'string')
             return ret(
-                ZERO_HEX_20_BYTE,
+                ZERO_HEX_32_BYTE,
                 `Failed to get the metadata of the NFT ${tokenId}#${serialId}`
             );
         persistentSlotMapOf(tokenId).store(nrequestedSlot, atob(metadata));
