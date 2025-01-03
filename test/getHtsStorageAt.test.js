@@ -164,9 +164,54 @@ describe('::getHtsStorageAt', function () {
             expect(result).to.be.equal(`0x${'58d'.padStart(64, '0')}`);
         });
     });
+    /**
+     * Pads `accountId` to be encoded within a storage slot.
+     *
+     * @param {number} accountId The `accountId` to pad.
+     * @returns {string}
+     */
+    const padAccountId = accountId => accountId.toString(16).padStart(8, '0');
+
+    /**
+     * Pads `accountId` to be encoded within a storage slot.
+     *
+     * @param {string|null} result Response returned by eth_getStorageAt
+     * @param {string} expectedString Expected string.
+     * @param {IMirrorNodeClient} client Mirror node client, to compare all slots taken by long strings
+     * @param {string} slot Base slot, to compare all slots taken by long string
+     * @param {string} address Address, to compare all slots taken by long string
+     */
+    const expectCorrectString = async (result, expectedString, client, slot, address) => {
+        if (expectedString.length > 31) {
+            const len = (expectedString.length * 2 + 1).toString(16).padStart(2, '0');
+            assert(result !== null);
+            expect(result.slice(2)).to.be.equal('0'.repeat(62) + len);
+
+            const baseSlot = BigInt(keccak256('0x' + toIntHex256(slot)));
+            let value = '';
+            for (let i = 0; i < (expectedString.length >> 5) + 1; i++) {
+                const result = await _getHtsStorageAt(
+                    address,
+                    `0x${(baseSlot + BigInt(i)).toString(16)}`,
+                    client
+                );
+                assert(result !== null);
+                value += result.slice(2);
+            }
+            const decoded = Buffer.from(value, 'hex')
+                .subarray(0, expectedString.length)
+                .toString('utf8');
+            expect(decoded).to.be.equal(expectedString);
+        } else {
+            const value = Buffer.from(expectedString).toString('hex').padEnd(62, '0');
+            const len = (expectedString.length * 2).toString(16).padStart(2, '0');
+            assert(result !== null);
+            expect(result.slice(2)).to.be.equal(value + len);
+        }
+    };
 
     Object.values(tokens)
-        .filter(t => ['USDC', 'MFCT'].includes(t.symbol))
+        .filter(t => ['USDC', 'MFCT', 'CFNFTFF'].includes(t.symbol))
         .forEach(({ symbol, address }) => {
             describe(`\`${symbol}(${address})\` token`, function () {
                 const tokenResult = require(`./data/${symbol}/getToken.json`);
@@ -200,31 +245,8 @@ describe('::getHtsStorageAt', function () {
                         if (str.length > 31) {
                             assert(this.test !== undefined);
                             this.test.title += ' (large string)';
-                            const len = (str.length * 2 + 1).toString(16).padStart(2, '0');
-                            assert(result !== null);
-                            expect(result.slice(2)).to.be.equal('0'.repeat(62) + len);
-
-                            const baseSlot = BigInt(keccak256('0x' + toIntHex256(slot)));
-                            let value = '';
-                            for (let i = 0; i < (str.length >> 5) + 1; i++) {
-                                const result = await _getHtsStorageAt(
-                                    address,
-                                    `0x${(baseSlot + BigInt(i)).toString(16)}`,
-                                    mirrorNodeClient
-                                );
-                                assert(result !== null);
-                                value += result.slice(2);
-                            }
-                            const decoded = Buffer.from(value, 'hex')
-                                .subarray(0, str.length)
-                                .toString('utf8');
-                            expect(decoded).to.be.equal(str);
-                        } else {
-                            const value = Buffer.from(str).toString('hex').padEnd(62, '0');
-                            const len = (str.length * 2).toString(16).padStart(2, '0');
-                            assert(result !== null);
-                            expect(result.slice(2)).to.be.equal(value + len);
                         }
+                        await expectCorrectString(result, str, mirrorNodeClient, slot, address);
                     });
                 });
 
@@ -239,14 +261,6 @@ describe('::getHtsStorageAt', function () {
                         );
                     });
                 });
-
-                /**
-                 * Pads `accountId` to be encoded within a storage slot.
-                 *
-                 * @param {number} accountId The `accountId` to pad.
-                 * @returns {string}
-                 */
-                const padAccountId = accountId => accountId.toString(16).padStart(8, '0');
 
                 /**@type{{name: string, fn: IMirrorNodeClient['getBalanceOfToken']}[]}*/ ([
                     {
@@ -280,48 +294,6 @@ describe('::getHtsStorageAt', function () {
                             balances.length === 0
                                 ? ZERO_HEX_32_BYTE
                                 : `0x${toIntHex256(balances[0].balance)}`
-                        );
-                    });
-                });
-
-                /**@type{{name: string, fn: IMirrorNodeClient['getAllowanceForToken']}[]}*/ ([
-                    {
-                        name: 'allowance is found',
-                        fn: (accountId, _tid, spenderId) =>
-                            require(
-                                `./data/${symbol}/getAllowanceForToken_${accountId}_${spenderId}`
-                            ),
-                    },
-                    {
-                        name: 'allowance is empty',
-                        fn: (_accountId, _tid, _spenderId) => ({ allowances: [] }),
-                    },
-                    {
-                        name: 'allowance is null',
-                        fn: (_accountId, _tid, _spenderId) => null,
-                    },
-                ]).forEach(({ name, fn: getAllowanceForToken }) => {
-                    const selector = id('allowance(address,address)').slice(0, 10);
-                    const padding = '0'.repeat(20 * 2);
-
-                    it(`should get \`allowance(${selector})\` of tokenId for encoded owner/spender when '${name}'`, async function () {
-                        const accountId = 4233295;
-                        const spenderId = 1335;
-                        const slot = `${selector}${padding}${padAccountId(spenderId)}${padAccountId(accountId)}`;
-                        const result = await _getHtsStorageAt(address, slot, {
-                            ...mirrorNodeClientStub,
-                            getAllowanceForToken,
-                        });
-
-                        const { allowances } = (await getAllowanceForToken(
-                            `0.0.${accountId}`,
-                            '<not used>',
-                            `0.0.${spenderId}`
-                        )) ?? { allowances: [] };
-                        expect(result).to.be.equal(
-                            allowances.length === 0
-                                ? ZERO_HEX_32_BYTE
-                                : `0x${toIntHex256(allowances[0].amount)}`
                         );
                     });
                 });
@@ -368,6 +340,156 @@ describe('::getHtsStorageAt', function () {
                         expect(result).to.be.equal(
                             tokens.length === 0 ? ZERO_HEX_32_BYTE : `0x${toIntHex256(1)}`
                         );
+                    });
+                });
+            });
+        });
+    Object.values(tokens)
+        .filter(t => ['USDC', 'MFCT'].includes(t.symbol))
+        .forEach(({ symbol, address }) => {
+            describe(`\`${symbol}(${address})\` token (fungible)`, function () {
+                /**@type{{name: string, fn: IMirrorNodeClient['getAllowanceForToken']}[]}*/ ([
+                    {
+                        name: 'allowance is found',
+                        fn: (accountId, _tid, spenderId) =>
+                            require(
+                                `./data/${symbol}/getAllowanceForToken_${accountId}_${spenderId}`
+                            ),
+                    },
+                    {
+                        name: 'allowance is empty',
+                        fn: (_accountId, _tid, _spenderId) => ({ allowances: [] }),
+                    },
+                    {
+                        name: 'allowance is null',
+                        fn: (_accountId, _tid, _spenderId) => null,
+                    },
+                ]).forEach(({ name, fn: getAllowanceForToken }) => {
+                    const selector = id('allowance(address,address)').slice(0, 10);
+                    const padding = '0'.repeat(20 * 2);
+
+                    it(`should get \`allowance(${selector})\` of tokenId for encoded owner/spender when '${name}'`, async function () {
+                        const accountId = 4233295;
+                        const spenderId = 1335;
+                        const slot = `${selector}${padding}${padAccountId(spenderId)}${padAccountId(accountId)}`;
+                        const result = await _getHtsStorageAt(address, slot, {
+                            ...mirrorNodeClientStub,
+                            getAllowanceForToken,
+                        });
+
+                        const { allowances } = (await getAllowanceForToken(
+                            `0.0.${accountId}`,
+                            '<not used>',
+                            `0.0.${spenderId}`
+                        )) ?? { allowances: [] };
+                        expect(result).to.be.equal(
+                            allowances.length === 0
+                                ? ZERO_HEX_32_BYTE
+                                : `0x${toIntHex256(allowances[0].amount)}`
+                        );
+                    });
+                });
+            });
+        });
+    Object.values(tokens)
+        .filter(t => t.symbol === 'CFNFTFF')
+        .forEach(({ symbol, address }) => {
+            describe(`\`${symbol}(${address})\` token (NFT)`, function () {
+                [1, 2].forEach(serialId => {
+                    const nftResult = require(
+                        `./data/${symbol}/getNonFungibleToken_${serialId}.json`
+                    );
+                    it(`should get owner of serial id ${serialId}`, async function () {
+                        const owner = nftResult['account_id'];
+                        const fakeEVMAddress = `0x${toIntHex256(serialId)}`;
+                        /** @type {IMirrorNodeClient} */
+                        const mirrorNodeClient = {
+                            ...mirrorNodeClientStub,
+                            getNftByTokenIdAndNumber(tokenId, _serial) {
+                                // https://testnet.mirrornode.hedera.com/api/v1/tokens/0.0.4271533/nfts/1
+                                expect(tokenId).to.be.equal(
+                                    nftResult.token_id,
+                                    'Invalid usage, provide the right address for token'
+                                );
+                                return nftResult;
+                            },
+                            getAccount(id) {
+                                expect(id).to.be.equal(
+                                    owner,
+                                    `Failed to extract owner of serial id ${serialId}`
+                                );
+                                return new Promise(resolve =>
+                                    resolve({
+                                        account: `0.0.${id}`,
+                                        evm_address: fakeEVMAddress,
+                                    })
+                                );
+                            },
+                        };
+                        const selector = id('ownerOf(uint256)').slice(0, 10);
+                        const padding = '0'.repeat(64 - 8 - `${serialId}`.length);
+                        const slot = `${selector}${padding}${serialId.toString(16)}`;
+                        const result = await _getHtsStorageAt(address, slot, mirrorNodeClient);
+                        expect(result).to.be.equal(fakeEVMAddress);
+                    });
+                    it(`should confirm approval for serial id ${serialId}`, async function () {
+                        const spender = nftResult['spender'];
+                        const fakeEVMAddress = `0x${toIntHex256(serialId)}`;
+                        /** @type {IMirrorNodeClient} */
+                        const mirrorNodeClient = {
+                            ...mirrorNodeClientStub,
+                            getNftByTokenIdAndNumber(tokenId, _serial) {
+                                // https://testnet.mirrornode.hedera.com/api/v1/tokens/0.0.4271533/nfts/1
+                                expect(tokenId).to.be.equal(
+                                    nftResult.token_id,
+                                    'Invalid usage, provide the right address for token'
+                                );
+                                return nftResult;
+                            },
+                            getAccount(id) {
+                                expect(id).to.be.equal(
+                                    spender,
+                                    `Failed to extract spender of serial id ${serialId}`
+                                );
+                                return new Promise(resolve =>
+                                    resolve({
+                                        account: `0.0.${id}`,
+                                        evm_address: fakeEVMAddress,
+                                    })
+                                );
+                            },
+                        };
+                        const selector = id('getApproved(uint256)').slice(0, 10);
+                        const padding = '0'.repeat(64 - 8 - `${serialId}`.length);
+                        const slot = `${selector}${padding}${serialId.toString(16)}`;
+                        const result = await _getHtsStorageAt(address, slot, mirrorNodeClient);
+                        expect(result).to.be.equal(
+                            spender ? fakeEVMAddress : `0x${toIntHex256(0)}`
+                        );
+                    });
+                    it(`should get storage for string field \`TokenURI\` for serial id ${serialId}`, async function () {
+                        /** @type {IMirrorNodeClient} */
+                        const mirrorNodeClient = {
+                            ...mirrorNodeClientStub,
+                            getNftByTokenIdAndNumber(tokenId, _serial) {
+                                // https://testnet.mirrornode.hedera.com/api/v1/tokens/0.0.4271533/nfts/1
+                                expect(tokenId).to.be.equal(
+                                    nftResult.token_id,
+                                    'Invalid usage, provide the right address for token'
+                                );
+                                return nftResult;
+                            },
+                        };
+                        const selector = id('tokenURI(uint256)').slice(0, 10);
+                        const padding = '0'.repeat(64 - 8 - `${serialId}`.length);
+                        const slot = `${selector}${padding}${serialId.toString(16)}`;
+                        const result = await _getHtsStorageAt(address, slot, mirrorNodeClient);
+                        const str = atob(nftResult['metadata']);
+                        if (str.length > 31) {
+                            assert(this.test !== undefined);
+                            this.test.title += ' (large string)';
+                        }
+                        await expectCorrectString(result, str, mirrorNodeClient, slot, address);
                     });
                 });
             });
