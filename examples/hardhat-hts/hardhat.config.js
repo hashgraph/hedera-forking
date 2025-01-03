@@ -17,7 +17,7 @@
  */
 
 require('@nomicfoundation/hardhat-toolbox');
-require('@hashgraph/hardhat-forking-plugin');
+require('@hashgraph/system-contracts-forking/plugin');
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {

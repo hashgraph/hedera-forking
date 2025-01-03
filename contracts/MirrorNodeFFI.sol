@@ -141,6 +141,8 @@ contract MirrorNodeFFI is MirrorNode {
             url = "https://testnet.mirrornode.hedera.com/api/v1/";
         } else if (block.chainid == 297) {
             url = "https://previewnet.mirrornode.hedera.com/api/v1/";
+        } else if (block.chainid == 298) {
+            url = "http://localhost:5551/api/v1/";
         } else {
             revert("The provided chain ID is not supported by the Hedera Mirror Node library. Please use one of the supported chain IDs: 295, 296, or 297.");
         }

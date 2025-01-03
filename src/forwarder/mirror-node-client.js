@@ -18,10 +18,20 @@
 
 const debug = require('util').debuglog('hedera-forking-mirror');
 
+/**
+ *
+ */
+const DEBUG_DISABLE_BALANCE_BLOCKNUMBER = !!process.env['DEBUG_DISABLE_BALANCE_BLOCKNUMBER'];
+
 /** @import { IMirrorNodeClient } from '@hashgraph/system-contracts-forking' */
 
 /**
- * Class representing a client for interacting with the Hedera Mirror Node API.
+ * Client to retrieve token and account data from the Hedera Mirror Node.
+ *
+ * It uses native [`fetch`](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API)
+ * to make requests to the Mirror Node.
+ *
+ * This client only provides read-only methods, given it is only intended to retrieve data.
  *
  * @implements {IMirrorNodeClient}
  */
@@ -30,12 +40,12 @@ class MirrorNodeClient {
     _responses = {};
 
     /**
-     * Creates a new instance of the `MirrorNodeClient`.
+     * Creates a new instance of the `MirrorNodeClient` pointing to `mirrorNodeUrl`.
      *
-     * @param {string} url The base URL of the Hedera Mirror Node API.
+     * @param {string} mirrorNodeUrl The base URL of the Hedera Mirror Node API.
      */
-    constructor(url) {
-        this.url = url;
+    constructor(mirrorNodeUrl) {
+        this.mirrorNodeUrl = mirrorNodeUrl;
     }
 
     /**
@@ -82,8 +92,10 @@ class MirrorNodeClient {
      * @returns {Promise<{ balances: { balance: number }[] } | null>} A `Promise` resolving to the account's token balance.
      */
     async getBalanceOfToken(tokenId, accountId, blockNumber) {
-        const timestamp = await this.getBlockQueryParam(blockNumber);
-        return this._get(`tokens/${tokenId}/balances?account.id=${accountId}&${timestamp}`);
+        const timestamp = DEBUG_DISABLE_BALANCE_BLOCKNUMBER
+            ? ''
+            : `&${await this.getBlockQueryParam(blockNumber)}`;
+        return this._get(`tokens/${tokenId}/balances?account.id=${accountId}${timestamp}`);
     }
 
     /**
@@ -152,7 +164,7 @@ class MirrorNodeClient {
      * @returns {Promise<T | null>} A `Promise` resolving to the response data or `null` if an error happened.
      */
     async _get(request) {
-        const url = `${this.url}${request}`;
+        const url = `${this.mirrorNodeUrl}${request}`;
 
         if (this._responses[url] !== undefined) {
             debug('Cached response for', url);
