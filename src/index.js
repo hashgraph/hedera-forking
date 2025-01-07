@@ -20,7 +20,7 @@ const { strict: assert } = require('assert');
 const debug = require('util').debuglog('hts-forking');
 
 const { ZERO_HEX_32_BYTE, toIntHex256 } = require('./utils');
-const { slotMapOf, packValues } = require('./slotmap');
+const { slotMapOf, packValues, persistentSlotMapOf } = require('./slotmap');
 const { deployedBytecode } = require('../out/HtsSystemContract.sol/HtsSystemContract.json');
 
 const HTSAddress = '0x0000000000000000000000000000000000000167';
@@ -138,11 +138,118 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
         return ret(ZERO_HEX_32_BYTE, `Token ${tokenId} not associated with ${accountId}`);
     }
 
-    const token = await mirrorNodeClient.getTokenById(tokenId, blockNumber);
-    if (token === null) return ret(ZERO_HEX_32_BYTE, `Token \`${tokenId}\` not found`);
-    const unresolvedValues = slotMapOf(token).load(nrequestedSlot);
-    if (unresolvedValues === undefined)
-        return ret(ZERO_HEX_32_BYTE, `Requested slot does not match any field slots`);
+    // Encoded `address(tokenId).getApproved(serialId)` slot
+    // slot(256) = `getApproved`selector(32) + padding(192) + serialId(32)
+    if (
+        nrequestedSlot >> 32n ===
+        0x81812fc_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000n
+    ) {
+        const serialId = parseInt(requestedSlot.slice(-8), 16);
+        const { spender } =
+            (await mirrorNodeClient.getNftByTokenIdAndNumber(tokenId, serialId, blockNumber)) ?? {};
+        if (typeof spender !== 'string')
+            return ret(
+                ZERO_HEX_32_BYTE,
+                `NFT ${tokenId}#${serialId} is not approved to any address`
+            );
+        const account = await mirrorNodeClient.getAccount(spender, blockNumber);
+        if (account === null)
+            return ret(
+                ZERO_HEX_32_BYTE,
+                `NFT ${tokenId}#${serialId} is approved to address \`${spender}\`, failed to get its EVM Alias`
+            );
+
+        return ret(
+            account.evm_address,
+            `NFT ${tokenId}#${serialId} is approved to ${account.evm_address}`
+        );
+    }
+
+    // Encoded `address(tokenId).ownerOf(serialId)` slot
+    // slot(256) = `ownerOf`selector(32) + padding(192) + serialId(32)
+    if (
+        nrequestedSlot >> 32n ===
+        0x6352211e_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000n
+    ) {
+        const serialId = parseInt(requestedSlot.slice(-8), 16);
+        const nft = (await mirrorNodeClient.getNftByTokenIdAndNumber(
+            tokenId,
+            serialId,
+            blockNumber
+        )) ?? {
+            account_id: null,
+        };
+        if (typeof nft['account_id'] !== 'string')
+            return ret(
+                ZERO_HEX_32_BYTE,
+                `Failed to determine an owner of the NFT ${tokenId}#${serialId}`
+            );
+        const account = await mirrorNodeClient.getAccount(`${nft['account_id']}`, blockNumber);
+        if (account === null)
+            return ret(
+                ZERO_HEX_32_BYTE,
+                `NFT ${tokenId}#${serialId} belongs to \`${nft['account_id']}\`, failed to get its EVM Alias`
+            );
+
+        return ret(
+            account.evm_address,
+            `NFT ${tokenId}#${serialId} is approved to ${account.evm_address}`
+        );
+    }
+
+    // Encoded `address(tokenId).isApprovedForAll(owner, operator)` slot
+    // slot(256) = `isApprovedForAll`selector(32) + padding(160) + ownerId(32) + operatorId(32)
+    if (nrequestedSlot >> 64n === 0xe985e9c5_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000n) {
+        const operatorId = `0.0.${parseInt(requestedSlot.slice(-8), 16)}`;
+        const ownerId = `0.0.${parseInt(requestedSlot.slice(-16, -8), 16)}`;
+        const { allowances } = (await mirrorNodeClient.getAllowanceForNFT(
+            ownerId,
+            tokenId,
+            operatorId
+        )) ?? { allowances: [] };
+
+        if (allowances.length === 0)
+            return ret(
+                ZERO_HEX_32_BYTE,
+                `${tokenId}.isApprovedForAll(${ownerId},${operatorId}) not found`
+            );
+        const value = allowances[0].approved_for_all ? 1 : 0;
+        return ret(
+            `0x${value.toString(16).padStart(64, '0')}`,
+            `Requested slot matches ${tokenId}.isApprovedForAll(${ownerId},${operatorId})`
+        );
+    }
+
+    // Encoded `address(tokenId).tokenURI(serialId)` slot
+    // slot(256) = `tokenURI`selector(32) + padding(192) + serialId(32)
+    if (
+        nrequestedSlot >> 32n ===
+        0xc87b56dd_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000n
+    ) {
+        const serialId = parseInt(requestedSlot.slice(-8), 16);
+        const { metadata } = (await mirrorNodeClient.getNftByTokenIdAndNumber(
+            tokenId,
+            serialId,
+            blockNumber
+        )) ?? {
+            metadata: null,
+        };
+        if (typeof metadata !== 'string')
+            return ret(
+                ZERO_HEX_32_BYTE,
+                `Failed to get the metadata of the NFT ${tokenId}#${serialId}`
+            );
+        persistentSlotMapOf(tokenId).store(nrequestedSlot, atob(metadata));
+    }
+    let unresolvedValues = persistentSlotMapOf(tokenId).load(nrequestedSlot);
+    if (unresolvedValues === undefined) {
+        const token = await mirrorNodeClient.getTokenById(tokenId, blockNumber);
+        if (token === null) return ret(ZERO_HEX_32_BYTE, `Token \`${tokenId}\` not found`);
+        unresolvedValues = slotMapOf(token).load(nrequestedSlot);
+
+        if (unresolvedValues === undefined)
+            return ret(ZERO_HEX_32_BYTE, `Requested slot does not match any field slots`);
+    }
     const values = await Promise.all(
         unresolvedValues.map(async ({ offset, path, value }) => ({
             offset,

@@ -99,6 +99,11 @@ const mirrorNodeClient = {
         if (tokens[tokenId] === undefined) return null;
         return require(`../data/${tokens[tokenId].symbol}/getToken.json`);
     },
+    async getNftByTokenIdAndNumber(tokenId, serialId) {
+        this.append('getNonFungibleToken', tokenId, serialId);
+        if (tokens[tokenId] === undefined) return null;
+        return require(`../data/${tokens[tokenId].symbol}/getNonFungibleToken_${serialId}.json`);
+    },
     async getAccount(idOrAliasOrEvmAddress) {
         assert(!idOrAliasOrEvmAddress.startsWith('0x'));
         this.append('getAccount', idOrAliasOrEvmAddress);
@@ -122,6 +127,15 @@ const mirrorNodeClient = {
         if (tokens[tokenId] === undefined) return noAllowance;
         return requireOrDefault(
             `${tokens[tokenId].symbol}/getAllowanceForToken_${accountId}_${spenderId}.json`,
+            noAllowance
+        );
+    },
+    async getAllowanceForNFT(accountId, tokenId, operatorId) {
+        this.append('getAllowanceForNFT', accountId, tokenId, operatorId);
+        const noAllowance = { allowances: [] };
+        if (tokens[tokenId] === undefined) return noAllowance;
+        return requireOrDefault(
+            `${tokens[tokenId].symbol}/getAllowanceForToken_${accountId}_${operatorId}.json`,
             noAllowance
         );
     },
