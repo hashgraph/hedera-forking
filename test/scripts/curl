@@ -49,8 +49,7 @@ for (const [re, fn] of /** @type {const} */([
     [/^tokens\/([\w.]+)\/nfts\/(\d+)$/, (tokenId, nftNumber) => {
         assert(typeof tokenId === 'string');
         const token = tokens[tokenId];
-        if (token === undefined)
-            return { _status: { messages: [{ message: 'Not found' }] } };
+        if (token === undefined) return undefined;
 
         return require(`../data/${token.symbol}/getNonFungibleToken_${nftNumber}.json`);
     }],

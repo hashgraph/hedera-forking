@@ -1,14 +1,14 @@
 {
-    "count": 1,
-    "hapi_version": "0.52.0",
-    "hash": "0x7e8a7062f9b66e76c8f267f19a4db60742f63041ac9ebb9b835c8150191e37375d726554dbeae40eccfd0792df7d267b",
-    "name": "2024-08-30T13_25_28.756521003Z.rcd.gz",
+    "count": 12,
+    "hapi_version": "0.57.3",
+    "hash": "0x87a98d96112c016014665d4a702a885fa75a901c0a865cd82cf77bbe9a0ba2066e1c9cfc4c01c8ef58a4a63f8a5d5239",
+    "name": "2025-01-02T08_23_32.012515669Z.rcd.gz",
     "number": 13890397,
-    "previous_hash": "0x68c644685e3b4b3fe842b57452f08d095a76e31ef0caf2562a69d80ea5468d845a845b825680657a60da7fe6350ffc54",
-    "size": 830,
+    "previous_hash": "0x6ba5130c21a8ac560f22676dc3d8c7ae32473db3ad6e3c0b36a8e5d9547a3e389cca24e07c9eba58d8cae571255c4123",
+    "size": 3671,
     "timestamp": {
-        "from": "1725024328.756521003",
-        "to": "1725024328.756521003"
+        "from": "1735806212.012515669",
+        "to": "1735806213.965569848"
     },
     "gas_used": 0,
     "logs_bloom": "0x"
