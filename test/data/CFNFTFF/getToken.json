@@ -1,48 +1,41 @@
 {
     "admin_key": {
-        "_type": "ED25519",
-        "key": "787a098fe4881cab246f045b6abdf284a19c8463e6eeb08cbcf08cae19834082"
+        "_type": "ECDSA_SECP256K1",
+        "key": "0242b7c3beea2af6dfcc874c41d1332463407e283f602ce8ef2cbe324823561b6f"
     },
-    "auto_renew_account": "0.0.741192",
+    "auto_renew_account": null,
     "auto_renew_period": 7776000,
-    "created_timestamp": "1713918023.847727403",
+    "created_timestamp": "1734948251.439270696",
     "custom_fees": {
-        "created_timestamp": "1713918023.847727403",
-        "fixed_fees": [
-            {
-                "all_collectors_are_exempt": false,
-                "amount": 7000000,
-                "collector_account_id": "0.0.741192",
-                "denominating_token_id": null
-            }
-        ],
+        "created_timestamp": "1734948251.439270696",
+        "fixed_fees": [],
         "royalty_fees": []
     },
     "decimals": "0",
     "deleted": false,
-    "expiry_timestamp": 1721694023847727400,
+    "expiry_timestamp": 1742724250000000000,
     "fee_schedule_key": null,
     "freeze_default": false,
     "freeze_key": null,
     "initial_supply": "0",
     "kyc_key": null,
-    "max_supply": "200",
+    "max_supply": "2",
     "memo": "",
     "metadata": "",
     "metadata_key": null,
-    "modified_timestamp": "1713918023.847727403",
+    "modified_timestamp": "1734948251.439270696",
     "name": "Custom Fee NFT (Fixed Fee)",
     "pause_key": null,
     "pause_status": "NOT_APPLICABLE",
     "supply_key": {
-        "_type": "ED25519",
-        "key": "787a098fe4881cab246f045b6abdf284a19c8463e6eeb08cbcf08cae19834082"
+        "_type": "ECDSA_SECP256K1",
+        "key": "0242b7c3beea2af6dfcc874c41d1332463407e283f602ce8ef2cbe324823561b6f"
     },
     "supply_type": "FINITE",
     "symbol": "CFNFTFF",
-    "token_id": "0.0.4271533",
+    "token_id": "0.0.5308378",
     "total_supply": "2",
-    "treasury_account_id": "0.0.2669675",
+    "treasury_account_id": "0.0.4436613",
     "type": "NON_FUNGIBLE_UNIQUE",
     "wipe_key": null
 }

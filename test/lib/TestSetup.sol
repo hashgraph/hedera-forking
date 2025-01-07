@@ -31,11 +31,12 @@ abstract contract TestSetup {
     address internal CTCF = 0x00000000000000000000000000000000004F7099;
 
     /**
-     * https://hashscan.io/testnet/token/0.0.4271533
-     * https://testnet.mirrornode.hedera.com/api/v1/tokens/0.0.4271533
+     * https://hashscan.io/testnet/token/0.0.5308378
+     * https://testnet.mirrornode.hedera.com/api/v1/tokens/0.0.5308378
      */
-    address internal CFNFTFF = 0x0000000000000000000000000000000000412DaD;
-    address internal CFNFTFF_TREASURY = 0xa3612A87022a4706FC9452C50abd2703ac4Fd7d9;
+    address internal CFNFTFF = 0x000000000000000000000000000000000050FfDA;
+    address internal CFNFTFF_TREASURY = 0x435d7D41D4f69F958bda7A8D9f549a0dD9B64c86;
+    address internal CFNFTFF_ALLOWED_SPENDER = 0x000000000000000000000000000000000043F832;
 
     /**
      * 3 test modes.
