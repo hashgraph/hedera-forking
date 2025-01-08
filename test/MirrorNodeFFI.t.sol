@@ -22,7 +22,7 @@ contract MirrorNodeFFITest is Test {
         } catch {
             _skip = false;
             vm.chainId(296);
-            vm.roll(8535327);
+            vm.roll(13890397);
 
             string memory PATH = vm.envString("PATH");
             vm.setEnv("PATH", string.concat("./test/scripts:", PATH));
@@ -71,7 +71,7 @@ contract MirrorNodeFFITest is Test {
 
     function test_get_balance_for_existing_account() nonFork external {
         uint256 amount = _mirrorNode.getBalance(USDC, alice);
-        assertEq(amount, 49_300_000);
+        assertEq(amount, 54_300_000);
     }
 
     function test_revert_when_get_allowance_for_invalid_token_address() nonFork external {

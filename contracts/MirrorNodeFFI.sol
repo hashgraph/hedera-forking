@@ -52,6 +52,17 @@ contract MirrorNodeFFI is MirrorNode {
         ));
     }
 
+    function fetchNftAllowance(address token, uint32 ownerNum, uint32 operatorNum) isValid(token) external override returns (string memory) {
+        return _get(string.concat(
+            "accounts/0.0.",
+            vm.toString(ownerNum),
+            "/allowances/nfts?token.id=0.0.",
+            vm.toString(uint160(token)),
+            "&account.id=0.0.",
+            vm.toString(operatorNum)
+        ));
+    }
+
     function fetchAccount(string memory idOrAliasOrEvmAddress) external override returns (string memory) {
         return _get(string.concat(
             "accounts/",
@@ -66,6 +77,15 @@ contract MirrorNodeFFI is MirrorNode {
             idOrAliasOrEvmAddress,
             "/tokens?token.id=0.0.",
             vm.toString(uint160(token))
+        ));
+    }
+
+    function fetchNonFungibleToken(address token, uint32 serial) isValid(token) external override returns (string memory) {
+        return _get(string.concat(
+            "tokens/0.0.",
+            vm.toString(uint160(token)),
+            "/nfts/",
+            vm.toString(serial)
         ));
     }
 

@@ -160,7 +160,7 @@ jobs:
         run: echo "./test/scripts" >> "$GITHUB_PATH"
 
       - name: Run Forge tests using JSON-RPC Mainnet and Testnet servers (with forking)
-        run: forge test -vvv --fork-url https://testnet.hashio.io/api --fork-block-number 8535327
+        run: forge test -vvv --fork-url https://testnet.hashio.io/api --fork-block-number 13890397
 
       - name: Show Mocked curl Requests
         run: cat test/scripts/curl.log
@@ -201,7 +201,8 @@ jobs:
         run: node test/scripts/json-rpc-mock.js &
 
       - name: Run Forge tests using JSON-RPC mock server for storage emulation (with forking)
-        run: forge test -vvv --fork-url http://localhost:7546 --no-storage-caching
+        # Remove no-match-contract when the support for ERC721 is implemented in the JSON RPC mock server (#80 task)
+        run: forge test -vvv --fork-url http://localhost:7546 --no-storage-caching --no-match-contract ^ERC721TokenTest$
 
   foundry-example-tests:
     name: 'Foundry example tests w/mainnet'

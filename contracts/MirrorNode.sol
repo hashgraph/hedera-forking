@@ -24,19 +24,57 @@ abstract contract MirrorNode {
 
     function fetchAllowance(address token, uint32 ownerNum, uint32 spenderNum) external virtual returns (string memory json);
 
+    function fetchNftAllowance(address token, uint32 ownerNum, uint32 operatorNum) external virtual returns (string memory json);
+
     function fetchAccount(string memory account) external virtual returns (string memory json);
 
     function fetchTokenRelationshipOfAccount(string memory account, address token) external virtual returns (string memory json);
 
+    function fetchNonFungibleToken(address token, uint32 serial) external virtual returns (string memory json);
+
+    function getNftMetadata(address token, uint32 serial) external returns (string memory) {
+        string memory json = this.fetchNonFungibleToken(token, serial);
+        if (vm.keyExistsJson(json, ".metadata")) {
+            return vm.parseJsonString(json, ".metadata");
+        }
+        return "";
+    }
+
+    function getNftOwner(address token, uint32 serial) external returns (address) {
+        string memory json = this.fetchNonFungibleToken(token, serial);
+        if (vm.keyExistsJson(json, ".account_id")) {
+            string memory owner = vm.parseJsonString(json, ".account_id");
+            return getAccountAddress(owner);
+        }
+        return address(0);
+    }
+
+    function getNftSpender(address token, uint32 serial) external returns (address) {
+        string memory json = this.fetchNonFungibleToken(token, serial);
+        if (vm.keyExistsJson(json, ".spender")) {
+            string memory spender = vm.parseJsonString(json, ".spender");
+            return getAccountAddress(spender);
+        }
+        return address(0);
+    }
+
+    function isApprovedForAll(address token, address owner, address operator) external returns (bool) {
+        uint32 ownerNum = _getAccountNum(owner);
+        if (ownerNum == 0) return false;
+        uint32 operatorNum = _getAccountNum(operator);
+        if (operatorNum == 0) return false;
+        string memory json = this.fetchNftAllowance(token, ownerNum, operatorNum);
+        return vm.keyExistsJson(json, ".allowances[0].approved_for_all")
+            && vm.parseJsonBool(json, ".allowances[0].approved_for_all");
+    }
+
     function getBalance(address token, address account) external returns (uint256) {
         uint32 accountNum = _getAccountNum(account);
         if (accountNum == 0) return 0;
-
-        try this.fetchBalance(token, accountNum) returns (string memory json) {
-            if (vm.keyExistsJson(json, ".balances[0].balance")) {
-                return vm.parseJsonUint(json, ".balances[0].balance");
-            }
-        } catch {}
+        string memory json = this.fetchBalance(token, accountNum);
+        if (vm.keyExistsJson(json, ".balances[0].balance")) {
+            return vm.parseJsonUint(json, ".balances[0].balance");
+        }
         return 0;
     }
 
@@ -45,12 +83,10 @@ abstract contract MirrorNode {
         if (ownerNum == 0) return 0;
         uint32 spenderNum = _getAccountNum(spender);
         if (spenderNum == 0) return 0;
-
-        try this.fetchAllowance(token, ownerNum, spenderNum) returns (string memory json) {
-            if (vm.keyExistsJson(json, ".allowances[0].amount")) {
-                return vm.parseJsonUint(json, ".allowances[0].amount");
-            }
-        } catch {}
+        string memory json = this.fetchAllowance(token, ownerNum, spenderNum);
+        if (vm.keyExistsJson(json, ".allowances[0].amount")) {
+            return vm.parseJsonUint(json, ".allowances[0].amount");
+        }
         return 0;
     }
 
@@ -65,9 +101,9 @@ abstract contract MirrorNode {
         return false;
     }
 
-    function getAccountAddress(string memory accountId) external returns (address) {
+    function getAccountAddress(string memory accountId) public returns (address) {
         if (bytes(accountId).length == 0
-            || keccak256(bytes(accountId)) == keccak256(bytes("null"))
+        || keccak256(bytes(accountId)) == keccak256(bytes("null"))
             || keccak256(abi.encodePacked(accountId)) == keccak256(abi.encodePacked(bytes32(0)))) {
             return address(0);
         }
