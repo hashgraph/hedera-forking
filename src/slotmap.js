@@ -275,59 +275,53 @@ function slotMapOf(token) {
 }
 
 /**
- * Represents the value in the `PersistentStorage`.
+ * Represents the value in the persistent storage.
  * Each token has its own SlotMap. Any value can be assigned to this storage
  * ad-hoc. It can be used for dynamically determined keys needed to be persistent.
- *
- * @typedef {Object} PersistentStorage
- * @property {SlotMap} slotMap - The SlotMap instance.
- * @property {string} target - The target string.
  */
+class PersistentStorageMap {
+    constructor() {
+        /** @type {Map<string, SlotMap>} */
+        this._map = new Map();
+    }
 
-/**
- * Represents the value in the `Storage`.
- * Each token has its own SlotMap. Any value can be assigned to this storage
- * ad-hoc. It can be used for dynamically determined keys needed to be persistent.
- *
- * @typedef {Object} PersistentSlotMap
- * @property {function(bigint): Array<{
- *   offset: number;
- *   value:Value;
- *   path:string;
- *   type:string;
- * }>|undefined} load - Loads the value associated with a slot.
- * @property {function(bigint, string): void} store - Stores a value in the slot map.
- */
+    /**
+     * @param {string} tokenId
+     * @param {number} blockNumber
+     */
+    _init(tokenId, blockNumber) {
+        const key = `${tokenId}:${blockNumber}`;
+        const initialized = this._map.get(key) || new SlotMap();
+        if (!this._map.has(key)) {
+            this._map.set(key, initialized);
+        }
+        return initialized;
+    }
 
-/**
- * @type {Array<PersistentStorage>}
- */
-const persistentStorage = [];
+    /**
+     * @param {string} tokenId
+     * @param {number} blockNumber
+     * @param {bigint} slot
+     * @param {Value} value
+     */
+    store(tokenId, blockNumber, slot, value) {
+        visit(
+            { label: 'value', slot: slot.toString(), type: 't_string_storage', offset: 0 },
+            0n,
+            { value },
+            '',
+            this._init(tokenId, blockNumber)
+        );
+    }
 
-/**
- * Slot map of token, but persistent, will not be removed between multiple separate requests.
- *
- * @param {string} target
- * @returns {PersistentSlotMap} An object with `load` and `store` methods.
- */
-function persistentSlotMapOf(target) {
-    const found = persistentStorage.filter(occupiedSlot => occupiedSlot.target === target);
-    const initialized = {
-        target,
-        slotMap: found.length > 0 && found[0] ? found[0].slotMap : new SlotMap(),
-    };
-    persistentStorage.push(initialized);
-    return {
-        load: slot => initialized.slotMap.load(slot),
-        store: (slot, value) =>
-            visit(
-                { label: 'value', slot: slot.toString(), type: 't_string_storage', offset: 0 },
-                0n,
-                { value },
-                '',
-                initialized.slotMap
-            ),
-    };
+    /**
+     * @param {string} tokenId
+     * @param {number} blockNumber
+     * @param {bigint} slot
+     */
+    load(tokenId, blockNumber, slot) {
+        return this._init(tokenId, blockNumber).load(slot);
+    }
 }
 
-module.exports = { packValues, persistentSlotMapOf, slotMapOf };
+module.exports = { packValues, slotMapOf, PersistentStorageMap };

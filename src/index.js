@@ -20,7 +20,7 @@ const { strict: assert } = require('assert');
 const debug = require('util').debuglog('hts-forking');
 
 const { ZERO_HEX_32_BYTE, toIntHex256 } = require('./utils');
-const { slotMapOf, packValues, persistentSlotMapOf } = require('./slotmap');
+const { slotMapOf, packValues, PersistentStorageMap } = require('./slotmap');
 const { deployedBytecode } = require('../out/HtsSystemContract.sol/HtsSystemContract.json');
 
 const HTSAddress = '0x0000000000000000000000000000000000000167';
@@ -36,6 +36,11 @@ function getHIP719Code(/** @type {string} */ address) {
 function getHtsCode() {
     return deployedBytecode.object;
 }
+
+/**
+ * Slot map of tokens, but persistent, will not be removed between multiple separate requests.
+ */
+const persistentStorage = new PersistentStorageMap();
 
 /**
  * @param {string} address
@@ -239,9 +244,9 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
                 ZERO_HEX_32_BYTE,
                 `Failed to get the metadata of the NFT ${tokenId}#${serialId}`
             );
-        persistentSlotMapOf(tokenId).store(nrequestedSlot, atob(metadata));
+        persistentStorage.store(tokenId, blockNumber, nrequestedSlot, atob(metadata));
     }
-    let unresolvedValues = persistentSlotMapOf(tokenId).load(nrequestedSlot);
+    let unresolvedValues = persistentStorage.load(tokenId, blockNumber, nrequestedSlot);
     if (unresolvedValues === undefined) {
         const token = await mirrorNodeClient.getTokenById(tokenId, blockNumber);
         if (token === null) return ret(ZERO_HEX_32_BYTE, `Token \`${tokenId}\` not found`);
