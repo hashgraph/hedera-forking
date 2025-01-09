@@ -48,7 +48,7 @@ describe('::getHtsStorageAt', function () {
         async getTokenRelationship(_idOrAliasOrEvmAddress, _tokenId) {
             throw Error('Not implemented');
         },
-        async getNftByTokenIdAndNumber(_tokenId, _serialId) {
+        async getNftByTokenIdAndSerial(_tokenId, _serialId) {
             throw Error('Not implemented');
         },
         async getAccount(_idOrAliasOrEvmAddress) {
@@ -408,7 +408,7 @@ describe('::getHtsStorageAt', function () {
                         /** @type {IMirrorNodeClient} */
                         const mirrorNodeClient = {
                             ...mirrorNodeClientStub,
-                            getNftByTokenIdAndNumber(tokenId, _serial) {
+                            getNftByTokenIdAndSerial(tokenId, _serial) {
                                 // https://testnet.mirrornode.hedera.com/api/v1/tokens/0.0.4271533/nfts/1
                                 expect(tokenId).to.be.equal(
                                     nftResult.token_id,
@@ -441,7 +441,7 @@ describe('::getHtsStorageAt', function () {
                         /** @type {IMirrorNodeClient} */
                         const mirrorNodeClient = {
                             ...mirrorNodeClientStub,
-                            getNftByTokenIdAndNumber(tokenId, _serial) {
+                            getNftByTokenIdAndSerial(tokenId, _serial) {
                                 // https://testnet.mirrornode.hedera.com/api/v1/tokens/0.0.4271533/nfts/1
                                 expect(tokenId).to.be.equal(
                                     nftResult.token_id,
@@ -474,7 +474,7 @@ describe('::getHtsStorageAt', function () {
                         /** @type {IMirrorNodeClient} */
                         const mirrorNodeClient = {
                             ...mirrorNodeClientStub,
-                            getNftByTokenIdAndNumber(tokenId, _serial) {
+                            getNftByTokenIdAndSerial(tokenId, _serial) {
                                 // https://testnet.mirrornode.hedera.com/api/v1/tokens/0.0.4271533/nfts/1
                                 expect(tokenId).to.be.equal(
                                     nftResult.token_id,

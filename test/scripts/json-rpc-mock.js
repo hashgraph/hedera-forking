@@ -99,7 +99,7 @@ const mirrorNodeClient = {
         if (tokens[tokenId] === undefined) return null;
         return require(`../data/${tokens[tokenId].symbol}/getToken.json`);
     },
-    async getNftByTokenIdAndNumber(tokenId, serialId) {
+    async getNftByTokenIdAndSerial(tokenId, serialId) {
         this.append('getNonFungibleToken', tokenId, serialId);
         if (tokens[tokenId] === undefined) return null;
         return require(`../data/${tokens[tokenId].symbol}/getNonFungibleToken_${serialId}.json`);

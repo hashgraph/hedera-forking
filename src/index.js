@@ -146,7 +146,7 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
     ) {
         const serialId = parseInt(requestedSlot.slice(-8), 16);
         const { spender } =
-            (await mirrorNodeClient.getNftByTokenIdAndNumber(tokenId, serialId, blockNumber)) ?? {};
+            (await mirrorNodeClient.getNftByTokenIdAndSerial(tokenId, serialId, blockNumber)) ?? {};
         if (typeof spender !== 'string')
             return ret(
                 ZERO_HEX_32_BYTE,
@@ -172,7 +172,7 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
         0x6352211e_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000n
     ) {
         const serialId = parseInt(requestedSlot.slice(-8), 16);
-        const nft = (await mirrorNodeClient.getNftByTokenIdAndNumber(
+        const nft = (await mirrorNodeClient.getNftByTokenIdAndSerial(
             tokenId,
             serialId,
             blockNumber
@@ -227,7 +227,7 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
         0xc87b56dd_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000n
     ) {
         const serialId = parseInt(requestedSlot.slice(-8), 16);
-        const { metadata } = (await mirrorNodeClient.getNftByTokenIdAndNumber(
+        const { metadata } = (await mirrorNodeClient.getNftByTokenIdAndSerial(
             tokenId,
             serialId,
             blockNumber

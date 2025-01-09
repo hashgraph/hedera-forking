@@ -43,7 +43,7 @@ interface IMirrorNodeClient {
      * @param serialId The serial id of the NFT.
      * @param blockNumber
      */
-    getNftByTokenIdAndNumber(
+    getNftByTokenIdAndSerial(
         tokenId: string,
         serialId: number,
         blockNumber: number

@@ -68,7 +68,7 @@ class MirrorNodeClient {
      * @param {number} blockNumber
      * @returns {Promise<Record<string, unknown> | null>} a `Promise` resolving to the token information or null if not found.
      */
-    async getNftByTokenIdAndNumber(tokenId, serialId, blockNumber) {
+    async getNftByTokenIdAndSerial(tokenId, serialId, blockNumber) {
         const timestamp = await this.getBlockQueryParam(blockNumber);
         return this._get(`tokens/${tokenId}/nft/${serialId}?${timestamp}`);
     }
