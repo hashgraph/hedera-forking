@@ -363,16 +363,16 @@ interface IHederaTokenService {
     ///               Type, once an account is associated, it can hold any number of NFTs (serial numbers) of that
     ///               token type
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
-    // function associateTokens(address account, address[] memory tokens)
-    //     external
-    //     returns (int64 responseCode);
+    function associateTokens(address account, address[] memory tokens)
+        external
+        returns (int64 responseCode);
 
     /// Single-token variant of associateTokens. Will be mapped to a single entry array call of associateTokens
     /// @param account The account to be associated with the provided token
     /// @param token The token to be associated with the provided account
-    // function associateToken(address account, address token)
-    //     external
-    //     returns (int64 responseCode);
+    function associateToken(address account, address token)
+        external
+        returns (int64 responseCode);
 
     /// Dissociates the provided account with the provided tokens. Must be signed by the provided
     /// Account's key.
@@ -392,16 +392,16 @@ interface IHederaTokenService {
     /// @param account The account to be dissociated from the provided tokens
     /// @param tokens The tokens to be dissociated from the provided account.
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
-    // function dissociateTokens(address account, address[] memory tokens)
-    //     external
-    //     returns (int64 responseCode);
+    function dissociateTokens(address account, address[] memory tokens)
+        external
+        returns (int64 responseCode);
 
     /// Single-token variant of dissociateTokens. Will be mapped to a single entry array call of dissociateTokens
     /// @param account The account to be associated with the provided token
     /// @param token The token to be associated with the provided account
-    // function dissociateToken(address account, address token)
-    //     external
-    //     returns (int64 responseCode);
+    function dissociateToken(address account, address token)
+        external
+        returns (int64 responseCode);
 
     /// Creates a Fungible Token with the specified properties
     /// @param token the basic properties of the token being created

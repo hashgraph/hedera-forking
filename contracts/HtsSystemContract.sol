@@ -49,7 +49,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
     }
 
     function getNonFungibleTokenInfo(address token, int64 serialNumber)
-        external
+        htsCall external
         returns (int64, NonFungibleTokenInfo memory) {
         require(token != address(0), "getNonFungibleTokenInfo: invalid token");
 
@@ -68,18 +68,54 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         return (22, nonFungibleTokenInfo);
     }
 
-    function getFungibleTokenInfo(address token)
-        external
-        returns (int64 responseCode, FungibleTokenInfo memory fungibleTokenInfo) {
+    function getFungibleTokenInfo(address token) htsCall external returns (int64, FungibleTokenInfo memory) {
         require(token != address(0), "getFungibleTokenInfo: invalid token");
 
         (int64 responseCode, TokenInfo memory tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
         require(responseCode == 2, "getFungibleTokenInfo: failed to get token data");
         FungibleTokenInfo memory fungibleTokenInfo;
         fungibleTokenInfo.tokenInfo = tokenInfo;
-        fungibleTokenInfo.decimals = IERC20(token).decimals();
+        fungibleTokenInfo.decimals =  int32(int8(IERC20(token).decimals()));
 
         return (22, fungibleTokenInfo);
+    }
+
+    function associateTokens(address account, address[] memory tokens) htsCall public returns (int64 responseCode) {
+        require(tokens.length > 0, "associateTokens: missing tokens");
+        require(account == msg.sender, "associateTokens: Must be signed by the provided Account's key or called from the accounts contract key");
+        for (uint256 i = 0; i < tokens.length; i++) {
+            require(tokens[i] != address(0), "associateTokens: invalid token");
+            (bool success, ) = tokens[i].delegatecall(
+                abi.encodeWithSignature("associate()")
+            );
+            require(success, "associateTokens: Failed to associate token");
+        }
+        responseCode = 22; // HederaResponseCodes.SUCCESS
+    }
+
+    function dissociateTokens(address account, address[] memory tokens) htsCall public returns (int64 responseCode) {
+        require(tokens.length > 0, "dissociateTokens: missing tokens");
+        require(account == msg.sender, "dissociateTokens: Must be signed by the provided Account's key or called from the accounts contract key");
+        for (uint256 i = 0; i < tokens.length; i++) {
+            require(tokens[i] != address(0), "dissociateTokens: invalid token");
+            (bool success, ) = tokens[i].delegatecall(
+                abi.encodeWithSignature("dissociate()")
+            );
+            require(success, "dissociateTokens: Failed to associate token");
+        }
+        responseCode = 22; // HederaResponseCodes.SUCCESS
+    }
+
+    function associateToken(address account, address token) htsCall external returns (int64 responseCode) {
+        address[] memory tokens = new address[](1);
+        tokens[0] = token;
+        return associateTokens(account, tokens);
+    }
+
+    function dissociateToken(address account, address token) htsCall external returns (int64 responseCode) {
+        address[] memory tokens = new address[](1);
+        tokens[0] = token;
+        return dissociateTokens(account, tokens);
     }
 
     function getTokenExpiryInfo(address token) htsCall external returns (int64 responseCode, Expiry memory tokenInfo) {
