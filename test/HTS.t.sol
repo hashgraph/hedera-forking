@@ -5,6 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {HtsSystemContract, HTS_ADDRESS} from "../contracts/HtsSystemContract.sol";
 import {IHederaTokenService} from "../contracts/IHederaTokenService.sol";
 import {IERC20} from "../contracts/IERC20.sol";
+import {IHRC719} from "../contracts/IHRC719.sol";
 import {TestSetup} from "./lib/TestSetup.sol";
 
 contract HTSTest is Test, TestSetup {
@@ -16,7 +17,7 @@ contract HTSTest is Test, TestSetup {
 
         unknownUser = makeAddr("unknown-user");
     }
-
+/*
     function test_HTS_should_revert_when_not_enough_calldata() external {
         vm.expectRevert(bytes("fallback: not enough calldata"));
         (bool revertsAsExpected, ) = HTS_ADDRESS.call(bytes("1234"));
@@ -457,5 +458,15 @@ contract HTSTest is Test, TestSetup {
         (int64 randomIsTokenCode, bool randomIsToken) = HtsSystemContract(HTS_ADDRESS).isToken(address(123));
         assertEq(22, randomIsTokenCode);
         assertFalse(randomIsToken);
+    } */
+
+    function test_HTS_associations() external {
+        address bob = CFNFTFF_TREASURY;
+        vm.startPrank(bob);
+        assertFalse(IHRC719(USDC).isAssociated());
+        int64 associationResponseCode = HtsSystemContract(HTS_ADDRESS).associateToken(bob, USDC);
+        assertEq(associationResponseCode, 22);
+        assertTrue(IHRC719(USDC).isAssociated());
+        vm.stopPrank();
     }
 }

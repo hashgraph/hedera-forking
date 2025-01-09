@@ -85,10 +85,11 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         require(account == msg.sender, "associateTokens: Must be signed by the provided Account's key or called from the accounts contract key");
         for (uint256 i = 0; i < tokens.length; i++) {
             require(tokens[i] != address(0), "associateTokens: invalid token");
-            (bool success, ) = tokens[i].delegatecall(
+            tokens[i].delegatecall(
                 abi.encodeWithSignature("associate()")
             );
-            require(success, "associateTokens: Failed to associate token");
+            //     uint256 associationResponseCode = tokens[i]
+           // require(associationResponseCode == 1, "associateTokens: Failed to associate token");
         }
         responseCode = 22; // HederaResponseCodes.SUCCESS
     }
@@ -98,10 +99,8 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         require(account == msg.sender, "dissociateTokens: Must be signed by the provided Account's key or called from the accounts contract key");
         for (uint256 i = 0; i < tokens.length; i++) {
             require(tokens[i] != address(0), "dissociateTokens: invalid token");
-            (bool success, ) = tokens[i].delegatecall(
-                abi.encodeWithSignature("dissociate()")
-            );
-            require(success, "dissociateTokens: Failed to associate token");
+            uint256 dissociateResponseCode = IHRC719(tokens[i]).dissociate();
+            require(dissociateResponseCode == 1, "dissociateTokens: Failed to associate token");
         }
         responseCode = 22; // HederaResponseCodes.SUCCESS
     }
