@@ -48,6 +48,102 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         (responseCode, tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
     }
 
+    function getNonFungibleTokenInfo(address token, int64 serialNumber)
+        external
+        returns (int64, NonFungibleTokenInfo memory) {
+        require(token != address(0), "getNonFungibleTokenInfo: invalid token");
+
+        (int64 responseCode, TokenInfo memory tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
+        require(responseCode == 2, "getNonFungibleTokenInfo: failed to get token data");
+        NonFungibleTokenInfo memory nonFungibleTokenInfo;
+        nonFungibleTokenInfo.tokenInfo = tokenInfo;
+        nonFungibleTokenInfo.serialNumber = serialNumber;
+        nonFungibleTokenInfo.spenderId = IERC721(token).getApproved(uint256(uint64(serialNumber)));
+        nonFungibleTokenInfo.ownerId = IERC721(token).ownerOf(uint256(uint64(serialNumber)));
+
+        // ToDo:
+        // nonFungibleTokenInfo.metadata = bytes(IERC721(token).tokenURI(uint256(uint64(serialNumber))));
+        // nonFungibleTokenInfo.creationTime = int64(0);
+
+        return (22, nonFungibleTokenInfo);
+    }
+
+    function getFungibleTokenInfo(address token)
+        external
+        returns (int64 responseCode, FungibleTokenInfo memory fungibleTokenInfo) {
+        require(token != address(0), "getFungibleTokenInfo: invalid token");
+
+        (int64 responseCode, TokenInfo memory tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
+        require(responseCode == 2, "getFungibleTokenInfo: failed to get token data");
+        FungibleTokenInfo memory fungibleTokenInfo;
+        fungibleTokenInfo.tokenInfo = tokenInfo;
+        fungibleTokenInfo.decimals = IERC20(token).decimals();
+
+        return (22, fungibleTokenInfo);
+    }
+
+    function getTokenExpiryInfo(address token) htsCall external returns (int64 responseCode, Expiry memory tokenInfo) {
+        require(token != address(0), "getTokenExpiryInfo: invalid token");
+
+        (responseCode, tokenInfo) = IHederaTokenService(token).getTokenExpiryInfo(token);
+    }
+
+    function getApproved(address token, uint256 serialNumber)
+        htsCall external view returns (int64 responseCode, address approved) {
+        require(token != address(0), "getApproved: invalid token");
+        (responseCode, approved) = (int64(22), IERC721(token).getApproved(serialNumber));
+    }
+
+    function isApprovedForAll(
+        address token,
+        address owner,
+        address operator
+    ) htsCall external view returns (int64, bool) {
+        require(token != address(0), "isApprovedForAll: invalid token");
+        return (int64(22), IERC721(token).isApprovedForAll(owner, operator));
+    }
+
+    function getTokenDefaultFreezeStatus(address token) htsCall external returns (int64, bool) {
+        require(token != address(0), "getTokenDefaultFreezeStatus: invalid address");
+        return IHederaTokenService(token).getTokenDefaultFreezeStatus(token);
+    }
+
+    function getTokenCustomFees(
+        address token
+    ) htsCall external returns (int64, FixedFee[] memory, FractionalFee[] memory, RoyaltyFee[] memory) {
+        require(token != address(0), "getTokenCustomFees: invalid token");
+        return IHederaTokenService(token).getTokenCustomFees(token);
+    }
+
+    function getTokenDefaultKycStatus(address token) htsCall external returns (int64, bool) {
+        require(token != address(0), "getTokenDefaultKycStatus: invalid address");
+        return IHederaTokenService(token).getTokenDefaultKycStatus(token);
+    }
+
+    function getTokenKey(address token, uint keyType) htsCall external returns (int64, KeyValue memory) {
+        require(token != address(0), "getTokenKey: invalid token");
+        (int64 responseCode, TokenInfo memory tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
+        require(responseCode == 22, "getTokenKey: failed to get token data");
+        for (uint256 i = 0; i < tokenInfo.token.tokenKeys.length; i++) {
+            if (tokenInfo.token.tokenKeys[i].keyType == keyType) {
+                return (22, tokenInfo.token.tokenKeys[i].key);
+            }
+        }
+        KeyValue memory emptyKey;
+        return (22, emptyKey);
+    }
+
+    function getTokenType(address token) htsCall external returns (int64, int32) {
+        require(token != address(0), "getTokenType: invalid address");
+        return IHederaTokenService(token).getTokenType(token);
+    }
+
+    function isToken(address token) external returns (int64, bool) {
+        bytes memory payload = abi.encodeWithSignature("getTokenType(address)", token);
+        (bool success, bytes memory returnData) = token.call(payload);
+        return (22, success && returnData.length > 0);
+    }
+
     function mintToken(address token, int64 amount, bytes[] memory) htsCall external returns (
         int64 responseCode,
         int64 newTotalSupply,
@@ -174,6 +270,32 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
             if (selector == this.getTokenInfo.selector) {
                 require(msg.data.length >= 28, "getTokenInfo: Not enough calldata");
                 return abi.encode(22, _tokenInfo);
+            }
+            if (selector == this.getTokenCustomFees.selector) {
+                require(msg.data.length >= 28, "getTokenCustomFees: Not enough calldata");
+                return abi.encode(22, _tokenInfo.fixedFees, _tokenInfo.fractionalFees, _tokenInfo.royaltyFees);
+            }
+            if (selector == this.getTokenDefaultKycStatus.selector) {
+                require(msg.data.length >= 28, "getTokenDefaultKycStatus: Not enough calldata");
+                return abi.encode(22, _tokenInfo.defaultKycStatus);
+            }
+            if (selector == this.getTokenDefaultFreezeStatus.selector) {
+                require(msg.data.length >= 28, "getTokenDefaultFreezeStatus: Not enough calldata");
+                return abi.encode(22, _tokenInfo.token.freezeDefault);
+            }
+            if (selector == this.getTokenExpiryInfo.selector) {
+                require(msg.data.length >= 28, "getTokenExpiryInfo: Not enough calldata");
+                return abi.encode(22, _tokenInfo.token.expiry);
+            }
+            if (selector == this.getTokenType.selector) {
+                require(msg.data.length >= 28, "getTokenType: Not enough calldata");
+                if (keccak256(abi.encodePacked(tokenType)) == keccak256("FUNGIBLE_COMMON")) {
+                    return abi.encode(22, int32(0));
+                }
+                if (keccak256(abi.encodePacked(tokenType)) == keccak256("NON_FUNGIBLE_UNIQUE")) {
+                    return abi.encode(22, int32(1));
+                }
+                return abi.encode(22, int32(-1));
             }
             if (selector == this._update.selector) {
                 require(msg.data.length >= 124, "update: Not enough calldata");
@@ -417,9 +539,9 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         assembly { approved := sload(slot) }
     }
 
-    function __isApprovedForAll(address owner, address operator) private returns (bool isApprovedForAll) {
+    function __isApprovedForAll(address owner, address operator) private returns (bool approvedForAll) {
         bytes32 slot = _isApprovedForAllSlot(owner, operator);
-        assembly { isApprovedForAll := sload(slot) }
+        assembly { approvedForAll := sload(slot) }
     }
 
     function _transfer(address from, address to, uint256 amount) private {

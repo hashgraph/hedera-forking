@@ -199,35 +199,35 @@ interface IHederaTokenService {
         string ledgerId;
     }
 
-    // /// Additional fungible properties of a Hedera Token.
-    // struct FungibleTokenInfo {
-    //     /// The shared hedera token info
-    //     TokenInfo tokenInfo;
+    /// Additional fungible properties of a Hedera Token.
+    struct FungibleTokenInfo {
+        /// The shared hedera token info
+        TokenInfo tokenInfo;
 
-    //     /// The number of decimal places a token is divisible by
-    //     int32 decimals;
-    // }
+        /// The number of decimal places a token is divisible by
+        int32 decimals;
+    }
 
-    // /// Additional non fungible properties of a Hedera Token.
-    // struct NonFungibleTokenInfo {
-    //     /// The shared hedera token info
-    //     TokenInfo tokenInfo;
+    /// Additional non fungible properties of a Hedera Token.
+    struct NonFungibleTokenInfo {
+        /// The shared hedera token info
+        TokenInfo tokenInfo;
 
-    //     /// The serial number of the nft
-    //     int64 serialNumber;
+        /// The serial number of the nft
+        int64 serialNumber;
 
-    //     /// The account id specifying the owner of the non fungible token
-    //     address ownerId;
+        /// The account id specifying the owner of the non fungible token
+        address ownerId;
 
-    //     /// The epoch second at which the token was created.
-    //     int64 creationTime;
+        /// The epoch second at which the token was created.
+        int64 creationTime;
 
-    //     /// The unique metadata of the NFT
-    //     bytes metadata;
+        /// The unique metadata of the NFT
+        bytes metadata;
 
-    //     /// The account id specifying an account that has been granted spending permissions on this nft
-    //     address spenderId;
-    // }
+        /// The account id specifying an account that has been granted spending permissions on this nft
+        address spenderId;
+    }
 
     /// A fixed number of units (hbar or token) to assess as a fee during a transfer of
     /// units of the token to which this fixed fee is attached. The denomination of
@@ -571,9 +571,9 @@ interface IHederaTokenService {
     /// @param serialNumber The NFT to find the approved address for
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
     /// @return approved The approved address for this NFT, or the zero address if there is none
-    // function getApproved(address token, uint256 serialNumber)
-    //     external
-    //     returns (int64 responseCode, address approved);
+    function getApproved(address token, uint256 serialNumber)
+        external
+        returns (int64 responseCode, address approved);
 
     /// Enable or disable approval for a third party ("operator") to manage
     ///  all of `msg.sender`'s assets
@@ -594,11 +594,11 @@ interface IHederaTokenService {
     /// @param operator The address that acts on behalf of the owner
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
     /// @return approved True if `operator` is an approved operator for `owner`, false otherwise
-    // function isApprovedForAll(
-    //     address token,
-    //     address owner,
-    //     address operator
-    // ) external returns (int64 responseCode, bool approved);
+    function isApprovedForAll(
+        address token,
+        address owner,
+        address operator
+    ) external returns (int64 responseCode, bool approved);
 
     /// Query if token account is frozen
     /// @param token The token address to check
@@ -629,41 +629,41 @@ interface IHederaTokenService {
     /// @return fixedFees Set of fixed fees for `token`
     /// @return fractionalFees Set of fractional fees for `token`
     /// @return royaltyFees Set of royalty fees for `token`
-    // function getTokenCustomFees(address token)
-    //     external
-    //     returns (int64 responseCode, FixedFee[] memory fixedFees, FractionalFee[] memory fractionalFees, RoyaltyFee[] memory royaltyFees);
+    function getTokenCustomFees(address token)
+        external
+        returns (int64 responseCode, FixedFee[] memory fixedFees, FractionalFee[] memory fractionalFees, RoyaltyFee[] memory royaltyFees);
 
     /// Query token default freeze status
     /// @param token The token address to check
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
     /// @return defaultFreezeStatus True if `token` default freeze status is frozen.
-    // function getTokenDefaultFreezeStatus(address token)
-    //     external
-    //     returns (int64 responseCode, bool defaultFreezeStatus);
+    function getTokenDefaultFreezeStatus(address token)
+        external
+        returns (int64 responseCode, bool defaultFreezeStatus);
 
     /// Query token default kyc status
     /// @param token The token address to check
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
     /// @return defaultKycStatus True if `token` default kyc status is KycNotApplicable and false if Revoked.
-    // function getTokenDefaultKycStatus(address token)
-    //     external
-    //     returns (int64 responseCode, bool defaultKycStatus);
+    function getTokenDefaultKycStatus(address token)
+        external
+        returns (int64 responseCode, bool defaultKycStatus);
 
     /// Query token expiry info
     /// @param token The token address to check
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
     /// @return expiry Expiry info for `token`
-    // function getTokenExpiryInfo(address token)
-    //     external
-    //     returns (int64 responseCode, Expiry memory expiry);
+    function getTokenExpiryInfo(address token)
+        external
+        returns (int64 responseCode, Expiry memory expiry);
 
     /// Query fungible token info
     /// @param token The token address to check
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
     /// @return fungibleTokenInfo FungibleTokenInfo info for `token`
-    // function getFungibleTokenInfo(address token)
-    //     external
-    //     returns (int64 responseCode, FungibleTokenInfo memory fungibleTokenInfo);
+    function getFungibleTokenInfo(address token)
+        external
+        returns (int64 responseCode, FungibleTokenInfo memory fungibleTokenInfo);
 
     /// Query token info
     /// @param token The token address to check
@@ -678,18 +678,18 @@ interface IHederaTokenService {
     /// @param keyType The keyType of the desired KeyValue
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
     /// @return key KeyValue info for key of type `keyType`
-    // function getTokenKey(address token, uint keyType)
-    //     external
-    //     returns (int64 responseCode, KeyValue memory key);
+    function getTokenKey(address token, uint keyType)
+        external
+        returns (int64 responseCode, KeyValue memory key);
 
     /// Query non fungible token info
     /// @param token The token address to check
     /// @param serialNumber The NFT serialNumber to check
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
     /// @return nonFungibleTokenInfo NonFungibleTokenInfo info for `token` `serialNumber`
-    // function getNonFungibleTokenInfo(address token, int64 serialNumber)
-    //     external
-    //     returns (int64 responseCode, NonFungibleTokenInfo memory nonFungibleTokenInfo);
+    function getNonFungibleTokenInfo(address token, int64 serialNumber)
+        external
+        returns (int64 responseCode, NonFungibleTokenInfo memory nonFungibleTokenInfo);
 
     /// Operation to freeze token account
     /// @param token The token address
@@ -783,17 +783,17 @@ interface IHederaTokenService {
     /// @param token The token address
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
     /// @return isToken True if valid token found for the given address
-    // function isToken(address token)
-    //     external returns
-    //     (int64 responseCode, bool isToken);
+    function isToken(address token)
+        external returns
+        (int64 responseCode, bool isToken);
 
     /// Query to return the token type for a given address
     /// @param token The token address
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
     /// @return tokenType the token type. 0 is FUNGIBLE_COMMON, 1 is NON_FUNGIBLE_UNIQUE, -1 is UNRECOGNIZED
-    // function getTokenType(address token)
-    //     external returns
-    //     (int64 responseCode, int32 tokenType);
+    function getTokenType(address token)
+        external returns
+        (int64 responseCode, int32 tokenType);
 
     /// Initiates a Redirect For Token
     /// @param token The token address

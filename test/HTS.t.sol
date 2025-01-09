@@ -134,7 +134,7 @@ contract HTSTest is Test, TestSetup {
         assertEq(tokenInfo.fixedFees[2].useCurrentTokenForPayment, true);
 
         assertEq(tokenInfo.fractionalFees.length, 2);
-        
+
         assertEq(tokenInfo.fractionalFees[0].netOfTransfers, false);
         assertEq(tokenInfo.fractionalFees[0].numerator, 1);
         assertEq(tokenInfo.fractionalFees[0].denominator, 100);
@@ -302,5 +302,160 @@ contract HTSTest is Test, TestSetup {
 
         vm.expectRevert(bytes("burnToken: invalid amount"));
         HtsSystemContract(HTS_ADDRESS).burnToken(token, amount, serialNumbers);
+    }
+
+    function test_HTS_getApproved_should_return_correct_address() external view {
+        address token = CFNFTFF;
+        (int64 responseCodeGetApproved, address approved) = HtsSystemContract(HTS_ADDRESS)
+            .getApproved(token, 1);
+        assertEq(responseCodeGetApproved, 22);
+        assertEq(approved, CFNFTFF_ALLOWED_SPENDER);
+    }
+
+    function test_HTS_getApproved_should_return_nothing_when_no_approval_granted() external view {
+        address token = CFNFTFF;
+        (int64 responseCodeGetApproved, address approved) = HtsSystemContract(HTS_ADDRESS).getApproved(token, 2);
+        assertEq(responseCodeGetApproved, 22);
+        assertEq(approved, address(0));
+    }
+
+    function test_HTS_isApprovedForAll() view external {
+        address token = CFNFTFF;
+        (int64 isApprovedForAllResponseCode, bool isApproved) = HtsSystemContract(HTS_ADDRESS)
+            .isApprovedForAll(token, CFNFTFF_TREASURY, CFNFTFF_ALLOWED_SPENDER);
+        assertEq(isApprovedForAllResponseCode, 22);
+        assertFalse(isApproved);
+    }
+
+    function test_HTS_getTokenCustomFees_should_return_custom_fees_for_valid_token() external {
+        (
+            int64 responseCode,
+            HtsSystemContract.FixedFee[] memory fixedFees,
+            HtsSystemContract.FractionalFee[] memory fractionalFees,
+            HtsSystemContract.RoyaltyFee[] memory royaltyFees
+        ) = HtsSystemContract(HTS_ADDRESS).getTokenCustomFees(CTCF);
+        assertEq(responseCode, 22);
+
+        assertEq(fixedFees.length, 3);
+
+        assertEq(fixedFees[0].feeCollector, 0xa3612A87022a4706FC9452C50abd2703ac4Fd7d9);
+        assertEq(fixedFees[0].amount, 1);
+        assertEq(fixedFees[0].tokenId, address(0));
+        assertEq(fixedFees[0].useHbarsForPayment, true);
+        assertEq(fixedFees[0].useCurrentTokenForPayment, false);
+
+        assertEq(fixedFees[1].feeCollector, 0x0000000000000000000000000000000000000D89);
+        assertEq(fixedFees[1].amount, 2);
+        assertEq(fixedFees[1].tokenId, 0x0000000000000000000000000000000000068cDa);
+        assertEq(fixedFees[1].useHbarsForPayment, false);
+        assertEq(fixedFees[1].useCurrentTokenForPayment, false);
+
+        assertEq(fixedFees[2].feeCollector, 0xa3612A87022a4706FC9452C50abd2703ac4Fd7d9);
+        assertEq(fixedFees[2].amount, 3);
+        assertEq(fixedFees[2].tokenId, CTCF);
+        assertEq(fixedFees[2].useHbarsForPayment, false);
+        assertEq(fixedFees[2].useCurrentTokenForPayment, true);
+
+        assertEq(fractionalFees.length, 2);
+
+        assertEq(fractionalFees[0].netOfTransfers, false);
+        assertEq(fractionalFees[0].numerator, 1);
+        assertEq(fractionalFees[0].denominator, 100);
+        assertEq(fractionalFees[0].minimumAmount, 3);
+        assertEq(fractionalFees[0].maximumAmount, 4);
+        assertEq(fractionalFees[0].feeCollector, 0xa3612A87022a4706FC9452C50abd2703ac4Fd7d9);
+
+        assertEq(fractionalFees[1].netOfTransfers, true);
+        assertEq(fractionalFees[1].numerator, 5);
+        assertEq(fractionalFees[1].denominator, 100);
+        assertEq(fractionalFees[1].minimumAmount, 3);
+        assertEq(fractionalFees[1].maximumAmount, 4);
+        assertEq(fractionalFees[1].feeCollector, 0xa3612A87022a4706FC9452C50abd2703ac4Fd7d9);
+
+        assertEq(royaltyFees.length, 0);
+    }
+
+    function test_HTS_getTokenDefaultFreezeStatus_should_correct_value_for_valid_token() external {
+        address token = CFNFTFF;
+        (int64 freezeStatus, bool defaultFreeze) = HtsSystemContract(HTS_ADDRESS).getTokenDefaultFreezeStatus(token);
+        assertEq(freezeStatus, 22);
+        assertFalse(defaultFreeze);
+    }
+
+    function test_HTS_getTokenDefaultKycStatus_should_correct_value_for_valid_token() external {
+        address token = CFNFTFF;
+        (int64 kycStatus, bool defaultKyc) = HtsSystemContract(HTS_ADDRESS).getTokenDefaultKycStatus(token);
+        assertEq(kycStatus, 22);
+        assertFalse(defaultKyc);
+    }
+
+    function test_HTS_getTokenExpiryInfo_should_correct_value_for_valid_token() external {
+        address token = CFNFTFF;
+        (int64 expiryStatusCode, HtsSystemContract.Expiry memory expiry)
+            = HtsSystemContract(HTS_ADDRESS).getTokenExpiryInfo(token);
+        assertEq(expiryStatusCode, 22);
+        assertEq(expiry.second, 1742724250000000000);
+        assertEq(expiry.autoRenewAccount, address(0));
+        assertEq(expiry.autoRenewPeriod, 0);
+    }
+
+    function test_HTS_getTokenKey_should_correct_key_value() external {
+        address token = USDC;
+
+        // AdminKey
+        (int64 adminKeyStatusCode, HtsSystemContract.KeyValue memory adminKey)
+            = HtsSystemContract(HTS_ADDRESS).getTokenKey(token, 0x1);
+        assertEq(adminKeyStatusCode, 22);
+        assertEq(adminKey.inheritAccountKey, false);
+        assertEq(adminKey.contractId, address(0));
+        assertEq(adminKey.ed25519, hex"5db29fb3f19f8618cc4689cf13e78a935621845d67547719faf49f65d5c367cc");
+        assertEq(adminKey.ECDSA_secp256k1, bytes(""));
+        assertEq(adminKey.delegatableContractId, address(0));
+        // FreezeKey
+        (int64 freezeKeyStatusCode, HtsSystemContract.KeyValue memory freezeKey)
+            = HtsSystemContract(HTS_ADDRESS).getTokenKey(token, 0x4);
+        assertEq(freezeKeyStatusCode, 22);
+        assertEq(freezeKey.inheritAccountKey, false);
+        assertEq(freezeKey.contractId, address(0));
+        assertEq(freezeKey.ed25519, hex"baa2dd1684d8445d41b22f2b2c913484a7d885cf25ce525f8bf3fe8d5c8cb85d");
+        assertEq(freezeKey.ECDSA_secp256k1, bytes(""));
+        assertEq(freezeKey.delegatableContractId, address(0));
+        // SupplyKey
+        (int64 supplyKeyStatusCode, HtsSystemContract.KeyValue memory supplyKey)
+            = HtsSystemContract(HTS_ADDRESS).getTokenKey(token, 0x10);
+        assertEq(supplyKeyStatusCode, 22);
+        assertEq(supplyKey.inheritAccountKey, false);
+        assertEq(supplyKey.contractId, address(0));
+        assertEq(supplyKey.ed25519, hex"4e4658983980d1b25a634eeeb26cb2b0f0e2e9c83263ba5b056798d35f2139a8");
+        assertEq(supplyKey.ECDSA_secp256k1, bytes(""));
+        assertEq(supplyKey.delegatableContractId, address(0));
+    }
+
+    function test_HTS_getTokenType_should_correct_token_type_for_existing_token() external {
+        (int64 ftTypeStatusCode, int32 ftType) = HtsSystemContract(HTS_ADDRESS).getTokenType(USDC);
+        assertEq(22, ftTypeStatusCode);
+        assertEq(ftType, int32(0));
+
+        (int64 nftTypeStatusCode, int32 nftType) = HtsSystemContract(HTS_ADDRESS).getTokenType(CFNFTFF);
+        assertEq(22, nftTypeStatusCode);
+        assertEq(nftType, int32(1));
+    }
+
+    function test_HTS_isToken_should_correct_is_token_info() external {
+        (int64 ftIsTokenStatusCode, bool ftIsToken) = HtsSystemContract(HTS_ADDRESS).isToken(USDC);
+        assertEq(22, ftIsTokenStatusCode);
+        assertTrue(ftIsToken);
+
+        (int64 nftIsTokenStatusCode, bool nftIsToken) = HtsSystemContract(HTS_ADDRESS).isToken(CFNFTFF);
+        assertEq(22, nftIsTokenStatusCode);
+        assertTrue(nftIsToken);
+
+        (int64 accountIsTokenCode, bool accountIsToken) = HtsSystemContract(HTS_ADDRESS).isToken(CFNFTFF_TREASURY);
+        assertEq(22, accountIsTokenCode);
+        assertFalse(accountIsToken);
+
+        (int64 randomIsTokenCode, bool randomIsToken) = HtsSystemContract(HTS_ADDRESS).isToken(address(123));
+        assertEq(22, randomIsTokenCode);
+        assertFalse(randomIsToken);
     }
 }
