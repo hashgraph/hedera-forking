@@ -49,6 +49,45 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         (responseCode, tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
     }
 
+    function cryptoTransfer(TransferList memory transferList, TokenTransferList[] memory tokenTransfers)
+        htsCall external returns (int64 responseCode) {
+    //    uint256 hbarsReceived = msg.value;
+    //    for (uint256 hbarIndex = 0; hbarIndex < transferList.transfers.length; hbarIndex++) {
+    //        if (!transferList.transfers[hbarIndex].isApproval) {
+    //            require(transferList.transfers[hbarIndex].amount > 0, "cryptoTransfer: invalid amount");
+    //            hbarsReceived -= uint256(uint64(transferList.transfers[hbarIndex].amount));
+    //            require(hbarsReceived > 0, "cryptoTransfer: insufficient balance");
+    //            uint256 value = uint256(uint64(transferList.transfers[hbarIndex].amount));
+    //            transferList.transfers[hbarIndex].accountID.call{value: value}("");
+    //        }
+    //    }
+        for (uint256 tokenIndex = 0; tokenIndex < tokenTransfers.length; tokenIndex++) {
+            require(tokenTransfers[tokenIndex].token != address(0), "cryptoTransfer: invalid token");
+            for (uint256 ftIndex = 0; ftIndex < tokenTransfers[tokenIndex].transfers.length; ftIndex++) {
+                if (!tokenTransfers[tokenIndex].transfers[ftIndex].isApproval) {
+                     transferToken(
+                        tokenTransfers[tokenIndex].token,
+                        msg.sender,
+                        tokenTransfers[tokenIndex].transfers[ftIndex].accountID,
+                        tokenTransfers[tokenIndex].transfers[ftIndex].amount
+                    );
+                }
+            }
+            for (uint256 nftIndex = 0; nftIndex < tokenTransfers[tokenIndex].nftTransfers.length; nftIndex++) {
+                if (!tokenTransfers[tokenIndex].nftTransfers[nftIndex].isApproval) {
+                    transferNFT(
+                        tokenTransfers[tokenIndex].token,
+                        tokenTransfers[tokenIndex].nftTransfers[nftIndex].senderAccountID,
+                        tokenTransfers[tokenIndex].nftTransfers[nftIndex].receiverAccountID,
+                        tokenTransfers[tokenIndex].nftTransfers[nftIndex].serialNumber
+                    );
+                }
+            }
+        }
+
+        return 22; // HederaResponseCodes.SUCCESS
+    }
+
     function getNonFungibleTokenInfo(address token, int64 serialNumber)
         htsCall external
         returns (int64, NonFungibleTokenInfo memory) {
@@ -106,6 +145,24 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         responseCode = 22; // HederaResponseCodes.SUCCESS
     }
 
+    function transferFrom(
+        address token,
+        address sender,
+        address recipient,
+        uint256 amount
+    ) htsCall external returns (int64) {
+        return transferToken(token, sender, recipient, int64(int256(amount)));
+    }
+
+    function transferFromNFT(
+        address token,
+        address from,
+        address to,
+        uint256 serialNumber
+    ) htsCall external returns (int64) {
+        return transferNFT(token, from, to, int64(int256(serialNumber)));
+    }
+
     function transferToken(
         address token,
         address sender,
@@ -120,8 +177,55 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
             to = sender;
             amount *= -1;
         }
-        emit Transfer(from, to, uint256(uint64(amount)));
+        require(
+            from == msg.sender ||
+            IERC20(token).allowance(from, msg.sender) >= uint256(uint64(amount)),
+            "transferNFT: unauthorized"
+        );
         HtsSystemContract(token)._transferAsHTS(from, to, uint256(uint64(amount)));
+        responseCode = 22; // HederaResponseCodes.SUCCESS
+    }
+
+    function approve(address token, address spender, uint256 amount) external returns (int64 responseCode) {
+        HtsSystemContract(token).approve(msg.sender, spender, amount);
+        responseCode = 22; // HederaResponseCodes.SUCCESS
+    }
+
+    function approveNFT(address token, address approved, uint256 serialNumber) external returns (int64 responseCode) {
+        HtsSystemContract(token).approveNFT(msg.sender, approved, serialNumber);
+        responseCode = 22; // HederaResponseCodes.SUCCESS
+    }
+
+    function transferNFTs(
+        address token,
+        address[] memory sender,
+        address[] memory receiver,
+        int64[] memory serialNumber
+    ) htsCall external returns (int64 responseCode) {
+        require(token != address(0), "transferNFTs: invalid token");
+        require(sender.length > 0, "transferNFTs: missing recipients");
+        require(receiver.length == sender.length, "transferNFTs: inconsistent input");
+        require(serialNumber.length == sender.length, "transferNFTs: inconsistent input");
+        for (uint256 i = 0; i < sender.length; i++) {
+            transferNFT(token, sender[i], receiver[i], serialNumber[i]);
+        }
+        responseCode = 22; // HederaResponseCodes.SUCCESS
+    }
+
+    function transferNFT(
+        address token,
+        address sender,
+        address recipient,
+        int64 serialNumber
+    ) htsCall public returns (int64 responseCode) {
+        uint256 serialId = uint256(uint64(serialNumber));
+        require(
+            IERC721(token).ownerOf(serialId) == msg.sender ||
+            IERC721(token).getApproved(serialId) == msg.sender ||
+            IERC721(token).isApprovedForAll(sender, msg.sender),
+            "transferNFT: unauthorized"
+        );
+        HtsSystemContract(token)._transferNFTAsHTS(sender, recipient, serialId);
         responseCode = 22; // HederaResponseCodes.SUCCESS
     }
 
@@ -378,11 +482,35 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
                 return abi.encode(22, int32(-1));
             }
             if (selector == this._transferAsHTS.selector) {
-                require(msg.data.length >= 124, "update: Not enough calldata");
+                require(msg.data.length >= 124, "transferAsHTS: Not enough calldata");
                 address from = address(bytes20(msg.data[40:60]));
                 address to = address(bytes20(msg.data[72:92]));
                 uint256 amount = uint256(bytes32(msg.data[92:124]));
                 _transferAsHTS(from, to, amount);
+                return abi.encode(true);
+            }
+            if (selector == this._transferNFTAsHTS.selector) {
+                require(msg.data.length >= 124, "transferNFTAsHTS: Not enough calldata");
+                address from = address(bytes20(msg.data[40:60]));
+                address to = address(bytes20(msg.data[72:92]));
+                uint256 serialId = uint256(bytes32(msg.data[92:124]));
+                _transferNFTAsHTS(from, to, serialId);
+                return abi.encode(true);
+            }
+            if (selector == this.approve.selector) {
+                require(msg.data.length >= 124, "approve: Not enough calldata");
+                address from = address(bytes20(msg.data[40:60]));
+                address to = address(bytes20(msg.data[72:92]));
+                uint256 amount = uint256(bytes32(msg.data[92:124]));
+                _approve(from, to, amount);
+                return abi.encode(true);
+            }
+            if (selector == this.approveNFT.selector) {
+                require(msg.data.length >= 124, "approveNFT: Not enough calldata");
+                address from = address(bytes20(msg.data[40:60]));
+                address to = address(bytes20(msg.data[72:92]));
+                uint256 amount = uint256(bytes32(msg.data[92:124]));
+            // TODO    _approve(from, to, amount);
                 return abi.encode(true);
             }
             if (selector == this._update.selector) {
@@ -641,10 +769,12 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
 
     function _transferAsHTS(address from, address to, uint256 amount) public {
         require(msg.sender == HTS_ADDRESS, "hts: not permitted");
-        require(from != address(0), "hts: invalid sender");
-        require(to != address(0), "hts: invalid receiver");
-        _update(from, to, amount);
-        emit Transfer(from, to, amount);
+        _transfer(from, to, amount);
+    }
+
+    function _transferNFTAsHTS(address from, address to, uint256 serialId) public {
+        require(msg.sender == HTS_ADDRESS, "hts: not permitted");
+        _transferNFT(from, to, serialId);
     }
 
     function _transferNFT(address from, address to, uint256 serialId) private {
@@ -657,9 +787,14 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         assembly { owner := sload(slot) }
         require(owner == from, "hts: sender is not owner");
 
+        address sender = msg.sender;
         // If the sender is not the owner, check if the sender is approved
-        if (msg.sender != from) {
-            require(msg.sender == __getApproved(serialId) || __isApprovedForAll(from, msg.sender), "hts: unauthorized");
+        if (sender == HTS_ADDRESS) {
+            sender = from;
+            require(sender == owner || __isApprovedForAll(owner, sender), "hts: unauthorized");
+        }
+        if (sender != owner) {
+            require(sender == __getApproved(serialId) || __isApprovedForAll(from, sender), "hts: unauthorized");
         }
 
         // Clear approval

@@ -14,56 +14,56 @@ interface IHederaTokenService {
     // /// accounts, and for any receiving accounts that have receiverSigRequired == true. The signatures
     // /// are in the same order as the accounts, skipping those accounts that don't need a signature.
     // /// @custom:version 0.3.0 previous version did not include isApproval
-    // struct AccountAmount {
-    //     // The Account ID, as a solidity address, that sends/receives cryptocurrency or tokens
-    //     address accountID;
+    struct AccountAmount {
+         // The Account ID, as a solidity address, that sends/receives cryptocurrency or tokens
+        address accountID;
 
-    //     // The amount of  the lowest denomination of the given token that
-    //     // the account sends(negative) or receives(positive)
-    //     int64 amount;
+        // The amount of  the lowest denomination of the given token that
+        // the account sends(negative) or receives(positive)
+        int64 amount;
 
-    //     // If true then the transfer is expected to be an approved allowance and the
-    //     // accountID is expected to be the owner. The default is false (omitted).
-    //     bool isApproval;
-    // }
+        // If true then the transfer is expected to be an approved allowance and the
+        // accountID is expected to be the owner. The default is false (omitted).
+        bool isApproval;
+    }
 
     // /// A sender account, a receiver account, and the serial number of an NFT of a Token with
     // /// NON_FUNGIBLE_UNIQUE type. When minting NFTs the sender will be the default AccountID instance
     // /// (0.0.0 aka 0x0) and when burning NFTs, the receiver will be the default AccountID instance.
     // /// @custom:version 0.3.0 previous version did not include isApproval
-    // struct NftTransfer {
-    //     // The solidity address of the sender
-    //     address senderAccountID;
+    struct NftTransfer {
+        // The solidity address of the sender
+        address senderAccountID;
 
-    //     // The solidity address of the receiver
-    //     address receiverAccountID;
+        // The solidity address of the receiver
+        address receiverAccountID;
 
-    //     // The serial number of the NFT
-    //     int64 serialNumber;
+        // The serial number of the NFT
+        int64 serialNumber;
 
-    //     // If true then the transfer is expected to be an approved allowance and the
-    //     // accountID is expected to be the owner. The default is false (omitted).
-    //     bool isApproval;
-    // }
+        // If true then the transfer is expected to be an approved allowance and the
+        // accountID is expected to be the owner. The default is false (omitted).
+        bool isApproval;
+    }
 
-    // struct TokenTransferList {
-    //     // The ID of the token as a solidity address
-    //     address token;
+    struct TokenTransferList {
+        // The ID of the token as a solidity address
+        address token;
 
-    //     // Applicable to tokens of type FUNGIBLE_COMMON. Multiple list of AccountAmounts, each of which
-    //     // has an account and amount.
-    //     AccountAmount[] transfers;
+        // Applicable to tokens of type FUNGIBLE_COMMON. Multiple list of AccountAmounts, each of which
+        // has an account and amount.
+        AccountAmount[] transfers;
 
-    //     // Applicable to tokens of type NON_FUNGIBLE_UNIQUE. Multiple list of NftTransfers, each of
-    //     // which has a sender and receiver account, including the serial number of the NFT
-    //     NftTransfer[] nftTransfers;
-    // }
+        // Applicable to tokens of type NON_FUNGIBLE_UNIQUE. Multiple list of NftTransfers, each of
+        // which has a sender and receiver account, including the serial number of the NFT
+        NftTransfer[] nftTransfers;
+    }
 
-    // struct TransferList {
-    //     // Multiple list of AccountAmounts, each of which has an account and amount.
-    //     // Used to transfer hbars between the accounts in the list.
-    //     AccountAmount[] transfers;
-    // }
+    struct TransferList {
+        // Multiple list of AccountAmounts, each of which has an account and amount.
+        // Used to transfer hbars between the accounts in the list.
+        AccountAmount[] transfers;
+    }
 
     /// Expiry properties of a Hedera token - second, autoRenewAccount, autoRenewPeriod
     struct Expiry {
@@ -304,9 +304,9 @@ interface IHederaTokenService {
     /// @param transferList the list of hbar transfers to do
     /// @param tokenTransfers the list of token transfers to do
     /// @custom:version 0.3.0 the signature of the previous version was cryptoTransfer(TokenTransferList[] memory tokenTransfers)
-    // function cryptoTransfer(TransferList memory transferList, TokenTransferList[] memory tokenTransfers)
-    //     external
-    //     returns (int64 responseCode);
+    function cryptoTransfer(TransferList memory transferList, TokenTransferList[] memory tokenTransfers)
+        external
+        returns (int64 responseCode);
 
     /// Mints an amount of the token to the defined treasury account
     /// @param token The token for which to mint tokens. If token does not exist, transaction results in
@@ -473,12 +473,12 @@ interface IHederaTokenService {
     /// @param sender the sender of an nft
     /// @param receiver the receiver of the nft sent by the same index at sender
     /// @param serialNumber the serial number of the nft sent by the same index at sender
-    // function transferNFTs(
-    //     address token,
-    //     address[] memory sender,
-    //     address[] memory receiver,
-    //     int64[] memory serialNumber
-    // ) external returns (int64 responseCode);
+    function transferNFTs(
+        address token,
+        address[] memory sender,
+        address[] memory receiver,
+        int64[] memory serialNumber
+    ) external returns (int64 responseCode);
 
     /// Transfers tokens where the calling account/contract is implicitly the first entry in the token transfer list,
     /// where the amount is the value needed to zero balance the transfers. Regular signing rules apply for sending
@@ -501,12 +501,12 @@ interface IHederaTokenService {
     /// @param sender The sender for the transaction
     /// @param recipient The receiver of the transaction
     /// @param serialNumber The serial number of the NFT to transfer.
-    // function transferNFT(
-    //     address token,
-    //     address sender,
-    //     address recipient,
-    //     int64 serialNumber
-    // ) external returns (int64 responseCode);
+    function transferNFT(
+        address token,
+        address sender,
+        address recipient,
+        int64 serialNumber
+    ) external returns (int64 responseCode);
 
     /// Allows spender to withdraw from your account multiple times, up to the value amount. If this function is called
     /// again it overwrites the current allowance with value.
@@ -515,11 +515,11 @@ interface IHederaTokenService {
     /// @param spender the account address authorized to spend
     /// @param amount the amount of tokens authorized to spend.
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
-    // function approve(
-    //     address token,
-    //     address spender,
-    //     uint256 amount
-    // ) external returns (int64 responseCode);
+    function approve(
+        address token,
+        address spender,
+        uint256 amount
+    ) external returns (int64 responseCode);
 
     /// Transfers `amount` tokens from `from` to `to` using the
     //  allowance mechanism. `amount` is then deducted from the caller's allowance.
@@ -529,7 +529,7 @@ interface IHederaTokenService {
     /// @param to The account address of the receiver of the `amount` tokens
     /// @param amount The amount of tokens to transfer from `from` to `to`
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
-    // function transferFrom(address token, address from, address to, uint256 amount) external returns (int64 responseCode);
+    function transferFrom(address token, address from, address to, uint256 amount) external returns (int64 responseCode);
 
     /// Returns the amount which spender is still allowed to withdraw from owner.
     /// Only Applicable to Fungible Tokens
@@ -550,11 +550,11 @@ interface IHederaTokenService {
     /// @param approved The new approved NFT controller.  To revoke approvals pass in the zero address.
     /// @param serialNumber The NFT serial number  to approve
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
-    // function approveNFT(
-    //     address token,
-    //     address approved,
-    //     uint256 serialNumber
-    // ) external returns (int64 responseCode);
+    function approveNFT(
+        address token,
+        address approved,
+        uint256 serialNumber
+    ) external returns (int64 responseCode);
 
     /// Transfers `serialNumber` of `token` from `from` to `to` using the allowance mechanism.
     /// Only applicable to NFT tokens
@@ -563,7 +563,7 @@ interface IHederaTokenService {
     /// @param to The account address of the receiver of `serialNumber`
     /// @param serialNumber The NFT serial number to transfer
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
-    // function transferFromNFT(address token, address from, address to, uint256 serialNumber) external returns (int64 responseCode);
+    function transferFromNFT(address token, address from, address to, uint256 serialNumber) external returns (int64 responseCode);
 
     /// Get the approved address for a single NFT
     /// Only Applicable to NFT Tokens

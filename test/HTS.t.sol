@@ -5,6 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {HtsSystemContract, HTS_ADDRESS} from "../contracts/HtsSystemContract.sol";
 import {IHederaTokenService} from "../contracts/IHederaTokenService.sol";
 import {IERC20Events, IERC20} from "../contracts/IERC20.sol";
+import {IERC721} from "../contracts/IERC721.sol";
 import {IHRC719} from "../contracts/IHRC719.sol";
 import {TestSetup} from "./lib/TestSetup.sol";
 
@@ -17,7 +18,7 @@ contract HTSTest is Test, TestSetup {
 
         unknownUser = makeAddr("unknown-user");
     }
-/*
+
     function test_HTS_should_revert_when_not_enough_calldata() external {
         vm.expectRevert(bytes("fallback: not enough calldata"));
         (bool revertsAsExpected, ) = HTS_ADDRESS.call(bytes("1234"));
@@ -458,7 +459,7 @@ contract HTSTest is Test, TestSetup {
         (int64 randomIsTokenCode, bool randomIsToken) = HtsSystemContract(HTS_ADDRESS).isToken(address(123));
         assertEq(22, randomIsTokenCode);
         assertFalse(randomIsToken);
-    } */
+    }
 
     function test_HTS_associations_with_correct_privileges() external {
         address bob = CFNFTFF_TREASURY;
@@ -631,6 +632,25 @@ contract HTSTest is Test, TestSetup {
         assertEq(IERC20(USDC).balanceOf(to), amount);
     }
 
+    function test_HTS_transferToken_alias() external {
+        // https://hashscan.io/testnet/account/0.0.1421
+        address owner = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
+        address to = makeAddr("bob");
+        uint256 amount = 4_000000;
+
+        uint256 balanceOfOwner = IERC20(USDC).balanceOf(owner);
+        assertGt(balanceOfOwner, 0);
+        assertEq(IERC20(USDC).balanceOf(to), 0);
+
+        vm.prank(owner); // https://book.getfoundry.sh/cheatcodes/prank
+        vm.expectEmit(USDC);
+        emit IERC20Events.Transfer(owner, to, amount);
+        IHederaTokenService(HTS_ADDRESS).transferFrom(USDC, owner, to, amount);
+
+        assertEq(IERC20(USDC).balanceOf(owner), balanceOfOwner - amount);
+        assertEq(IERC20(USDC).balanceOf(to), amount);
+    }
+
     function test_HTS_transferTokens() external {
         // https://hashscan.io/testnet/account/0.0.1421
         address owner = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
@@ -640,9 +660,6 @@ contract HTSTest is Test, TestSetup {
         amount[0] = int64(int256(1_000000));
         amount[1] = int64(int256(amountToAlice));
         address[] memory to = new address[](2);
-        to[0] = makeAddr("bob");
-        to[1] = makeAddr("alice");
-        address[] memory from = new address[](2);
         to[0] = makeAddr("bob");
         to[1] = makeAddr("alice");
         uint256 balanceOfOwner = IERC20(USDC).balanceOf(owner);
@@ -657,5 +674,74 @@ contract HTSTest is Test, TestSetup {
         assertEq(IERC20(USDC).balanceOf(owner), balanceOfOwner - amountToBob - amountToAlice);
         assertEq(IERC20(USDC).balanceOf(to[0]), amountToBob);
         assertEq(IERC20(USDC).balanceOf(to[1]), amountToAlice);
+    }
+
+    function test_HTS_transferTokens_insufficient_balance() external {
+        // https://hashscan.io/testnet/account/0.0.1421
+        address owner = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
+        uint256 amountToBob = 1_000000;
+        uint256 amountToAlice = 300_000000;
+        int64[] memory amount = new int64[](2);
+        amount[0] = int64(int256(1_000000));
+        amount[1] = int64(int256(amountToAlice));
+        address[] memory to = new address[](2);
+        to[0] = makeAddr("bob");
+        to[1] = makeAddr("alice");
+        uint256 balanceOfOwner = IERC20(USDC).balanceOf(owner);
+        assertGt(balanceOfOwner, 0);
+        assertEq(IERC20(USDC).balanceOf(to[0]), 0);
+        assertEq(IERC20(USDC).balanceOf(to[1]), 0);
+        vm.prank(owner); // https://book.getfoundry.sh/cheatcodes/prank
+        emit IERC20Events.Transfer(owner, to[0], amountToBob);
+        emit IERC20Events.Transfer(owner, to[1], amountToAlice);
+        vm.expectRevert();
+        IHederaTokenService(HTS_ADDRESS).transferTokens(USDC, to, amount);
+    }
+
+    function test_HTS_transferNFT() external {
+        address to = makeAddr("recipient");
+        uint256 serialId = 1;
+        vm.startPrank(CFNFTFF_TREASURY);
+        vm.expectEmit(CFNFTFF);
+        emit IERC20Events.Transfer(CFNFTFF_TREASURY, to, serialId);
+        IHederaTokenService(HTS_ADDRESS).transferNFT(CFNFTFF, CFNFTFF_TREASURY, to, int64(int256(serialId)));
+        vm.stopPrank();
+        assertEq(IERC721(CFNFTFF).ownerOf(serialId), to);
+    }
+
+    function test_HTS_transferNFT_alias() external {
+        address to = makeAddr("recipient");
+        uint256 serialId = 1;
+        vm.startPrank(CFNFTFF_TREASURY);
+        vm.expectEmit(CFNFTFF);
+        emit IERC20Events.Transfer(CFNFTFF_TREASURY, to, serialId);
+        IHederaTokenService(HTS_ADDRESS).transferFromNFT(CFNFTFF, CFNFTFF_TREASURY, to, serialId);
+        vm.stopPrank();
+        assertEq(IERC721(CFNFTFF).ownerOf(serialId), to);
+    }
+
+    function test_HTS_transferNFTs() external {
+        uint256[] memory serialId = new uint256[](1);
+        serialId[0] = 1;
+        address[] memory from = new address[](1);
+        from[0] = CFNFTFF_TREASURY;
+        address[] memory to = new address[](1);
+        to[0] = makeAddr("recipient");
+        vm.startPrank(CFNFTFF_TREASURY);
+        vm.expectEmit(CFNFTFF);
+        emit IERC20Events.Transfer(CFNFTFF_TREASURY, to[0], serialId[0]);
+        IHederaTokenService(HTS_ADDRESS).transferNFT(CFNFTFF, from[0], to[0], int64(int256(serialId[0])));
+        vm.stopPrank();
+        assertEq(IERC721(CFNFTFF).ownerOf(serialId[0]), to[0]);
+    }
+
+    function test_HTS_transferNFT_fail_when_not_allowed() external {
+        address from = makeAddr("bob");
+        address to = makeAddr("recipient");
+        uint256 serialId = 2;
+        vm.startPrank(from);
+        vm.expectRevert();
+        IHederaTokenService(HTS_ADDRESS).transferNFT(CFNFTFF, from, to, int64(int256(serialId)));
+        vm.stopPrank();
     }
 }
