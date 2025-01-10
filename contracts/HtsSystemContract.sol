@@ -5,6 +5,7 @@ import {IERC20Events, IERC20} from "./IERC20.sol";
 import {IERC721, IERC721Events} from "./IERC721.sol";
 import {IHRC719} from "./IHRC719.sol";
 import {IHederaTokenService} from "./IHederaTokenService.sol";
+import {IERC165} from "../lib/forge-std/src/interfaces/IERC165.sol";
 
 address constant HTS_ADDRESS = address(0x167);
 
@@ -89,6 +90,41 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
             require(associationResponseCode == 22, "associateTokens: Failed to associate token");
         }
         responseCode = 22; // HederaResponseCodes.SUCCESS
+    }
+
+    function transferTokens(
+        address token,
+        address[] memory accountId,
+        int64[] memory amount
+    ) htsCall public returns (int64 responseCode) {
+        require(token != address(0), "transferTokens: invalid token");
+        require(accountId.length > 0, "transferTokens: missing recipients");
+        require(amount.length == accountId.length, "transferTokens: inconsistent input");
+        for (uint256 i = 0; i < accountId.length; i++) {
+            require(accountId[i] != address(0) && accountId[i] != msg.sender, "transferTokens: Invalid accountId");
+            transferToken(token, msg.sender, accountId[i], amount[i]);
+        }
+        responseCode = 22; // HederaResponseCodes.SUCCESS
+    }
+
+    function transferToken(
+        address token,
+        address sender,
+        address recipient,
+        int64 amount
+    ) htsCall public returns (int64 responseCode) {
+        require(token != address(0), "transferToken: invalid token");
+        address from = sender;
+        address to = recipient;
+        if (amount < 0) {
+            from = recipient;
+            to = sender;
+            amount *= -1;
+        }
+        require(IERC20(token).allowance(from, msg.sender));
+        HtsSystemContract(token)._update(from, to, uint256(uint64(amount)));
+
+        return 22; // HederaResponseCodes.SUCCESS
     }
 
     function dissociateTokens(address account, address[] memory tokens) htsCall public returns (int64 responseCode) {

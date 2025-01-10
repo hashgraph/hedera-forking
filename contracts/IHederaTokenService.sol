@@ -462,11 +462,11 @@ interface IHederaTokenService {
     /// @param token The ID of the token as a solidity address
     /// @param accountId account to do a transfer to/from
     /// @param amount The amount from the accountId at the same index
-    // function transferTokens(
-    //     address token,
-    //     address[] memory accountId,
-    //     int64[] memory amount
-    // ) external returns (int64 responseCode);
+    function transferTokens(
+        address token,
+        address[] memory accountId,
+        int64[] memory amount
+    ) external returns (int64 responseCode);
 
     /// Initiates a Non-Fungable Token Transfer
     /// @param token The ID of the token as a solidity address
@@ -487,12 +487,12 @@ interface IHederaTokenService {
     /// @param sender The sender for the transaction
     /// @param recipient The receiver of the transaction
     /// @param amount Non-negative value to send. a negative value will result in a failure.
-    // function transferToken(
-    //     address token,
-    //     address sender,
-    //     address recipient,
-    //     int64 amount
-    // ) external returns (int64 responseCode);
+    function transferToken(
+        address token,
+        address sender,
+        address recipient,
+        int64 amount
+    ) external returns (int64 responseCode);
 
     /// Transfers tokens where the calling account/contract is implicitly the first entry in the token transfer list,
     /// where the amount is the value needed to zero balance the transfers. Regular signing rules apply for sending
