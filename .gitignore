@@ -2,10 +2,7 @@
 
 # Foundry's cache and compiler output files
 /cache/
-/out/*
-
-# HTS compiler output needed for `npm` package when consumed directly from GitHub
-!/out/HtsSystemContract.sol/
+/out/
 
 .idea/
 
