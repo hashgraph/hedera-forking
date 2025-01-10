@@ -460,13 +460,155 @@ contract HTSTest is Test, TestSetup {
         assertFalse(randomIsToken);
     } */
 
-    function test_HTS_associations() external {
+    function test_HTS_associations_with_correct_privileges() external {
         address bob = CFNFTFF_TREASURY;
         vm.startPrank(bob);
         assertFalse(IHRC719(USDC).isAssociated());
+
+        // Associate the token.
         int64 associationResponseCode = HtsSystemContract(HTS_ADDRESS).associateToken(bob, USDC);
         assertEq(associationResponseCode, 22);
         assertTrue(IHRC719(USDC).isAssociated());
+
+        // Dissociate this token.
+        int64 dissociationResponseCode = HtsSystemContract(HTS_ADDRESS).dissociateToken(bob, USDC);
+        assertEq(associationResponseCode, 22);
+        assertFalse(IHRC719(USDC).isAssociated());
+
+        // Associate multiple tokens at once.
+        assertFalse(IHRC719(MFCT).isAssociated());
+
+        address[] memory tokens = new address[](2);
+        tokens[0] = USDC;
+        tokens[1] = MFCT;
+        int64 multiAssociateResponseCode = HtsSystemContract(HTS_ADDRESS).associateTokens(bob, tokens);
+        assertEq(associationResponseCode, 22);
+        assertTrue(IHRC719(USDC).isAssociated());
+        assertTrue(IHRC719(MFCT).isAssociated());
+
+        // Dissociate multiple tokens at once.
+        int64 multiDissociateResponseCode = HtsSystemContract(HTS_ADDRESS).dissociateTokens(bob, tokens);
+        assertEq(multiDissociateResponseCode, 22);
+        assertFalse(IHRC719(USDC).isAssociated());
+        assertFalse(IHRC719(MFCT).isAssociated());
+
         vm.stopPrank();
+    }
+
+    function test_HTS_associations_without_correct_privileges() external {
+        address bob = CFNFTFF_TREASURY;
+        vm.expectRevert();
+        HtsSystemContract(HTS_ADDRESS).associateToken(bob, USDC);
+    }
+
+    function test_HTS_dissociation_without_correct_privileges() external {
+        address bob = CFNFTFF_TREASURY;
+        vm.expectRevert();
+        HtsSystemContract(HTS_ADDRESS).dissociateToken(bob, USDC);
+    }
+
+    function test_HTS_mass_associations_without_correct_privileges() external {
+        address bob = CFNFTFF_TREASURY;
+        address[] memory tokens = new address[](2);
+        tokens[0] = USDC;
+        tokens[1] = MFCT;
+        vm.expectRevert();
+        HtsSystemContract(HTS_ADDRESS).associateTokens(bob, tokens);
+    }
+
+    function test_HTS_mass_dissociation_without_correct_privileges() external {
+        address bob = CFNFTFF_TREASURY;
+        address[] memory tokens = new address[](2);
+        tokens[0] = USDC;
+        tokens[1] = MFCT;
+        vm.expectRevert();
+        HtsSystemContract(HTS_ADDRESS).dissociateTokens(bob, tokens);
+    }
+
+    function test_HTS_get_fungible_token_info() external {
+        (int64 fungibleResponseCode, HtsSystemContract.FungibleTokenInfo memory fungibleTokenInfo)
+            = HtsSystemContract(HTS_ADDRESS).getFungibleTokenInfo(USDC);
+        assertEq(fungibleResponseCode, 22);
+        assertEq(fungibleTokenInfo.decimals, 6);
+        assertEq(fungibleTokenInfo.tokenInfo.token.name, "USD Coin");
+        assertEq(fungibleTokenInfo.tokenInfo.token.symbol, "USDC");
+        assertEq(fungibleTokenInfo.tokenInfo.token.treasury, address(0x0000000000000000000000000000000000001438));
+        assertEq(fungibleTokenInfo.tokenInfo.token.memo, "USDC HBAR");
+        assertEq(fungibleTokenInfo.tokenInfo.token.tokenSupplyType, false);
+        assertEq(fungibleTokenInfo.tokenInfo.token.maxSupply, 0);
+        assertEq(fungibleTokenInfo.tokenInfo.token.freezeDefault, false);
+        assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys.length, 7);
+
+        // AdminKey
+        assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[0].keyType, 0x1);
+        assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[0].key.inheritAccountKey, false);
+        assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[0].key.contractId, address(0));
+        assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[0].key.ed25519, hex"5db29fb3f19f8618cc4689cf13e78a935621845d67547719faf49f65d5c367cc");
+        assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[0].key.ECDSA_secp256k1, bytes(""));
+        assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[0].key.delegatableContractId, address(0));
+        // FreezeKey
+        assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[2].keyType, 0x4);
+        assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[2].key.inheritAccountKey, false);
+        assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[2].key.contractId, address(0));
+        assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[2].key.ed25519, hex"baa2dd1684d8445d41b22f2b2c913484a7d885cf25ce525f8bf3fe8d5c8cb85d");
+        assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[2].key.ECDSA_secp256k1, bytes(""));
+        assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[2].key.delegatableContractId, address(0));
+        // SupplyKey
+        assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[4].keyType, 0x10);
+        assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[4].key.inheritAccountKey, false);
+        assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[4].key.contractId, address(0));
+        assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[4].key.ed25519, hex"4e4658983980d1b25a634eeeb26cb2b0f0e2e9c83263ba5b056798d35f2139a8");
+        assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[4].key.ECDSA_secp256k1, bytes(""));
+        assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[4].key.delegatableContractId, address(0));
+        // Expiry
+        assertEq(fungibleTokenInfo.tokenInfo.token.expiry.second, 1706825707000718000);
+        assertEq(fungibleTokenInfo.tokenInfo.token.expiry.autoRenewAccount, address(0));
+        assertEq(fungibleTokenInfo.tokenInfo.token.expiry.autoRenewPeriod, 0);
+        assertEq(fungibleTokenInfo.tokenInfo.totalSupply, 10000000005000000);
+        assertEq(fungibleTokenInfo.tokenInfo.deleted, false);
+        assertEq(fungibleTokenInfo.tokenInfo.defaultKycStatus, false);
+        assertEq(fungibleTokenInfo.tokenInfo.pauseStatus, false);
+        assertEq(fungibleTokenInfo.tokenInfo.fixedFees.length, 0);
+        assertEq(fungibleTokenInfo.tokenInfo.fractionalFees.length, 0);
+        assertEq(fungibleTokenInfo.tokenInfo.royaltyFees.length, 0);
+        assertEq(fungibleTokenInfo.tokenInfo.ledgerId, testMode == TestMode.FFI ? "0x01" : "0x00");
+    }
+
+    function test_HTS_get_non_fungible_token_info() external {
+        (int64 nonFungibleResponseCode, HtsSystemContract.NonFungibleTokenInfo memory nonFungibleTokenInfo)
+            = HtsSystemContract(HTS_ADDRESS).getNonFungibleTokenInfo(CFNFTFF, int64(1));
+        assertEq(nonFungibleResponseCode, 22);
+        assertEq(nonFungibleTokenInfo.serialNumber, int64(1));
+        assertEq(nonFungibleTokenInfo.ownerId, CFNFTFF_TREASURY);
+        assertEq(nonFungibleTokenInfo.spenderId, CFNFTFF_ALLOWED_SPENDER);
+        assertEq(nonFungibleTokenInfo.tokenInfo.token.name, "Custom Fee NFT (Fixed Fee)");
+        assertEq(nonFungibleTokenInfo.tokenInfo.token.symbol, "CFNFTFF");
+        assertEq(nonFungibleTokenInfo.tokenInfo.token.treasury, CFNFTFF_TREASURY);
+        assertEq(nonFungibleTokenInfo.tokenInfo.token.memo, "");
+        assertEq(nonFungibleTokenInfo.tokenInfo.token.tokenSupplyType, true);
+        assertEq(nonFungibleTokenInfo.tokenInfo.token.maxSupply, 2);
+        assertEq(nonFungibleTokenInfo.tokenInfo.token.freezeDefault, false);
+        assertEq(nonFungibleTokenInfo.tokenInfo.token.tokenKeys.length, 7);
+
+        // AdminKey
+        assertEq(nonFungibleTokenInfo.tokenInfo.token.tokenKeys[0].keyType, 0x1);
+        assertEq(nonFungibleTokenInfo.tokenInfo.token.tokenKeys[0].key.inheritAccountKey, false);
+        assertEq(nonFungibleTokenInfo.tokenInfo.token.tokenKeys[0].key.contractId, address(0));
+        assertEq(nonFungibleTokenInfo.tokenInfo.token.tokenKeys[0].key.ed25519, bytes(""));
+        assertEq(nonFungibleTokenInfo.tokenInfo.token.tokenKeys[0].key.ECDSA_secp256k1, hex"0242b7c3beea2af6dfcc874c41d1332463407e283f602ce8ef2cbe324823561b6f");
+        assertEq(nonFungibleTokenInfo.tokenInfo.token.tokenKeys[0].key.delegatableContractId, address(0));
+
+        // Expiry
+        assertEq(nonFungibleTokenInfo.tokenInfo.token.expiry.second, 1742724250000000000);
+        assertEq(nonFungibleTokenInfo.tokenInfo.token.expiry.autoRenewAccount, address(0));
+        assertEq(nonFungibleTokenInfo.tokenInfo.token.expiry.autoRenewPeriod, 0);
+        assertEq(nonFungibleTokenInfo.tokenInfo.totalSupply, 2);
+        assertEq(nonFungibleTokenInfo.tokenInfo.deleted, false);
+        assertEq(nonFungibleTokenInfo.tokenInfo.defaultKycStatus, false);
+        assertEq(nonFungibleTokenInfo.tokenInfo.pauseStatus, false);
+        assertEq(nonFungibleTokenInfo.tokenInfo.fixedFees.length, 0);
+        assertEq(nonFungibleTokenInfo.tokenInfo.fractionalFees.length, 0);
+        assertEq(nonFungibleTokenInfo.tokenInfo.royaltyFees.length, 0);
+        assertEq(nonFungibleTokenInfo.tokenInfo.ledgerId, testMode == TestMode.FFI ? "0x01" : "0x00");
     }
 }

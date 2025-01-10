@@ -54,7 +54,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         require(token != address(0), "getNonFungibleTokenInfo: invalid token");
 
         (int64 responseCode, TokenInfo memory tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
-        require(responseCode == 2, "getNonFungibleTokenInfo: failed to get token data");
+        require(responseCode == 22, "getNonFungibleTokenInfo: failed to get token data");
         NonFungibleTokenInfo memory nonFungibleTokenInfo;
         nonFungibleTokenInfo.tokenInfo = tokenInfo;
         nonFungibleTokenInfo.serialNumber = serialNumber;
@@ -65,19 +65,19 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         // nonFungibleTokenInfo.metadata = bytes(IERC721(token).tokenURI(uint256(uint64(serialNumber))));
         // nonFungibleTokenInfo.creationTime = int64(0);
 
-        return (22, nonFungibleTokenInfo);
+        return (responseCode, nonFungibleTokenInfo);
     }
 
     function getFungibleTokenInfo(address token) htsCall external returns (int64, FungibleTokenInfo memory) {
         require(token != address(0), "getFungibleTokenInfo: invalid token");
 
         (int64 responseCode, TokenInfo memory tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
-        require(responseCode == 2, "getFungibleTokenInfo: failed to get token data");
+        require(responseCode == 22, "getFungibleTokenInfo: failed to get token data");
         FungibleTokenInfo memory fungibleTokenInfo;
         fungibleTokenInfo.tokenInfo = tokenInfo;
         fungibleTokenInfo.decimals =  int32(int8(IERC20(token).decimals()));
 
-        return (22, fungibleTokenInfo);
+        return (responseCode, fungibleTokenInfo);
     }
 
     function associateTokens(address account, address[] memory tokens) htsCall public returns (int64 responseCode) {
@@ -85,11 +85,8 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         require(account == msg.sender, "associateTokens: Must be signed by the provided Account's key or called from the accounts contract key");
         for (uint256 i = 0; i < tokens.length; i++) {
             require(tokens[i] != address(0), "associateTokens: invalid token");
-            tokens[i].delegatecall(
-                abi.encodeWithSignature("associate()")
-            );
-            //     uint256 associationResponseCode = tokens[i]
-           // require(associationResponseCode == 1, "associateTokens: Failed to associate token");
+            int64 associationResponseCode = IHederaTokenService(tokens[i]).associateToken(account, tokens[i]);
+            require(associationResponseCode == 22, "associateTokens: Failed to associate token");
         }
         responseCode = 22; // HederaResponseCodes.SUCCESS
     }
@@ -99,8 +96,8 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         require(account == msg.sender, "dissociateTokens: Must be signed by the provided Account's key or called from the accounts contract key");
         for (uint256 i = 0; i < tokens.length; i++) {
             require(tokens[i] != address(0), "dissociateTokens: invalid token");
-            uint256 dissociateResponseCode = IHRC719(tokens[i]).dissociate();
-            require(dissociateResponseCode == 1, "dissociateTokens: Failed to associate token");
+            int64 dissociationResponseCode = IHederaTokenService(tokens[i]).dissociateToken(account, tokens[i]);
+            require(dissociationResponseCode == 22, "dissociateTokens: Failed to dissociate token");
         }
         responseCode = 22; // HederaResponseCodes.SUCCESS
     }
@@ -321,6 +318,20 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
             if (selector == this.getTokenExpiryInfo.selector) {
                 require(msg.data.length >= 28, "getTokenExpiryInfo: Not enough calldata");
                 return abi.encode(22, _tokenInfo.token.expiry);
+            }
+            if (selector == this.associateToken.selector) {
+                require(msg.data.length >= 48, "associateToken: Not enough calldata");
+                address account = address(bytes20(msg.data[40:60]));
+                bytes32 slot = _isAssociatedSlot(account);
+                assembly { sstore(slot, true) }
+                return abi.encode(22);
+            }
+            if (selector == this.dissociateToken.selector) {
+                require(msg.data.length >= 48, "dissociateToken: Not enough calldata");
+                address account = address(bytes20(msg.data[40:60]));
+                bytes32 slot = _isAssociatedSlot(account);
+                assembly { sstore(slot, false) }
+                return abi.encode(22);
             }
             if (selector == this.getTokenType.selector) {
                 require(msg.data.length >= 28, "getTokenType: Not enough calldata");
