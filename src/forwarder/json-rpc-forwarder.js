@@ -70,6 +70,13 @@ const eth = {
             debug(c.yellow('loading HTS Code at address %s'), address);
             return getHtsCode();
         }
+        // Don't try to fetch token for Hardhat's `console.log`
+        // https://github.com/NomicFoundation/hardhat/blob/e4e2b86776791840299db76cb13f7cecb6640c06/packages/hardhat-core/console.sol#L6
+        // See issue https://github.com/hashgraph/hedera-forking/issues/182.
+        // Given this address is expected to not have any bytecode, it's safe to return `0x`.
+        if (address.toLowerCase() === '0x000000000000000000636f6e736f6c652e6c6f67') {
+            return '0x';
+        }
         if (address.startsWith(LONG_ZERO_PREFIX)) {
             const tokenId = `0.0.${parseInt(address, 16)}`;
             const token = await mirrorNodeClient.getTokenById(tokenId, Number(blockNumber));
