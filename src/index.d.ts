@@ -33,6 +33,23 @@ interface IMirrorNodeClient {
     getTokenById(tokenId: string, blockNumber: number): Promise<Record<string, unknown> | null>;
 
     /**
+     * Get NFT by token id and serial id.
+     *
+     * Returns token NFT entity information given the token id and serial id.
+     *
+     * This method should call the Mirror Node API endpoint `GET /api/v1/tokens/{tokenId}/nft/{serialId}`.
+     *
+     * @param tokenId The ID of the token to return information for.
+     * @param serialId The serial id of the NFT.
+     * @param blockNumber
+     */
+    getNftByTokenIdAndSerial(
+        tokenId: string,
+        serialId: number,
+        blockNumber: number
+    ): Promise<Record<string, unknown> | null>;
+
+    /**
      * Get token relationship for an account.
      *
      * This method should call the Mirror Node API endpoint: `GET /api/v1/accounts/{idOrAliasOrEvmAddress}/tokens`.
@@ -88,6 +105,26 @@ interface IMirrorNodeClient {
     ): Promise<{
         allowances: {
             amount: number;
+        }[];
+    } | null>;
+
+    /**
+     * Returns information for non-fungible token allowances for an account.
+     *
+     * NOTE: `blockNumber` is not yet included until we fix issue
+     * https://github.com/hashgraph/hedera-forking/issues/89.
+     *
+     * @param accountId Account alias or account id or evm address.
+     * @param tokenId The ID of the token to return information for.
+     * @param operatorId The ID of the operator to return information for.
+     */
+    getAllowanceForNFT(
+        accountId: string,
+        tokenId: string,
+        operatorId: string
+    ): Promise<{
+        allowances: {
+            approved_for_all: boolean;
         }[];
     } | null>;
 

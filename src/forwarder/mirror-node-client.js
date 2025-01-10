@@ -61,6 +61,19 @@ class MirrorNodeClient {
     }
 
     /**
+     * Fetches information about an NFT by its token ID and serial ID.
+     *
+     * @param {string} tokenId the token ID to fetch.
+     * @param {number} serialId the serial ID of the NFT to fetch.
+     * @param {number} blockNumber
+     * @returns {Promise<Record<string, unknown> | null>} a `Promise` resolving to the token information or null if not found.
+     */
+    async getNftByTokenIdAndSerial(tokenId, serialId, blockNumber) {
+        const timestamp = await this.getBlockQueryParam(blockNumber);
+        return this._get(`tokens/${tokenId}/nft/${serialId}?${timestamp}`);
+    }
+
+    /**
      * Get token relationship for an account.
      *
      * @param {string} idOrAliasOrEvmAddress The ID or alias or EVM address of the account
@@ -96,6 +109,20 @@ class MirrorNodeClient {
     getAllowanceForToken(accountId, tokenId, spenderId) {
         return this._get(
             `accounts/${accountId}/allowances/tokens?token.id=${tokenId}&spender.id=${spenderId}`
+        );
+    }
+
+    /**
+     * Fetches token allowances for a specific account, token, and operator.
+     *
+     * @param {string} accountId The owner's account ID.
+     * @param {string} tokenId The token ID.
+     * @param {string} operatorId The operator's account ID.
+     * @returns {Promise<{ allowances: { approved_for_all: boolean }[] } | null>} A `Promise` resolving to the approval.
+     */
+    getAllowanceForNFT(accountId, tokenId, operatorId) {
+        return this._get(
+            `accounts/${accountId}/allowances/nfts?token.id=${tokenId}&account.id=${operatorId}`
         );
     }
 

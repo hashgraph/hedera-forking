@@ -274,4 +274,69 @@ function slotMapOf(token) {
     return map;
 }
 
-module.exports = { slotMapOf, packValues };
+/**
+ * Represents the value in the persistent storage.
+ * Each token and `blockNumber` has its own SlotMap. Any value can be assigned to this storage
+ * ad-hoc. It can be used for dynamically determined keys needed to be persistent.
+ *
+ * It is not possible to determine which NFT numbers have been minted unless they are specifically queried.
+ * Persistent storage is used to address this issue. The current solution:
+ * - Dynamically loads each NFT's details the first time its slot is queried.
+ * - Once accessed, stores information about the existence of the NFT.
+ *
+ * Possible issues that this solution may cause. Let's consider scenario where:
+ * 1. We have a long tokenUri that spans more than one storage slot.
+ * 2. Someone attempts to access the value in the second slot without first querying the initial slot.
+ * The correct result won't be returned then.
+ * This is because persistentStorage is only populated when the request for the first slot
+ * of the string is made (only then we can deduce the serial NFT number from the slot address).
+ */
+class PersistentStorageMap {
+    constructor() {
+        /** @type {Map<string, SlotMap>} */
+        this._map = new Map();
+    }
+
+    /**
+     * @param {string} tokenId
+     * @param {number} blockNumber
+     */
+    _getSlotMap(tokenId, blockNumber) {
+        const key = `${tokenId}:${blockNumber}`;
+        let slotMap = this._map.get(key);
+        if (slotMap === undefined) {
+            slotMap = new SlotMap();
+            this._map.set(key, slotMap);
+        }
+        return slotMap;
+    }
+
+    /**
+     * @param {string} tokenId
+     * @param {number} blockNumber
+     * @param {bigint} slot
+     * @param {Value} value
+     */
+    store(tokenId, blockNumber, slot, value) {
+        visit(
+            { label: 'value', slot: slot.toString(), type: 't_string_storage', offset: 0 },
+            0n,
+            { value },
+            '',
+            this._getSlotMap(tokenId, blockNumber)
+        );
+    }
+
+    /**
+     * @param {string} tokenId
+     * @param {number} blockNumber
+     * @param {bigint} slot
+     *
+     * @returns {{offset: number, value: Value, path: string, type: string}[]|undefined}
+     */
+    load(tokenId, blockNumber, slot) {
+        return this._getSlotMap(tokenId, blockNumber).load(slot);
+    }
+}
+
+module.exports = { packValues, slotMapOf, PersistentStorageMap };
