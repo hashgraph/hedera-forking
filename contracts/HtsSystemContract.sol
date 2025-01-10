@@ -140,6 +140,10 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         require(accountId.length > 0, "transferTokens: missing recipients");
         require(amount.length == accountId.length, "transferTokens: inconsistent input");
         for (uint256 i = 0; i < accountId.length; i++) {
+            // FIXME it does not necessarily have to be msg.sender who sends the token...
+            // 2 rows will be send - -1 on account A, +1 on account B means that it is account A sending to B...
+            // This scenario should work anyway by mistake (A will send to msg.sender, msg.sender will forward to B),
+            // But this method should support more complicated scenarios as well, which at this time it DOES NOT :(
             transferToken(token, msg.sender, accountId[i], amount[i]);
         }
         responseCode = 22; // HederaResponseCodes.SUCCESS
