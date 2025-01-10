@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import {Test} from "forge-std/Test.sol";
 import {HtsSystemContract, HTS_ADDRESS} from "../contracts/HtsSystemContract.sol";
 import {IHederaTokenService} from "../contracts/IHederaTokenService.sol";
-import {IERC20} from "../contracts/IERC20.sol";
+import {IERC20Events, IERC20} from "../contracts/IERC20.sol";
 import {IHRC719} from "../contracts/IHRC719.sol";
 import {TestSetup} from "./lib/TestSetup.sol";
 
@@ -462,7 +462,7 @@ contract HTSTest is Test, TestSetup {
 
     function test_HTS_associations_with_correct_privileges() external {
         address bob = CFNFTFF_TREASURY;
-        vm.startPrank(bob);
+        vm.startPrank(bob); // https://book.getfoundry.sh/cheatcodes/prank
         assertFalse(IHRC719(USDC).isAssociated());
 
         // Associate the token.
@@ -472,7 +472,7 @@ contract HTSTest is Test, TestSetup {
 
         // Dissociate this token.
         int64 dissociationResponseCode = HtsSystemContract(HTS_ADDRESS).dissociateToken(bob, USDC);
-        assertEq(associationResponseCode, 22);
+        assertEq(dissociationResponseCode, 22);
         assertFalse(IHRC719(USDC).isAssociated());
 
         // Associate multiple tokens at once.
@@ -482,7 +482,7 @@ contract HTSTest is Test, TestSetup {
         tokens[0] = USDC;
         tokens[1] = MFCT;
         int64 multiAssociateResponseCode = HtsSystemContract(HTS_ADDRESS).associateTokens(bob, tokens);
-        assertEq(associationResponseCode, 22);
+        assertEq(multiAssociateResponseCode, 22);
         assertTrue(IHRC719(USDC).isAssociated());
         assertTrue(IHRC719(MFCT).isAssociated());
 
@@ -610,5 +610,52 @@ contract HTSTest is Test, TestSetup {
         assertEq(nonFungibleTokenInfo.tokenInfo.fractionalFees.length, 0);
         assertEq(nonFungibleTokenInfo.tokenInfo.royaltyFees.length, 0);
         assertEq(nonFungibleTokenInfo.tokenInfo.ledgerId, testMode == TestMode.FFI ? "0x01" : "0x00");
+    }
+
+    function test_HTS_transferToken() external {
+        // https://hashscan.io/testnet/account/0.0.1421
+        address owner = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
+        address to = makeAddr("bob");
+        uint256 amount = 4_000000;
+
+        uint256 balanceOfOwner = IERC20(USDC).balanceOf(owner);
+        assertGt(balanceOfOwner, 0);
+        assertEq(IERC20(USDC).balanceOf(to), 0);
+
+        vm.prank(owner); // https://book.getfoundry.sh/cheatcodes/prank
+        vm.expectEmit(USDC);
+        emit IERC20Events.Transfer(owner, to, amount);
+        IHederaTokenService(HTS_ADDRESS).transferToken(USDC, owner, to, int64(int256(amount)));
+
+        assertEq(IERC20(USDC).balanceOf(owner), balanceOfOwner - amount);
+        assertEq(IERC20(USDC).balanceOf(to), amount);
+    }
+
+    function test_HTS_transferTokens() external {
+        // https://hashscan.io/testnet/account/0.0.1421
+        address owner = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
+        uint256 amountToBob = 1_000000;
+        uint256 amountToAlice = 3_000000;
+        int64[] memory amount = new int64[](2);
+        amount[0] = int64(int256(1_000000));
+        amount[1] = int64(int256(amountToAlice));
+        address[] memory to = new address[](2);
+        to[0] = makeAddr("bob");
+        to[1] = makeAddr("alice");
+        address[] memory from = new address[](2);
+        to[0] = makeAddr("bob");
+        to[1] = makeAddr("alice");
+        uint256 balanceOfOwner = IERC20(USDC).balanceOf(owner);
+        assertGt(balanceOfOwner, 0);
+        assertEq(IERC20(USDC).balanceOf(to[0]), 0);
+        assertEq(IERC20(USDC).balanceOf(to[1]), 0);
+        vm.prank(owner); // https://book.getfoundry.sh/cheatcodes/prank
+        vm.expectEmit(USDC);
+        emit IERC20Events.Transfer(owner, to[0], amountToBob);
+        emit IERC20Events.Transfer(owner, to[1], amountToAlice);
+        IHederaTokenService(HTS_ADDRESS).transferTokens(USDC, to, amount);
+        assertEq(IERC20(USDC).balanceOf(owner), balanceOfOwner - amountToBob - amountToAlice);
+        assertEq(IERC20(USDC).balanceOf(to[0]), amountToBob);
+        assertEq(IERC20(USDC).balanceOf(to[1]), amountToAlice);
     }
 }

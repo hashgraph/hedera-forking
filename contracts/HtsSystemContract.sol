@@ -101,7 +101,6 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         require(accountId.length > 0, "transferTokens: missing recipients");
         require(amount.length == accountId.length, "transferTokens: inconsistent input");
         for (uint256 i = 0; i < accountId.length; i++) {
-            require(accountId[i] != address(0) && accountId[i] != msg.sender, "transferTokens: Invalid accountId");
             transferToken(token, msg.sender, accountId[i], amount[i]);
         }
         responseCode = 22; // HederaResponseCodes.SUCCESS
@@ -121,10 +120,9 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
             to = sender;
             amount *= -1;
         }
-        require(IERC20(token).allowance(from, msg.sender));
-        HtsSystemContract(token)._update(from, to, uint256(uint64(amount)));
-
-        return 22; // HederaResponseCodes.SUCCESS
+        emit Transfer(from, to, uint256(uint64(amount)));
+        HtsSystemContract(token)._transferAsHTS(from, to, uint256(uint64(amount)));
+        responseCode = 22; // HederaResponseCodes.SUCCESS
     }
 
     function dissociateTokens(address account, address[] memory tokens) htsCall public returns (int64 responseCode) {
@@ -379,6 +377,14 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
                 }
                 return abi.encode(22, int32(-1));
             }
+            if (selector == this._transferAsHTS.selector) {
+                require(msg.data.length >= 124, "update: Not enough calldata");
+                address from = address(bytes20(msg.data[40:60]));
+                address to = address(bytes20(msg.data[72:92]));
+                uint256 amount = uint256(bytes32(msg.data[92:124]));
+                _transferAsHTS(from, to, amount);
+                return abi.encode(true);
+            }
             if (selector == this._update.selector) {
                 require(msg.data.length >= 124, "update: Not enough calldata");
                 address from = address(bytes20(msg.data[40:60]));
@@ -627,6 +633,14 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
     }
 
     function _transfer(address from, address to, uint256 amount) private {
+        require(from != address(0), "hts: invalid sender");
+        require(to != address(0), "hts: invalid receiver");
+        _update(from, to, amount);
+        emit Transfer(from, to, amount);
+    }
+
+    function _transferAsHTS(address from, address to, uint256 amount) public {
+        require(msg.sender == HTS_ADDRESS, "hts: not permitted");
         require(from != address(0), "hts: invalid sender");
         require(to != address(0), "hts: invalid receiver");
         _update(from, to, amount);
