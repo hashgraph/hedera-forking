@@ -70,7 +70,7 @@ contract ERC721TokenTest is Test, TestSetup, IERC721Events, IERC20Events {
         assertEq(IERC721(CFNFTFF).getApproved(tokenId), CFNFTFF_ALLOWED_SPENDER);
     }
 
-    function test_ERC721_isApprovedForAll() external {
+    function test_ERC721_isApprovedForAll() external view {
         assertFalse(IERC721(CFNFTFF).isApprovedForAll(CFNFTFF_TREASURY, CFNFTFF_ALLOWED_SPENDER));
     }
 
