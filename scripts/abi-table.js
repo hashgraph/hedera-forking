@@ -33,8 +33,8 @@ function* data(kind, abi, userdoc, devdoc) {
         if (frag.type === kind) {
             const sighash = frag.format('sighash');
             const [member] = frag.format('full').replace(`${kind} `, '').split(' returns ');
-            const notice = userdoc[sighash]?.notice;
-            const dev = devdoc[sighash]?.details;
+            const notice = (userdoc[sighash]?.notice ?? '').trim();
+            const dev = (devdoc[sighash]?.details ?? '').trim();
 
             yield { member, notice, dev };
         }
@@ -67,7 +67,8 @@ function main() {
             write(`| ${kind} | Comment |`);
             write('|----------|---------|');
             for (const { member, notice, dev } of members) {
-                write(`| \`${member}\` | ${notice ?? ''} ${dev ?? ''} |`);
+                const sep = notice !== '' && dev !== '' && !notice.endsWith('.') ? '.' : '';
+                write(`| \`${member}\` | ${notice}${sep} ${dev} |`);
             }
         }
     });
