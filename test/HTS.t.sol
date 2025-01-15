@@ -377,21 +377,21 @@ contract HTSTest is Test, TestSetup {
         assertEq(royaltyFees.length, 0);
     }
 
-    function test_HTS_getTokenDefaultFreezeStatus_should_correct_value_for_valid_token() external {
+    function test_HTS_getTokenDefaultFreezeStatus_should_return_correct_value_for_valid_token() external {
         address token = CFNFTFF;
         (int64 freezeStatus, bool defaultFreeze) = HtsSystemContract(HTS_ADDRESS).getTokenDefaultFreezeStatus(token);
         assertEq(freezeStatus, 22);
         assertFalse(defaultFreeze);
     }
 
-    function test_HTS_getTokenDefaultKycStatus_should_correct_value_for_valid_token() external {
+    function test_HTS_getTokenDefaultKycStatus_should_return_correct_value_for_valid_token() external {
         address token = CFNFTFF;
         (int64 kycStatus, bool defaultKyc) = HtsSystemContract(HTS_ADDRESS).getTokenDefaultKycStatus(token);
         assertEq(kycStatus, 22);
         assertFalse(defaultKyc);
     }
 
-    function test_HTS_getTokenExpiryInfo_should_correct_value_for_valid_token() external {
+    function test_HTS_getTokenExpiryInfo_should_return_correct_value_for_valid_token() external {
         address token = CFNFTFF;
         (int64 expiryStatusCode, HtsSystemContract.Expiry memory expiry)
             = HtsSystemContract(HTS_ADDRESS).getTokenExpiryInfo(token);
@@ -401,7 +401,7 @@ contract HTSTest is Test, TestSetup {
         assertEq(expiry.autoRenewPeriod, 0);
     }
 
-    function test_HTS_getTokenKey_should_correct_key_value() external {
+    function test_HTS_getTokenKey_should_return_correct_key_value() external {
         address token = USDC;
 
         // AdminKey
@@ -433,7 +433,7 @@ contract HTSTest is Test, TestSetup {
         assertEq(supplyKey.delegatableContractId, address(0));
     }
 
-    function test_HTS_getTokenType_should_correct_token_type_for_existing_token() external {
+    function test_HTS_getTokenType_should_return_correct_token_type_for_existing_token() external {
         (int64 ftTypeStatusCode, int32 ftType) = HtsSystemContract(HTS_ADDRESS).getTokenType(USDC);
         assertEq(22, ftTypeStatusCode);
         assertEq(ftType, int32(0));
@@ -443,7 +443,7 @@ contract HTSTest is Test, TestSetup {
         assertEq(nftType, int32(1));
     }
 
-    function test_HTS_isToken_should_correct_is_token_info() external {
+    function test_HTS_isToken_should_return_correct_is_token_info() external {
         (int64 ftIsTokenStatusCode, bool ftIsToken) = HtsSystemContract(HTS_ADDRESS).isToken(USDC);
         assertEq(22, ftIsTokenStatusCode);
         assertTrue(ftIsToken);
