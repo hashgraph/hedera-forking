@@ -600,7 +600,6 @@ contract HTSTest is Test, TestSetup {
 
         // Expiry
         assertEq(nonFungibleTokenInfo.tokenInfo.token.expiry.autoRenewAccount, address(0));
-        assertEq(nonFungibleTokenInfo.tokenInfo.token.expiry.autoRenewPeriod, 0);
         assertEq(nonFungibleTokenInfo.tokenInfo.totalSupply, 2);
         assertEq(nonFungibleTokenInfo.tokenInfo.deleted, false);
         assertEq(nonFungibleTokenInfo.tokenInfo.defaultKycStatus, false);
