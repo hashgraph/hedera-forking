@@ -1,6 +1,6 @@
 {
     "name": "@hashgraph/system-contracts-forking",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": "Hashgraph System Contracts and Hardhat plugin to support fork testing",
     "repository": {
         "url": "git+https://github.com/hashgraph/hedera-forking.git"
