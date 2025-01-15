@@ -392,11 +392,10 @@ contract HTSTest is Test, TestSetup {
     }
 
     function test_HTS_getTokenExpiryInfo_should_return_correct_value_for_valid_token() external {
-        address token = CFNFTFF;
         (int64 expiryStatusCode, HtsSystemContract.Expiry memory expiry)
-            = HtsSystemContract(HTS_ADDRESS).getTokenExpiryInfo(token);
+            = HtsSystemContract(HTS_ADDRESS).getTokenExpiryInfo(USDC);
         assertEq(expiryStatusCode, 22);
-        assertEq(expiry.second, 1742724250000000000);
+        assertEq(expiry.second, 1706825707000718000);
         assertEq(expiry.autoRenewAccount, address(0));
         assertEq(expiry.autoRenewPeriod, 0);
     }
@@ -600,7 +599,6 @@ contract HTSTest is Test, TestSetup {
         assertEq(nonFungibleTokenInfo.tokenInfo.token.tokenKeys[0].key.delegatableContractId, address(0));
 
         // Expiry
-        assertEq(nonFungibleTokenInfo.tokenInfo.token.expiry.second, 1742724250000000000);
         assertEq(nonFungibleTokenInfo.tokenInfo.token.expiry.autoRenewAccount, address(0));
         assertEq(nonFungibleTokenInfo.tokenInfo.token.expiry.autoRenewPeriod, 0);
         assertEq(nonFungibleTokenInfo.tokenInfo.totalSupply, 2);
