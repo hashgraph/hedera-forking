@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {Test} from "forge-std/Test.sol";
+import {HederaResponseCodes} from "../contracts/HederaResponseCodes.sol";
 import {HtsSystemContract, HTS_ADDRESS} from "../contracts/HtsSystemContract.sol";
 import {IHederaTokenService} from "../contracts/IHederaTokenService.sol";
 import {IERC20Events, IERC20} from "../contracts/IERC20.sol";
@@ -62,7 +63,7 @@ contract HTSTest is Test, TestSetup {
     function test_HTS_getTokenInfo_should_return_token_info_for_valid_token() external {
         address token = USDC;
         (int64 responseCode, HtsSystemContract.TokenInfo memory tokenInfo) = HtsSystemContract(HTS_ADDRESS).getTokenInfo(token);
-        assertEq(responseCode, 22);
+        assertEq(responseCode, HederaResponseCodes.SUCCESS);
         assertEq(tokenInfo.token.name, "USD Coin");
         assertEq(tokenInfo.token.symbol, "USDC");
         assertEq(tokenInfo.token.treasury, address(0x0000000000000000000000000000000000001438));
@@ -108,7 +109,7 @@ contract HTSTest is Test, TestSetup {
 
     function test_HTS_getTokenInfo_should_return_custom_fees_for_valid_token() external {
         (int64 responseCode, HtsSystemContract.TokenInfo memory tokenInfo) = HtsSystemContract(HTS_ADDRESS).getTokenInfo(CTCF);
-        assertEq(responseCode, 22);
+        assertEq(responseCode, HederaResponseCodes.SUCCESS);
         assertEq(tokenInfo.token.name, "Crypto Token with Custom Fees");
         assertEq(tokenInfo.token.symbol, "CTCF");
         assertEq(tokenInfo.token.memo, "");
@@ -199,7 +200,7 @@ contract HTSTest is Test, TestSetup {
         bytes[] memory metadata = new bytes[](0);
 
         (int64 responseCode, int64 newTotalSupply, int64[] memory serialNumbers) = HtsSystemContract(HTS_ADDRESS).mintToken(token, amount, metadata);
-        assertEq(responseCode, 22);
+        assertEq(responseCode, HederaResponseCodes.SUCCESS);
         assertEq(serialNumbers.length, 0);
         assertEq(newTotalSupply, initialTotalSupply + amount);
         assertEq(IERC20(token).balanceOf(treasury), uint64(initialTreasuryBalance) + uint64(amount));
@@ -223,7 +224,11 @@ contract HTSTest is Test, TestSetup {
             IHederaTokenService.Expiry(0, address(0), 0)
         );
 
-        vm.mockCall(token, abi.encode(HtsSystemContract.getTokenInfo.selector), abi.encode(22, tokenInfo));
+        vm.mockCall(
+            token,
+            abi.encode(HtsSystemContract.getTokenInfo.selector),
+            abi.encode(HederaResponseCodes.SUCCESS, tokenInfo)
+        );
         vm.expectRevert(bytes("mintToken: invalid account"));
         HtsSystemContract(HTS_ADDRESS).mintToken(token, amount, metadata);
     }
@@ -254,13 +259,13 @@ contract HTSTest is Test, TestSetup {
         uint256 initialTreasuryBalance = IERC20(token).balanceOf(treasury);
 
         (int64 responseCodeMint, int64 newTotalSupplyAfterMint, int64[] memory serialNumbers) = HtsSystemContract(HTS_ADDRESS).mintToken(token, amount, new bytes[](0));
-        assertEq(responseCodeMint, 22);
+        assertEq(responseCodeMint, HederaResponseCodes.SUCCESS);
         assertEq(serialNumbers.length, 0);
         assertEq(newTotalSupplyAfterMint, initialTotalSupply + amount);
         assertEq(IERC20(token).balanceOf(treasury), uint64(initialTreasuryBalance) + uint64(amount));
 
         (int64 responseCodeBurn, int64 newTotalSupplyAfterBurn) = HtsSystemContract(HTS_ADDRESS).burnToken(token, amount, serialNumbers);
-        assertEq(responseCodeBurn, 22);
+        assertEq(responseCodeBurn, HederaResponseCodes.SUCCESS);
         assertEq(newTotalSupplyAfterBurn, initialTotalSupply);
         assertEq(IERC20(token).balanceOf(treasury), uint64(initialTreasuryBalance));
     }
@@ -283,7 +288,11 @@ contract HTSTest is Test, TestSetup {
             IHederaTokenService.Expiry(0, address(0), 0)
         );
 
-        vm.mockCall(token, abi.encode(HtsSystemContract.getTokenInfo.selector), abi.encode(22, tokenInfo));
+        vm.mockCall(
+            token,
+            abi.encode(HtsSystemContract.getTokenInfo.selector),
+            abi.encode(HederaResponseCodes.SUCCESS, tokenInfo)
+        );
         vm.expectRevert(bytes("burnToken: invalid account"));
         HtsSystemContract(HTS_ADDRESS).burnToken(token, amount, serialNumbers);
     }
@@ -310,14 +319,14 @@ contract HTSTest is Test, TestSetup {
         address token = CFNFTFF;
         (int64 responseCodeGetApproved, address approved) = HtsSystemContract(HTS_ADDRESS)
             .getApproved(token, 1);
-        assertEq(responseCodeGetApproved, 22);
+        assertEq(responseCodeGetApproved, HederaResponseCodes.SUCCESS);
         assertEq(approved, CFNFTFF_ALLOWED_SPENDER);
     }
 
     function test_HTS_getApproved_should_return_nothing_when_no_approval_granted() external view {
         address token = CFNFTFF;
         (int64 responseCodeGetApproved, address approved) = HtsSystemContract(HTS_ADDRESS).getApproved(token, 2);
-        assertEq(responseCodeGetApproved, 22);
+        assertEq(responseCodeGetApproved, HederaResponseCodes.SUCCESS);
         assertEq(approved, address(0));
     }
 
@@ -325,7 +334,7 @@ contract HTSTest is Test, TestSetup {
         address token = CFNFTFF;
         (int64 isApprovedForAllResponseCode, bool isApproved) = HtsSystemContract(HTS_ADDRESS)
             .isApprovedForAll(token, CFNFTFF_TREASURY, CFNFTFF_ALLOWED_SPENDER);
-        assertEq(isApprovedForAllResponseCode, 22);
+        assertEq(isApprovedForAllResponseCode, HederaResponseCodes.SUCCESS);
         assertFalse(isApproved);
     }
 
@@ -336,7 +345,7 @@ contract HTSTest is Test, TestSetup {
             HtsSystemContract.FractionalFee[] memory fractionalFees,
             HtsSystemContract.RoyaltyFee[] memory royaltyFees
         ) = HtsSystemContract(HTS_ADDRESS).getTokenCustomFees(CTCF);
-        assertEq(responseCode, 22);
+        assertEq(responseCode, HederaResponseCodes.SUCCESS);
 
         assertEq(fixedFees.length, 3);
 
@@ -380,21 +389,21 @@ contract HTSTest is Test, TestSetup {
     function test_HTS_getTokenDefaultFreezeStatus_should_return_correct_value_for_valid_token() external {
         address token = CFNFTFF;
         (int64 freezeStatus, bool defaultFreeze) = HtsSystemContract(HTS_ADDRESS).getTokenDefaultFreezeStatus(token);
-        assertEq(freezeStatus, 22);
+        assertEq(freezeStatus, HederaResponseCodes.SUCCESS);
         assertFalse(defaultFreeze);
     }
 
     function test_HTS_getTokenDefaultKycStatus_should_return_correct_value_for_valid_token() external {
         address token = CFNFTFF;
         (int64 kycStatus, bool defaultKyc) = HtsSystemContract(HTS_ADDRESS).getTokenDefaultKycStatus(token);
-        assertEq(kycStatus, 22);
+        assertEq(kycStatus, HederaResponseCodes.SUCCESS);
         assertFalse(defaultKyc);
     }
 
     function test_HTS_getTokenExpiryInfo_should_return_correct_value_for_valid_token() external {
         (int64 expiryStatusCode, HtsSystemContract.Expiry memory expiry)
             = HtsSystemContract(HTS_ADDRESS).getTokenExpiryInfo(USDC);
-        assertEq(expiryStatusCode, 22);
+        assertEq(expiryStatusCode, HederaResponseCodes.SUCCESS);
         assertEq(expiry.second, 1706825707000718000);
         assertEq(expiry.autoRenewAccount, address(0));
         assertEq(expiry.autoRenewPeriod, 0);
@@ -406,7 +415,7 @@ contract HTSTest is Test, TestSetup {
         // AdminKey
         (int64 adminKeyStatusCode, HtsSystemContract.KeyValue memory adminKey)
             = HtsSystemContract(HTS_ADDRESS).getTokenKey(token, 0x1);
-        assertEq(adminKeyStatusCode, 22);
+        assertEq(adminKeyStatusCode, HederaResponseCodes.SUCCESS);
         assertEq(adminKey.inheritAccountKey, false);
         assertEq(adminKey.contractId, address(0));
         assertEq(adminKey.ed25519, hex"5db29fb3f19f8618cc4689cf13e78a935621845d67547719faf49f65d5c367cc");
@@ -415,7 +424,7 @@ contract HTSTest is Test, TestSetup {
         // FreezeKey
         (int64 freezeKeyStatusCode, HtsSystemContract.KeyValue memory freezeKey)
             = HtsSystemContract(HTS_ADDRESS).getTokenKey(token, 0x4);
-        assertEq(freezeKeyStatusCode, 22);
+        assertEq(freezeKeyStatusCode, HederaResponseCodes.SUCCESS);
         assertEq(freezeKey.inheritAccountKey, false);
         assertEq(freezeKey.contractId, address(0));
         assertEq(freezeKey.ed25519, hex"baa2dd1684d8445d41b22f2b2c913484a7d885cf25ce525f8bf3fe8d5c8cb85d");
@@ -424,7 +433,7 @@ contract HTSTest is Test, TestSetup {
         // SupplyKey
         (int64 supplyKeyStatusCode, HtsSystemContract.KeyValue memory supplyKey)
             = HtsSystemContract(HTS_ADDRESS).getTokenKey(token, 0x10);
-        assertEq(supplyKeyStatusCode, 22);
+        assertEq(supplyKeyStatusCode, HederaResponseCodes.SUCCESS);
         assertEq(supplyKey.inheritAccountKey, false);
         assertEq(supplyKey.contractId, address(0));
         assertEq(supplyKey.ed25519, hex"4e4658983980d1b25a634eeeb26cb2b0f0e2e9c83263ba5b056798d35f2139a8");
@@ -434,29 +443,29 @@ contract HTSTest is Test, TestSetup {
 
     function test_HTS_getTokenType_should_return_correct_token_type_for_existing_token() external {
         (int64 ftTypeStatusCode, int32 ftType) = HtsSystemContract(HTS_ADDRESS).getTokenType(USDC);
-        assertEq(22, ftTypeStatusCode);
+        assertEq(ftTypeStatusCode, HederaResponseCodes.SUCCESS);
         assertEq(ftType, int32(0));
 
         (int64 nftTypeStatusCode, int32 nftType) = HtsSystemContract(HTS_ADDRESS).getTokenType(CFNFTFF);
-        assertEq(22, nftTypeStatusCode);
+        assertEq(nftTypeStatusCode, HederaResponseCodes.SUCCESS);
         assertEq(nftType, int32(1));
     }
 
     function test_HTS_isToken_should_return_correct_is_token_info() external {
         (int64 ftIsTokenStatusCode, bool ftIsToken) = HtsSystemContract(HTS_ADDRESS).isToken(USDC);
-        assertEq(22, ftIsTokenStatusCode);
+        assertEq(ftIsTokenStatusCode, HederaResponseCodes.SUCCESS);
         assertTrue(ftIsToken);
 
         (int64 nftIsTokenStatusCode, bool nftIsToken) = HtsSystemContract(HTS_ADDRESS).isToken(CFNFTFF);
-        assertEq(22, nftIsTokenStatusCode);
+        assertEq(nftIsTokenStatusCode, HederaResponseCodes.SUCCESS);
         assertTrue(nftIsToken);
 
         (int64 accountIsTokenCode, bool accountIsToken) = HtsSystemContract(HTS_ADDRESS).isToken(CFNFTFF_TREASURY);
-        assertEq(22, accountIsTokenCode);
+        assertEq(accountIsTokenCode, HederaResponseCodes.SUCCESS);
         assertFalse(accountIsToken);
 
         (int64 randomIsTokenCode, bool randomIsToken) = HtsSystemContract(HTS_ADDRESS).isToken(address(123));
-        assertEq(22, randomIsTokenCode);
+        assertEq(randomIsTokenCode, HederaResponseCodes.SUCCESS);
         assertFalse(randomIsToken);
     }
 
@@ -467,12 +476,12 @@ contract HTSTest is Test, TestSetup {
 
         // Associate the token.
         int64 associationResponseCode = HtsSystemContract(HTS_ADDRESS).associateToken(bob, USDC);
-        assertEq(associationResponseCode, 22);
+        assertEq(associationResponseCode, HederaResponseCodes.SUCCESS);
         assertTrue(IHRC719(USDC).isAssociated());
 
         // Dissociate this token.
         int64 dissociationResponseCode = HtsSystemContract(HTS_ADDRESS).dissociateToken(bob, USDC);
-        assertEq(dissociationResponseCode, 22);
+        assertEq(dissociationResponseCode, HederaResponseCodes.SUCCESS);
         assertFalse(IHRC719(USDC).isAssociated());
 
         // Associate multiple tokens at once.
@@ -482,13 +491,13 @@ contract HTSTest is Test, TestSetup {
         tokens[0] = USDC;
         tokens[1] = MFCT;
         int64 multiAssociateResponseCode = HtsSystemContract(HTS_ADDRESS).associateTokens(bob, tokens);
-        assertEq(multiAssociateResponseCode, 22);
+        assertEq(multiAssociateResponseCode, HederaResponseCodes.SUCCESS);
         assertTrue(IHRC719(USDC).isAssociated());
         assertTrue(IHRC719(MFCT).isAssociated());
 
         // Dissociate multiple tokens at once.
         int64 multiDissociateResponseCode = HtsSystemContract(HTS_ADDRESS).dissociateTokens(bob, tokens);
-        assertEq(multiDissociateResponseCode, 22);
+        assertEq(multiDissociateResponseCode, HederaResponseCodes.SUCCESS);
         assertFalse(IHRC719(USDC).isAssociated());
         assertFalse(IHRC719(MFCT).isAssociated());
 
@@ -528,7 +537,7 @@ contract HTSTest is Test, TestSetup {
     function test_HTS_get_fungible_token_info() external {
         (int64 fungibleResponseCode, HtsSystemContract.FungibleTokenInfo memory fungibleTokenInfo)
             = HtsSystemContract(HTS_ADDRESS).getFungibleTokenInfo(USDC);
-        assertEq(fungibleResponseCode, 22);
+        assertEq(fungibleResponseCode, HederaResponseCodes.SUCCESS);
         assertEq(fungibleTokenInfo.decimals, 6);
         assertEq(fungibleTokenInfo.tokenInfo.token.name, "USD Coin");
         assertEq(fungibleTokenInfo.tokenInfo.token.symbol, "USDC");
@@ -577,7 +586,7 @@ contract HTSTest is Test, TestSetup {
     function test_HTS_get_non_fungible_token_info() external {
         (int64 nonFungibleResponseCode, HtsSystemContract.NonFungibleTokenInfo memory nonFungibleTokenInfo)
             = HtsSystemContract(HTS_ADDRESS).getNonFungibleTokenInfo(CFNFTFF, int64(1));
-        assertEq(nonFungibleResponseCode, 22);
+        assertEq(nonFungibleResponseCode, HederaResponseCodes.SUCCESS);
         assertEq(nonFungibleTokenInfo.serialNumber, int64(1));
         assertEq(nonFungibleTokenInfo.ownerId, CFNFTFF_TREASURY);
         assertEq(nonFungibleTokenInfo.spenderId, CFNFTFF_ALLOWED_SPENDER);
@@ -620,7 +629,7 @@ contract HTSTest is Test, TestSetup {
         assertGt(balanceOfOwner, 0);
         assertEq(IERC20(USDC).balanceOf(to), 0);
 
-        vm.prank(owner); // https://book.getfoundry.sh/cheatcodes/prank
+        vm.prank(owner);
         vm.expectEmit(USDC);
         emit IERC20Events.Transfer(owner, to, amount);
         IHederaTokenService(HTS_ADDRESS).transferToken(USDC, owner, to, int64(int256(amount)));
@@ -639,7 +648,7 @@ contract HTSTest is Test, TestSetup {
         assertGt(balanceOfOwner, 0);
         assertEq(IERC20(USDC).balanceOf(to), 0);
 
-        vm.prank(owner); // https://book.getfoundry.sh/cheatcodes/prank
+        vm.prank(owner);
         vm.expectEmit(USDC);
         emit IERC20Events.Transfer(owner, to, amount);
         IHederaTokenService(HTS_ADDRESS).transferFrom(USDC, owner, to, amount);
@@ -665,7 +674,7 @@ contract HTSTest is Test, TestSetup {
         assertGt(balanceOfOwner, 0);
         assertEq(IERC20(USDC).balanceOf(to[1]), 0);
         assertEq(IERC20(USDC).balanceOf(to[2]), 0);
-        vm.prank(owner); // https://book.getfoundry.sh/cheatcodes/prank
+        vm.prank(owner);
         vm.expectEmit(USDC);
         emit IERC20Events.Transfer(owner, to[1], amountToBob);
         emit IERC20Events.Transfer(owner, to[2], amountToAlice);
@@ -690,7 +699,7 @@ contract HTSTest is Test, TestSetup {
         assertGt(balanceOfOwner, 0);
         assertEq(IERC20(USDC).balanceOf(to[0]), 0);
         assertEq(IERC20(USDC).balanceOf(to[1]), 0);
-        vm.prank(owner); // https://book.getfoundry.sh/cheatcodes/prank
+        vm.prank(owner);
         emit IERC20Events.Transfer(owner, to[0], amountToBob);
         emit IERC20Events.Transfer(owner, to[1], amountToAlice);
         vm.expectRevert();
@@ -752,7 +761,7 @@ contract HTSTest is Test, TestSetup {
         vm.expectEmit(token);
         emit IERC20Events.Approval(CFNFTFF_TREASURY, newSpender, 1);
         int64 responseCodeApprove = HtsSystemContract(HTS_ADDRESS).approveNFT(token, newSpender, 1);
-        assertEq(responseCodeApprove, 22);
+        assertEq(responseCodeApprove, HederaResponseCodes.SUCCESS);
         assertEq(IERC721(token).getApproved(1), newSpender);
     }
 
@@ -765,7 +774,7 @@ contract HTSTest is Test, TestSetup {
         vm.expectEmit(USDC);
         emit IERC20Events.Approval(owner, spender, amount);
         int64 responseCodeApprove = HtsSystemContract(HTS_ADDRESS).approve(USDC, spender, amount);
-        assertEq(responseCodeApprove, 22);
+        assertEq(responseCodeApprove, HederaResponseCodes.SUCCESS);
         assertEq(IERC20(USDC).allowance(owner, spender), amount);
     }
 
@@ -777,7 +786,7 @@ contract HTSTest is Test, TestSetup {
         emit IERC721Events.ApprovalForAll(CFNFTFF_TREASURY, operator, true);
         int64 setApprovalForAllResponseCode = HtsSystemContract(HTS_ADDRESS)
             .setApprovalForAll(CFNFTFF, operator, true);
-        assertEq(setApprovalForAllResponseCode, 22);
+        assertEq(setApprovalForAllResponseCode, HederaResponseCodes.SUCCESS);
         assertTrue(IERC721(CFNFTFF).isApprovedForAll(CFNFTFF_TREASURY, operator));
     }
 }

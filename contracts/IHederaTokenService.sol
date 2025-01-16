@@ -305,7 +305,7 @@ interface IHederaTokenService {
     /// @param tokenTransfers the list of token transfers to do
     /// @custom:version 0.3.0 the signature of the previous version was cryptoTransfer(TokenTransferList[] memory tokenTransfers)
     // function cryptoTransfer(TransferList memory transferList, TokenTransferList[] memory tokenTransfers)
-    //     payable external
+    //     external
     //     returns (int64 responseCode);
 
     /// Mints an amount of the token to the defined treasury account
