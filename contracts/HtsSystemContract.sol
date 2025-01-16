@@ -125,44 +125,6 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         return dissociateTokens(account, tokens);
     }
 
-    function transferTokens(
-        address token,
-        address[] memory accountId,
-        int64[] memory amount
-    ) htsCall public returns (int64 responseCode) {
-        require(token != address(0), "transferTokens: invalid token");
-        require(accountId.length > 0, "transferTokens: missing recipients");
-        require(amount.length == accountId.length, "transferTokens: inconsistent input");
-
-        int64 total = 0;
-        for (uint256 i = 0; i < accountId.length; i++) {
-            total += amount[i];
-        }
-        require(total == 0, "transferTokens: total amount must balance");
-
-        for (uint256 from = 0; from < amount.length; from++) {
-            if (amount[from] >= 0) {
-                continue;
-            }
-            for (uint256 to = 0; to < amount.length; to++) {
-                if (amount[to] <= 0) {
-                    continue;
-                }
-                int64 transferAmount = amount[to] < -amount[from] ? amount[to] : -amount[from];
-                transferToken(token, accountId[from], accountId[to], transferAmount);
-                amount[from] += transferAmount;
-                amount[to] -= transferAmount;
-                if (amount[from] == 0) {
-                    break;
-                }
-            }
-        }
-        for (uint256 i = 0; i < amount.length; i++) { // Ensure all amounts are fully balanced after processing
-            require(amount[i] == 0, "transferTokens: unmatched transfers");
-        }
-        responseCode = HederaResponseCodes.SUCCESS;
-    }
-
     function transferNFTs(
         address token,
         address[] memory sender,

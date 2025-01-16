@@ -657,53 +657,17 @@ contract HTSTest is Test, TestSetup {
         assertEq(IERC20(USDC).balanceOf(to), amount);
     }
 
-    function test_HTS_transferTokens_with_correct_dataset() external {
+    function test_HTS_transferToken_insufficient_balance() external {
         // https://hashscan.io/testnet/account/0.0.1421
         address owner = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
-        uint256 amountToBob = 1_000000;
-        uint256 amountToAlice = 3_000000;
-        int64[] memory amount = new int64[](3);
-        amount[0] = -4_000000;
-        amount[1] = int64(int256(1_000000));
-        amount[2] = int64(int256(amountToAlice));
-        address[] memory to = new address[](3);
-        to[0] = owner;
-        to[1] = makeAddr("bob");
-        to[2] = makeAddr("alice");
+        uint256 amount = 300_000000;
+        address to = makeAddr("bob");
         uint256 balanceOfOwner = IERC20(USDC).balanceOf(owner);
         assertGt(balanceOfOwner, 0);
-        assertEq(IERC20(USDC).balanceOf(to[1]), 0);
-        assertEq(IERC20(USDC).balanceOf(to[2]), 0);
+        assertEq(IERC20(USDC).balanceOf(to), 0);
         vm.prank(owner);
-        vm.expectEmit(USDC);
-        emit IERC20Events.Transfer(owner, to[1], amountToBob);
-        emit IERC20Events.Transfer(owner, to[2], amountToAlice);
-        IHederaTokenService(HTS_ADDRESS).transferTokens(USDC, to, amount);
-        assertEq(IERC20(USDC).balanceOf(owner), balanceOfOwner - amountToBob - amountToAlice);
-        assertEq(IERC20(USDC).balanceOf(to[1]), amountToBob);
-        assertEq(IERC20(USDC).balanceOf(to[2]), amountToAlice);
-    }
-
-    function test_HTS_transferTokens_insufficient_balance() external {
-        // https://hashscan.io/testnet/account/0.0.1421
-        address owner = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
-        uint256 amountToBob = 1_000000;
-        uint256 amountToAlice = 300_000000;
-        int64[] memory amount = new int64[](2);
-        amount[0] = int64(int256(1_000000));
-        amount[1] = int64(int256(amountToAlice));
-        address[] memory to = new address[](2);
-        to[0] = makeAddr("bob");
-        to[1] = makeAddr("alice");
-        uint256 balanceOfOwner = IERC20(USDC).balanceOf(owner);
-        assertGt(balanceOfOwner, 0);
-        assertEq(IERC20(USDC).balanceOf(to[0]), 0);
-        assertEq(IERC20(USDC).balanceOf(to[1]), 0);
-        vm.prank(owner);
-        emit IERC20Events.Transfer(owner, to[0], amountToBob);
-        emit IERC20Events.Transfer(owner, to[1], amountToAlice);
         vm.expectRevert();
-        IHederaTokenService(HTS_ADDRESS).transferTokens(USDC, to, amount);
+        IHederaTokenService(HTS_ADDRESS).transferFrom(USDC, owner, to, amount);
     }
 
     function test_HTS_transferNFT() external {
