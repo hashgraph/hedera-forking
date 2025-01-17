@@ -21,12 +21,12 @@ const { expect } = require('chai');
 const { ethers: { getSigner, getSigners, getContractAt }, network: { provider } } = require('hardhat');
 const { loadFixture } = require('@nomicfoundation/hardhat-toolbox/network-helpers');
 
-describe('NFT example -- transfer', function () {
+describe('NFT example -- transferFrom', function () {
     async function id() {
         return [(await getSigners())[0]];
     }
 
-    it("should `tranfer` tokens from account holder to one of Hardhat' signers", async function () {
+    it("should `transferFrom` tokens from account holder to one of Hardhat' signers", async function () {
         const [receiver] = await loadFixture(id);
 
         // https://hashscan.io/mainnet/account/0.0.4822941
@@ -40,9 +40,9 @@ describe('NFT example -- transfer', function () {
         // https://hashscan.io/mainnet/token/0.0.8098137
         const nft = await getContractAt('IERC721', '0x00000000000000000000000000000000007b9159');
 
-        expect(await nft['ownerOf'](1n)).to.be.equal(receiver.address);
+        expect(await nft['ownerOf'](1n)).to.be.equal(holder.address);
 
-        await nft.connect(holder)['transfer'](receiver, 1n);
+        await nft.connect(holder)['transferFrom'](holder, receiver, 1n);
 
         expect(await nft['ownerOf'](1n)).to.be.equal(receiver.address);
     });

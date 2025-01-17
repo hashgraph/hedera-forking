@@ -95,17 +95,6 @@ describe('NFT example', function () {
         expect(owner).to.be.equal(holder.address);
     });
 
-    it("should `transfer` tokens from account holder to one of Hardhat' signers", async function () {
-        const { receiver } = await loadFixture(id);
-        const serialId = 1n;
-
-        expect(await nft['ownerOf'](serialId)).to.be.equal(holder.address);
-
-        await connectAs(nft, holder)['transfer'](receiver, serialId);
-
-        expect(await nft['ownerOf'](serialId)).to.be.equal(receiver.address);
-    });
-
     it("should `transferFrom` tokens from account holder after `approve`d one of Hardhat' signers", async function () {
         const { receiver, spender } = await loadFixture(id);
         const serialId = 1n;

@@ -26,6 +26,6 @@ contract NFTExampleTest is Test {
     }
 
     function test_dealt_nft_assigned_to_local_account() view external {
-        assertEq(IERC721(NFT_mainnet).balanceOf(3), user1);
+        assertEq(IERC721(NFT_mainnet).ownerOf(3), user1);
     }
 }
