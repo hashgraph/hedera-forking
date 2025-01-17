@@ -717,6 +717,25 @@ contract HTSTest is Test, TestSetup {
         vm.stopPrank();
     }
 
+    function test_HTS_allowance_from_remote() external {
+        // https://hashscan.io/testnet/account/0.0.4233295
+        address owner = address(0x000000000000000000000000000000000040984F);
+        // https://hashscan.io/testnet/account/0.0.1335
+        address spender = 0x0000000000000000000000000000000000000537;
+        (int64 responseCode, uint256 allowance) = IHederaTokenService(HTS_ADDRESS).allowance(USDC, owner, spender);
+        assertEq(responseCode, HederaResponseCodes.SUCCESS);
+        assertEq(allowance, 5_000000);
+    }
+
+    function test_HTS_allowance_empty() external {
+        // https://hashscan.io/testnet/account/0.0.4233295
+        address owner = address(0x000000000000000000000000000000000040984F);
+        address spender = makeAddr("alice");
+        (int64 responseCode, uint256 allowance) = IHederaTokenService(HTS_ADDRESS).allowance(USDC, owner, spender);
+        assertEq(responseCode, HederaResponseCodes.SUCCESS);
+        assertEq(allowance, 0);
+    }
+
     function test_HTS_approveNFT() external {
         address token = CFNFTFF;
         address newSpender = makeAddr("NEW_SPENDER");

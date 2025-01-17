@@ -538,11 +538,11 @@ interface IHederaTokenService {
     /// @param spender the spender of the tokens
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
     /// @return allowance The amount which spender is still allowed to withdraw from owner.
-    // function allowance(
-    //     address token,
-    //     address owner,
-    //     address spender
-    // ) external returns (int64 responseCode, uint256 allowance);
+    function allowance(
+        address token,
+        address owner,
+        address spender
+    ) external returns (int64 responseCode, uint256 allowance);
 
     /// Allow or reaffirm the approved address to transfer an NFT the approved address does not own.
     /// Only Applicable to NFT Tokens
