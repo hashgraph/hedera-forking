@@ -68,10 +68,16 @@ function deleteToken(address token) external returns (int64 responseCode);
 
 The main goal of this document is to describe how to enable token creation and deletion on HTS emulation.
 
-## What about Forking from a Remove Network?
+## What about Forking (from a Remove Network)?
 
-The introducion of token creation opens the door for a new capability.
-Using the HTS emulation **without** forking.
+The introducion of token creation unlocks a new capability.
+_Using the HTS emulation **without** forking._
+In order to use HTS emulation, a token must be present in the Ethereum Development Environment network, _e.g._, Hardhat'EDR or Foundry's Anvil.
+This can be done in two ways.
+Fetching the token state from a remote network, or by creating a token locally altogether.
+
+Compare this to the HTS mock present in the [Smart Contracts repo](https://github.com/hashgraph/hedera-smart-contracts/tree/main/test/foundry/mocks/hts-precompile).
+In addition to provide the same features as the HTS mock, we provide forking capabilities as well.
 
 ## High-level Specification
 
@@ -83,12 +89,14 @@ interface IHtsFungibleToken is IERC20, IHRC719 {}
 interface IHtsNonFungibleToken is IERC721, IHRC719 {}
 ```
 
+### Create Token
+
 All token creation methods receive a `token`, which refers to the `HederaToken` used to configure the initial values of the token being created.
 They return a `tokenAddress`, which will be the address of the newly created token.
 
 A successful call to any token creation method should have the following effect
 
-- The associated bytecode of `tokenAddress` should be that of the Proxy Contract as defined by [HIP719 &sect; _Specification_](https://hips.hedera.com/hip/hip-719). Note that the `tokenAddress` should be embedded into the bytecode as noted by the HIP.
+- The associated bytecode of `tokenAddress` should be that of the Proxy Contract as defined by [HIP719 _&sect; Specification_](https://hips.hedera.com/hip/hip-719). Note that the `tokenAddress` should be embedded into the bytecode as noted by the HIP.
 - The balance of the `token.treasury` should be `totalSupply`.
 - The `token.treasury` address should be associated to the token.
 - The token should not have any other balances nor associations.
@@ -96,10 +104,42 @@ A successful call to any token creation method should have the following effect
 - An immediate call to `IHederaTokenService(0x167).getTokenInfo(tokenAddress)` should return `token`.
 - All methods in either `IHtsFungibleToken(tokenAddress)` or `IHtsNonFungibleToken(tokenAddress)` should be available to invoke.
 
+#### Token Creation Counter
+
+HTS emulation should keep an internal counter to track next token address to be created.
+In forking mode, this counter should reemsemble the next token address from the remote network.
+In non-forking mode, this counter should be `0.0.32`, the first token account created by local node.
+
+### Delete Token
+
+Similarly, a successful call to `deleteToken` should have the following effect
+
+- The associated bytecode of `tokenAddress` should be `0x`.
+- No calls to either `IHtsFungibleToken(tokenAddress)` or `IHtsNonFungibleToken(tokenAddress)` should be possible.
+
+A `deleteToken` operation should leave the _Token Creation Counter_ untouched.
+
 ## Foundry library
 
 When
 
+[`vm.etch`](https://book.getfoundry.sh/cheatcodes/etch)
+
 ## Hardhat plugin
 
-How to encode a create token message into a storage slot request?
+The main issue with the Hardhat plugin is how to deploy the HIP 719 Proxy Contract into a predefined address, `tokenAddress`.
+As expected, this is not possible using only vanilla EVM.
+As we saw in the previous section, the Foundry library leverages Foundry cheatcode `vm.etch` to deploy the Proxy Contract to a predefined address.
+This can be done regardless of the forking environment.
+
+However, the Hardhat plugin works in a completely different manner.
+If fork is disabled, we simply cannot deploy into a predefined address as mentioned above.
+We cannot use [`hardhat_setcode`](https://hardhat.org/hardhat-network/docs/reference#hardhat_setcode) either.
+This is because there is no way to hook into EVM internal calls (the same reason we had to introduce the JSON-RPC Forwarder in the first place).
+
+A possible solution could be to use the JSON-RPC Forwarder with no backend Mirror Node.
+Then we can introduce a dummy slot for `eth_getStorageAt` that signals the creation of a token (see [_&sect; Token Creation Counter_](#token-creation-counter)).
+The JSON-RPC Forwarder can then return the Proxy Contract bytecode when a request `eth_getCode(tokenAddress)` is performed.
+
+This means that even if the user selects a non-forking environment,
+Hardhat will run in a forked one, against a no-backend JSON-RPC Forwarder.
