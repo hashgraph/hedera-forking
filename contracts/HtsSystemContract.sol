@@ -43,6 +43,51 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         assembly { accountId := sload(slot) }
     }
 
+    function cryptoTransfer(TransferList memory transferList, TokenTransferList[] memory tokenTransfers)
+    external
+    returns (int64 responseCode) {
+        require(TransferList.transfers.length + tokenTransfers.length > 0, "cryptoTransfer: Empty transfer lists");
+        AccountAmount memory accountAmount;
+        NftTransfer memory nftTransfer;
+        for (uint256 hbarTransferIndex = 0; hbarTransferIndex < transferList.transfers.length; hbarTransferIndex++) {
+            accountAmount = transferList.transfers[hbarTransferIndex];
+            require(accountAmount.amount > 0, "cryptoTransfer: invalid amount");
+            require(accountAmount.accountID != address(0), "cryptoTransfer: invalid account");
+            if (accountAmount.isApproval) {
+                revert("cryptoTransfer: Approve to spend hbar operation is not supported");
+            } else {
+                payable(accountAmount.amount).call{value: accountAmount.amount}("");
+            }
+        }
+        address tokenAddress;
+        for (uint256 tokenTransferIndex = 0; tokenTransferIndex < tokenTransfers.length; tokenTransferIndex++) {
+            tokenAddress = tokenTransfers[tokenTransferIndex].token;
+            require(accountAmount.amount > 0, "cryptoTransfer: invalid amount");
+            require(tokenAddress != address(0), "cryptoTransfer: invalid token");
+            for (uint256 ftIndex = 0; ftIndex < tokenTransfers[tokenTransferIndex].transfers.length; ftIndex++) {
+                accountAmount = tokenTransfers[ftIndex].transfers[ftIndex];
+                require(accountAmount.amount > 0, "cryptoTransfer: invalid amount");
+                require(accountAmount.accountID != address(0), "cryptoTransfer: invalid account");
+                if (accountAmount.isApproval) {
+                    IERC20(tokenAddress).approve(accountAmount.accountID, accountAmount.amount);
+                } else {
+                    IERC20(tokenAddress).transfer(accountAmount.accountID, accountAmount.amount);
+                }
+            }
+            for (uint256 nftIndex = 0; nftIndex < tokenTransfers[tokenTransferIndex].transfers.length; nftIndex++) {
+                nftTransfer = tokenTransfers[tokenTransferIndex].nftTransfers[nftIndex];
+                require(nftTransfer.receiverAccountID != address(0), "cryptoTransfer: invalid receiver");
+                if (accountAmount.isApproval) {
+                    IERC721(tokenAddress).approve(nftTransfer.receiverAccountID, nftTransfer.serialNumber);
+                } else {
+                    require(nftTransfer.senderAccountID != address(0), "cryptoTransfer: invalid sender");
+                    IERC721(tokenAddress).transferFrom(nftTransfer.senderAccountID, nftTransfer.receiverAccountID, nftTransfer.serialNumber);
+                }
+            }
+        }
+        responseCode = 22; // HederaResponseCodes.SUCCESS
+    }
+
     function mintToken(address token, int64 amount, bytes[] memory) htsCall external returns (
         int64 responseCode,
         int64 newTotalSupply,
