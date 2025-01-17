@@ -53,7 +53,7 @@ describe('NFT example', function () {
     let nft;
 
     /**
-     * https://hashscan.io/mainnet/account/0.0.6279
+     * https://hashscan.io/mainnet/account/0.0.4822941
      *
      * @type {import('@nomicfoundation/hardhat-ethers/signers').HardhatEthersSigner}
      */
@@ -61,8 +61,7 @@ describe('NFT example', function () {
 
     beforeEach(async function () {
         nft = await ethers.getContractAt('IERC721', nftAddress);
-
-        const holderAddress = '0x0000000000000000000000000000000000001887';
+        const holderAddress = '0x000000000000000000000000000000000049979d';
         // https://hardhat.org/hardhat-network/docs/reference#hardhat_impersonateaccount
         await network.provider.request({
             method: 'hardhat_impersonateAccount',
@@ -74,7 +73,7 @@ describe('NFT example', function () {
     it('should get name, symbol and tokenURI', async function () {
         const name = await nft['name']();
         const symbol = await nft['symbol']();
-        const tokenURI = await nft['tokenURI'](1);
+        const tokenURI = await nft['tokenURI'](1n);
         expect(name).to.be.equal('Hash Monkey Community token support');
         expect(symbol).to.be.equal('NFTmonkey');
         expect(tokenURI).to.be.equal(
@@ -92,13 +91,13 @@ describe('NFT example', function () {
     });
 
     it('should get `ownerOf` account holder', async function () {
-        const owner = await nft['ownerOf'](1);
+        const owner = await nft['ownerOf'](1n);
         expect(owner).to.be.equal(holder.address);
     });
 
     it("should `transfer` tokens from account holder to one of Hardhat' signers", async function () {
         const { receiver } = await loadFixture(id);
-        const serialId = 1;
+        const serialId = 1n;
 
         expect(await nft['ownerOf'](serialId)).to.be.equal(holder.address);
 
@@ -109,7 +108,7 @@ describe('NFT example', function () {
 
     it("should `transferFrom` tokens from account holder after `approve`d one of Hardhat' signers", async function () {
         const { receiver, spender } = await loadFixture(id);
-        const serialId = 1;
+        const serialId = 1n;
         expect(await nft['ownerOf'](serialId)).to.be.equal(holder.address);
 
         await connectAs(nft, holder)['approve'](spender, serialId);
@@ -124,15 +123,15 @@ describe('NFT example', function () {
 
     it("should indirectly `transferFrom` tokens from account holder after `approve`d one of Hardhat' signers", async function () {
         const { receiver, spender } = await loadFixture(id);
-        const serialId = 1;
+        const serialId = 1n;
         expect(await nft['ownerOf'](serialId)).to.be.equal(holder.address);
 
         const CallToken = await ethers.getContractFactory('CallNFT');
         const callToken = await CallToken.deploy();
         const callTokenAddress = await callToken.getAddress();
 
-        await connectAs(nft, holder)['approve'](callTokenAddress, 1);
-        await connectAs(callToken, holder)['invokeTransferFrom'](nftAddress, receiver, 1);
+        await connectAs(nft, holder)['approve'](callTokenAddress, 1n);
+        await connectAs(callToken, holder)['invokeTransferFrom'](nftAddress, receiver, 1n);
 
         expect(await nft['isApproved'](holder.address, spender.address)).to.be.equal(false);
         expect(await nft['ownerOf'](serialId)).to.be.equal(receiver);
