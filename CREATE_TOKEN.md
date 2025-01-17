@@ -121,15 +121,44 @@ A `deleteToken` operation should leave the _Token Creation Counter_ untouched.
 
 ## Foundry library
 
-When
+A token create method should first check that `token` is valid, _e.g._, `token.name` is not empty.
+Then a `TokenInfo` variable should be created containing `token` and the remaining creation arguments as applicable.
 
-[`vm.etch`](https://book.getfoundry.sh/cheatcodes/etch)
+After that, the created `TokenInfo` should be copied into `internal _tokenInfo` of the `tokenAddress` slot space.
+To avoid changing the `redirectForToken` and `_initTokenData` interaction,
+we can deploy a temporary contract that copies `_tokenInfo` into its own storage space.
+After that, we deploy the Proxy Contract bytecode at `tokenAddress`.
+
+> [!NOTE]
+> The `vm.etch` cheatcode does not clean up the storage space of `target`.
+> That is, the storage space remains unchanged for a given target after `vm.etch` has been invoked onto that `target`.
+>
+> ```solidity
+> address target = address(0x1234);
+> vm.store(target, bytes32(uint256(0x0)), bytes32(uint256(1111)));
+> vm.store(target, bytes32(uint256(0x1)), bytes32(uint256(2222)));
+>
+> vm.etch(target, address(new C()).code);
+>
+> C c = C(target);
+> console.log(c.val1());
+> console.log(c.val2());
+> ```
+>
+> ```console
+> $ foundry test
+> [...]
+> Logs:
+>   1111
+>   2222
+> [...]
+> ```
 
 ## Hardhat plugin
 
 The main issue with the Hardhat plugin is how to deploy the HIP 719 Proxy Contract into a predefined address, `tokenAddress`.
 As expected, this is not possible using only vanilla EVM.
-As we saw in the previous section, the Foundry library leverages Foundry cheatcode `vm.etch` to deploy the Proxy Contract to a predefined address.
+As we saw in the previous section, the Foundry library leverages Foundry cheatcode [`vm.etch`](https://book.getfoundry.sh/cheatcodes/etch) to deploy the Proxy Contract to a predefined address.
 This can be done regardless of the forking environment.
 
 However, the Hardhat plugin works in a completely different manner.
