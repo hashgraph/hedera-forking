@@ -238,33 +238,27 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
     function getTokenCustomFees(
         address token
     ) htsCall external returns (int64, FixedFee[] memory, FractionalFee[] memory, RoyaltyFee[] memory) {
-        require(token != address(0), "getTokenCustomFees: invalid token");
-        (int64 responseCode, TokenInfo memory tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
+        (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
         return (responseCode, tokenInfo.fixedFees, tokenInfo.fractionalFees, tokenInfo.royaltyFees);
     }
 
     function getTokenDefaultFreezeStatus(address token) htsCall external returns (int64, bool) {
-        require(token != address(0), "getTokenDefaultFreezeStatus: invalid address");
-        (int64 responseCode, TokenInfo memory tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
+        (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
         return (responseCode, tokenInfo.token.freezeDefault);
     }
 
     function getTokenDefaultKycStatus(address token) htsCall external returns (int64, bool) {
-        require(token != address(0), "getTokenDefaultKycStatus: invalid address");
-        (int64 responseCode, TokenInfo memory tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
+        (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
         return (responseCode, tokenInfo.defaultKycStatus);
     }
 
     function getTokenExpiryInfo(address token) htsCall external returns (int64, Expiry memory expiry) {
-        require(token != address(0), "getTokenExpiryInfo: invalid token");
-        (int64 responseCode, TokenInfo memory tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
+        (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
         return (responseCode, tokenInfo.token.expiry);
     }
 
     function getFungibleTokenInfo(address token) htsCall external returns (int64, FungibleTokenInfo memory) {
-        require(token != address(0), "getFungibleTokenInfo: invalid token");
-
-        (int64 responseCode, TokenInfo memory tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
+        (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
         require(responseCode == HederaResponseCodes.SUCCESS, "getFungibleTokenInfo: failed to get token data");
         FungibleTokenInfo memory fungibleTokenInfo;
         fungibleTokenInfo.tokenInfo = tokenInfo;
@@ -273,15 +267,14 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         return (responseCode, fungibleTokenInfo);
     }
 
-    function getTokenInfo(address token) htsCall external returns (int64, TokenInfo memory) {
+    function getTokenInfo(address token) htsCall public returns (int64, TokenInfo memory) {
         require(token != address(0), "getTokenInfo: invalid token");
 
         return IHederaTokenService(token).getTokenInfo(token);
     }
 
     function getTokenKey(address token, uint keyType) htsCall external returns (int64, KeyValue memory) {
-        require(token != address(0), "getTokenKey: invalid token");
-        (int64 responseCode, TokenInfo memory tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
+        (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
         require(responseCode == HederaResponseCodes.SUCCESS, "getTokenKey: failed to get token data");
         for (uint256 i = 0; i < tokenInfo.token.tokenKeys.length; i++) {
             if (tokenInfo.token.tokenKeys[i].keyType == keyType) {
@@ -295,9 +288,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
     function getNonFungibleTokenInfo(address token, int64 serialNumber)
         htsCall external
         returns (int64, NonFungibleTokenInfo memory) {
-        require(token != address(0), "getNonFungibleTokenInfo: invalid token");
-
-        (int64 responseCode, TokenInfo memory tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
+        (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
         require(responseCode == HederaResponseCodes.SUCCESS, "getNonFungibleTokenInfo: failed to get token data");
         NonFungibleTokenInfo memory nonFungibleTokenInfo;
         nonFungibleTokenInfo.tokenInfo = tokenInfo;
