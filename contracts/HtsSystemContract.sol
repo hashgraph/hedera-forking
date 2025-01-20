@@ -5,6 +5,7 @@ import {IERC20Events, IERC20} from "./IERC20.sol";
 import {IERC721, IERC721Events} from "./IERC721.sol";
 import {IHRC719} from "./IHRC719.sol";
 import {IHederaTokenService} from "./IHederaTokenService.sol";
+import {HederaResponseCodes} from "./HederaResponseCodes.sol";
 
 address constant HTS_ADDRESS = address(0x167);
 
@@ -42,12 +43,6 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         assembly { accountId := sload(slot) }
     }
 
-    function getTokenInfo(address token) htsCall external returns (int64 responseCode, TokenInfo memory tokenInfo) {
-        require(token != address(0), "getTokenInfo: invalid token");
-
-        (responseCode, tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
-    }
-
     function mintToken(address token, int64 amount, bytes[] memory) htsCall external returns (
         int64 responseCode,
         int64 newTotalSupply,
@@ -57,14 +52,14 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         require(amount > 0, "mintToken: invalid amount");
 
         (int64 tokenInfoResponseCode, TokenInfo memory tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
-        require(tokenInfoResponseCode == 22, "mintToken: failed to get token info");
+        require(tokenInfoResponseCode == HederaResponseCodes.SUCCESS, "mintToken: failed to get token info");
 
         address treasuryAccount = tokenInfo.token.treasury;
         require(treasuryAccount != address(0), "mintToken: invalid account");
 
         HtsSystemContract(token)._update(address(0), treasuryAccount, uint256(uint64(amount)));
 
-        responseCode = 22; // HederaResponseCodes.SUCCESS
+        responseCode = HederaResponseCodes.SUCCESS;
         newTotalSupply = int64(uint64(IERC20(token).totalSupply()));
         serialNumbers = new int64[](0);
         require(newTotalSupply >= 0, "mintToken: invalid total supply");
@@ -78,16 +73,245 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         require(amount > 0, "burnToken: invalid amount");
 
         (int64 tokenInfoResponseCode, TokenInfo memory tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
-        require(tokenInfoResponseCode == 22, "burnToken: failed to get token info");
+        require(tokenInfoResponseCode == HederaResponseCodes.SUCCESS, "burnToken: failed to get token info");
 
         address treasuryAccount = tokenInfo.token.treasury;
         require(treasuryAccount != address(0), "burnToken: invalid account");
 
         HtsSystemContract(token)._update(treasuryAccount, address(0), uint256(uint64(amount)));
 
-        responseCode = 22; // HederaResponseCodes.SUCCESS
+        responseCode = HederaResponseCodes.SUCCESS;
         newTotalSupply = int64(uint64(IERC20(token).totalSupply()));
         require(newTotalSupply >= 0, "burnToken: invalid total supply");
+    }
+
+    function associateTokens(address account, address[] memory tokens) htsCall public returns (int64 responseCode) {
+        require(tokens.length > 0, "associateTokens: missing tokens");
+        require(
+            account == msg.sender,
+            "associateTokens: Must be signed by the provided Account's key or called from the accounts contract key"
+        );
+        for (uint256 i = 0; i < tokens.length; i++) {
+            require(tokens[i] != address(0), "associateTokens: invalid token");
+            int64 associationResponseCode = IHederaTokenService(tokens[i]).associateToken(account, tokens[i]);
+            require(
+                associationResponseCode == HederaResponseCodes.SUCCESS,
+                "associateTokens: Failed to associate token"
+            );
+        }
+        responseCode = HederaResponseCodes.SUCCESS;
+    }
+
+    function associateToken(address account, address token) htsCall external returns (int64 responseCode) {
+        address[] memory tokens = new address[](1);
+        tokens[0] = token;
+        return associateTokens(account, tokens);
+    }
+
+    function dissociateTokens(address account, address[] memory tokens) htsCall public returns (int64 responseCode) {
+        require(tokens.length > 0, "dissociateTokens: missing tokens");
+        require(account == msg.sender, "dissociateTokens: Must be signed by the provided Account's key or called from the accounts contract key");
+        for (uint256 i = 0; i < tokens.length; i++) {
+            require(tokens[i] != address(0), "dissociateTokens: invalid token");
+            int64 dissociationResponseCode = IHederaTokenService(tokens[i]).dissociateToken(account, tokens[i]);
+            require(dissociationResponseCode == HederaResponseCodes.SUCCESS, "dissociateTokens: Failed to dissociate token");
+        }
+        responseCode = HederaResponseCodes.SUCCESS;
+    }
+
+    function dissociateToken(address account, address token) htsCall external returns (int64 responseCode) {
+        address[] memory tokens = new address[](1);
+        tokens[0] = token;
+        return dissociateTokens(account, tokens);
+    }
+
+    function transferNFTs(
+        address token,
+        address[] memory sender,
+        address[] memory receiver,
+        int64[] memory serialNumber
+    ) htsCall external returns (int64 responseCode) {
+        require(token != address(0), "transferNFTs: invalid token");
+        require(sender.length > 0, "transferNFTs: missing recipients");
+        require(receiver.length == sender.length, "transferNFTs: inconsistent input");
+        require(serialNumber.length == sender.length, "transferNFTs: inconsistent input");
+        for (uint256 i = 0; i < sender.length; i++) {
+            transferNFT(token, sender[i], receiver[i], serialNumber[i]);
+        }
+        responseCode = HederaResponseCodes.SUCCESS;
+    }
+
+    function transferToken(
+        address token,
+        address sender,
+        address recipient,
+        int64 amount
+    ) htsCall public returns (int64 responseCode) {
+        require(token != address(0), "transferToken: invalid token");
+        address from = sender;
+        address to = recipient;
+        if (amount < 0) {
+            from = recipient;
+            to = sender;
+            amount *= -1;
+        }
+        require(
+            from == msg.sender ||
+            IERC20(token).allowance(from, msg.sender) >= uint256(uint64(amount)),
+            "transferNFT: unauthorized"
+        );
+        HtsSystemContract(token).transferFrom(msg.sender, from, to, uint256(uint64(amount)));
+        responseCode = HederaResponseCodes.SUCCESS;
+    }
+
+    function transferNFT(
+        address token,
+        address sender,
+        address recipient,
+        int64 serialNumber
+    ) htsCall public returns (int64 responseCode) {
+        uint256 serialId = uint256(uint64(serialNumber));
+        HtsSystemContract(token).transferFromNFT(msg.sender, sender, recipient, serialId);
+        responseCode = HederaResponseCodes.SUCCESS;
+    }
+
+    function approve(address token, address spender, uint256 amount) htsCall public returns (int64 responseCode) {
+        HtsSystemContract(token).approve(msg.sender, spender, amount);
+        responseCode = HederaResponseCodes.SUCCESS;
+    }
+
+    function transferFrom(
+        address token,
+        address sender,
+        address recipient,
+        uint256 amount
+    ) htsCall external returns (int64) {
+        return transferToken(token, sender, recipient, int64(int256(amount)));
+    }
+
+    function allowance(address token, address owner, address spender) htsCall external view returns (int64, uint256) {
+        return (HederaResponseCodes.SUCCESS, IERC20(token).allowance(owner, spender));
+    }
+
+    function approveNFT(
+        address token,
+        address approved,
+        uint256 serialNumber
+    ) htsCall public returns (int64 responseCode) {
+        HtsSystemContract(token).approveNFT(msg.sender, approved, serialNumber);
+        responseCode = HederaResponseCodes.SUCCESS;
+    }
+
+    function transferFromNFT(
+        address token,
+        address from,
+        address to,
+        uint256 serialNumber
+    ) htsCall external returns (int64) {
+        return transferNFT(token, from, to, int64(int256(serialNumber)));
+    }
+
+    function getApproved(address token, uint256 serialNumber)
+        htsCall external view returns (int64 responseCode, address approved) {
+        require(token != address(0), "getApproved: invalid token");
+        (responseCode, approved) = (HederaResponseCodes.SUCCESS, IERC721(token).getApproved(serialNumber));
+    }
+
+    function setApprovalForAll(
+        address token,
+        address operator,
+        bool approved
+    ) htsCall external returns (int64 responseCode) {
+        HtsSystemContract(token).setApprovalForAll(msg.sender, operator, approved);
+        responseCode = HederaResponseCodes.SUCCESS;
+    }
+
+    function isApprovedForAll(
+        address token,
+        address owner,
+        address operator
+    ) htsCall external view returns (int64, bool) {
+        require(token != address(0), "isApprovedForAll: invalid token");
+        return (HederaResponseCodes.SUCCESS, IERC721(token).isApprovedForAll(owner, operator));
+    }
+
+    function getTokenCustomFees(
+        address token
+    ) htsCall external returns (int64, FixedFee[] memory, FractionalFee[] memory, RoyaltyFee[] memory) {
+        (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
+        return (responseCode, tokenInfo.fixedFees, tokenInfo.fractionalFees, tokenInfo.royaltyFees);
+    }
+
+    function getTokenDefaultFreezeStatus(address token) htsCall external returns (int64, bool) {
+        (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
+        return (responseCode, tokenInfo.token.freezeDefault);
+    }
+
+    function getTokenDefaultKycStatus(address token) htsCall external returns (int64, bool) {
+        (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
+        return (responseCode, tokenInfo.defaultKycStatus);
+    }
+
+    function getTokenExpiryInfo(address token) htsCall external returns (int64, Expiry memory expiry) {
+        (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
+        return (responseCode, tokenInfo.token.expiry);
+    }
+
+    function getFungibleTokenInfo(address token) htsCall external returns (int64, FungibleTokenInfo memory) {
+        (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
+        require(responseCode == HederaResponseCodes.SUCCESS, "getFungibleTokenInfo: failed to get token data");
+        FungibleTokenInfo memory fungibleTokenInfo;
+        fungibleTokenInfo.tokenInfo = tokenInfo;
+        fungibleTokenInfo.decimals =  int32(int8(IERC20(token).decimals()));
+
+        return (responseCode, fungibleTokenInfo);
+    }
+
+    function getTokenInfo(address token) htsCall public returns (int64, TokenInfo memory) {
+        require(token != address(0), "getTokenInfo: invalid token");
+
+        return IHederaTokenService(token).getTokenInfo(token);
+    }
+
+    function getTokenKey(address token, uint keyType) htsCall external returns (int64, KeyValue memory) {
+        (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
+        require(responseCode == HederaResponseCodes.SUCCESS, "getTokenKey: failed to get token data");
+        for (uint256 i = 0; i < tokenInfo.token.tokenKeys.length; i++) {
+            if (tokenInfo.token.tokenKeys[i].keyType == keyType) {
+                return (HederaResponseCodes.SUCCESS, tokenInfo.token.tokenKeys[i].key);
+            }
+        }
+        KeyValue memory emptyKey;
+        return (HederaResponseCodes.SUCCESS, emptyKey);
+    }
+
+    function getNonFungibleTokenInfo(address token, int64 serialNumber)
+        htsCall external
+        returns (int64, NonFungibleTokenInfo memory) {
+        (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
+        require(responseCode == HederaResponseCodes.SUCCESS, "getNonFungibleTokenInfo: failed to get token data");
+        NonFungibleTokenInfo memory nonFungibleTokenInfo;
+        nonFungibleTokenInfo.tokenInfo = tokenInfo;
+        nonFungibleTokenInfo.serialNumber = serialNumber;
+        nonFungibleTokenInfo.spenderId = IERC721(token).getApproved(uint256(uint64(serialNumber)));
+        nonFungibleTokenInfo.ownerId = IERC721(token).ownerOf(uint256(uint64(serialNumber)));
+
+        // ToDo:
+        // nonFungibleTokenInfo.metadata = bytes(IERC721(token).tokenURI(uint256(uint64(serialNumber))));
+        // nonFungibleTokenInfo.creationTime = int64(0);
+
+        return (responseCode, nonFungibleTokenInfo);
+    }
+
+    function isToken(address token) htsCall external returns (int64, bool) {
+        bytes memory payload = abi.encodeWithSignature("getTokenType(address)", token);
+        (bool success, bytes memory returnData) = token.call(payload);
+        return (HederaResponseCodes.SUCCESS, success && returnData.length > 0);
+    }
+
+    function getTokenType(address token) htsCall external returns (int64, int32) {
+        require(token != address(0), "getTokenType: invalid address");
+        return IHederaTokenService(token).getTokenType(token);
     }
 
     /**
@@ -173,7 +397,77 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         if (msg.sender == HTS_ADDRESS) {
             if (selector == this.getTokenInfo.selector) {
                 require(msg.data.length >= 28, "getTokenInfo: Not enough calldata");
-                return abi.encode(22, _tokenInfo);
+                return abi.encode(HederaResponseCodes.SUCCESS, _tokenInfo);
+            }
+            if (selector == this.associateToken.selector) {
+                require(msg.data.length >= 48, "associateToken: Not enough calldata");
+                address account = address(bytes20(msg.data[40:60]));
+                bytes32 slot = _isAssociatedSlot(account);
+                assembly { sstore(slot, true) }
+                return abi.encode(HederaResponseCodes.SUCCESS);
+            }
+            if (selector == this.dissociateToken.selector) {
+                require(msg.data.length >= 48, "dissociateToken: Not enough calldata");
+                address account = address(bytes20(msg.data[40:60]));
+                bytes32 slot = _isAssociatedSlot(account);
+                assembly { sstore(slot, false) }
+                return abi.encode(HederaResponseCodes.SUCCESS);
+            }
+            if (selector == this.getTokenType.selector) {
+                require(msg.data.length >= 28, "getTokenType: Not enough calldata");
+                if (keccak256(abi.encodePacked(tokenType)) == keccak256("FUNGIBLE_COMMON")) {
+                    return abi.encode(HederaResponseCodes.SUCCESS, int32(0));
+                }
+                if (keccak256(abi.encodePacked(tokenType)) == keccak256("NON_FUNGIBLE_UNIQUE")) {
+                    return abi.encode(HederaResponseCodes.SUCCESS, int32(1));
+                }
+                return abi.encode(HederaResponseCodes.SUCCESS, int32(-1));
+            }
+            if (selector == this.transferFrom.selector) {
+                require(msg.data.length >= 156, "transferFrom: Not enough calldata");
+                address sender = address(bytes20(msg.data[40:60]));
+                address from = address(bytes20(msg.data[72:92]));
+                address to = address(bytes20(msg.data[104:124]));
+                uint256 amount = uint256(bytes32(msg.data[124:156]));
+                if (from != sender) {
+                    _spendAllowance(from, sender, amount);
+                }
+                _transfer(from, to, amount);
+                return abi.encode(true);
+            }
+            if (selector == this.transferFromNFT.selector) {
+                require(msg.data.length >= 156, "transferFromNFT: Not enough calldata");
+                address sender = address(bytes20(msg.data[40:60]));
+                address from = address(bytes20(msg.data[72:92]));
+                address to = address(bytes20(msg.data[104:124]));
+                uint256 serialId = uint256(bytes32(msg.data[124:156]));
+                _transferNFT(sender, from, to, serialId);
+                return abi.encode(true);
+            }
+            if (selector == this.approve.selector) {
+                require(msg.data.length >= 124, "approve: Not enough calldata");
+                address from = address(bytes20(msg.data[40:60]));
+                address to = address(bytes20(msg.data[72:92]));
+                uint256 amount = uint256(bytes32(msg.data[92:124]));
+                _approve(from, to, amount);
+                emit Approval(from, to, amount);
+                return abi.encode(true);
+            }
+            if (selector == this.approveNFT.selector) {
+                require(msg.data.length >= 124, "approveNFT: Not enough calldata");
+                address from = address(bytes20(msg.data[40:60]));
+                address to = address(bytes20(msg.data[72:92]));
+                uint256 serialId = uint256(bytes32(msg.data[92:124]));
+                _approve(from, to, serialId, true);
+                return abi.encode(true);
+            }
+            if (selector == this.setApprovalForAll.selector) {
+                require(msg.data.length >= 124, "setApprovalForAll: Not enough calldata");
+                address from = address(bytes20(msg.data[40:60]));
+                address to = address(bytes20(msg.data[72:92]));
+                bool approved = uint256(bytes32(msg.data[92:124])) == 1;
+                _setApprovalForAll(from, to, approved);
+                return abi.encode(true);
             }
             if (selector == this._update.selector) {
                 require(msg.data.length >= 124, "update: Not enough calldata");
@@ -288,21 +582,21 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
             address from = address(bytes20(msg.data[40:60]));
             address to = address(bytes20(msg.data[72:92]));
             uint256 serialId = uint256(bytes32(msg.data[92:124]));
-            _transferNFT(from, to, serialId);
+            _transferNFT(msg.sender, from, to, serialId);
             return abi.encode(true);
         }
         if (selector == IERC721.approve.selector) {
             require(msg.data.length >= 92, "approve: Not enough calldata");
             address spender = address(bytes20(msg.data[40:60]));
             uint256 serialId = uint256(bytes32(msg.data[60:92]));
-            _approve(spender, serialId, true);
+            _approve(msg.sender, spender, serialId, true);
             return abi.encode(true);
         }
         if (selector == IERC721.setApprovalForAll.selector) {
             require(msg.data.length >= 92, "setApprovalForAll: Not enough calldata");
             address operator = address(bytes20(msg.data[40:60]));
             bool approved = uint256(bytes32(msg.data[60:92])) == 1;
-            _setApprovalForAll(operator, approved);
+            _setApprovalForAll(msg.sender, operator, approved);
             return abi.encode(true);
         }
         if (selector == IERC721.getApproved.selector) {
@@ -417,9 +711,9 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         assembly { approved := sload(slot) }
     }
 
-    function __isApprovedForAll(address owner, address operator) private returns (bool isApprovedForAll) {
+    function __isApprovedForAll(address owner, address operator) private returns (bool approvedForAll) {
         bytes32 slot = _isApprovedForAllSlot(owner, operator);
-        assembly { isApprovedForAll := sload(slot) }
+        assembly { approvedForAll := sload(slot) }
     }
 
     function _transfer(address from, address to, uint256 amount) private {
@@ -429,7 +723,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         emit Transfer(from, to, amount);
     }
 
-    function _transferNFT(address from, address to, uint256 serialId) private {
+    function _transferNFT(address sender, address from, address to, uint256 serialId) private {
         require(from != address(0), "hts: invalid sender");
         require(to != address(0), "hts: invalid receiver");
 
@@ -438,10 +732,8 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         address owner;
         assembly { owner := sload(slot) }
         require(owner == from, "hts: sender is not owner");
-
-        // If the sender is not the owner, check if the sender is approved
-        if (msg.sender != from) {
-            require(msg.sender == __getApproved(serialId) || __isApprovedForAll(from, msg.sender), "hts: unauthorized");
+        if (sender != owner) {
+            require(sender == __getApproved(serialId) || __isApprovedForAll(owner, sender), "hts: unauthorized");
         }
 
         // Clear approval
@@ -449,8 +741,10 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         assembly { sstore(approvalSlot, 0) }
 
         // Clear approval for all
-        bytes32 isApprovedForAllSlot = _isApprovedForAllSlot(from, to);
-        assembly { sstore(isApprovedForAllSlot, false) }
+        if (owner != sender) {
+            bytes32 isApprovedForAllSlot = _isApprovedForAllSlot(owner, sender);
+            assembly { sstore(isApprovedForAllSlot, false) }
+        }
 
         // Set the new owner
         assembly { sstore(slot, to) }
@@ -488,10 +782,13 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         assembly { sstore(allowanceSlot, amount) }
     }
 
-    function _approve(address spender, uint256 serialId, bool isApproved) private {
+    function _approve(address sender, address spender, uint256 serialId, bool isApproved) private {
         // The caller must own the token or be an approved operator.
         address owner = __ownerOf(serialId);
-        require(msg.sender == owner || __getApproved(serialId) == msg.sender || __isApprovedForAll(owner, msg.sender), "_approve: unauthorized");
+        require(
+            sender == owner || __getApproved(serialId) == sender || __isApprovedForAll(owner, sender),
+            "_approve: unauthorized"
+        );
 
         bytes32 slot = _getApprovedSlot(uint32(serialId));
         address newApproved = isApproved ? spender : address(0);
@@ -514,11 +811,10 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         }
     }
 
-    function _setApprovalForAll(address operator, bool approved) private {
-        address owner = msg.sender;
-        require(operator != address(0) && operator != owner, "setApprovalForAll: invalid operator");
-        bytes32 slot = _isApprovedForAllSlot(owner, operator);
+    function _setApprovalForAll(address sender, address operator, bool approved) private {
+        require(operator != address(0) && operator != sender, "setApprovalForAll: invalid operator");
+        bytes32 slot = _isApprovedForAllSlot(sender, operator);
         assembly { sstore(slot, approved) }
-        emit ApprovalForAll(owner, operator, approved);
+        emit ApprovalForAll(sender, operator, approved);
     }
 }
