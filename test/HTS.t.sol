@@ -692,6 +692,64 @@ contract HTSTest is Test, TestSetup {
         assertEq(IERC721(CFNFTFF).ownerOf(serialId), to);
     }
 
+    function test_HTS_transferTokens_success() public {
+        // https://hashscan.io/testnet/account/0.0.1421
+        address owner = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
+        address[] memory to = new address[](1);
+        to[0] = makeAddr("bob");
+        uint256 amount = 4_000000;
+        int64[] memory amounts = new int64[](1);
+        amounts[0] = int64(int256(amount));
+
+        uint256 balanceOfOwner = IERC20(USDC).balanceOf(owner);
+        assertGt(balanceOfOwner, 0);
+        assertEq(IERC20(USDC).balanceOf(to[0]), 0);
+
+        vm.prank(owner);
+        vm.expectEmit(USDC);
+        emit IERC20Events.Transfer(owner, to[0], amount);
+        IHederaTokenService(HTS_ADDRESS).transferTokens(USDC, to, amounts);
+
+        assertEq(IERC20(USDC).balanceOf(owner), balanceOfOwner - amount);
+        assertEq(IERC20(USDC).balanceOf(to[0]), amount);
+    }
+
+    function test_HTS_transferTokens_invalid_token_address() public {
+        // https://hashscan.io/testnet/account/0.0.1421
+        address owner = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
+        address[] memory to = new address[](1);
+        to[0] = makeAddr("bob");
+        int64[] memory amounts = new int64[](1);
+        amounts[0] = 4_000000;
+        vm.prank(owner);
+        vm.expectRevert("transferTokens: invalid token");
+        IHederaTokenService(HTS_ADDRESS).transferTokens(address(0), to, amounts);
+    }
+
+    function test_HTS_transferTokens_inconsistent_input() public {
+        // https://hashscan.io/testnet/account/0.0.1421
+        address owner = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
+        address[] memory to = new address[](1);
+        to[0] = makeAddr("bob");
+        int64[] memory amounts = new int64[](2);
+        amounts[0] = 3_000000;
+        amounts[1] = 1_000000;
+        vm.prank(owner);
+        vm.expectRevert("transferTokens: inconsistent input");
+        IHederaTokenService(HTS_ADDRESS).transferTokens(USDC, to, amounts);
+    }
+
+    function test_HTS_transferTokens_missing_recipients() public {
+        // https://hashscan.io/testnet/account/0.0.1421
+        address owner = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
+        address[] memory to = new address[](0);
+        int64[] memory amounts = new int64[](1);
+        amounts[0] = 3_000000;
+        vm.prank(owner);
+        vm.expectRevert("transferTokens: missing recipients");
+        IHederaTokenService(HTS_ADDRESS).transferTokens(USDC, to, amounts);
+    }
+
     function test_HTS_transferNFTs_for_allowed_user() external {
         uint256[] memory serialId = new uint256[](1);
         serialId[0] = 1;
