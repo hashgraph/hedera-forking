@@ -68,11 +68,11 @@ function deleteToken(address token) external returns (int64 responseCode);
 
 The main goal of this document is to describe how to enable token creation and deletion on HTS emulation.
 
-## What about Forking (from a Remove Network)?
+## What about Forking from a Remote Network?
 
-The introducion of token creation unlocks a new capability.
+The introduction of token creation unlocks a new capability:
 _Using the HTS emulation **without** forking._
-In order to use HTS emulation, a token must be present in the Ethereum Development Environment network, _e.g._, Hardhat'EDR or Foundry's Anvil.
+In order to use HTS emulation, a token must be present in the Ethereum Development Environment network, _e.g._, Hardhat's EDR or Foundry's Anvil.
 This can be done in two ways.
 Fetching the token state from a remote network, or by creating a token locally altogether.
 
@@ -107,7 +107,7 @@ A successful call to any token creation method should have the following effect
 #### Token Creation Counter
 
 HTS emulation should keep an internal counter to track next token address to be created.
-In forking mode, this counter should reemsemble the next token address from the remote network.
+In forking mode, this counter should resemble the next token address from the remote network.
 In non-forking mode, this counter should be `0.0.32`, the first token account created by local node.
 
 ### Delete Token
