@@ -462,11 +462,11 @@ interface IHederaTokenService {
     /// @param token The ID of the token as a solidity address
     /// @param accountId account to do a transfer to/from
     /// @param amount The amount from the accountId at the same index
-    // function transferTokens(
-    //     address token,
-    //     address[] memory accountId,
-    //     int64[] memory amount
-    // ) external returns (int64 responseCode);
+    function transferTokens(
+        address token,
+        address[] memory accountId,
+        int64[] memory amount
+    ) external returns (int64 responseCode);
 
     /// Initiates a Non-Fungable Token Transfer
     /// @param token The ID of the token as a solidity address
