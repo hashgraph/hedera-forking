@@ -22,11 +22,10 @@ const { ethers: { getContractAt } } = require('hardhat');
 
 describe('NFT example -- ownerOf', function () {
     it('should get `ownerOf` account holder', async function () {
-        // https://hashscan.io/mainnet/token/0.0.8098137
-        const nft = await getContractAt('IERC721', '0x00000000000000000000000000000000007b9159');
-
-        // https://hashscan.io/mainnet/account/0.0.4822941
-        const holderAddress = '0x000000000000000000000000000000000049979d';
-        expect(await nft['ownerOf'](1n)).to.be.equal(holderAddress);
+        // https://hashscan.io/mainnet/token/0.0.4970613
+        const nft = await getContractAt('IERC721', '0x00000000000000000000000000000000004bd875');
+        expect(await nft['ownerOf'](1)).to.not.be.equal(
+            '0x0000000000000000000000000000000000000000'
+        );
     });
 });

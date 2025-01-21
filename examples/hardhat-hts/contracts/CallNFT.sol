@@ -13,6 +13,7 @@ contract CallNFT {
         // You can use `console.log` as usual
         // https://hardhat.org/tutorial/debugging-with-hardhat-network#solidity--console.log
         console.log("Transferring from %s to %s %s tokens", msg.sender, to, serialId);
-        IERC721(tokenAddress).transferFrom(msg.sender, to, serialId);
+        address owner = IERC721(tokenAddress).ownerOf(serialId);
+        IERC721(tokenAddress).transferFrom(owner, to, serialId);
     }
 }

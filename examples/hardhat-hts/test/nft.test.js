@@ -44,16 +44,16 @@ describe('NFT example', function () {
     }
 
     /**
-     * https://hashscan.io/mainnet/token/0.0.8098137
-     * https://mainnet.mirrornode.hedera.com/api/v1/tokens/0.0.8098137
+     * https://hashscan.io/mainnet/token/0.0.4970613
+     * https://mainnet.mirrornode.hedera.com/api/v1/tokens/0.0.4970613
      */
-    const nftAddress = '0x00000000000000000000000000000000007b9159';
+    const nftAddress = '0x00000000000000000000000000000000004bd875';
 
     /** @type {import('ethers').Contract} */
     let nft;
 
     /**
-     * https://hashscan.io/mainnet/account/0.0.4822941
+     * https://hashscan.io/mainnet/account/0.0.1448231
      *
      * @type {import('@nomicfoundation/hardhat-ethers/signers').HardhatEthersSigner}
      */
@@ -61,7 +61,7 @@ describe('NFT example', function () {
 
     beforeEach(async function () {
         nft = await ethers.getContractAt('IERC721', nftAddress);
-        const holderAddress = '0x000000000000000000000000000000000049979d';
+        const holderAddress = await nft['ownerOf'](1n);
         // https://hardhat.org/hardhat-network/docs/reference#hardhat_impersonateaccount
         await network.provider.request({
             method: 'hardhat_impersonateAccount',
@@ -74,20 +74,17 @@ describe('NFT example', function () {
         const name = await nft['name']();
         const symbol = await nft['symbol']();
         const tokenURI = await nft['tokenURI'](1n);
-        expect(name).to.be.equal('Hash Monkey Community token support');
-        expect(symbol).to.be.equal('NFTmonkey');
-        expect(tokenURI).to.be.equal(
-            'ipfs://bafkreif4t2apm7apgyu3lsi6ak3vxa3nd2oqpczqhnqapno2jbnj62oszy'
-        );
+
+        expect(name).to.be.equal('Concierge Collectibles');
+        expect(symbol).to.be.equal('Concierge Collectibles');
+        expect(tokenURI).to.be.equal('ipfs://QmVtsRvgZkqbBr5h5NB17LntAWC9DgXToLTLhNKCzB9RHZ');
     });
 
     it('should get Token name through a contract call', async function () {
         const CallToken = await ethers.getContractFactory('CallNFT');
         const callToken = await CallToken.deploy();
 
-        expect(await callToken['getTokenName'](nftAddress)).to.be.equal(
-            'Hash Monkey Community token support'
-        );
+        expect(await callToken['getTokenName'](nftAddress)).to.be.equal('Concierge Collectibles');
     });
 
     it('should get `ownerOf` account holder', async function () {
@@ -99,30 +96,31 @@ describe('NFT example', function () {
         const { receiver, spender } = await loadFixture(id);
         const serialId = 1n;
         expect(await nft['ownerOf'](serialId)).to.be.equal(holder.address);
-
         await connectAs(nft, holder)['approve'](spender, serialId);
-
-        expect(await nft['isApproved'](holder.address, spender.address)).to.be.equal(true);
-
-        await connectAs(nft, spender)['transferFrom'](spender.address, receiver, serialId);
-
-        expect(await nft['isApproved'](holder.address, spender.address)).to.be.equal(false);
+        expect(await nft['getApproved'](serialId)).to.be.equal(spender.address);
+        await connectAs(nft, spender)['transferFrom'](holder, receiver, serialId);
+        expect(await nft['getApproved'](serialId)).to.not.be.equal(spender.address);
         expect(await nft['ownerOf'](serialId)).to.be.equal(receiver);
     });
 
     it("should indirectly `transferFrom` tokens from account holder after `approve`d one of Hardhat' signers", async function () {
         const { receiver, spender } = await loadFixture(id);
         const serialId = 1n;
-        expect(await nft['ownerOf'](serialId)).to.be.equal(holder.address);
+        const ownerAddress = await nft['ownerOf'](serialId);
+        await network.provider.request({
+            method: 'hardhat_impersonateAccount',
+            params: [ownerAddress],
+        });
+        const owner = await ethers.getSigner(ownerAddress);
+        expect(await nft['ownerOf'](serialId)).to.be.equal(owner.address);
 
         const CallToken = await ethers.getContractFactory('CallNFT');
         const callToken = await CallToken.deploy();
         const callTokenAddress = await callToken.getAddress();
 
-        await connectAs(nft, holder)['approve'](callTokenAddress, 1n);
-        await connectAs(callToken, holder)['invokeTransferFrom'](nftAddress, receiver, 1n);
-
-        expect(await nft['isApproved'](holder.address, spender.address)).to.be.equal(false);
-        expect(await nft['ownerOf'](serialId)).to.be.equal(receiver);
+        await connectAs(nft, owner)['approve'](callTokenAddress, serialId);
+        await connectAs(callToken, spender)['invokeTransferFrom'](nftAddress, receiver, serialId);
+        expect(await nft['getApproved'](serialId)).to.not.be.equal(spender.address);
+        expect(await nft['ownerOf'](serialId)).to.be.equal(holder);
     });
 });

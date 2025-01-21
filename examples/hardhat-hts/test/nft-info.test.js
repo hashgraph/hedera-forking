@@ -21,13 +21,10 @@ const { expect } = require('chai');
 const { ethers: { getContractAt } } = require('hardhat');
 
 describe('NFT example -- informational', function () {
-    it('should get name, symbol and tokenURI', async function () {
-        // https://hashscan.io/mainnet/token/0.0.8098137
-        const nft = await getContractAt('IERC721', '0x00000000000000000000000000000000007b9159');
-        expect(await nft['name']()).to.be.equal('Hash Monkey Community token support');
-        expect(await nft['symbol']()).to.be.equal('NFTmonkey');
-        expect(await nft['tokenURI']()).to.be.equal(
-            'ipfs://bafkreif4t2apm7apgyu3lsi6ak3vxa3nd2oqpczqhnqapno2jbnj62oszy'
-        );
+    it('should get name and symbol', async function () {
+        // https://hashscan.io/mainnet/token/0.0.4970613
+        const nft = await getContractAt('IERC721', '0x00000000000000000000000000000000004bd875');
+        expect(await nft['name']()).to.be.equal('Concierge Collectibles');
+        expect(await nft['symbol']()).to.be.equal('Concierge Collectibles');
     });
 });

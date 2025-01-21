@@ -37,7 +37,7 @@ interface IMirrorNodeClient {
      *
      * Returns token NFT entity information given the token id and serial id.
      *
-     * This method should call the Mirror Node API endpoint `GET /api/v1/tokens/{tokenId}/nft/{serialId}`.
+     * This method should call the Mirror Node API endpoint `GET /api/v1/tokens/{tokenId}/nfts/{serialId}`.
      *
      * @param tokenId The ID of the token to return information for.
      * @param serialId The serial id of the NFT.
