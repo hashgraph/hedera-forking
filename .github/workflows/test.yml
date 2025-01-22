@@ -232,3 +232,5 @@ jobs:
 
       - name: Run Forge example tests using remote network with a pinned block number
         run: forge test --remappings hedera-forking=. -vv --fork-url https://mainnet.hashio.io/api --fork-block-number 72433403
+        env:
+          FOUNDRY_DISABLE_NIGHTLY_WARNING: true
