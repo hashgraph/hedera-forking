@@ -43,6 +43,119 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         assembly { accountId := sload(slot) }
     }
 
+    function cryptoTransfer(TransferList memory transferList, TokenTransferList[] memory tokenTransfers)
+    payable htsCall external returns (int64 responseCode) {
+        uint256 hbarsReceived = msg.value;
+        int64 hbarBalance = 0;
+        for (uint256 hbarIndex = 0; hbarIndex < transferList.transfers.length; hbarIndex++) {
+            require(!transferList.transfers[hbarIndex].isApproval, "cryptoTransfer: hbar approval is not supported");
+            hbarBalance += transferList.transfers[hbarIndex].amount;
+            if (transferList.transfers[hbarIndex].amount < 0) {
+                require(
+                    transferList.transfers[hbarIndex].accountID == msg.sender,
+                    "cryptoTransfer: hbar transfer allowed only from the msg sender account"
+                );
+                continue;
+            }
+            require(transferList.transfers[hbarIndex].amount > 0, "cryptoTransfer: invalid amount");
+            uint256 value = uint256(uint64(transferList.transfers[hbarIndex].amount));
+            require(hbarsReceived >= value, "cryptoTransfer: insufficient balance");
+            hbarsReceived -= value;
+            (bool success, ) = transferList.transfers[hbarIndex].accountID.call{value: value}("");
+            require(success, "cryptoTransfer: hbar transfer failure");
+        }
+        require(hbarBalance == 0 && hbarsReceived == 0, "cryptoTransfer: unmatched hbar transfers ");
+        for (uint256 tokenIndex = 0; tokenIndex < tokenTransfers.length; tokenIndex++) {
+            require(tokenTransfers[tokenIndex].token != address(0), "cryptoTransfer: invalid token");
+            uint256 validFungibleTransfersCount = 0;
+            for (uint256 ftIndex = 0; ftIndex < tokenTransfers[tokenIndex].transfers.length; ftIndex++) {
+                if (!tokenTransfers[tokenIndex].transfers[ftIndex].isApproval) {
+                    validFungibleTransfersCount++;
+                } else {
+                    require(
+                        tokenTransfers[tokenIndex].transfers[ftIndex].amount >= 0,
+                        "cryptoTransfer: only positive approvals allowed"
+                    );
+                    int64 approveResponseCode = approve(
+                        tokenTransfers[tokenIndex].token,
+                        tokenTransfers[tokenIndex].transfers[ftIndex].accountID,
+                        uint256(uint64(tokenTransfers[tokenIndex].transfers[ftIndex].amount))
+                    );
+                    require(
+                        approveResponseCode == HederaResponseCodes.SUCCESS,
+                        "cryptoTransfer: failed to approve fungible token"
+                    );
+                }
+            }
+            address[] memory ftAccountIds = new address[](validFungibleTransfersCount);
+            int64[] memory ftAmounts = new int64[](validFungibleTransfersCount);
+            uint256 validFungibleIndex = 0;
+            for (uint256 ftIndex = 0; ftIndex < tokenTransfers[tokenIndex].transfers.length; ftIndex++) {
+                if (!tokenTransfers[tokenIndex].transfers[ftIndex].isApproval) {
+                    ftAccountIds[validFungibleIndex] = tokenTransfers[tokenIndex].transfers[ftIndex].accountID;
+                    ftAmounts[validFungibleIndex] = tokenTransfers[tokenIndex].transfers[ftIndex].amount;
+                    validFungibleIndex++;
+                }
+            }
+            if (ftAccountIds.length > 0) {
+                int64 total = 0;
+                for (uint256 i = 0; i < ftAccountIds.length; i++) {
+                    total += ftAmounts[i];
+                }
+                require(total == 0, "cryptoTransfer: total amount must balance");
+
+                for (uint256 from = 0; from < ftAmounts.length; from++) {
+                    if (ftAmounts[from] >= 0) {
+                        continue;
+                    }
+                    for (uint256 to = 0; to < ftAmounts.length; to++) {
+                        if (ftAmounts[to] <= 0) {
+                            continue;
+                        }
+                        int64 transferAmount = ftAmounts[to] < -ftAmounts[from] ? ftAmounts[to] : -ftAmounts[from];
+                        transferToken(
+                            tokenTransfers[tokenIndex].token,
+                            ftAccountIds[from],
+                            ftAccountIds[to],
+                            transferAmount
+                        );
+                        ftAmounts[from] += transferAmount;
+                        ftAmounts[to] -= transferAmount;
+                        if (ftAmounts[from] == 0) {
+                            break;
+                        }
+                    }
+                }
+                // Ensure all amounts are fully balanced after processing
+                for (uint256 i = 0; i < ftAmounts.length; i++) {
+                    require(ftAmounts[i] == 0, "cryptoTransfer: unmatched transfers");
+                }
+            }
+            for (uint256 nftIndex = 0; nftIndex < tokenTransfers[tokenIndex].nftTransfers.length; nftIndex++) {
+                if (!tokenTransfers[tokenIndex].nftTransfers[nftIndex].isApproval) {
+                    transferNFT(
+                        tokenTransfers[tokenIndex].token,
+                        tokenTransfers[tokenIndex].nftTransfers[nftIndex].senderAccountID,
+                        tokenTransfers[tokenIndex].nftTransfers[nftIndex].receiverAccountID,
+                        tokenTransfers[tokenIndex].nftTransfers[nftIndex].serialNumber
+                    );
+                } else {
+                    int64 nftApproveResponseCode = approveNFT(
+                        tokenTransfers[tokenIndex].token,
+                        tokenTransfers[tokenIndex].nftTransfers[nftIndex].receiverAccountID,
+                        uint256(uint64(tokenTransfers[tokenIndex].nftTransfers[nftIndex].serialNumber))
+                    );
+                    require(
+                        nftApproveResponseCode == HederaResponseCodes.SUCCESS,
+                        "cryptoTransfer: failed to approve nft"
+                    );
+                }
+            }
+        }
+
+        return HederaResponseCodes.SUCCESS;
+    }
+
     function mintToken(address token, int64 amount, bytes[] memory) htsCall external returns (
         int64 responseCode,
         int64 newTotalSupply,

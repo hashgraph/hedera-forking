@@ -830,4 +830,210 @@ contract HTSTest is Test, TestSetup {
         assertEq(setApprovalForAllResponseCode, HederaResponseCodes.SUCCESS);
         assertTrue(IERC721(CFNFTFF).isApprovedForAll(CFNFTFF_TREASURY, operator));
     }
+
+    function test_HTS_cryptoTransfer() external {
+        address owner = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
+        address bob = makeAddr("bob");
+        address alice = makeAddr("alice");
+        uint256 amountToBob = 1_000000;
+        uint256 amountToAlice = 3_000000;
+        address token = USDC;
+        IHederaTokenService.AccountAmount memory transfer1 = IHederaTokenService.AccountAmount(
+            owner,
+            -int64(uint64(amountToBob + amountToAlice)),
+            false
+        );
+        IHederaTokenService.AccountAmount memory transfer2 = IHederaTokenService.AccountAmount(
+            bob,
+            int64(uint64(amountToBob)),
+            false
+        );
+        IHederaTokenService.AccountAmount memory transfer3 = IHederaTokenService.AccountAmount(
+            alice,
+            int64(uint64(amountToAlice)),
+            false
+        );
+        IHederaTokenService.AccountAmount memory transfer4 = IHederaTokenService.AccountAmount(
+            makeAddr("ignored"),
+            500000,
+            true
+        );
+        IHederaTokenService.TokenTransferList[] memory tokenTransfers = new IHederaTokenService.TokenTransferList[](1);
+        IHederaTokenService.TransferList memory hbarTransfers;
+        IHederaTokenService.AccountAmount[] memory transfers = new IHederaTokenService.AccountAmount[](4);
+        tokenTransfers[0] = IHederaTokenService.TokenTransferList(
+            token,
+            transfers,
+            new IHederaTokenService.NftTransfer[](0)
+        );
+        tokenTransfers[0].transfers[0] = transfer1;
+        tokenTransfers[0].transfers[1] = transfer2;
+        tokenTransfers[0].transfers[2] = transfer3;
+        tokenTransfers[0].transfers[3] = transfer4;
+        vm.prank(owner);
+        vm.expectEmit(true, true, true, true, token);
+        emit IERC20Events.Transfer(owner, bob, amountToBob);
+        vm.expectEmit(true, true, true, true, token);
+        emit IERC20Events.Transfer(owner, alice, amountToAlice);
+        int64 responseCode = IHederaTokenService(HTS_ADDRESS).cryptoTransfer(hbarTransfers, tokenTransfers);
+        assertEq(responseCode, HederaResponseCodes.SUCCESS);
+        assertEq(IERC20(token).balanceOf(bob), amountToBob);
+        assertEq(IERC20(token).balanceOf(alice), amountToAlice);
+    }
+
+    function test_HTS_cryptoTransfer_hbar() external {
+        address owner = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
+        address recipient1 = makeAddr("recipient1");
+        address recipient2 = makeAddr("recipient2");
+        uint256 hbarToRecipient1 = 1 ether;
+        uint256 hbarToRecipient2 = 2 ether;
+        IHederaTokenService.AccountAmount memory transfer1 = IHederaTokenService.AccountAmount(
+            owner,
+            -int64(uint64(hbarToRecipient1 + hbarToRecipient2)),
+            false
+        );
+        IHederaTokenService.AccountAmount memory transfer2 = IHederaTokenService.AccountAmount(
+            recipient1,
+            int64(uint64(hbarToRecipient1)),
+            false
+        );
+        IHederaTokenService.AccountAmount memory transfer3 = IHederaTokenService.AccountAmount(
+            recipient2,
+            int64(uint64(hbarToRecipient2)),
+            false
+        );
+        IHederaTokenService.TransferList memory transferList;
+        transferList.transfers = new IHederaTokenService.AccountAmount[](3);
+        transferList.transfers[0] = transfer1;
+        transferList.transfers[1] = transfer2;
+        transferList.transfers[2] = transfer3;
+        vm.deal(owner, hbarToRecipient1 + hbarToRecipient2 + 100);
+        uint256 initialOwnerBalance = address(owner).balance;
+        uint256 initialRecipient1Balance = address(recipient1).balance;
+        uint256 initialRecipient2Balance = address(recipient2).balance;
+        assertGt(initialOwnerBalance, hbarToRecipient1 + hbarToRecipient2);
+        assertEq(initialRecipient1Balance, 0);
+        assertEq(initialRecipient2Balance, 0);
+        vm.prank(owner);
+        vm.expectCall(recipient1, hbarToRecipient1, "");
+        vm.expectCall(recipient2, hbarToRecipient2, "");
+        int64 code = IHederaTokenService(HTS_ADDRESS).cryptoTransfer{value: hbarToRecipient1 + hbarToRecipient2}(
+            transferList,
+            new IHederaTokenService.TokenTransferList[](0)
+        );
+        assertEq(code, HederaResponseCodes.SUCCESS);
+        assertEq(address(owner).balance, initialOwnerBalance - hbarToRecipient1 - hbarToRecipient2);
+        assertEq(address(recipient1).balance, initialRecipient1Balance + hbarToRecipient1);
+        assertEq(address(recipient2).balance, initialRecipient2Balance + hbarToRecipient2);
+    }
+
+    function test_HTS_cryptoTransfer_test_invalid_sender() external {
+        address owner = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
+        address sender = makeAddr("sender");
+        address recipient = makeAddr("recipient");
+        uint256 hbarToRecipient = 1 ether;
+        IHederaTokenService.AccountAmount memory transfer1 = IHederaTokenService.AccountAmount(
+            sender,
+            -int64(uint64(hbarToRecipient)),
+            false
+        );
+        IHederaTokenService.AccountAmount memory transfer2 = IHederaTokenService.AccountAmount(
+            recipient,
+            int64(uint64(hbarToRecipient)),
+            false
+        );
+        IHederaTokenService.TransferList memory transferList;
+        transferList.transfers = new IHederaTokenService.AccountAmount[](2);
+        transferList.transfers[0] = transfer1;
+        transferList.transfers[1] = transfer2;
+        vm.deal(owner, hbarToRecipient);
+        vm.deal(sender, hbarToRecipient);
+        vm.expectRevert("cryptoTransfer: hbar transfer allowed only from the msg sender account");
+        vm.prank(owner);
+        IHederaTokenService(HTS_ADDRESS).cryptoTransfer{value: hbarToRecipient}(
+            transferList,
+            new IHederaTokenService.TokenTransferList[](0)
+        );
+    }
+
+    function test_HTS_cryptoTransfer_test_reject_insufficient_value_send() external {
+        address owner = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
+        address recipient = makeAddr("recipient");
+        uint256 hbarToRecipient = 1 ether;
+        IHederaTokenService.AccountAmount memory transfer1 = IHederaTokenService.AccountAmount(
+            owner,
+            -int64(uint64(hbarToRecipient)),
+            false
+        );
+        IHederaTokenService.AccountAmount memory transfer2 = IHederaTokenService.AccountAmount(
+            recipient,
+            int64(uint64(hbarToRecipient)),
+            false
+        );
+        IHederaTokenService.TransferList memory transferList;
+        transferList.transfers = new IHederaTokenService.AccountAmount[](2);
+        transferList.transfers[0] = transfer1;
+        transferList.transfers[1] = transfer2;
+        vm.deal(owner, hbarToRecipient);
+        vm.expectRevert("cryptoTransfer: insufficient balance");
+        vm.prank(owner);
+        IHederaTokenService(HTS_ADDRESS).cryptoTransfer{value: hbarToRecipient - 0.5 ether}(
+            transferList,
+            new IHederaTokenService.TokenTransferList[](0)
+        );
+    }
+
+    function test_HTS_cryptoTransfer_test_reject_hbar_approval() external {
+        address owner = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
+        address recipient = makeAddr("recipient");
+        uint256 hbarToRecipient = 1 ether;
+        IHederaTokenService.AccountAmount memory transfer1 = IHederaTokenService.AccountAmount(
+            owner,
+            -int64(uint64(hbarToRecipient)),
+            false
+        );
+        IHederaTokenService.AccountAmount memory transfer2 = IHederaTokenService.AccountAmount(
+            recipient,
+            int64(uint64(hbarToRecipient)),
+            true
+        );
+        IHederaTokenService.TransferList memory transferList;
+        transferList.transfers = new IHederaTokenService.AccountAmount[](2);
+        transferList.transfers[0] = transfer1;
+        transferList.transfers[1] = transfer2;
+        vm.deal(owner, hbarToRecipient);
+        vm.expectRevert("cryptoTransfer: hbar approval is not supported");
+        vm.prank(owner);
+        IHederaTokenService(HTS_ADDRESS).cryptoTransfer{value: hbarToRecipient}(
+            transferList,
+            new IHederaTokenService.TokenTransferList[](0)
+        );
+    }
+
+    function test_HTS_cryptoTransfer_test_reject_wrong_value() external {
+        address owner = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
+        address recipient = makeAddr("recipient");
+        uint256 hbarToRecipient = 1 ether;
+        IHederaTokenService.AccountAmount memory transfer1 = IHederaTokenService.AccountAmount(
+            owner,
+            -int64(uint64(hbarToRecipient)),
+            false
+        );
+        IHederaTokenService.AccountAmount memory transfer2 = IHederaTokenService.AccountAmount(
+            recipient,
+            int64(uint64(hbarToRecipient)),
+            false
+        );
+        IHederaTokenService.TransferList memory transferList;
+        transferList.transfers = new IHederaTokenService.AccountAmount[](2);
+        transferList.transfers[0] = transfer1;
+        transferList.transfers[1] = transfer2;
+        vm.deal(owner, hbarToRecipient);
+        vm.expectRevert();
+        vm.prank(owner);
+        IHederaTokenService(HTS_ADDRESS).cryptoTransfer{value: hbarToRecipient + 0.5 ether}(
+            transferList,
+            new IHederaTokenService.TokenTransferList[](0)
+        );
+    }
 }
