@@ -74,7 +74,7 @@ describe('NFT example', function () {
         const tokenURI = await nft['tokenURI'](1n);
 
         expect(name).to.be.equal('THE BARKANEERS');
-        expect(symbol).to.be.equal('CBARKANEERS');
+        expect(symbol).to.be.equal('BARKANEERS');
         expect(tokenURI).to.be.equal(
             'ipfs://bafkreif4hpsgflzzvd7c4abx5u5xwrrjl7wkimbjtndvkxodklxdam5upm'
         );
