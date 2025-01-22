@@ -5,7 +5,9 @@ pragma solidity ^0.8.0;
  * See https://ethereum.org/en/developers/docs/standards/tokens/erc-721/#events for more information.
  */
 interface IERC721Events {
-    event ApprovalForAll(address indexed owner, address indexed operator, bool approved);
+    event ERC721Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
+    event ERC721Approval(address indexed owner, address indexed approved, uint256 indexed tokenId);
+    event ERC721ApprovalForAll(address indexed owner, address indexed operator, bool approved);
 }
 
 /**

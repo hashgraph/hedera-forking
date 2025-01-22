@@ -39,7 +39,7 @@ contract ERC721TokenTest is Test, TestSetup, IERC721Events, IERC20Events {
         uint256 tokenId = 1;
         vm.startPrank(CFNFTFF_TREASURY);
         vm.expectEmit(CFNFTFF);
-        emit Transfer(CFNFTFF_TREASURY, to, tokenId);
+        emit ERC721Transfer(CFNFTFF_TREASURY, to, tokenId);
         IERC721(CFNFTFF).transferFrom(CFNFTFF_TREASURY, to, tokenId);
         vm.stopPrank();
         assertEq(IERC721(CFNFTFF).ownerOf(tokenId), to);
@@ -50,7 +50,7 @@ contract ERC721TokenTest is Test, TestSetup, IERC721Events, IERC20Events {
         uint256 tokenId = 1;
         vm.startPrank(CFNFTFF_TREASURY);
         vm.expectEmit(CFNFTFF);
-        emit Approval(CFNFTFF_TREASURY, spender, tokenId);
+        emit ERC721Approval(CFNFTFF_TREASURY, spender, tokenId);
         IERC721(CFNFTFF).approve(spender, tokenId);
         vm.stopPrank();
         assertEq(IERC721(CFNFTFF).getApproved(tokenId), spender);
@@ -60,7 +60,7 @@ contract ERC721TokenTest is Test, TestSetup, IERC721Events, IERC20Events {
         address operator = makeAddr("operator");
         vm.prank(CFNFTFF_TREASURY);
         vm.expectEmit(CFNFTFF);
-        emit ApprovalForAll(CFNFTFF_TREASURY, operator, true);
+        emit ERC721ApprovalForAll(CFNFTFF_TREASURY, operator, true);
         IERC721(CFNFTFF).setApprovalForAll(operator, true);
         assertTrue(IERC721(CFNFTFF).isApprovedForAll(CFNFTFF_TREASURY, operator));
     }

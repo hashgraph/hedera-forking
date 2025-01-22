@@ -114,7 +114,7 @@ contract TokenTest is Test, TestSetup, IERC20Events {
 
         vm.prank(owner);
         vm.expectEmit(USDC);
-        emit Approval(owner, spender, amount);
+        emit ERC20Approval(owner, spender, amount);
         IERC20(USDC).approve(spender, amount);
 
         assertEq(IERC20(USDC).allowance(owner, spender), amount);
@@ -142,7 +142,7 @@ contract TokenTest is Test, TestSetup, IERC20Events {
 
         vm.prank(owner); // https://book.getfoundry.sh/cheatcodes/prank
         vm.expectEmit(USDC);
-        emit Transfer(owner, to, amount);
+        emit ERC20Transfer(owner, to, amount);
         IERC20(USDC).transfer(to, amount);
 
         assertEq(IERC20(USDC).balanceOf(owner), balanceOfOwner - amount);
@@ -186,7 +186,7 @@ contract TokenTest is Test, TestSetup, IERC20Events {
 
         vm.prank(bob);
         vm.expectEmit(USDC);
-        emit Transfer(alice, charlie, transferAmount);
+        emit ERC20Transfer(alice, charlie, transferAmount);
         IERC20(USDC).transferFrom(alice, charlie, transferAmount);
 
         assertEq(IERC20(USDC).balanceOf(alice), 54_300000 - 4_000000);
