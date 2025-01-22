@@ -44,17 +44,15 @@ describe('NFT example', function () {
     }
 
     /**
-     * https://hashscan.io/mainnet/token/0.0.4970613
-     * https://mainnet.mirrornode.hedera.com/api/v1/tokens/0.0.4970613
+     * https://hashscan.io/mainnet/token/0.0.5083205
+     * https://mainnet.mirrornode.hedera.com/api/v1/tokens/0.0.5083205
      */
-    const nftAddress = '0x00000000000000000000000000000000004bd875';
+    const nftAddress = '0x00000000000000000000000000000000004d9045';
 
     /** @type {import('ethers').Contract} */
     let nft;
 
     /**
-     * https://hashscan.io/mainnet/account/0.0.1448231
-     *
      * @type {import('@nomicfoundation/hardhat-ethers/signers').HardhatEthersSigner}
      */
     let holder;
@@ -75,16 +73,18 @@ describe('NFT example', function () {
         const symbol = await nft['symbol']();
         const tokenURI = await nft['tokenURI'](1n);
 
-        expect(name).to.be.equal('Concierge Collectibles');
-        expect(symbol).to.be.equal('Concierge Collectibles');
-        expect(tokenURI).to.be.equal('ipfs://QmVtsRvgZkqbBr5h5NB17LntAWC9DgXToLTLhNKCzB9RHZ');
+        expect(name).to.be.equal('THE BARKANEERS');
+        expect(symbol).to.be.equal('CBARKANEERS');
+        expect(tokenURI).to.be.equal(
+            'ipfs://bafkreif4hpsgflzzvd7c4abx5u5xwrrjl7wkimbjtndvkxodklxdam5upm'
+        );
     });
 
     it('should get Token name through a contract call', async function () {
         const CallToken = await ethers.getContractFactory('CallNFT');
         const callToken = await CallToken.deploy();
 
-        expect(await callToken['getTokenName'](nftAddress)).to.be.equal('Concierge Collectibles');
+        expect(await callToken['getTokenName'](nftAddress)).to.be.equal('THE BARKANEERS');
     });
 
     it('should get `ownerOf` account holder', async function () {

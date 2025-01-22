@@ -11,15 +11,15 @@ contract NFTConsoleExampleTest is Test {
     }
 
     function test_using_console_log() view external {
-        // https://hashscan.io/mainnet/token/0.0.4970613
-        address NFT_mainnet = 0x00000000000000000000000000000000004Bd875;
+        // https://hashscan.io/mainnet/token/0.0.5083205
+        address NFT_mainnet = 0x00000000000000000000000000000000004d9045;
 
         string memory name = IERC721(NFT_mainnet).name();
         string memory symbol = IERC721(NFT_mainnet).symbol();
         string memory tokenURI = IERC721(NFT_mainnet).tokenURI(1);
-        assertEq(name, "Concierge Collectibles");
-        assertEq(symbol, "Concierge Collectibles");
-        assertEq(tokenURI, "ipfs://QmVtsRvgZkqbBr5h5NB17LntAWC9DgXToLTLhNKCzB9RHZ");
+        assertEq(name, "THE BARKANEERS");
+        assertEq(symbol, "BARKANEERS");
+        assertEq(tokenURI, "ipfs://bafkreif4hpsgflzzvd7c4abx5u5xwrrjl7wkimbjtndvkxodklxdam5upm");
         console.log("name: %s, symbol: %s, tokenURI: %s", name, symbol, tokenURI);
     }
 }
