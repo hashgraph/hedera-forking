@@ -6,8 +6,8 @@ import {htsSetup} from "hedera-forking/contracts/htsSetup.sol";
 import {IERC721} from "hedera-forking/contracts/IERC721.sol";
 
 contract NFTExampleTest is Test {
-    // https://hashscan.io/mainnet/token/0.0.4970613
-    address NFT_mainnet = 0x00000000000000000000000000000000004Bd875;
+    // https://hashscan.io/mainnet/token/0.0.5083205
+    address NFT_mainnet = 0x00000000000000000000000000000000004d9045;
 
     address private user;
 
@@ -15,11 +15,16 @@ contract NFTExampleTest is Test {
         htsSetup();
 
         user = makeAddr("user");
-        deal(NFT_mainnet, user, 3);
+        dealERC721(NFT_mainnet, user, 3);
     }
 
     function test_get_owner_of_existing_account() view external {
+        address owner = IERC721(NFT_mainnet).ownerOf(1);
         assertNotEq(IERC721(NFT_mainnet).ownerOf(1), address(0));
+
+        // The assertion below cannot be guaranteed, since we can only query the current owner of the NFT,
+        // Note that the ownership of the NFT may change over time.
+        assertEq(owner, 0x000000000000000000000000000000000006889a);
     }
 
     function test_dealt_nft_assigned_to_local_account() view external {
