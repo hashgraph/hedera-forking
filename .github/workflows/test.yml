@@ -94,6 +94,8 @@ jobs:
 
       - name: Run Unit Tests
         run: npm run test
+        env:
+          FOUNDRY_DISABLE_NIGHTLY_WARNING: true
 
   sol-tests-local-storage:
     name: 'Forge tests w/storage emulation'
