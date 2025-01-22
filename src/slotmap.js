@@ -267,7 +267,17 @@ function slotMapOf(token) {
         maximum_amount: fee['maximum'],
         fee_collector: fee['collector_account_id'],
     }));
-    token['royalty_fees'] = customFees['royalty_fees'] ?? [];
+    token['royalty_fees'] = (customFees['royalty_fees'] ?? []).map(fee => ({
+        all_collectors_are_exempt: fee['all_collectors_are_exempt'],
+        numerator: /**@type{{numerator: unknown}}*/ (fee['amount'])['numerator'],
+        denominator: /**@type{{denominator: unknown}}*/ (fee['amount'])['denominator'],
+        collector_account_id: fee['collector_account_id'],
+        amount: /**@type{{amount: unknown}}*/ (fee['fallback_fee'] || {})['amount'],
+        tokenId: /**@type{{denominating_token_id: unknown}}*/ (fee['fallback_fee'] || {})[
+            'denominating_token_id'
+        ],
+        fee_collector: fee['collector_account_id'],
+    }));
 
     const map = new SlotMap();
     storage.forEach(slot => visit(slot, 0n, token, '', map));

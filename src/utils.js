@@ -51,10 +51,5 @@ module.exports = {
      * @param {string | number | bigint} value It can be anything accepted by the [`BigInt` constructor](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigInt/BigInt).
      * @returns {string}
      */
-    toIntHex256: value => {
-        if (!['string', 'number', 'bigint'].includes(typeof value)) {
-            return value.toString(16).padStart(64, '0');
-        }
-        return BigInt(value).toString(16).padStart(64, '0');
-    },
+    toIntHex256: value => BigInt(value).toString(16).padStart(64, '0'),
 };
