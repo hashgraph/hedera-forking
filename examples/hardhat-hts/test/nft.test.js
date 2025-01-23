@@ -99,7 +99,9 @@ describe('NFT example', function () {
         await connectAs(nft, holder)['approve'](spender, serialId);
         expect(await nft['getApproved'](serialId)).to.be.equal(spender.address);
         await connectAs(nft, spender)['transferFrom'](holder, receiver, serialId);
-        expect(await nft['getApproved'](serialId)).to.not.be.equal(spender.address);
+        expect(await nft['getApproved'](serialId)).to.be.equal(
+            '0x0000000000000000000000000000000000000000'
+        );
         expect(await nft['ownerOf'](serialId)).to.be.equal(receiver);
     });
 
