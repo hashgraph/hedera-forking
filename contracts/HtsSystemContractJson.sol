@@ -473,4 +473,35 @@ contract HtsSystemContractJson is HtsSystemContract {
     function _scratchAddr() private view returns (address) {
         return address(bytes20(keccak256(abi.encode(address(this)))));
     }
+
+    function _cryptoHbarTransfer(TransferList memory transferList) internal override {
+        int64 hbarBalance = 0;
+        for (uint256 hbarIndex = 0; hbarIndex < transferList.transfers.length; hbarIndex++) {
+            require(transferList.transfers[hbarIndex].amount != 0, "cryptoTransfer: invalid amount");
+            require(!transferList.transfers[hbarIndex].isApproval, "cryptoTransfer: hbar approval is not supported");
+            hbarBalance += transferList.transfers[hbarIndex].amount;
+            if (transferList.transfers[hbarIndex].amount < 0) {
+                require(
+                    transferList.transfers[hbarIndex].accountID == msg.sender,
+                    "cryptoTransfer: hbar transfer allowed only from the msg sender account, approved transfers are not supported"
+                );
+                uint256 fromAmount = uint256(uint64(-transferList.transfers[hbarIndex].amount));
+                require(
+                    fromAmount <= transferList.transfers[hbarIndex].accountID.balance,
+                    "cryptoTransfer: insufficient balance"
+                );
+                vm.deal(
+                    transferList.transfers[hbarIndex].accountID,
+                    transferList.transfers[hbarIndex].accountID.balance - fromAmount
+                );
+                continue;
+            }
+            uint256 toAmount = uint256(uint64(transferList.transfers[hbarIndex].amount));
+            vm.deal(
+                transferList.transfers[hbarIndex].accountID,
+                transferList.transfers[hbarIndex].accountID.balance + toAmount
+            );
+        }
+        require(hbarBalance == 0, "cryptoTransfer: unmatched hbar transfers ");
+    }
 }

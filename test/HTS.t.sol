@@ -915,9 +915,7 @@ contract HTSTest is Test, TestSetup {
         assertEq(initialRecipient1Balance, 0);
         assertEq(initialRecipient2Balance, 0);
         vm.prank(owner);
-        vm.expectCall(recipient1, hbarToRecipient1, "");
-        vm.expectCall(recipient2, hbarToRecipient2, "");
-        int64 code = IHederaTokenService(HTS_ADDRESS).cryptoTransfer{value: hbarToRecipient1 + hbarToRecipient2}(
+        int64 code = IHederaTokenService(HTS_ADDRESS).cryptoTransfer(
             transferList,
             new IHederaTokenService.TokenTransferList[](0)
         );
@@ -948,18 +946,19 @@ contract HTSTest is Test, TestSetup {
         transferList.transfers[1] = transfer2;
         vm.deal(owner, hbarToRecipient);
         vm.deal(sender, hbarToRecipient);
-        vm.expectRevert("cryptoTransfer: hbar transfer allowed only from the msg sender account");
+        vm.expectRevert("cryptoTransfer: hbar transfer allowed only from the msg sender account, approved transfers are not supported");
         vm.prank(owner);
-        IHederaTokenService(HTS_ADDRESS).cryptoTransfer{value: hbarToRecipient}(
+        IHederaTokenService(HTS_ADDRESS).cryptoTransfer(
             transferList,
             new IHederaTokenService.TokenTransferList[](0)
         );
     }
 
-    function test_HTS_cryptoTransfer_test_reject_insufficient_value_send() external {
+    function test_HTS_cryptoTransfer_test_reject_insufficient_balance() external {
         address owner = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
         address recipient = makeAddr("recipient");
         uint256 hbarToRecipient = 1 ether;
+        vm.deal(owner, 0.5 ether); // Not enough
         IHederaTokenService.AccountAmount memory transfer1 = IHederaTokenService.AccountAmount(
             owner,
             -int64(uint64(hbarToRecipient)),
@@ -974,10 +973,9 @@ contract HTSTest is Test, TestSetup {
         transferList.transfers = new IHederaTokenService.AccountAmount[](2);
         transferList.transfers[0] = transfer1;
         transferList.transfers[1] = transfer2;
-        vm.deal(owner, hbarToRecipient);
         vm.expectRevert("cryptoTransfer: insufficient balance");
         vm.prank(owner);
-        IHederaTokenService(HTS_ADDRESS).cryptoTransfer{value: hbarToRecipient - 0.5 ether}(
+        IHederaTokenService(HTS_ADDRESS).cryptoTransfer(
             transferList,
             new IHederaTokenService.TokenTransferList[](0)
         );
@@ -1004,34 +1002,7 @@ contract HTSTest is Test, TestSetup {
         vm.deal(owner, hbarToRecipient);
         vm.expectRevert("cryptoTransfer: hbar approval is not supported");
         vm.prank(owner);
-        IHederaTokenService(HTS_ADDRESS).cryptoTransfer{value: hbarToRecipient}(
-            transferList,
-            new IHederaTokenService.TokenTransferList[](0)
-        );
-    }
-
-    function test_HTS_cryptoTransfer_test_reject_wrong_value() external {
-        address owner = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
-        address recipient = makeAddr("recipient");
-        uint256 hbarToRecipient = 1 ether;
-        IHederaTokenService.AccountAmount memory transfer1 = IHederaTokenService.AccountAmount(
-            owner,
-            -int64(uint64(hbarToRecipient)),
-            false
-        );
-        IHederaTokenService.AccountAmount memory transfer2 = IHederaTokenService.AccountAmount(
-            recipient,
-            int64(uint64(hbarToRecipient)),
-            false
-        );
-        IHederaTokenService.TransferList memory transferList;
-        transferList.transfers = new IHederaTokenService.AccountAmount[](2);
-        transferList.transfers[0] = transfer1;
-        transferList.transfers[1] = transfer2;
-        vm.deal(owner, hbarToRecipient);
-        vm.expectRevert();
-        vm.prank(owner);
-        IHederaTokenService(HTS_ADDRESS).cryptoTransfer{value: hbarToRecipient + 0.5 ether}(
+        IHederaTokenService(HTS_ADDRESS).cryptoTransfer(
             transferList,
             new IHederaTokenService.TokenTransferList[](0)
         );

@@ -44,27 +44,8 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
     }
 
     function cryptoTransfer(TransferList memory transferList, TokenTransferList[] memory tokenTransfers)
-    payable htsCall external returns (int64 responseCode) {
-        uint256 hbarsReceived = msg.value;
-        int64 hbarBalance = 0;
-        for (uint256 hbarIndex = 0; hbarIndex < transferList.transfers.length; hbarIndex++) {
-            require(!transferList.transfers[hbarIndex].isApproval, "cryptoTransfer: hbar approval is not supported");
-            hbarBalance += transferList.transfers[hbarIndex].amount;
-            if (transferList.transfers[hbarIndex].amount < 0) {
-                require(
-                    transferList.transfers[hbarIndex].accountID == msg.sender,
-                    "cryptoTransfer: hbar transfer allowed only from the msg sender account"
-                );
-                continue;
-            }
-            require(transferList.transfers[hbarIndex].amount > 0, "cryptoTransfer: invalid amount");
-            uint256 value = uint256(uint64(transferList.transfers[hbarIndex].amount));
-            require(hbarsReceived >= value, "cryptoTransfer: insufficient balance");
-            hbarsReceived -= value;
-            (bool success, ) = transferList.transfers[hbarIndex].accountID.call{value: value}("");
-            require(success, "cryptoTransfer: hbar transfer failure");
-        }
-        require(hbarBalance == 0 && hbarsReceived == 0, "cryptoTransfer: unmatched hbar transfers ");
+        htsCall external returns (int64 responseCode) {
+        _cryptoHbarTransfer(transferList);
         for (uint256 tokenIndex = 0; tokenIndex < tokenTransfers.length; tokenIndex++) {
             require(tokenTransfers[tokenIndex].token != address(0), "cryptoTransfer: invalid token");
             uint256 validFungibleTransfersCount = 0;
@@ -944,5 +925,9 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         bytes32 slot = _isApprovedForAllSlot(sender, operator);
         assembly { sstore(slot, approved) }
         emit ApprovalForAll(sender, operator, approved);
+    }
+
+    function _cryptoHbarTransfer(TransferList memory transferList) internal virtual {
+        require(transferList.transfers.length == 0, "cryptoTransfer: hbar transfer is not supported");
     }
 }
