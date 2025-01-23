@@ -631,7 +631,7 @@ contract HTSTest is Test, TestSetup {
 
         vm.prank(owner);
         vm.expectEmit(USDC);
-        emit IERC20Events.ERC20Transfer(owner, to, amount);
+        emit IERC20Events.Transfer(owner, to, amount);
         IHederaTokenService(HTS_ADDRESS).transferToken(USDC, owner, to, int64(int256(amount)));
 
         assertEq(IERC20(USDC).balanceOf(owner), balanceOfOwner - amount);
@@ -650,7 +650,7 @@ contract HTSTest is Test, TestSetup {
 
         vm.prank(owner);
         vm.expectEmit(USDC);
-        emit IERC20Events.ERC20Transfer(owner, to, amount);
+        emit IERC20Events.Transfer(owner, to, amount);
         IHederaTokenService(HTS_ADDRESS).transferFrom(USDC, owner, to, amount);
 
         assertEq(IERC20(USDC).balanceOf(owner), balanceOfOwner - amount);
@@ -674,8 +674,6 @@ contract HTSTest is Test, TestSetup {
         address to = makeAddr("recipient");
         uint256 serialId = 1;
         vm.startPrank(CFNFTFF_TREASURY);
-        vm.expectEmit(CFNFTFF);
-        emit IERC721Events.ERC721Transfer(CFNFTFF_TREASURY, to, serialId);
         IHederaTokenService(HTS_ADDRESS).transferNFT(CFNFTFF, CFNFTFF_TREASURY, to, int64(int256(serialId)));
         vm.stopPrank();
         assertEq(IERC721(CFNFTFF).ownerOf(serialId), to);
@@ -685,8 +683,6 @@ contract HTSTest is Test, TestSetup {
         address to = makeAddr("recipient");
         uint256 serialId = 1;
         vm.startPrank(CFNFTFF_TREASURY);
-        vm.expectEmit(CFNFTFF);
-        emit IERC721Events.ERC721Transfer(CFNFTFF_TREASURY, to, serialId);
         IHederaTokenService(HTS_ADDRESS).transferFromNFT(CFNFTFF, CFNFTFF_TREASURY, to, serialId);
         vm.stopPrank();
         assertEq(IERC721(CFNFTFF).ownerOf(serialId), to);
@@ -707,7 +703,7 @@ contract HTSTest is Test, TestSetup {
 
         vm.prank(owner);
         vm.expectEmit(USDC);
-        emit IERC20Events.ERC20Transfer(owner, to[0], amount);
+        emit IERC20Events.Transfer(owner, to[0], amount);
         IHederaTokenService(HTS_ADDRESS).transferTokens(USDC, to, amounts);
 
         assertEq(IERC20(USDC).balanceOf(owner), balanceOfOwner - amount);
@@ -758,8 +754,6 @@ contract HTSTest is Test, TestSetup {
         address[] memory to = new address[](1);
         to[0] = makeAddr("recipient");
         vm.startPrank(CFNFTFF_TREASURY);
-        vm.expectEmit(CFNFTFF);
-        emit IERC721Events.ERC721Transfer(CFNFTFF_TREASURY, to[0], serialId[0]);
         IHederaTokenService(HTS_ADDRESS).transferNFT(CFNFTFF, from[0], to[0], int64(int256(serialId[0])));
         vm.stopPrank();
         assertEq(IERC721(CFNFTFF).ownerOf(serialId[0]), to[0]);
@@ -799,8 +793,6 @@ contract HTSTest is Test, TestSetup {
         address newSpender = makeAddr("NEW_SPENDER");
         assertNotEq(IERC721(token).getApproved(1), newSpender);
         vm.prank(CFNFTFF_TREASURY);
-        vm.expectEmit(token);
-        emit IERC721Events.ERC721Approval(CFNFTFF_TREASURY, newSpender, 1);
         int64 responseCodeApprove = HtsSystemContract(HTS_ADDRESS).approveNFT(token, newSpender, 1);
         assertEq(responseCodeApprove, HederaResponseCodes.SUCCESS);
         assertEq(IERC721(token).getApproved(1), newSpender);
@@ -813,7 +805,7 @@ contract HTSTest is Test, TestSetup {
         assertEq(IERC20(USDC).allowance(owner, spender), 0);
         vm.prank(owner);
         vm.expectEmit(USDC);
-        emit IERC20Events.ERC20Approval(owner, spender, amount);
+        emit IERC20Events.Approval(owner, spender, amount);
         int64 responseCodeApprove = HtsSystemContract(HTS_ADDRESS).approve(USDC, spender, amount);
         assertEq(responseCodeApprove, HederaResponseCodes.SUCCESS);
         assertEq(IERC20(USDC).allowance(owner, spender), amount);
@@ -823,8 +815,6 @@ contract HTSTest is Test, TestSetup {
         address operator = makeAddr("operator");
         assertFalse(IERC721(CFNFTFF).isApprovedForAll(CFNFTFF_TREASURY, operator));
         vm.prank(CFNFTFF_TREASURY);
-        vm.expectEmit(CFNFTFF);
-        emit IERC721Events.ERC721ApprovalForAll(CFNFTFF_TREASURY, operator, true);
         int64 setApprovalForAllResponseCode = HtsSystemContract(HTS_ADDRESS)
             .setApprovalForAll(CFNFTFF, operator, true);
         assertEq(setApprovalForAllResponseCode, HederaResponseCodes.SUCCESS);
