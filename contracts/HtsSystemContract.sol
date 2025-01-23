@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {IERC20Events, IERC20} from "./IERC20.sol";
-import {IERC721Events, IERC721} from "./IERC721.sol";
+import {IERC721, IERC721Events} from "./IERC721.sol";
 import {IHRC719} from "./IHRC719.sol";
 import {IHederaTokenService} from "./IHederaTokenService.sol";
 import {HederaResponseCodes} from "./HederaResponseCodes.sol";
