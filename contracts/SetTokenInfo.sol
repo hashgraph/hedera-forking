@@ -18,12 +18,24 @@ contract SetTokenInfo {
 
         assembly { sstore(18, 1) }
 
+        // The assignment
+        //
+        // _tokenInfo = tokenInfo;
+        //
+        // cannot be used directly because it triggers the following compilation error
+        //
         // Error (1834): Copying of type struct IHederaTokenService.TokenKey memory[] memory to storage is not supported in legacy (only supported by the IR pipeline).
         // Hint: try compiling with `--via-ir` (CLI) or the equivalent `viaIR: true` (Standard JSON)
-        // https://docs.soliditylang.org/en/v0.8.28/ir-breaking-changes.html
-        // https://github.com/ethereum/solidity/issues/3446#issuecomment-1924761902
-        // _tokenInfo = tokenInfo;
+        //
+        // More specifically, the assigment
+        //
         // _tokenInfo.token.tokenKeys = tokenInfo.token.tokenKeys;
+        //
+        // triggers the above error as well.
+        //
+        // Array assignments from memory to storage are not supported in legacy codegen https://github.com/ethereum/solidity/issues/3446#issuecomment-1924761902.
+        // And using the `--via-ir` flag as mentioned above increases compilation time substantially
+        // That is why we are better off copying the struct to storage manually.
 
         _tokenInfo.token.name = tokenInfo.token.name;
         _tokenInfo.token.symbol = tokenInfo.token.symbol;
@@ -44,16 +56,16 @@ contract SetTokenInfo {
         _tokenInfo.defaultKycStatus = tokenInfo.defaultKycStatus;
         _tokenInfo.pauseStatus = tokenInfo.pauseStatus;
 
-        // The same copying issue for fee arrays
+        // The same copying issue as mentioned above for fee arrays.
         // _tokenInfo.fixedFees = tokenInfo.fixedFees;
-        // _tokenInfo.fractionalFees = tokenInfo.fractionalFees;
-        // _tokenInfo.royaltyFees = tokenInfo.royaltyFees;
         for (uint256 i = 0; i < tokenInfo.fixedFees.length; i++) {
             _tokenInfo.fixedFees.push(tokenInfo.fixedFees[i]);
         }
+        // _tokenInfo.fractionalFees = tokenInfo.fractionalFees;
         for (uint256 i = 0; i < tokenInfo.fractionalFees.length; i++) {
             _tokenInfo.fractionalFees.push(tokenInfo.fractionalFees[i]);
         }
+        // _tokenInfo.royaltyFees = tokenInfo.royaltyFees;
         for (uint256 i = 0; i < tokenInfo.royaltyFees.length; i++) {
             _tokenInfo.royaltyFees.push(tokenInfo.royaltyFees[i]);
         }

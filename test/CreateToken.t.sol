@@ -58,6 +58,8 @@ contract CreateTokenTest is Test, TestSetup {
     }
 
     function test_createFungibleToken() external {
+        if (testMode == TestMode.JSON_RPC) vm.skip(true);
+
         IHederaTokenService.HederaToken memory token;
         token.name = "Token name";
         token.symbol = "Token symbol";
