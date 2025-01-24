@@ -98,8 +98,8 @@ contract HtsSystemContractJson is HtsSystemContract {
         assembly { slot := decimals.slot }
         storeUint(address(this), uint256(slot), vm.parseJsonUint(json, ".decimals"));
 
-        assembly { slot := totalSupply.slot }
-        storeUint(address(this), uint256(slot), vm.parseJsonUint(json, ".total_supply"));
+        // assembly { slot := totalSupply.slot }
+        // storeUint(address(this), uint256(slot), vm.parseJsonUint(json, ".total_supply"));
 
         assembly { slot := initialized.slot }
         storeBool(address(this), uint256(slot), true);

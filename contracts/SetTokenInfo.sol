@@ -9,14 +9,14 @@ contract SetTokenInfo {
     // uint256 private __gap1;
     // uint256 private __gap2;
     uint8 private _decimals;
-    uint256 private __gap3;
+    // uint256 private __gap3;
     IHederaTokenService.TokenInfo private _tokenInfo;
 
     function setTokenInfo(string memory tokenType, IHederaTokenService.TokenInfo memory tokenInfo, int32 decimals) external {
         _tokenType = tokenType;
         _decimals = uint8(uint32(decimals));
 
-        assembly { sstore(16, 1) }
+        assembly { sstore(15, 1) }
 
         // The assignment
         //

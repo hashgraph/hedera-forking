@@ -28,7 +28,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
     // string internal name;
     // string internal symbol;
     uint8 internal decimals;
-    uint256 internal totalSupply;
+    // uint256 internal totalSupply;
     TokenInfo internal _tokenInfo;
 
     /**
@@ -617,7 +617,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
             return abi.encode(decimals);
         }
         if (selector == IERC20.totalSupply.selector) {
-            return abi.encode(totalSupply);
+            return abi.encode(_tokenInfo.totalSupply);
         }
         if (selector == IERC20.symbol.selector) {
             return abi.encode(_tokenInfo.token.symbol);
@@ -682,7 +682,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
             return abi.encode(__tokenURI(serialId));
         }
         if (selector == IERC721.totalSupply.selector) {
-            return abi.encode(totalSupply);
+            return abi.encode(_tokenInfo.totalSupply);
         }
         if (selector == IERC721.balanceOf.selector) {
             require(msg.data.length >= 60, "balanceOf: Not enough calldata");
@@ -870,7 +870,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
 
     function _update(address from, address to, uint256 amount) public {
         if (from == address(0)) {
-            totalSupply += amount;
+            _tokenInfo.totalSupply += int64(int256(amount));
         } else {
             bytes32 fromSlot = _balanceOfSlot(from);
             uint256 fromBalance;
@@ -880,7 +880,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         }
 
         if (to == address(0)) {
-            totalSupply -= amount;
+            _tokenInfo.totalSupply -= int64(int256(amount));
         } else {
             bytes32 toSlot = _balanceOfSlot(to);
             uint256 toBalance;
