@@ -3,13 +3,16 @@ pragma solidity ^0.8.0;
 
 import {IHederaTokenService} from "./IHederaTokenService.sol";
 
-contract TokenProxyHotSwap {
-
-   // Must be in the same slot as `HtsSystemContract.tokenType`
+contract SetTokenInfo {
+    // The following state variables must be in the same slot as in `HtsSystemContract.tokenType`.
     string private _tokenType;
+    uint256 private __gap1;
+    uint256 private __gap2;
+    uint8 private _decimals;
 
-    function setTokenInfo(string memory tokenType, IHederaTokenService.TokenInfo memory tokenInfo) external {
+    function setTokenInfo(string memory tokenType, IHederaTokenService.TokenInfo memory tokenInfo, int32 decimals) external {
         _tokenType = tokenType;
+        _decimals = uint8(uint32(decimals));
 
         assembly { sstore(19, 1) }
 

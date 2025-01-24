@@ -6,7 +6,7 @@ import {IERC721, IERC721Events} from "./IERC721.sol";
 import {IHRC719} from "./IHRC719.sol";
 import {IHederaTokenService} from "./IHederaTokenService.sol";
 import {HederaResponseCodes} from "./HederaResponseCodes.sol";
-import {TokenProxyHotSwap} from "./TokenProxyHotSwap.sol";
+import {SetTokenInfo} from "./SetTokenInfo.sol";
 
 address constant HTS_ADDRESS = address(0x167);
 
@@ -16,7 +16,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
     // These state variables are accessed with a `delegatecall` from the Token Proxy bytecode.
     // That is, they live in the token address storage space, not in the space of HTS `0x167`.
     // See `__redirectForToken` for more details.
-    string internal tokenType; // 
+    string internal tokenType; // Cannot be moved, `SetTokenInfo` depends on `tokenType` being at slot `0`
     string internal name;
     string internal symbol;
     uint8 internal decimals;
@@ -171,7 +171,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         tokenAddress = address(_nextTokenId);
 
         deploySetTokenInfo(tokenAddress);
-        TokenProxyHotSwap(tokenAddress).setTokenInfo(tokenType_, tokenInfo);
+        SetTokenInfo(tokenAddress).setTokenInfo(tokenType_, tokenInfo, decimals_);
         deployHIP719Proxy(tokenAddress);
         responseCode = HederaResponseCodes.SUCCESS;
     }
@@ -600,7 +600,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
 
     function _redirectForERC20(bytes4 selector) private returns (bytes memory) {
         if (selector == IERC20.name.selector) {
-            return abi.encode(name);
+            return abi.encode(_tokenInfo.token.name);
         }
         if (selector == IERC20.decimals.selector) {
             return abi.encode(decimals);
@@ -609,7 +609,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
             return abi.encode(totalSupply);
         }
         if (selector == IERC20.symbol.selector) {
-            return abi.encode(symbol);
+            return abi.encode(_tokenInfo.token.symbol);
         }
         if (selector == IERC20.balanceOf.selector) {
             require(msg.data.length >= 60, "balanceOf: Not enough calldata");
@@ -660,10 +660,10 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
 
     function _redirectForERC721(bytes4 selector) private returns (bytes memory) {
         if (selector == IERC721.name.selector) {
-            return abi.encode(name);
+            return abi.encode(_tokenInfo.token.name);
         }
         if (selector == IERC721.symbol.selector) {
-            return abi.encode(symbol);
+            return abi.encode(_tokenInfo.token.symbol);
         }
         if (selector == IERC721.tokenURI.selector) {
             require(msg.data.length >= 60, "tokenURI: Not enough calldata");

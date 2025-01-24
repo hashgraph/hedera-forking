@@ -67,9 +67,13 @@ contract CreateTokenTest is Test, TestSetup {
         vm.assertEq(responseCode, HederaResponseCodes.SUCCESS);
         vm.assertNotEq(tokenAddress, address(0));
 
-        IHederaTokenService.TokenInfo memory tokenInfo;
-        (responseCode, tokenInfo) = IHederaTokenService(HTS_ADDRESS).getTokenInfo(tokenAddress);
+        IHederaTokenService.FungibleTokenInfo memory fungibleTokenInfo;
+        (responseCode, fungibleTokenInfo) = IHederaTokenService(HTS_ADDRESS).getFungibleTokenInfo(tokenAddress);
         vm.assertEq(responseCode, HederaResponseCodes.SUCCESS);
+
+        vm.assertEq(fungibleTokenInfo.decimals, 4);
+
+        IHederaTokenService.TokenInfo memory tokenInfo = fungibleTokenInfo.tokenInfo;
 
         vm.assertEq(tokenInfo.token.name, token.name);
         vm.assertEq(tokenInfo.token.symbol, token.symbol);
@@ -81,6 +85,8 @@ contract CreateTokenTest is Test, TestSetup {
         vm.assertEq(tokenInfo.ledgerId, "0x03");
 
         // Created token should be accessible through Proxy contract redirect calls
-        // vm.assertEq(IERC20(tokenAddress).name(), token.name);
+        vm.assertEq(IERC20(tokenAddress).name(), token.name);
+        vm.assertEq(IERC20(tokenAddress).symbol(), token.symbol);
+        vm.assertEq(IERC20(tokenAddress).decimals(), 4);
     }
 }
