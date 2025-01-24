@@ -4,20 +4,19 @@ pragma solidity ^0.8.0;
 import {IHederaTokenService} from "./IHederaTokenService.sol";
 
 contract SetTokenInfo {
-    // The following state variables must be in the same slot as in `HtsSystemContract.tokenType`.
+    // The state variables must be in the same slot as in `HtsSystemContract.tokenType`.
     string private _tokenType;
     uint256 private __gap1;
     uint256 private __gap2;
     uint8 private _decimals;
+    uint256 private __gap3;
+    IHederaTokenService.TokenInfo private _tokenInfo;
 
     function setTokenInfo(string memory tokenType, IHederaTokenService.TokenInfo memory tokenInfo, int32 decimals) external {
         _tokenType = tokenType;
         _decimals = uint8(uint32(decimals));
 
-        assembly { sstore(19, 1) }
-
-        IHederaTokenService.TokenInfo storage _tokenInfo;
-        assembly { _tokenInfo.slot := 5 }
+        assembly { sstore(18, 1) }
 
         // Error (1834): Copying of type struct IHederaTokenService.TokenKey memory[] memory to storage is not supported in legacy (only supported by the IR pipeline).
         // Hint: try compiling with `--via-ir` (CLI) or the equivalent `viaIR: true` (Standard JSON)

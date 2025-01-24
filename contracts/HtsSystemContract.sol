@@ -12,18 +12,24 @@ address constant HTS_ADDRESS = address(0x167);
 
 contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
 
-    // The following state variables belong to an instantiated Fungible/Non-Fungible token.
+    // This slot is used in the `0x167` address. 
+    // It cannot be used as a state variable directly.
+    // This is because JS' `getHtsStorageAt` implementation assumes all state variables
+    // declared here are part of the token address space.
+    bytes32 private constant _nextTokenIdSlot = keccak256("HTS:_nextTokenIdSlot");
+
+    // All state variables belong to an instantiated Fungible/Non-Fungible token.
     // These state variables are accessed with a `delegatecall` from the Token Proxy bytecode.
     // That is, they live in the token address storage space, not in the space of HTS `0x167`.
     // See `__redirectForToken` for more details.
-    string internal tokenType; // Cannot be moved, `SetTokenInfo` depends on `tokenType` being at slot `0`
+    //
+    // Moreover, these variables must match the slots defined in `SetTokenInfo`.
+    string internal tokenType; 
     string internal name;
     string internal symbol;
     uint8 internal decimals;
     uint256 internal totalSupply;
     TokenInfo internal _tokenInfo;
-
-    uint160 private _nextTokenId;
 
     /**
      * @dev Prevents delegatecall into the modified method.
@@ -164,11 +170,16 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         tokenInfo.royaltyFees = royaltyFees;
         tokenInfo.ledgerId = "0x03";
 
-        if (_nextTokenId == 0) {
-            _nextTokenId = 31;
+        bytes32 nextTokenIdSlot = _nextTokenIdSlot;
+        uint160 nextTokenId;
+        assembly { nextTokenId := sload(nextTokenIdSlot) }
+        if (nextTokenId == 0) {
+            nextTokenId = 31;
         }
-        _nextTokenId++;
-        tokenAddress = address(_nextTokenId);
+        nextTokenId++;
+        assembly { sstore(nextTokenIdSlot, nextTokenId) }
+
+        tokenAddress = address(nextTokenId);
 
         deploySetTokenInfo(tokenAddress);
         SetTokenInfo(tokenAddress).setTokenInfo(tokenType_, tokenInfo, decimals_);
