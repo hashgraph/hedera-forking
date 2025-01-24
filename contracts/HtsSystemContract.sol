@@ -153,6 +153,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         FractionalFee[] memory fractionalFees,
         RoyaltyFee[] memory royaltyFees
     ) private returns (int64 responseCode, address tokenAddress) {
+        require(msg.value > 0, "HTS: must send HBARs");
         require(bytes(token.name).length > 0, "HTS: name cannot be empty");
         require(bytes(token.symbol).length > 0, "HTS: symbol cannot be empty");
         require(token.treasury != address(0), "HTS: treasury cannot be zero-address");

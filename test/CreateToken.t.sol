@@ -15,17 +15,23 @@ contract CreateTokenTest is Test, TestSetup {
         setUpMockStorageForNonFork();
     }
 
+    function test_createFungibleToken_should_revert_if_value_is_not_provided() external {
+        IHederaTokenService.HederaToken memory token;
+        vm.expectRevert(bytes("HTS: must send HBARs"));
+        IHederaTokenService(HTS_ADDRESS).createFungibleToken(token, 10000, 4);
+    }
+
     function test_createFungibleToken_should_revert_if_name_is_not_provided() external {
         IHederaTokenService.HederaToken memory token;
         vm.expectRevert(bytes("HTS: name cannot be empty"));
-        IHederaTokenService(HTS_ADDRESS).createFungibleToken(token, 10000, 4);
+        IHederaTokenService(HTS_ADDRESS).createFungibleToken{value: 1000}(token, 10000, 4);
     }
 
     function test_createFungibleToken_should_revert_if_symbol_is_not_provided() external {
         IHederaTokenService.HederaToken memory token;
         token.name = "Token name";
         vm.expectRevert(bytes("HTS: symbol cannot be empty"));
-        IHederaTokenService(HTS_ADDRESS).createFungibleToken(token, 10000, 4);
+        IHederaTokenService(HTS_ADDRESS).createFungibleToken{value: 1000}(token, 10000, 4);
     }
 
     function test_createFungibleToken_should_revert_if_treasury_is_not_provided() external {
@@ -33,7 +39,7 @@ contract CreateTokenTest is Test, TestSetup {
         token.name = "Token name";
         token.symbol = "Token symbol";
         vm.expectRevert(bytes("HTS: treasury cannot be zero-address"));
-        IHederaTokenService(HTS_ADDRESS).createFungibleToken(token, 10000, 4);
+        IHederaTokenService(HTS_ADDRESS).createFungibleToken{value: 1000}(token, 10000, 4);
     }
 
     function test_createFungibleToken_should_revert_if_initialTotalSupply_is_negative() external {
@@ -42,7 +48,7 @@ contract CreateTokenTest is Test, TestSetup {
         token.symbol = "Token symbol";
         token.treasury = makeAddr("Token treasury");
         vm.expectRevert(bytes("HTS: initialTotalSupply cannot be negative"));
-        IHederaTokenService(HTS_ADDRESS).createFungibleToken(token, -1, 4);
+        IHederaTokenService(HTS_ADDRESS).createFungibleToken{value: 1000}(token, -1, 4);
     }
 
     function test_createFungibleToken_should_revert_if_decimals_is_negative() external {
@@ -51,7 +57,7 @@ contract CreateTokenTest is Test, TestSetup {
         token.symbol = "Token symbol";
         token.treasury = makeAddr("Token treasury");
         vm.expectRevert(bytes("HTS: decimals cannot be negative"));
-        IHederaTokenService(HTS_ADDRESS).createFungibleToken(token, 10000, -1);
+        IHederaTokenService(HTS_ADDRESS).createFungibleToken{value: 1000}(token, 10000, -1);
     }
 
     function test_createFungibleToken_should_succeed_when_tokenInfo_is_valid() external {
@@ -62,7 +68,7 @@ contract CreateTokenTest is Test, TestSetup {
         token.symbol = "Token symbol";
         token.treasury = makeAddr("Token treasury");
 
-        (int64 responseCode, address tokenAddress) = IHederaTokenService(HTS_ADDRESS).createFungibleToken(token, 10000, 4);
+        (int64 responseCode, address tokenAddress) = IHederaTokenService(HTS_ADDRESS).createFungibleToken{value: 1000}(token, 10000, 4);
         vm.assertEq(responseCode, HederaResponseCodes.SUCCESS);
         vm.assertNotEq(tokenAddress, address(0));
 
@@ -112,7 +118,7 @@ contract CreateTokenTest is Test, TestSetup {
         token.symbol = "Token symbol";
         token.treasury = makeAddr("Token treasury");
 
-        (int64 responseCode, address tokenAddress) = IHederaTokenService(HTS_ADDRESS).createFungibleToken(token, 0, 4);
+        (int64 responseCode, address tokenAddress) = IHederaTokenService(HTS_ADDRESS).createFungibleToken{value: 1000}(token, 0, 4);
         vm.assertEq(responseCode, HederaResponseCodes.SUCCESS);
 
         IHederaTokenService.FungibleTokenInfo memory fungibleTokenInfo;
@@ -146,7 +152,7 @@ contract CreateTokenTest is Test, TestSetup {
         IHederaTokenService.FractionalFee[] memory fractionalFees = new IHederaTokenService.FractionalFee[](1);
         fractionalFees[0].numerator = 1;
         fractionalFees[0].denominator = 5;
-        (int64 responseCode, address tokenAddress) = IHederaTokenService(HTS_ADDRESS).createFungibleTokenWithCustomFees(token, 10000, 4, fixedFees, fractionalFees);
+        (int64 responseCode, address tokenAddress) = IHederaTokenService(HTS_ADDRESS).createFungibleTokenWithCustomFees{value: 1000}(token, 10000, 4, fixedFees, fractionalFees);
         vm.assertEq(responseCode, HederaResponseCodes.SUCCESS);
         vm.assertNotEq(tokenAddress, address(0));
 
@@ -175,14 +181,14 @@ contract CreateTokenTest is Test, TestSetup {
         token[0].symbol = "Token symbol 0";
         token[0].treasury = makeAddr("Token treasury 0");
 
-        (responseCode, tokenAddress) = IHederaTokenService(HTS_ADDRESS).createFungibleToken(token[0], 10000, 4);
+        (responseCode, tokenAddress) = IHederaTokenService(HTS_ADDRESS).createFungibleToken{value: 1000}(token[0], 10000, 4);
         vm.assertEq(responseCode, HederaResponseCodes.SUCCESS);
         address tokenAddress0 = tokenAddress;
 
         token[1].name = "Token name 1";
         token[1].symbol = "Token symbol 1";
         token[1].treasury = makeAddr("Token treasury 1");
-        (responseCode, tokenAddress) = IHederaTokenService(HTS_ADDRESS).createFungibleToken(token[1], 20000, 5);
+        (responseCode, tokenAddress) = IHederaTokenService(HTS_ADDRESS).createFungibleToken{value: 1000}(token[1], 20000, 5);
         vm.assertEq(responseCode, HederaResponseCodes.SUCCESS);
         address tokenAddress1 = tokenAddress;
 
@@ -211,7 +217,7 @@ contract CreateTokenTest is Test, TestSetup {
         token.symbol = "NFT symbol";
         token.treasury = makeAddr("NFT treasury");
 
-        (int64 responseCode, address tokenAddress) = IHederaTokenService(HTS_ADDRESS).createNonFungibleToken(token);
+        (int64 responseCode, address tokenAddress) = IHederaTokenService(HTS_ADDRESS).createNonFungibleToken{value: 1000}(token);
         vm.assertEq(responseCode, HederaResponseCodes.SUCCESS);
         vm.assertNotEq(tokenAddress, address(0));
 
