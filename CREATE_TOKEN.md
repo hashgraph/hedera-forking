@@ -106,9 +106,10 @@ A successful call to any token creation method should have the following effect
 
 #### Token Creation Counter
 
-HTS emulation should keep an internal counter to track next token address to be created.
-In forking mode, this counter should resemble the next token address from the remote network.
-In non-forking mode, this counter should be `0.0.32`, the first token account created by local node.
+HTS emulation should keep an internal counter to track the next token address to be created.
+
+- **In forking mode,** this counter should resemble the next token address from the remote network. This can be obtained by querying the Mirror Node for the latest account and token IDs and getting the latest (higher) between these two. The latest account ID can be obtained with `/v1/accounts?order=desc&limit=1`. On the other hand, the latest token ID can be obtained with `/v1/tokens?order=desc&limit=1`.
+- **In non-forking mode,** this counter should be `0.0.1032`, the first token account ID created by local node when `--createInitialResources=true` is specified.
 
 ### Delete Token
 

@@ -7,6 +7,7 @@ import {HTS_ADDRESS} from "../contracts/HtsSystemContract.sol";
 import {IHederaTokenService} from "../contracts/IHederaTokenService.sol";
 import {HederaResponseCodes} from "../contracts/HederaResponseCodes.sol";
 import {IERC20} from "../contracts/IERC20.sol";
+import {IERC721} from "../contracts/IERC721.sol";
 
 contract CreateTokenTest is Test, TestSetup {
 
@@ -65,6 +66,16 @@ contract CreateTokenTest is Test, TestSetup {
         vm.assertEq(responseCode, HederaResponseCodes.SUCCESS);
         vm.assertNotEq(tokenAddress, address(0));
 
+        bool isToken;
+        (responseCode, isToken) = IHederaTokenService(HTS_ADDRESS).isToken(tokenAddress);
+        vm.assertEq(responseCode, HederaResponseCodes.SUCCESS);
+        vm.assertTrue(isToken);
+
+        int32 tokenType;
+        (responseCode, tokenType) = IHederaTokenService(HTS_ADDRESS).getTokenType(tokenAddress);
+        vm.assertEq(responseCode, HederaResponseCodes.SUCCESS);
+        vm.assertEq(tokenType, 0);
+
         IHederaTokenService.FungibleTokenInfo memory fungibleTokenInfo;
         (responseCode, fungibleTokenInfo) = IHederaTokenService(HTS_ADDRESS).getFungibleTokenInfo(tokenAddress);
         vm.assertEq(responseCode, HederaResponseCodes.SUCCESS);
@@ -87,6 +98,7 @@ contract CreateTokenTest is Test, TestSetup {
         vm.assertEq(IERC20(tokenAddress).name(), token.name);
         vm.assertEq(IERC20(tokenAddress).symbol(), token.symbol);
         vm.assertEq(IERC20(tokenAddress).decimals(), 4);
+        vm.assertEq(IERC20(tokenAddress).totalSupply(), 10000);
 
         vm.assertEq(IERC20(tokenAddress).balanceOf(token.treasury), uint256(int256(tokenInfo.totalSupply)));
         vm.assertEq(IERC20(tokenAddress).balanceOf(makeAddr("no balance account")), 0);
@@ -130,4 +142,47 @@ contract CreateTokenTest is Test, TestSetup {
         vm.assertEq(tokenInfo.token.symbol, token[1].symbol);
         vm.assertEq(tokenInfo.token.treasury, token[1].treasury);
     }
+
+    function test_createNonFungibleToken_should_succeed_when_tokenInfo_is_valid() external {
+        if (testMode == TestMode.JSON_RPC) vm.skip(true);
+
+        IHederaTokenService.HederaToken memory token;
+        token.name = "NFT name";
+        token.symbol = "NFT symbol";
+        token.treasury = makeAddr("NFT treasury");
+
+        (int64 responseCode, address tokenAddress) = IHederaTokenService(HTS_ADDRESS).createNonFungibleToken(token);
+        vm.assertEq(responseCode, HederaResponseCodes.SUCCESS);
+        vm.assertNotEq(tokenAddress, address(0));
+
+        bool isToken;
+        (responseCode, isToken) = IHederaTokenService(HTS_ADDRESS).isToken(tokenAddress);
+        vm.assertEq(responseCode, HederaResponseCodes.SUCCESS);
+        vm.assertTrue(isToken);
+
+        int32 tokenType;
+        (responseCode, tokenType) = IHederaTokenService(HTS_ADDRESS).getTokenType(tokenAddress);
+        vm.assertEq(responseCode, HederaResponseCodes.SUCCESS);
+        vm.assertEq(tokenType, 1);
+
+        IHederaTokenService.TokenInfo memory tokenInfo;
+        (responseCode, tokenInfo) = IHederaTokenService(HTS_ADDRESS).getTokenInfo(tokenAddress);
+        vm.assertEq(responseCode, HederaResponseCodes.SUCCESS);
+
+        vm.assertEq(tokenInfo.token.name, token.name);
+        vm.assertEq(tokenInfo.token.symbol, token.symbol);
+        vm.assertEq(tokenInfo.token.treasury, token.treasury);
+        vm.assertEq(tokenInfo.totalSupply, 0);
+        vm.assertEq(tokenInfo.fixedFees.length, 0);
+        vm.assertEq(tokenInfo.fractionalFees.length, 0);
+        vm.assertEq(tokenInfo.royaltyFees.length, 0);
+
+        vm.assertEq(tokenInfo.ledgerId, "0x03");
+
+        // Created token should be accessible through Proxy contract redirect calls
+        vm.assertEq(IERC721(tokenAddress).name(), token.name);
+        vm.assertEq(IERC721(tokenAddress).symbol(), token.symbol);
+        vm.assertEq(IERC721(tokenAddress).totalSupply(), 0);
+    }
+
 }

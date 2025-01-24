@@ -174,7 +174,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         uint160 nextTokenId;
         assembly { nextTokenId := sload(nextTokenIdSlot) }
         if (nextTokenId == 0) {
-            nextTokenId = 31;
+            nextTokenId = 1031;
         }
         nextTokenId++;
         assembly { sstore(nextTokenIdSlot, nextTokenId) }
@@ -185,7 +185,10 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         SetTokenInfo(tokenAddress).setTokenInfo(tokenType_, tokenInfo, decimals_);
         deployHIP719Proxy(tokenAddress);
 
-        this.mintToken(tokenAddress, initialTotalSupply, new bytes[](0));
+        if (initialTotalSupply > 0) {
+            this.mintToken(tokenAddress, initialTotalSupply, new bytes[](0));
+        }
+
         responseCode = HederaResponseCodes.SUCCESS;
     }
 
