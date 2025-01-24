@@ -25,8 +25,8 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
     //
     // Moreover, these variables must match the slots defined in `SetTokenInfo`.
     string internal tokenType; 
-    string internal name;
-    string internal symbol;
+    // string internal name;
+    // string internal symbol;
     uint8 internal decimals;
     uint256 internal totalSupply;
     TokenInfo internal _tokenInfo;

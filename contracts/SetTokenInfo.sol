@@ -6,8 +6,8 @@ import {IHederaTokenService} from "./IHederaTokenService.sol";
 contract SetTokenInfo {
     // The state variables must be in the same slot as in `HtsSystemContract.tokenType`.
     string private _tokenType;
-    uint256 private __gap1;
-    uint256 private __gap2;
+    // uint256 private __gap1;
+    // uint256 private __gap2;
     uint8 private _decimals;
     uint256 private __gap3;
     IHederaTokenService.TokenInfo private _tokenInfo;
@@ -16,7 +16,7 @@ contract SetTokenInfo {
         _tokenType = tokenType;
         _decimals = uint8(uint32(decimals));
 
-        assembly { sstore(18, 1) }
+        assembly { sstore(16, 1) }
 
         // The assignment
         //

@@ -89,11 +89,11 @@ contract HtsSystemContractJson is HtsSystemContract {
         assembly { slot := tokenType.slot }
         storeString(address(this), uint256(slot), vm.parseJsonString(json, ".type"));
 
-        assembly { slot := name.slot }
-        storeString(address(this), uint256(slot), vm.parseJsonString(json, ".name"));
+        // assembly { slot := name.slot }
+        // storeString(address(this), uint256(slot), vm.parseJsonString(json, ".name"));
 
-        assembly { slot := symbol.slot }
-        storeString(address(this), uint256(slot), vm.parseJsonString(json, ".symbol"));
+        // assembly { slot := symbol.slot }
+        // storeString(address(this), uint256(slot), vm.parseJsonString(json, ".symbol"));
 
         assembly { slot := decimals.slot }
         storeUint(address(this), uint256(slot), vm.parseJsonUint(json, ".decimals"));
