@@ -13,13 +13,28 @@ contract HtsSystemContractJson is HtsSystemContract {
     Vm private constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
     /**
-     * This slot stores whether the token has been initialized.
+     * This slot value indicates whether the token has been initialized.
      * In the token initialization, token data is fetched remotely if the token is not local.
      * This slot is accessed through the address of the token.
      */
     bytes32 private constant _initSlot = keccak256("HtsSystemContractJson::_initSlot");
 
+    /**
+     * This slot value indicates whether the token has been created in locally.
+     * A token that has been created locally does not make any requests to fetch remote data.
+     * This slot is accessed through the address of the token.
+     */
     bytes32 private constant _isLocalTokenSlot = keccak256("HtsSystemContractJson::_isLocalTokenSlot");
+
+    /**
+     * The Proxy template bytecode as specified by HIP719.
+     * It is treated as a template because the placeholder `fefefefefefefefefefefefefefefefefefefefe`
+     * needs to be replace by the actual token address.
+     * This bytecode is inlined here to avoid reading from file using `vm.readFile`,
+     * which is disallowed unless `fs_permissions` is granted.
+     * See https://book.getfoundry.sh/cheatcodes/fs#description for more details.
+     */
+    string private constant _HIP719TemplateBytecode = "0x6080604052348015600f57600080fd5b506000610167905077618dc65efefefefefefefefefefefefefefefefefefefefe600052366000602037600080366018016008845af43d806000803e8160008114605857816000f35b816000fdfea2646970667358221220d8378feed472ba49a0005514ef7087017f707b45fb9bf56bb81bb93ff19a238b64736f6c634300080b0033";
 
     /**
      * The state variable `_mirrorNode` is accessed through the `0x167` address.
@@ -67,10 +82,9 @@ contract HtsSystemContractJson is HtsSystemContract {
     }
 
     function deployHIP719Proxy(address tokenAddress) override internal {
-        string memory template = vm.replace(vm.trim(vm.readFile("./src/HIP719.bytecode.json")), "\"", "");
         string memory placeholder = "fefefefefefefefefefefefefefefefefefefefe";
         string memory addressString = vm.replace(vm.toString(tokenAddress), "0x", "");
-        string memory proxyBytecode = vm.replace(template, placeholder, addressString);
+        string memory proxyBytecode = vm.replace(_HIP719TemplateBytecode, placeholder, addressString);
         vm.etch(tokenAddress, vm.parseBytes(proxyBytecode));
     }
 
