@@ -410,7 +410,7 @@ contract HtsSystemContractJson is HtsSystemContract {
 
     function _balanceOfSlot(address account) internal override returns (bytes32) {
         bytes32 slot = super._balanceOfSlot(account);
-        if (vm.load(_scratchAddr(), slot) == bytes32(0)) {
+        if (_shouldFetch(slot)) {
             uint256 amount = mirrorNode().getBalance(address(this), account);
             _setValue(slot, bytes32(amount));
         }
@@ -419,7 +419,7 @@ contract HtsSystemContractJson is HtsSystemContract {
 
     function _allowanceSlot(address owner, address spender) internal override returns (bytes32) {
         bytes32 slot = super._allowanceSlot(owner, spender);
-        if (vm.load(_scratchAddr(), slot) == bytes32(0)) {
+        if (_shouldFetch(slot)) {
             uint256 amount = mirrorNode().getAllowance(address(this), owner, spender);
             _setValue(slot, bytes32(amount));
         }
@@ -428,7 +428,7 @@ contract HtsSystemContractJson is HtsSystemContract {
 
     function _isAssociatedSlot(address account) internal override returns (bytes32) {
         bytes32 slot = super._isAssociatedSlot(account);
-        if (vm.load(_scratchAddr(), slot) == bytes32(0)) {
+        if (_shouldFetch(slot)) {
             bool associated = mirrorNode().isAssociated(address(this), account);
             _setValue(slot, bytes32(uint256(associated ? 1 : 0)));
         }
@@ -437,7 +437,7 @@ contract HtsSystemContractJson is HtsSystemContract {
 
     function _tokenUriSlot(uint32 serialId) internal override virtual returns (bytes32) {
         bytes32 slot = super._tokenUriSlot(serialId);
-        if (vm.load(_scratchAddr(), slot) == bytes32(0)) {
+        if (_shouldFetch(slot)) {
             string memory metadata = mirrorNode().getNftMetadata(address(this), serialId);
             string memory uri = string(decode(metadata));
             storeString(address(this), uint256(slot), uri);
@@ -447,7 +447,7 @@ contract HtsSystemContractJson is HtsSystemContract {
 
     function _ownerOfSlot(uint32 serialId) internal override virtual returns (bytes32) {
         bytes32 slot = super._ownerOfSlot(serialId);
-        if (vm.load(_scratchAddr(), slot) == bytes32(0)) {
+        if (_shouldFetch(slot)) {
             address owner = mirrorNode().getNftOwner(address(this), serialId);
             _setValue(slot, bytes32(uint256(uint160(owner))));
         }
@@ -456,7 +456,7 @@ contract HtsSystemContractJson is HtsSystemContract {
 
     function _getApprovedSlot(uint32 serialId) internal override virtual returns (bytes32) {
         bytes32 slot = super._getApprovedSlot(serialId);
-        if (vm.load(_scratchAddr(), slot) == bytes32(0)) {
+        if (_shouldFetch(slot)) {
             address approved = mirrorNode().getNftSpender(address(this), serialId);
             _setValue(slot, bytes32(uint256(uint160(approved))));
         }
@@ -465,11 +465,15 @@ contract HtsSystemContractJson is HtsSystemContract {
 
     function _isApprovedForAllSlot(address owner, address operator) internal override virtual returns (bytes32) {
         bytes32 slot = super._isApprovedForAllSlot(owner, operator);
-        if (vm.load(_scratchAddr(), slot) == bytes32(0)) {
+        if (_shouldFetch(slot)) {
             bool approved = mirrorNode().isApprovedForAll(address(this), owner, operator);
             _setValue(slot, bytes32(uint256(approved ? 1 : 0)));
         }
         return slot;
+    }
+
+    function _shouldFetch(bytes32 slot) private view returns (bool) {
+        return vm.load(_scratchAddr(), slot) == bytes32(0);
     }
 
     function _setValue(bytes32 slot, bytes32 value) private {
