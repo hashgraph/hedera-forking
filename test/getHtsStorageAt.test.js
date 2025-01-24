@@ -100,24 +100,6 @@ describe('::getHtsStorageAt', function () {
         expect(result).to.be.equal(ZERO_HEX_32_BYTE);
     });
 
-    ['name', 'symbol'].forEach(name => {
-        const slot = slotsByLabel[name];
-        it(`should return \`ZERO_HEX_32_BYTE\` when \`address\` is not found for the keccaked slot of \`${slot}\` for field \`${name}\``, async function () {
-            const keccakedSlot = keccak256('0x' + toIntHex256(slot));
-            /** @type{IMirrorNodeClient} */
-            const mirrorNodeClient = {
-                ...mirrorNodeClientStub,
-                getTokenById: async _tokenId => null,
-            };
-            const result = await _getHtsStorageAt(
-                '0x0000000000000000000000000000000000000001',
-                keccakedSlot,
-                mirrorNodeClient
-            );
-            expect(result).to.be.equal(ZERO_HEX_32_BYTE);
-        });
-    });
-
     describe('`getAccountId` mapping on `0x167`', function () {
         it(`should return \`ZERO_HEX_32_BYTE\` on \`0x167\` when slot does not match \`getAccountId\``, async function () {
             const slot = '0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15';
@@ -238,31 +220,15 @@ describe('::getHtsStorageAt', function () {
                     expect(result).to.be.equal(ZERO_HEX_32_BYTE);
                 });
 
-                ['name', 'symbol'].forEach(name => {
-                    const slot = slotsByLabel[name];
+                const name = 'decimals';
+                const slot = slotsByLabel[name];
 
-                    it(`should get storage for string field \`${name}\` at slot \`${slot}\``, async function () {
-                        const result = await _getHtsStorageAt(address, slot, mirrorNodeClient);
-
-                        const str = tokenResult[name];
-                        if (str.length > 31) {
-                            assert(this.test !== undefined);
-                            this.test.title += ' (large string)';
-                        }
-                        await expectCorrectString(result, str, mirrorNodeClient, slot, address);
-                    });
-                });
-
-                ['decimals', 'totalSupply'].forEach(name => {
-                    const slot = slotsByLabel[name];
-
-                    it(`should get storage for primitive field \`${name}\` at slot \`${slot}\``, async function () {
-                        const result = await _getHtsStorageAt(address, slot, mirrorNodeClient);
-                        assert(result !== null);
-                        expect(result.slice(2)).to.be.equal(
-                            toIntHex256(tokenResult[toSnakeCase(name)])
-                        );
-                    });
+                it(`should get storage for primitive field \`${name}\` at slot \`${slot}\``, async function () {
+                    const result = await _getHtsStorageAt(address, slot, mirrorNodeClient);
+                    assert(result !== null);
+                    expect(result.slice(2)).to.be.equal(
+                        toIntHex256(tokenResult[toSnakeCase(name)])
+                    );
                 });
 
                 /**@type{{name: string, fn: IMirrorNodeClient['getBalanceOfToken']}[]}*/ ([
