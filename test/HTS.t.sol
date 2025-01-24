@@ -274,6 +274,11 @@ contract HTSTest is Test, TestSetup {
         assertEq(responseCodeBurn, HederaResponseCodes.SUCCESS);
         assertEq(newTotalSupplyAfterBurn, initialTotalSupply);
         assertEq(IERC20(token).balanceOf(treasury), uint64(initialTreasuryBalance));
+
+        (int64 responseCodeGet, IHederaTokenService.TokenInfo memory tokenInfo) = IHederaTokenService(HTS_ADDRESS).getTokenInfo(token);
+        assertEq(responseCodeGet, HederaResponseCodes.SUCCESS);
+
+        assertEq(tokenInfo.totalSupply, newTotalSupplyAfterBurn);
     }
 
     function test_burnToken_should_revert_with_invalid_treasureAccount() external {
