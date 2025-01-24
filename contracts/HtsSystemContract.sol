@@ -6,19 +6,24 @@ import {IERC721, IERC721Events} from "./IERC721.sol";
 import {IHRC719} from "./IHRC719.sol";
 import {IHederaTokenService} from "./IHederaTokenService.sol";
 import {HederaResponseCodes} from "./HederaResponseCodes.sol";
+import {TokenProxyHotSwap} from "./TokenProxyHotSwap.sol";
 
 address constant HTS_ADDRESS = address(0x167);
 
 contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
 
-    // All ERC20 properties are accessed with a `delegatecall` from the Token Proxy.
+    // The following state variables belong to an instantiated Fungible/Non-Fungible token.
+    // These state variables are accessed with a `delegatecall` from the Token Proxy bytecode.
+    // That is, they live in the token address storage space, not in the space of HTS `0x167`.
     // See `__redirectForToken` for more details.
-    string internal tokenType;
+    string internal tokenType; // 
     string internal name;
     string internal symbol;
     uint8 internal decimals;
     uint256 internal totalSupply;
     TokenInfo internal _tokenInfo;
+
+    uint160 private _nextTokenId;
 
     /**
      * @dev Prevents delegatecall into the modified method.
@@ -123,6 +128,92 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         address[] memory tokens = new address[](1);
         tokens[0] = token;
         return dissociateTokens(account, tokens);
+    }
+
+    function deploySetTokenInfo(address token) virtual internal {
+        //
+    }
+
+    function deployHIP719Proxy(address token) virtual internal {
+        //
+    }
+
+    function _createToken(
+        string memory tokenType_,
+        HederaToken memory token,
+        int64 initialTotalSupply,
+        int32 decimals_,
+        FixedFee[] memory fixedFees,
+        FractionalFee[] memory fractionalFees,
+        RoyaltyFee[] memory royaltyFees
+    ) private returns (int64 responseCode, address tokenAddress) {
+        require(bytes(token.name).length > 0, "HTS: name cannot be empty");
+        require(bytes(token.symbol).length > 0, "HTS: symbol cannot be empty");
+        require(token.treasury != address(0), "HTS: treasury cannot be zero-address");
+        require(initialTotalSupply >= 0, "HTS: initialTotalSupply cannot be negative");
+        require(decimals_ >= 0, "HTS: decimals cannot be negative");
+
+        TokenInfo memory tokenInfo;
+        tokenInfo.token = token;
+        tokenInfo.totalSupply = initialTotalSupply;
+        tokenInfo.deleted = false;
+        tokenInfo.defaultKycStatus = true;
+        tokenInfo.pauseStatus = false;
+        tokenInfo.fixedFees = fixedFees;
+        tokenInfo.fractionalFees = fractionalFees;
+        tokenInfo.royaltyFees = royaltyFees;
+        tokenInfo.ledgerId = "0x03";
+
+        if (_nextTokenId == 0) {
+            _nextTokenId = 31;
+        }
+        _nextTokenId++;
+        tokenAddress = address(_nextTokenId);
+
+        deploySetTokenInfo(tokenAddress);
+        TokenProxyHotSwap(tokenAddress).setTokenInfo(tokenType_, tokenInfo);
+        deployHIP719Proxy(tokenAddress);
+        responseCode = HederaResponseCodes.SUCCESS;
+    }
+
+    function createFungibleToken(
+        HederaToken memory token,
+        int64 initialTotalSupply,
+        int32 decimals_
+    ) htsCall external payable returns (int64 responseCode, address tokenAddress) {
+        FixedFee[] memory fixedFees = new FixedFee[](0);
+        FractionalFee[] memory fractionalFees = new FractionalFee[](0);
+        RoyaltyFee[] memory royaltyFees = new RoyaltyFee[](0);
+        return _createToken("FUNGIBLE_COMMON", token, initialTotalSupply, decimals_, fixedFees, fractionalFees, royaltyFees);
+    }
+
+    function createFungibleTokenWithCustomFees(
+        HederaToken memory token,
+        int64 initialTotalSupply,
+        int32 decimals_,
+        FixedFee[] memory fixedFees,
+        FractionalFee[] memory fractionalFees
+    ) htsCall external payable returns (int64 responseCode, address tokenAddress) {
+        RoyaltyFee[] memory royaltyFees = new RoyaltyFee[](0);
+        return _createToken("FUNGIBLE_COMMON", token, initialTotalSupply, decimals_, fixedFees, fractionalFees, royaltyFees);
+    }
+
+    function createNonFungibleToken(
+        HederaToken memory token
+    ) htsCall external payable returns (int64 responseCode, address tokenAddress) {
+        FixedFee[] memory fixedFees = new FixedFee[](0);
+        FractionalFee[] memory fractionalFees = new FractionalFee[](0);
+        RoyaltyFee[] memory royaltyFees = new RoyaltyFee[](0);
+        return _createToken("NON_FUNGIBLE_UNIQUE", token, 0, 0, fixedFees, fractionalFees, royaltyFees);
+    }
+
+    function createNonFungibleTokenWithCustomFees(
+        HederaToken memory token,
+        FixedFee[] memory fixedFees,
+        RoyaltyFee[] memory royaltyFees
+    ) htsCall external payable returns (int64 responseCode, address tokenAddress) {
+        FractionalFee[] memory fractionalFees = new FractionalFee[](0);
+        return _createToken("NON_FUNGIBLE_UNIQUE", token, 0, 0, fixedFees, fractionalFees, royaltyFees);
     }
 
     function transferTokens(

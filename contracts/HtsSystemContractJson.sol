@@ -45,6 +45,22 @@ contract HtsSystemContractJson is HtsSystemContract {
         return MirrorNode(address(uint160(uint256(vm.load(HTS_ADDRESS, slot)))));
     }
 
+    function deploySetTokenInfo(address tokenAddress) override internal {
+        bytes memory creationCode = vm.getCode("TokenProxyHotSwap.sol");
+        vm.etch(tokenAddress, creationCode);
+        (bool success, bytes memory runtimeBytecode) = tokenAddress.call("");
+        require(success, "deploySetTokenInfo: Failed to create runtime bytecode");
+        vm.etch(tokenAddress, runtimeBytecode);
+    }
+
+    function deployHIP719Proxy(address token) override internal {
+        string memory template = vm.replace(vm.trim(vm.readFile("./src/HIP719.bytecode.json")), "\"", "");
+        string memory placeholder = "fefefefefefefefefefefefefefefefefefefefe";
+        string memory addressString = vm.replace(vm.toString(token), "0x", "");
+        string memory proxyBytecode = vm.replace(template, placeholder, addressString);
+        vm.etch(token, vm.parseBytes(proxyBytecode));
+    }
+
     /**
      * @dev Reading Smart Contract's data into it's storage directly from the MirrorNode.
      * @dev Both `initialized` and `_mirrorNode` are stored in the same slot (with different offsets).
