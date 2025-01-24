@@ -57,7 +57,7 @@ contract CreateTokenTest is Test, TestSetup {
         IHederaTokenService(HTS_ADDRESS).createFungibleToken(token, 10000, -1);
     }
 
-    function test_createFungibleToken() external {
+    function test_createFungibleToken_should_succeed_when_tokenInfo_is_valid() external {
         if (testMode == TestMode.JSON_RPC) vm.skip(true);
 
         IHederaTokenService.HederaToken memory token;
@@ -90,5 +90,8 @@ contract CreateTokenTest is Test, TestSetup {
         vm.assertEq(IERC20(tokenAddress).name(), token.name);
         vm.assertEq(IERC20(tokenAddress).symbol(), token.symbol);
         vm.assertEq(IERC20(tokenAddress).decimals(), 4);
+
+        vm.assertEq(IERC20(tokenAddress).balanceOf(token.treasury), uint256(int256(tokenInfo.totalSupply)));
+        vm.assertEq(IERC20(tokenAddress).balanceOf(makeAddr("no balance account")), 0);
     }
 }
