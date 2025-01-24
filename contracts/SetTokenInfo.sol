@@ -4,19 +4,24 @@ pragma solidity ^0.8.0;
 import {IHederaTokenService} from "./IHederaTokenService.sol";
 
 contract SetTokenInfo {
+
+    bytes32 private constant _initSlot = keccak256("HtsSystemContractJson::_initSlot");
+
     // The state variables must be in the same slot as in `HtsSystemContract.tokenType`.
     string private _tokenType;
-    // uint256 private __gap1;
-    // uint256 private __gap2;
     uint8 private _decimals;
-    // uint256 private __gap3;
     IHederaTokenService.TokenInfo private _tokenInfo;
 
     function setTokenInfo(string memory tokenType, IHederaTokenService.TokenInfo memory tokenInfo, int32 decimals) external {
         _tokenType = tokenType;
         _decimals = uint8(uint32(decimals));
 
-        assembly { sstore(15, 1) }
+        // Marks the `_tokenInfo` as initialized.
+        // This avoids fetching token data from the Mirror Node.
+        // It is needed because the token only exists in the local EVM state,
+        // not in the remote network.
+        bytes32 initSlot = _initSlot;
+        assembly { sstore(initSlot, 1) }
 
         // The assignment
         //

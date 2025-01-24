@@ -16,7 +16,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
     // It cannot be used as a state variable directly.
     // This is because JS' `getHtsStorageAt` implementation assumes all state variables
     // declared here are part of the token address space.
-    bytes32 private constant _nextTokenIdSlot = keccak256("HTS:_nextTokenIdSlot");
+    bytes32 private constant _nextTokenIdSlot = keccak256("HtsSystemContract::_nextTokenIdSlot");
 
     // All state variables belong to an instantiated Fungible/Non-Fungible token.
     // These state variables are accessed with a `delegatecall` from the Token Proxy bytecode.

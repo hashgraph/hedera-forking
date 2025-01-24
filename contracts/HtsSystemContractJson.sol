@@ -12,9 +12,9 @@ import {storeAddress, storeBool, storeBytes, storeInt64, storeString, storeUint}
 contract HtsSystemContractJson is HtsSystemContract {
     Vm private constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
-    MirrorNode private _mirrorNode;
+    bytes32 private constant _initSlot = keccak256("HtsSystemContractJson::_initSlot");
 
-    bool private initialized;
+    MirrorNode private _mirrorNode;
 
     function setMirrorNodeProvider(MirrorNode mirrorNode_) htsCall external {
         _mirrorNode = mirrorNode_;
@@ -72,8 +72,8 @@ contract HtsSystemContractJson is HtsSystemContract {
      */
     function _initTokenData() internal override {
         bytes32 slot;
-        assembly { slot := initialized.slot }
-        if (vm.load(address(this), slot) == bytes32(uint256(1))) {
+        // assembly { slot := initialized.slot }
+        if (vm.load(address(this), _initSlot) == bytes32(uint256(1))) {
             // Already initialized
             return;
         }
@@ -89,20 +89,11 @@ contract HtsSystemContractJson is HtsSystemContract {
         assembly { slot := tokenType.slot }
         storeString(address(this), uint256(slot), vm.parseJsonString(json, ".type"));
 
-        // assembly { slot := name.slot }
-        // storeString(address(this), uint256(slot), vm.parseJsonString(json, ".name"));
-
-        // assembly { slot := symbol.slot }
-        // storeString(address(this), uint256(slot), vm.parseJsonString(json, ".symbol"));
-
         assembly { slot := decimals.slot }
         storeUint(address(this), uint256(slot), vm.parseJsonUint(json, ".decimals"));
 
-        // assembly { slot := totalSupply.slot }
-        // storeUint(address(this), uint256(slot), vm.parseJsonUint(json, ".total_supply"));
-
-        assembly { slot := initialized.slot }
-        storeBool(address(this), uint256(slot), true);
+        // assembly { slot := initialized.slot }
+        storeBool(address(this), uint256(_initSlot), true);
 
         _initTokenInfo(json);
     }
