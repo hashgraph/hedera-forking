@@ -13,9 +13,13 @@ contract HtsSystemContractJson is HtsSystemContract {
     Vm private constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
     /**
+     * This slot stores whether the token has been initialized.
+     * In the token initialization, token data is fetched remotely if the token is not local.
      * This slot is accessed through the address of the token.
      */
     bytes32 private constant _initSlot = keccak256("HtsSystemContractJson::_initSlot");
+
+    bytes32 private constant _isLocalTokenSlot = keccak256("HtsSystemContractJson::_isLocalTokenSlot");
 
     /**
      * The state variable `_mirrorNode` is accessed through the `0x167` address.
@@ -473,7 +477,8 @@ contract HtsSystemContractJson is HtsSystemContract {
     }
 
     function _shouldFetch(bytes32 slot) private view returns (bool) {
-        return vm.load(_scratchAddr(), slot) == bytes32(0);
+        return vm.load(address(this), _isLocalTokenSlot) == bytes32(0)
+            && vm.load(_scratchAddr(), slot) == bytes32(0);
     }
 
     function _setValue(bytes32 slot, bytes32 value) private {

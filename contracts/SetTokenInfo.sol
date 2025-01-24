@@ -6,6 +6,7 @@ import {IHederaTokenService} from "./IHederaTokenService.sol";
 contract SetTokenInfo {
 
     bytes32 private constant _initSlot = keccak256("HtsSystemContractJson::_initSlot");
+    bytes32 private constant _isLocalTokenSlot = keccak256("HtsSystemContractJson::_isLocalTokenSlot");
 
     // The state variables must be in the same slot as in `HtsSystemContract.tokenType`.
     string private _tokenType;
@@ -22,6 +23,9 @@ contract SetTokenInfo {
         // not in the remote network.
         bytes32 initSlot = _initSlot;
         assembly { sstore(initSlot, 1) }
+
+        bytes32 isLocalTokenSlot = _isLocalTokenSlot;
+        assembly { sstore(isLocalTokenSlot , 1) }
 
         // The assignment
         //
