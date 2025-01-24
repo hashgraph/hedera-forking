@@ -12,15 +12,21 @@ import {storeAddress, storeBool, storeBytes, storeInt64, storeString, storeUint}
 contract HtsSystemContractJson is HtsSystemContract {
     Vm private constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
+    /**
+     * This slot is accessed through the address of the token.
+     */
     bytes32 private constant _initSlot = keccak256("HtsSystemContractJson::_initSlot");
 
+    /**
+     * The state variable `_mirrorNode` is accessed through the `0x167` address.
+     */
     MirrorNode private _mirrorNode;
 
     function setMirrorNodeProvider(MirrorNode mirrorNode_) htsCall external {
         _mirrorNode = mirrorNode_;
     }
 
-    /*
+    /**
      * @dev HTS can be used to propagate allow cheat codes flag onto the token Proxies Smart Contracts.
      * We can call `vm.allowCheatcodes` from within the HTS context.
      */
@@ -28,8 +34,11 @@ contract HtsSystemContractJson is HtsSystemContract {
         vm.allowCheatcodes(target);
     }
 
-    // For testing, we support accounts created with `makeAddr`. These accounts will not exist on the mirror node,
-    // so we calculate a deterministic (but unique) ID at runtime as a fallback.
+    /**
+     * @dev For testing, we support accounts created with `makeAddr`.
+     * These accounts will not exist on the mirror node,
+     * so we calculate a deterministic (but unique) ID at runtime as a fallback.
+     */
     function getAccountId(address account) htsCall external view override returns (uint32) {
         return uint32(bytes4(keccak256(abi.encodePacked(account))));
     }
@@ -62,22 +71,14 @@ contract HtsSystemContractJson is HtsSystemContract {
     }
 
     /**
-     * @dev Reading Smart Contract's data into it's storage directly from the MirrorNode.
-     * @dev Both `initialized` and `_mirrorNode` are stored in the same slot (with different offsets).
-     * Given how `initialized` is written to (see at the end of the method), it would seem that the
-     * instance variable `_mirrorNode` is overwritten.
-     * However, this is not the case because the slot space for each access is different:
-     * - `_mirrorNode` is accessed through the `0x167` address.
-     * - `initialized` is accessed through the address of the token.
+     * @dev Fetches Smart Contract's token data from the MirrorNode and writes it into its storage.
      */
     function _initTokenData() internal override {
-        bytes32 slot;
-        // assembly { slot := initialized.slot }
         if (vm.load(address(this), _initSlot) == bytes32(uint256(1))) {
-            // Already initialized
             return;
         }
 
+        bytes32 slot;
         string memory json = mirrorNode().fetchTokenData(address(this));
         if (vm.keyExistsJson(json, "._status")) {
             // Token not found
@@ -92,7 +93,6 @@ contract HtsSystemContractJson is HtsSystemContract {
         assembly { slot := decimals.slot }
         storeUint(address(this), uint256(slot), vm.parseJsonUint(json, ".decimals"));
 
-        // assembly { slot := initialized.slot }
         storeBool(address(this), uint256(_initSlot), true);
 
         _initTokenInfo(json);
