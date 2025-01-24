@@ -104,6 +104,66 @@ contract CreateTokenTest is Test, TestSetup {
         vm.assertEq(IERC20(tokenAddress).balanceOf(makeAddr("no balance account")), 0);
     }
 
+    function test_createFungibleToken_should_succeed_when_initialTotalSupply_is_zero() external {
+        if (testMode == TestMode.JSON_RPC) vm.skip(true);
+
+        IHederaTokenService.HederaToken memory token;
+        token.name = "Token name";
+        token.symbol = "Token symbol";
+        token.treasury = makeAddr("Token treasury");
+
+        (int64 responseCode, address tokenAddress) = IHederaTokenService(HTS_ADDRESS).createFungibleToken(token, 0, 4);
+        vm.assertEq(responseCode, HederaResponseCodes.SUCCESS);
+
+        IHederaTokenService.FungibleTokenInfo memory fungibleTokenInfo;
+        (responseCode, fungibleTokenInfo) = IHederaTokenService(HTS_ADDRESS).getFungibleTokenInfo(tokenAddress);
+        vm.assertEq(responseCode, HederaResponseCodes.SUCCESS);
+        vm.assertEq(fungibleTokenInfo.decimals, 4);
+
+        IHederaTokenService.TokenInfo memory tokenInfo = fungibleTokenInfo.tokenInfo;
+        vm.assertEq(tokenInfo.totalSupply, 0);
+
+        // Created token should be accessible through Proxy contract redirect calls
+        vm.assertEq(IERC20(tokenAddress).name(), token.name);
+        vm.assertEq(IERC20(tokenAddress).symbol(), token.symbol);
+        vm.assertEq(IERC20(tokenAddress).decimals(), 4);
+        vm.assertEq(IERC20(tokenAddress).totalSupply(), 0);
+
+        vm.assertEq(IERC20(tokenAddress).balanceOf(token.treasury), 0);
+        vm.assertEq(IERC20(tokenAddress).balanceOf(makeAddr("no balance account")), 0);
+    }
+
+    function test_createFungibleTokenWithCustomFees_should_succeed_when_tokenInfo_is_valid() external {
+        if (testMode == TestMode.JSON_RPC) vm.skip(true);
+
+        IHederaTokenService.HederaToken memory token;
+        token.name = "Token name";
+        token.symbol = "Token symbol";
+        token.treasury = makeAddr("Token treasury");
+
+        IHederaTokenService.FixedFee[] memory fixedFees = new IHederaTokenService.FixedFee[](1);
+        fixedFees[0].amount = 10;
+        IHederaTokenService.FractionalFee[] memory fractionalFees = new IHederaTokenService.FractionalFee[](1);
+        fractionalFees[0].numerator = 1;
+        fractionalFees[0].denominator = 5;
+        (int64 responseCode, address tokenAddress) = IHederaTokenService(HTS_ADDRESS).createFungibleTokenWithCustomFees(token, 10000, 4, fixedFees, fractionalFees);
+        vm.assertEq(responseCode, HederaResponseCodes.SUCCESS);
+        vm.assertNotEq(tokenAddress, address(0));
+
+        IHederaTokenService.TokenInfo memory tokenInfo;
+        (responseCode, tokenInfo) = IHederaTokenService(HTS_ADDRESS).getTokenInfo(tokenAddress);
+        vm.assertEq(responseCode, HederaResponseCodes.SUCCESS);
+
+        vm.assertEq(tokenInfo.token.name, token.name);
+        vm.assertEq(tokenInfo.token.symbol, token.symbol);
+        vm.assertEq(tokenInfo.fixedFees.length, 1);
+        vm.assertEq(tokenInfo.fixedFees[0].amount, fixedFees[0].amount);
+        vm.assertEq(tokenInfo.fractionalFees.length, 1);
+        vm.assertEq(tokenInfo.fractionalFees[0].numerator, fractionalFees[0].numerator);
+        vm.assertEq(tokenInfo.fractionalFees[0].denominator, fractionalFees[0].denominator);
+        vm.assertEq(tokenInfo.royaltyFees.length, 0);
+    }
+
     function test_createFungibleToken_should_succeed_when_called_multiple_times() external {
         if (testMode == TestMode.JSON_RPC) vm.skip(true);
 
