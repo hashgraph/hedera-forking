@@ -10,12 +10,8 @@ import {IERC20} from "../contracts/IERC20.sol";
 
 contract CreateTokenTest is Test, TestSetup {
 
-    address private unknownUser;
-
     function setUp() external {
         setUpMockStorageForNonFork();
-
-        unknownUser = makeAddr("unknown-user");
     }
 
     function test_createFungibleToken_should_revert_if_name_is_not_provided() external {
@@ -79,6 +75,7 @@ contract CreateTokenTest is Test, TestSetup {
 
         vm.assertEq(tokenInfo.token.name, token.name);
         vm.assertEq(tokenInfo.token.symbol, token.symbol);
+        vm.assertEq(tokenInfo.token.treasury, token.treasury);
         vm.assertEq(tokenInfo.totalSupply, 10000);
         vm.assertEq(tokenInfo.fixedFees.length, 0);
         vm.assertEq(tokenInfo.fractionalFees.length, 0);
@@ -93,5 +90,44 @@ contract CreateTokenTest is Test, TestSetup {
 
         vm.assertEq(IERC20(tokenAddress).balanceOf(token.treasury), uint256(int256(tokenInfo.totalSupply)));
         vm.assertEq(IERC20(tokenAddress).balanceOf(makeAddr("no balance account")), 0);
+    }
+
+    function test_createFungibleToken_should_succeed_when_called_multiple_times() external {
+        if (testMode == TestMode.JSON_RPC) vm.skip(true);
+
+        int64 responseCode;
+        address tokenAddress;
+        IHederaTokenService.HederaToken[2] memory token;
+
+        token[0].name = "Token name 0";
+        token[0].symbol = "Token symbol 0";
+        token[0].treasury = makeAddr("Token treasury 0");
+
+        (responseCode, tokenAddress) = IHederaTokenService(HTS_ADDRESS).createFungibleToken(token[0], 10000, 4);
+        vm.assertEq(responseCode, HederaResponseCodes.SUCCESS);
+        address tokenAddress0 = tokenAddress;
+
+        token[1].name = "Token name 1";
+        token[1].symbol = "Token symbol 1";
+        token[1].treasury = makeAddr("Token treasury 1");
+        (responseCode, tokenAddress) = IHederaTokenService(HTS_ADDRESS).createFungibleToken(token[1], 20000, 5);
+        vm.assertEq(responseCode, HederaResponseCodes.SUCCESS);
+        address tokenAddress1 = tokenAddress;
+
+        vm.assertNotEq(tokenAddress0, tokenAddress1);
+
+        IHederaTokenService.TokenInfo memory tokenInfo;
+
+        (responseCode, tokenInfo) = IHederaTokenService(HTS_ADDRESS).getTokenInfo(tokenAddress0);
+        vm.assertEq(responseCode, HederaResponseCodes.SUCCESS);
+        vm.assertEq(tokenInfo.token.name, token[0].name);
+        vm.assertEq(tokenInfo.token.symbol, token[0].symbol);
+        vm.assertEq(tokenInfo.token.treasury, token[0].treasury);
+
+        (responseCode, tokenInfo) = IHederaTokenService(HTS_ADDRESS).getTokenInfo(tokenAddress1);
+        vm.assertEq(responseCode, HederaResponseCodes.SUCCESS);
+        vm.assertEq(tokenInfo.token.name, token[1].name);
+        vm.assertEq(tokenInfo.token.symbol, token[1].symbol);
+        vm.assertEq(tokenInfo.token.treasury, token[1].treasury);
     }
 }
