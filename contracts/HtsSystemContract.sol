@@ -12,10 +12,14 @@ address constant HTS_ADDRESS = address(0x167);
 
 contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
 
-    // This slot is used in the `0x167` address. 
-    // It cannot be used as a state variable directly.
-    // This is because JS' `getHtsStorageAt` implementation assumes all state variables
-    // declared here are part of the token address space.
+    /**
+     * The slot's value contains the next token ID to use when a token is being created.
+     *
+     * This slot is used in the `0x167` address. 
+     * It cannot be used as a state variable directly.
+     * This is because JS' `getHtsStorageAt` implementation assumes all state variables
+     * declared here are part of the token address space.
+     */
     bytes32 private constant _nextTokenIdSlot = keccak256("HtsSystemContract::_nextTokenIdSlot");
 
     // All state variables belong to an instantiated Fungible/Non-Fungible token.
@@ -25,10 +29,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
     //
     // Moreover, these variables must match the slots defined in `SetTokenInfo`.
     string internal tokenType; 
-    // string internal name;
-    // string internal symbol;
     uint8 internal decimals;
-    // uint256 internal totalSupply;
     TokenInfo internal _tokenInfo;
 
     /**
