@@ -410,11 +410,11 @@ interface IHederaTokenService {
     /// @param decimals the number of decimal places a token is divisible by
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
     /// @return tokenAddress the created token's address
-    // function createFungibleToken(
-    //     HederaToken memory token,
-    //     int64 initialTotalSupply,
-    //     int32 decimals
-    // ) external payable returns (int64 responseCode, address tokenAddress);
+    function createFungibleToken(
+        HederaToken memory token,
+        int64 initialTotalSupply,
+        int32 decimals
+    ) external payable returns (int64 responseCode, address tokenAddress);
 
     /// Creates a Fungible Token with the specified properties
     /// @param token the basic properties of the token being created
@@ -425,22 +425,22 @@ interface IHederaTokenService {
     /// @param fractionalFees list of fractional fees to apply to the token
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
     /// @return tokenAddress the created token's address
-    // function createFungibleTokenWithCustomFees(
-    //     HederaToken memory token,
-    //     int64 initialTotalSupply,
-    //     int32 decimals,
-    //     FixedFee[] memory fixedFees,
-    //     FractionalFee[] memory fractionalFees
-    // ) external payable returns (int64 responseCode, address tokenAddress);
+    function createFungibleTokenWithCustomFees(
+        HederaToken memory token,
+        int64 initialTotalSupply,
+        int32 decimals,
+        FixedFee[] memory fixedFees,
+        FractionalFee[] memory fractionalFees
+    ) external payable returns (int64 responseCode, address tokenAddress);
 
     /// Creates an Non Fungible Unique Token with the specified properties
     /// @param token the basic properties of the token being created
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
     /// @return tokenAddress the created token's address
-    // function createNonFungibleToken(HederaToken memory token)
-    //     external
-    //     payable
-    //     returns (int64 responseCode, address tokenAddress);
+    function createNonFungibleToken(HederaToken memory token)
+        external
+        payable
+        returns (int64 responseCode, address tokenAddress);
 
     /// Creates an Non Fungible Unique Token with the specified properties
     /// @param token the basic properties of the token being created
@@ -448,11 +448,11 @@ interface IHederaTokenService {
     /// @param royaltyFees list of royalty fees to apply to the token
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
     /// @return tokenAddress the created token's address
-    // function createNonFungibleTokenWithCustomFees(
-    //     HederaToken memory token,
-    //     FixedFee[] memory fixedFees,
-    //     RoyaltyFee[] memory royaltyFees
-    // ) external payable returns (int64 responseCode, address tokenAddress);
+    function createNonFungibleTokenWithCustomFees(
+        HederaToken memory token,
+        FixedFee[] memory fixedFees,
+        RoyaltyFee[] memory royaltyFees
+    ) external payable returns (int64 responseCode, address tokenAddress);
 
     /**********************
      * ABIV1 calls        *

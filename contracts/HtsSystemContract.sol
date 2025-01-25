@@ -6,18 +6,30 @@ import {IERC721, IERC721Events} from "./IERC721.sol";
 import {IHRC719} from "./IHRC719.sol";
 import {IHederaTokenService} from "./IHederaTokenService.sol";
 import {HederaResponseCodes} from "./HederaResponseCodes.sol";
+import {SetTokenInfo} from "./SetTokenInfo.sol";
 
 address constant HTS_ADDRESS = address(0x167);
 
 contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
 
-    // All ERC20 properties are accessed with a `delegatecall` from the Token Proxy.
+    /**
+     * The slot's value contains the next token ID to use when a token is being created.
+     *
+     * This slot is used in the `0x167` address. 
+     * It cannot be used as a state variable directly.
+     * This is because JS' `getHtsStorageAt` implementation assumes all state variables
+     * declared here are part of the token address space.
+     */
+    bytes32 private constant _nextTokenIdSlot = keccak256("HtsSystemContract::_nextTokenIdSlot");
+
+    // All state variables belong to an instantiated Fungible/Non-Fungible token.
+    // These state variables are accessed with a `delegatecall` from the Token Proxy bytecode.
+    // That is, they live in the token address storage space, not in the space of HTS `0x167`.
     // See `__redirectForToken` for more details.
-    string internal tokenType;
-    string internal name;
-    string internal symbol;
+    //
+    // Moreover, these variables must match the slots defined in `SetTokenInfo`.
+    string internal tokenType; 
     uint8 internal decimals;
-    uint256 internal totalSupply;
     TokenInfo internal _tokenInfo;
 
     /**
@@ -123,6 +135,103 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         address[] memory tokens = new address[](1);
         tokens[0] = token;
         return dissociateTokens(account, tokens);
+    }
+
+    function deploySetTokenInfo(address token) virtual internal {
+        //
+    }
+
+    function deployHIP719Proxy(address token) virtual internal {
+        //
+    }
+
+    function _createToken(
+        string memory tokenType_,
+        HederaToken memory token,
+        int64 initialTotalSupply,
+        int32 decimals_,
+        FixedFee[] memory fixedFees,
+        FractionalFee[] memory fractionalFees,
+        RoyaltyFee[] memory royaltyFees
+    ) private returns (int64 responseCode, address tokenAddress) {
+        require(msg.value > 0, "HTS: must send HBARs");
+        require(bytes(token.name).length > 0, "HTS: name cannot be empty");
+        require(bytes(token.symbol).length > 0, "HTS: symbol cannot be empty");
+        require(token.treasury != address(0), "HTS: treasury cannot be zero-address");
+        require(initialTotalSupply >= 0, "HTS: initialTotalSupply cannot be negative");
+        require(decimals_ >= 0, "HTS: decimals cannot be negative");
+
+        TokenInfo memory tokenInfo;
+        tokenInfo.token = token;
+        tokenInfo.totalSupply = 0;
+        tokenInfo.deleted = false;
+        tokenInfo.defaultKycStatus = true;
+        tokenInfo.pauseStatus = false;
+        tokenInfo.fixedFees = fixedFees;
+        tokenInfo.fractionalFees = fractionalFees;
+        tokenInfo.royaltyFees = royaltyFees;
+        tokenInfo.ledgerId = "0x03";
+
+        bytes32 nextTokenIdSlot = _nextTokenIdSlot;
+        uint160 nextTokenId;
+        assembly { nextTokenId := sload(nextTokenIdSlot) }
+        if (nextTokenId == 0) {
+            nextTokenId = 1031;
+        }
+        nextTokenId++;
+        assembly { sstore(nextTokenIdSlot, nextTokenId) }
+
+        tokenAddress = address(nextTokenId);
+
+        deploySetTokenInfo(tokenAddress);
+        SetTokenInfo(tokenAddress).setTokenInfo(tokenType_, tokenInfo, decimals_);
+        deployHIP719Proxy(tokenAddress);
+
+        if (initialTotalSupply > 0) {
+            this.mintToken(tokenAddress, initialTotalSupply, new bytes[](0));
+        }
+
+        responseCode = HederaResponseCodes.SUCCESS;
+    }
+
+    function createFungibleToken(
+        HederaToken memory token,
+        int64 initialTotalSupply,
+        int32 decimals_
+    ) htsCall external payable returns (int64 responseCode, address tokenAddress) {
+        FixedFee[] memory fixedFees = new FixedFee[](0);
+        FractionalFee[] memory fractionalFees = new FractionalFee[](0);
+        RoyaltyFee[] memory royaltyFees = new RoyaltyFee[](0);
+        return _createToken("FUNGIBLE_COMMON", token, initialTotalSupply, decimals_, fixedFees, fractionalFees, royaltyFees);
+    }
+
+    function createFungibleTokenWithCustomFees(
+        HederaToken memory token,
+        int64 initialTotalSupply,
+        int32 decimals_,
+        FixedFee[] memory fixedFees,
+        FractionalFee[] memory fractionalFees
+    ) htsCall external payable returns (int64 responseCode, address tokenAddress) {
+        RoyaltyFee[] memory royaltyFees = new RoyaltyFee[](0);
+        return _createToken("FUNGIBLE_COMMON", token, initialTotalSupply, decimals_, fixedFees, fractionalFees, royaltyFees);
+    }
+
+    function createNonFungibleToken(
+        HederaToken memory token
+    ) htsCall external payable returns (int64 responseCode, address tokenAddress) {
+        FixedFee[] memory fixedFees = new FixedFee[](0);
+        FractionalFee[] memory fractionalFees = new FractionalFee[](0);
+        RoyaltyFee[] memory royaltyFees = new RoyaltyFee[](0);
+        return _createToken("NON_FUNGIBLE_UNIQUE", token, 0, 0, fixedFees, fractionalFees, royaltyFees);
+    }
+
+    function createNonFungibleTokenWithCustomFees(
+        HederaToken memory token,
+        FixedFee[] memory fixedFees,
+        RoyaltyFee[] memory royaltyFees
+    ) htsCall external payable returns (int64 responseCode, address tokenAddress) {
+        FractionalFee[] memory fractionalFees = new FractionalFee[](0);
+        return _createToken("NON_FUNGIBLE_UNIQUE", token, 0, 0, fixedFees, fractionalFees, royaltyFees);
     }
 
     function transferTokens(
@@ -509,16 +618,16 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
 
     function _redirectForERC20(bytes4 selector) private returns (bytes memory) {
         if (selector == IERC20.name.selector) {
-            return abi.encode(name);
+            return abi.encode(_tokenInfo.token.name);
         }
         if (selector == IERC20.decimals.selector) {
             return abi.encode(decimals);
         }
         if (selector == IERC20.totalSupply.selector) {
-            return abi.encode(totalSupply);
+            return abi.encode(_tokenInfo.totalSupply);
         }
         if (selector == IERC20.symbol.selector) {
-            return abi.encode(symbol);
+            return abi.encode(_tokenInfo.token.symbol);
         }
         if (selector == IERC20.balanceOf.selector) {
             require(msg.data.length >= 60, "balanceOf: Not enough calldata");
@@ -569,10 +678,10 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
 
     function _redirectForERC721(bytes4 selector) private returns (bytes memory) {
         if (selector == IERC721.name.selector) {
-            return abi.encode(name);
+            return abi.encode(_tokenInfo.token.name);
         }
         if (selector == IERC721.symbol.selector) {
-            return abi.encode(symbol);
+            return abi.encode(_tokenInfo.token.symbol);
         }
         if (selector == IERC721.tokenURI.selector) {
             require(msg.data.length >= 60, "tokenURI: Not enough calldata");
@@ -580,7 +689,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
             return abi.encode(__tokenURI(serialId));
         }
         if (selector == IERC721.totalSupply.selector) {
-            return abi.encode(totalSupply);
+            return abi.encode(_tokenInfo.totalSupply);
         }
         if (selector == IERC721.balanceOf.selector) {
             require(msg.data.length >= 60, "balanceOf: Not enough calldata");
@@ -768,7 +877,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
 
     function _update(address from, address to, uint256 amount) public {
         if (from == address(0)) {
-            totalSupply += amount;
+            _tokenInfo.totalSupply += int64(int256(amount));
         } else {
             bytes32 fromSlot = _balanceOfSlot(from);
             uint256 fromBalance;
@@ -778,7 +887,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         }
 
         if (to == address(0)) {
-            totalSupply -= amount;
+            _tokenInfo.totalSupply -= int64(int256(amount));
         } else {
             bytes32 toSlot = _balanceOfSlot(to);
             uint256 toBalance;
