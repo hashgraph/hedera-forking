@@ -6,7 +6,7 @@ import {Test, console} from "forge-std/Test.sol";
 import {IERC721, IERC721Events} from "../contracts/IERC721.sol";
 import {TestSetup} from "./lib/TestSetup.sol";
 
-contract ERC721TokenTest is Test, TestSetup {
+contract ERC721TokenTest is Test, TestSetup, IERC721Events {
 
     function setUp() external {
         setUpMockStorageForNonFork();
@@ -38,7 +38,7 @@ contract ERC721TokenTest is Test, TestSetup {
         uint256 tokenId = 1;
         vm.startPrank(CFNFTFF_TREASURY);
         vm.expectEmit(CFNFTFF);
-        emit IERC721Events.Transfer(CFNFTFF_TREASURY, to, tokenId);
+        emit Transfer(CFNFTFF_TREASURY, to, tokenId);
         IERC721(CFNFTFF).transferFrom(CFNFTFF_TREASURY, to, tokenId);
         vm.stopPrank();
         assertEq(IERC721(CFNFTFF).ownerOf(tokenId), to);
@@ -49,7 +49,7 @@ contract ERC721TokenTest is Test, TestSetup {
         uint256 tokenId = 1;
         vm.startPrank(CFNFTFF_TREASURY);
         vm.expectEmit(CFNFTFF);
-        emit IERC721Events.Approval(CFNFTFF_TREASURY, spender, tokenId);
+        emit Approval(CFNFTFF_TREASURY, spender, tokenId);
         IERC721(CFNFTFF).approve(spender, tokenId);
         vm.stopPrank();
         assertEq(IERC721(CFNFTFF).getApproved(tokenId), spender);
@@ -59,7 +59,7 @@ contract ERC721TokenTest is Test, TestSetup {
         address operator = makeAddr("operator");
         vm.prank(CFNFTFF_TREASURY);
         vm.expectEmit(CFNFTFF);
-        emit IERC721Events.ApprovalForAll(CFNFTFF_TREASURY, operator, true);
+        emit ApprovalForAll(CFNFTFF_TREASURY, operator, true);
         IERC721(CFNFTFF).setApprovalForAll(operator, true);
         assertTrue(IERC721(CFNFTFF).isApprovedForAll(CFNFTFF_TREASURY, operator));
     }
