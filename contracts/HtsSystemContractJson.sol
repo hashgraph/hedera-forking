@@ -443,6 +443,7 @@ contract HtsSystemContractJson is HtsSystemContract {
         if (block.chainid == 295) return "0x00"; // Mainnet
         if (block.chainid == 296) return "0x01"; // Testnet
         if (block.chainid == 297) return "0x02"; // Previewnet
+        if (block.chainid == 298) return "0x03"; // Localhost
         return "0x00"; // Default to Mainnet
     }
 

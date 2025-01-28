@@ -49,6 +49,27 @@ class MirrorNodeClient {
     }
 
     /**
+     * Get ledger ID.
+     *
+     * @returns {string}
+     */
+    getLedgerId() {
+        const knownEnvironments = [
+            { name: 'mainnet', id: '0x00' },
+            { name: 'testnet', id: '0x01' },
+            { name: 'previewnet', id: '0x02' },
+            { name: 'localhost', id: '0x03' },
+            { name: '127.0.0.1', id: '0x03' },
+        ];
+        for (let i = 0; i < knownEnvironments.length; i++) {
+            if (this.mirrorNodeUrl.split(knownEnvironments[i].name).length === 2) {
+                return knownEnvironments[i].id;
+            }
+        }
+        return '0x00';
+    }
+
+    /**
      * Fetches information about a token by its token ID.
      *
      * @param {string} tokenId the token ID to fetch.
