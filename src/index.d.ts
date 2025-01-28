@@ -21,6 +21,17 @@
  */
 interface IMirrorNodeClient {
     /**
+     * Get ledger ID.
+     *
+     * Returns the guessed ID of the ledger. Since there is only one environment supported at a time,
+     * the ledger ID can be determined using the API URL as input:
+     *  - 0x00 for mainnet,
+     *  - 0x01 for testnet,
+     *  - 0x02 for previewnet.
+     */
+    getLedgerId(): string;
+
+    /**
      * Get token by id.
      *
      * Returns token entity information given the id.
