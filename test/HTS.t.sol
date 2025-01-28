@@ -62,7 +62,7 @@ contract HTSTest is Test, TestSetup {
 
     function test_HTS_getTokenInfo_should_return_token_info_for_valid_token() external {
         address token = USDC;
-        (int64 responseCode, HtsSystemContract.TokenInfo memory tokenInfo) = HtsSystemContract(HTS_ADDRESS).getTokenInfo(token);
+        (int64 responseCode, IHederaTokenService.TokenInfo memory tokenInfo) = IHederaTokenService(HTS_ADDRESS).getTokenInfo(token);
         assertEq(responseCode, HederaResponseCodes.SUCCESS);
         assertEq(tokenInfo.token.name, "USD Coin");
         assertEq(tokenInfo.token.symbol, "USDC");
@@ -108,7 +108,7 @@ contract HTSTest is Test, TestSetup {
     }
 
     function test_HTS_getTokenInfo_should_return_custom_fees_for_valid_token() external {
-        (int64 responseCode, HtsSystemContract.TokenInfo memory tokenInfo) = HtsSystemContract(HTS_ADDRESS).getTokenInfo(CTCF);
+        (int64 responseCode, IHederaTokenService.TokenInfo memory tokenInfo) = IHederaTokenService(HTS_ADDRESS).getTokenInfo(CTCF);
         assertEq(responseCode, HederaResponseCodes.SUCCESS);
         assertEq(tokenInfo.token.name, "Crypto Token with Custom Fees");
         assertEq(tokenInfo.token.symbol, "CTCF");
@@ -158,13 +158,13 @@ contract HTSTest is Test, TestSetup {
     function test_HTS_getTokenInfo_should_revert_for_empty_token_address() external {
         address token = address(0);
         vm.expectRevert(bytes("getTokenInfo: invalid token"));
-        HtsSystemContract(HTS_ADDRESS).getTokenInfo(token);
+        IHederaTokenService(HTS_ADDRESS).getTokenInfo(token);
     }
 
     function test_HTS_getTokenInfo_should_revert_for_invalid_token() external {
         address token = makeAddr("unknown-token");
         vm.expectRevert();
-        HtsSystemContract(HTS_ADDRESS).getTokenInfo(token);
+        IHederaTokenService(HTS_ADDRESS).getTokenInfo(token);
     }
 
     function test_HTS_getTokenInfo_should_revert_when_call_to_mirror_node_fails() external {
@@ -176,19 +176,19 @@ contract HTSTest is Test, TestSetup {
         address token = MFCT;
         vm.mockCallRevert(address(mirrorNode), abi.encode(mirrorNode.fetchTokenData.selector), abi.encode("mirror node error"));
         vm.expectRevert(abi.encode("mirror node error"));
-        HtsSystemContract(HTS_ADDRESS).getTokenInfo(token);
+        IHederaTokenService(HTS_ADDRESS).getTokenInfo(token);
     }
 
     function test_HTS_getTokenInfo_should_revert_when_delegatecall() external {
         vm.expectRevert(bytes("htsCall: delegated call"));
-        (bool revertsAsExpected, ) = HTS_ADDRESS.delegatecall(abi.encodeWithSelector(HtsSystemContract.getTokenInfo.selector, address(this)));
+        (bool revertsAsExpected, ) = HTS_ADDRESS.delegatecall(abi.encodeWithSelector(IHederaTokenService.getTokenInfo.selector, address(this)));
         assertTrue(revertsAsExpected, "expectRevert: call did not revert");
     }
 
     function test_HTS_getTokenInfo_should_revert_when_called_from_outside_of_HTS() external {
         address token = USDC;
         vm.expectRevert(bytes("redirectForToken: not supported"));
-        HtsSystemContract(token).getTokenInfo(token);
+        IHederaTokenService(token).getTokenInfo(token);
     }
 
     function test_mintToken_should_succeed_with_valid_input() external {
@@ -199,11 +199,17 @@ contract HTSTest is Test, TestSetup {
         uint256 initialTreasuryBalance = IERC20(token).balanceOf(treasury);
         bytes[] memory metadata = new bytes[](0);
 
-        (int64 responseCode, int64 newTotalSupply, int64[] memory serialNumbers) = HtsSystemContract(HTS_ADDRESS).mintToken(token, amount, metadata);
+        (int64 responseCode, int64 newTotalSupply, int64[] memory serialNumbers) = IHederaTokenService(HTS_ADDRESS).mintToken(token, amount, metadata);
         assertEq(responseCode, HederaResponseCodes.SUCCESS);
         assertEq(serialNumbers.length, 0);
         assertEq(newTotalSupply, initialTotalSupply + amount);
         assertEq(IERC20(token).balanceOf(treasury), uint64(initialTreasuryBalance) + uint64(amount));
+        assertEq(IERC20(token).totalSupply(), uint256(int256(newTotalSupply)));
+
+        (int64 responseCodeGet, IHederaTokenService.TokenInfo memory tokenInfo) = IHederaTokenService(HTS_ADDRESS).getTokenInfo(token);
+        assertEq(responseCodeGet, HederaResponseCodes.SUCCESS);
+
+        assertEq(tokenInfo.totalSupply, newTotalSupply);
     }
 
     function test_mintToken_should_revert_with_invalid_treasureAccount() external {
@@ -226,11 +232,11 @@ contract HTSTest is Test, TestSetup {
 
         vm.mockCall(
             token,
-            abi.encode(HtsSystemContract.getTokenInfo.selector),
+            abi.encode(IHederaTokenService.getTokenInfo.selector),
             abi.encode(HederaResponseCodes.SUCCESS, tokenInfo)
         );
         vm.expectRevert(bytes("mintToken: invalid account"));
-        HtsSystemContract(HTS_ADDRESS).mintToken(token, amount, metadata);
+        IHederaTokenService(HTS_ADDRESS).mintToken(token, amount, metadata);
     }
 
     function test_mintToken_should_revert_with_invalid_token() external {
@@ -239,7 +245,7 @@ contract HTSTest is Test, TestSetup {
         bytes[] memory metadata = new bytes[](0);
 
         vm.expectRevert(bytes("mintToken: invalid token"));
-        HtsSystemContract(HTS_ADDRESS).mintToken(token, amount, metadata);
+        IHederaTokenService(HTS_ADDRESS).mintToken(token, amount, metadata);
     }
 
     function test_mintToken_should_revert_with_invalid_amount() external {
@@ -248,7 +254,7 @@ contract HTSTest is Test, TestSetup {
         bytes[] memory metadata = new bytes[](0);
 
         vm.expectRevert(bytes("mintToken: invalid amount"));
-        HtsSystemContract(HTS_ADDRESS).mintToken(token, amount, metadata);
+        IHederaTokenService(HTS_ADDRESS).mintToken(token, amount, metadata);
     }
 
     function test_burnToken_should_succeed_with_valid_input() external {
@@ -258,16 +264,21 @@ contract HTSTest is Test, TestSetup {
         int64 initialTotalSupply = 5000;
         uint256 initialTreasuryBalance = IERC20(token).balanceOf(treasury);
 
-        (int64 responseCodeMint, int64 newTotalSupplyAfterMint, int64[] memory serialNumbers) = HtsSystemContract(HTS_ADDRESS).mintToken(token, amount, new bytes[](0));
+        (int64 responseCodeMint, int64 newTotalSupplyAfterMint, int64[] memory serialNumbers) = IHederaTokenService(HTS_ADDRESS).mintToken(token, amount, new bytes[](0));
         assertEq(responseCodeMint, HederaResponseCodes.SUCCESS);
         assertEq(serialNumbers.length, 0);
         assertEq(newTotalSupplyAfterMint, initialTotalSupply + amount);
         assertEq(IERC20(token).balanceOf(treasury), uint64(initialTreasuryBalance) + uint64(amount));
 
-        (int64 responseCodeBurn, int64 newTotalSupplyAfterBurn) = HtsSystemContract(HTS_ADDRESS).burnToken(token, amount, serialNumbers);
+        (int64 responseCodeBurn, int64 newTotalSupplyAfterBurn) = IHederaTokenService(HTS_ADDRESS).burnToken(token, amount, serialNumbers);
         assertEq(responseCodeBurn, HederaResponseCodes.SUCCESS);
         assertEq(newTotalSupplyAfterBurn, initialTotalSupply);
         assertEq(IERC20(token).balanceOf(treasury), uint64(initialTreasuryBalance));
+
+        (int64 responseCodeGet, IHederaTokenService.TokenInfo memory tokenInfo) = IHederaTokenService(HTS_ADDRESS).getTokenInfo(token);
+        assertEq(responseCodeGet, HederaResponseCodes.SUCCESS);
+
+        assertEq(tokenInfo.totalSupply, newTotalSupplyAfterBurn);
     }
 
     function test_burnToken_should_revert_with_invalid_treasureAccount() external {
@@ -290,11 +301,11 @@ contract HTSTest is Test, TestSetup {
 
         vm.mockCall(
             token,
-            abi.encode(HtsSystemContract.getTokenInfo.selector),
+            abi.encode(IHederaTokenService.getTokenInfo.selector),
             abi.encode(HederaResponseCodes.SUCCESS, tokenInfo)
         );
         vm.expectRevert(bytes("burnToken: invalid account"));
-        HtsSystemContract(HTS_ADDRESS).burnToken(token, amount, serialNumbers);
+        IHederaTokenService(HTS_ADDRESS).burnToken(token, amount, serialNumbers);
     }
 
     function test_burnToken_should_revert_with_invalid_token() external {
@@ -303,7 +314,7 @@ contract HTSTest is Test, TestSetup {
         int64[] memory serialNumbers = new int64[](0);
 
         vm.expectRevert(bytes("burnToken: invalid token"));
-        HtsSystemContract(HTS_ADDRESS).burnToken(token, amount, serialNumbers);
+        IHederaTokenService(HTS_ADDRESS).burnToken(token, amount, serialNumbers);
     }
 
     function test_burnToken_should_revert_with_invalid_amount() external {
@@ -312,7 +323,7 @@ contract HTSTest is Test, TestSetup {
         int64[] memory serialNumbers = new int64[](0);
 
         vm.expectRevert(bytes("burnToken: invalid amount"));
-        HtsSystemContract(HTS_ADDRESS).burnToken(token, amount, serialNumbers);
+        IHederaTokenService(HTS_ADDRESS).burnToken(token, amount, serialNumbers);
     }
 
     function test_HTS_getApproved_should_return_correct_address() external view {
@@ -341,10 +352,10 @@ contract HTSTest is Test, TestSetup {
     function test_HTS_getTokenCustomFees_should_return_custom_fees_for_valid_token() external {
         (
             int64 responseCode,
-            HtsSystemContract.FixedFee[] memory fixedFees,
-            HtsSystemContract.FractionalFee[] memory fractionalFees,
-            HtsSystemContract.RoyaltyFee[] memory royaltyFees
-        ) = HtsSystemContract(HTS_ADDRESS).getTokenCustomFees(CTCF);
+            IHederaTokenService.FixedFee[] memory fixedFees,
+            IHederaTokenService.FractionalFee[] memory fractionalFees,
+            IHederaTokenService.RoyaltyFee[] memory royaltyFees
+        ) = IHederaTokenService(HTS_ADDRESS).getTokenCustomFees(CTCF);
         assertEq(responseCode, HederaResponseCodes.SUCCESS);
 
         assertEq(fixedFees.length, 3);
@@ -388,21 +399,21 @@ contract HTSTest is Test, TestSetup {
 
     function test_HTS_getTokenDefaultFreezeStatus_should_return_correct_value_for_valid_token() external {
         address token = CFNFTFF;
-        (int64 freezeStatus, bool defaultFreeze) = HtsSystemContract(HTS_ADDRESS).getTokenDefaultFreezeStatus(token);
+        (int64 freezeStatus, bool defaultFreeze) = IHederaTokenService(HTS_ADDRESS).getTokenDefaultFreezeStatus(token);
         assertEq(freezeStatus, HederaResponseCodes.SUCCESS);
         assertFalse(defaultFreeze);
     }
 
     function test_HTS_getTokenDefaultKycStatus_should_return_correct_value_for_valid_token() external {
         address token = CFNFTFF;
-        (int64 kycStatus, bool defaultKyc) = HtsSystemContract(HTS_ADDRESS).getTokenDefaultKycStatus(token);
+        (int64 kycStatus, bool defaultKyc) = IHederaTokenService(HTS_ADDRESS).getTokenDefaultKycStatus(token);
         assertEq(kycStatus, HederaResponseCodes.SUCCESS);
         assertFalse(defaultKyc);
     }
 
     function test_HTS_getTokenExpiryInfo_should_return_correct_value_for_valid_token() external {
-        (int64 expiryStatusCode, HtsSystemContract.Expiry memory expiry)
-            = HtsSystemContract(HTS_ADDRESS).getTokenExpiryInfo(USDC);
+        (int64 expiryStatusCode, IHederaTokenService.Expiry memory expiry)
+            = IHederaTokenService(HTS_ADDRESS).getTokenExpiryInfo(USDC);
         assertEq(expiryStatusCode, HederaResponseCodes.SUCCESS);
         assertEq(expiry.second, 1706825707000718000);
         assertEq(expiry.autoRenewAccount, address(0));
@@ -413,8 +424,8 @@ contract HTSTest is Test, TestSetup {
         address token = USDC;
 
         // AdminKey
-        (int64 adminKeyStatusCode, HtsSystemContract.KeyValue memory adminKey)
-            = HtsSystemContract(HTS_ADDRESS).getTokenKey(token, 0x1);
+        (int64 adminKeyStatusCode, IHederaTokenService.KeyValue memory adminKey)
+            = IHederaTokenService(HTS_ADDRESS).getTokenKey(token, 0x1);
         assertEq(adminKeyStatusCode, HederaResponseCodes.SUCCESS);
         assertEq(adminKey.inheritAccountKey, false);
         assertEq(adminKey.contractId, address(0));
@@ -422,8 +433,8 @@ contract HTSTest is Test, TestSetup {
         assertEq(adminKey.ECDSA_secp256k1, bytes(""));
         assertEq(adminKey.delegatableContractId, address(0));
         // FreezeKey
-        (int64 freezeKeyStatusCode, HtsSystemContract.KeyValue memory freezeKey)
-            = HtsSystemContract(HTS_ADDRESS).getTokenKey(token, 0x4);
+        (int64 freezeKeyStatusCode, IHederaTokenService.KeyValue memory freezeKey)
+            = IHederaTokenService(HTS_ADDRESS).getTokenKey(token, 0x4);
         assertEq(freezeKeyStatusCode, HederaResponseCodes.SUCCESS);
         assertEq(freezeKey.inheritAccountKey, false);
         assertEq(freezeKey.contractId, address(0));
@@ -431,8 +442,8 @@ contract HTSTest is Test, TestSetup {
         assertEq(freezeKey.ECDSA_secp256k1, bytes(""));
         assertEq(freezeKey.delegatableContractId, address(0));
         // SupplyKey
-        (int64 supplyKeyStatusCode, HtsSystemContract.KeyValue memory supplyKey)
-            = HtsSystemContract(HTS_ADDRESS).getTokenKey(token, 0x10);
+        (int64 supplyKeyStatusCode, IHederaTokenService.KeyValue memory supplyKey)
+            = IHederaTokenService(HTS_ADDRESS).getTokenKey(token, 0x10);
         assertEq(supplyKeyStatusCode, HederaResponseCodes.SUCCESS);
         assertEq(supplyKey.inheritAccountKey, false);
         assertEq(supplyKey.contractId, address(0));
@@ -442,29 +453,29 @@ contract HTSTest is Test, TestSetup {
     }
 
     function test_HTS_getTokenType_should_return_correct_token_type_for_existing_token() external {
-        (int64 ftTypeStatusCode, int32 ftType) = HtsSystemContract(HTS_ADDRESS).getTokenType(USDC);
+        (int64 ftTypeStatusCode, int32 ftType) = IHederaTokenService(HTS_ADDRESS).getTokenType(USDC);
         assertEq(ftTypeStatusCode, HederaResponseCodes.SUCCESS);
         assertEq(ftType, int32(0));
 
-        (int64 nftTypeStatusCode, int32 nftType) = HtsSystemContract(HTS_ADDRESS).getTokenType(CFNFTFF);
+        (int64 nftTypeStatusCode, int32 nftType) = IHederaTokenService(HTS_ADDRESS).getTokenType(CFNFTFF);
         assertEq(nftTypeStatusCode, HederaResponseCodes.SUCCESS);
         assertEq(nftType, int32(1));
     }
 
     function test_HTS_isToken_should_return_correct_is_token_info() external {
-        (int64 ftIsTokenStatusCode, bool ftIsToken) = HtsSystemContract(HTS_ADDRESS).isToken(USDC);
+        (int64 ftIsTokenStatusCode, bool ftIsToken) = IHederaTokenService(HTS_ADDRESS).isToken(USDC);
         assertEq(ftIsTokenStatusCode, HederaResponseCodes.SUCCESS);
         assertTrue(ftIsToken);
 
-        (int64 nftIsTokenStatusCode, bool nftIsToken) = HtsSystemContract(HTS_ADDRESS).isToken(CFNFTFF);
+        (int64 nftIsTokenStatusCode, bool nftIsToken) = IHederaTokenService(HTS_ADDRESS).isToken(CFNFTFF);
         assertEq(nftIsTokenStatusCode, HederaResponseCodes.SUCCESS);
         assertTrue(nftIsToken);
 
-        (int64 accountIsTokenCode, bool accountIsToken) = HtsSystemContract(HTS_ADDRESS).isToken(CFNFTFF_TREASURY);
+        (int64 accountIsTokenCode, bool accountIsToken) = IHederaTokenService(HTS_ADDRESS).isToken(CFNFTFF_TREASURY);
         assertEq(accountIsTokenCode, HederaResponseCodes.SUCCESS);
         assertFalse(accountIsToken);
 
-        (int64 randomIsTokenCode, bool randomIsToken) = HtsSystemContract(HTS_ADDRESS).isToken(address(123));
+        (int64 randomIsTokenCode, bool randomIsToken) = IHederaTokenService(HTS_ADDRESS).isToken(address(123));
         assertEq(randomIsTokenCode, HederaResponseCodes.SUCCESS);
         assertFalse(randomIsToken);
     }
@@ -475,12 +486,12 @@ contract HTSTest is Test, TestSetup {
         assertFalse(IHRC719(USDC).isAssociated());
 
         // Associate the token.
-        int64 associationResponseCode = HtsSystemContract(HTS_ADDRESS).associateToken(bob, USDC);
+        int64 associationResponseCode = IHederaTokenService(HTS_ADDRESS).associateToken(bob, USDC);
         assertEq(associationResponseCode, HederaResponseCodes.SUCCESS);
         assertTrue(IHRC719(USDC).isAssociated());
 
         // Dissociate this token.
-        int64 dissociationResponseCode = HtsSystemContract(HTS_ADDRESS).dissociateToken(bob, USDC);
+        int64 dissociationResponseCode = IHederaTokenService(HTS_ADDRESS).dissociateToken(bob, USDC);
         assertEq(dissociationResponseCode, HederaResponseCodes.SUCCESS);
         assertFalse(IHRC719(USDC).isAssociated());
 
@@ -490,13 +501,13 @@ contract HTSTest is Test, TestSetup {
         address[] memory tokens = new address[](2);
         tokens[0] = USDC;
         tokens[1] = MFCT;
-        int64 multiAssociateResponseCode = HtsSystemContract(HTS_ADDRESS).associateTokens(bob, tokens);
+        int64 multiAssociateResponseCode = IHederaTokenService(HTS_ADDRESS).associateTokens(bob, tokens);
         assertEq(multiAssociateResponseCode, HederaResponseCodes.SUCCESS);
         assertTrue(IHRC719(USDC).isAssociated());
         assertTrue(IHRC719(MFCT).isAssociated());
 
         // Dissociate multiple tokens at once.
-        int64 multiDissociateResponseCode = HtsSystemContract(HTS_ADDRESS).dissociateTokens(bob, tokens);
+        int64 multiDissociateResponseCode = IHederaTokenService(HTS_ADDRESS).dissociateTokens(bob, tokens);
         assertEq(multiDissociateResponseCode, HederaResponseCodes.SUCCESS);
         assertFalse(IHRC719(USDC).isAssociated());
         assertFalse(IHRC719(MFCT).isAssociated());
@@ -507,13 +518,13 @@ contract HTSTest is Test, TestSetup {
     function test_HTS_associations_without_correct_privileges() external {
         address bob = CFNFTFF_TREASURY;
         vm.expectRevert();
-        HtsSystemContract(HTS_ADDRESS).associateToken(bob, USDC);
+        IHederaTokenService(HTS_ADDRESS).associateToken(bob, USDC);
     }
 
     function test_HTS_dissociation_without_correct_privileges() external {
         address bob = CFNFTFF_TREASURY;
         vm.expectRevert();
-        HtsSystemContract(HTS_ADDRESS).dissociateToken(bob, USDC);
+        IHederaTokenService(HTS_ADDRESS).dissociateToken(bob, USDC);
     }
 
     function test_HTS_mass_associations_without_correct_privileges() external {
@@ -522,7 +533,7 @@ contract HTSTest is Test, TestSetup {
         tokens[0] = USDC;
         tokens[1] = MFCT;
         vm.expectRevert();
-        HtsSystemContract(HTS_ADDRESS).associateTokens(bob, tokens);
+        IHederaTokenService(HTS_ADDRESS).associateTokens(bob, tokens);
     }
 
     function test_HTS_mass_dissociation_without_correct_privileges() external {
@@ -531,12 +542,12 @@ contract HTSTest is Test, TestSetup {
         tokens[0] = USDC;
         tokens[1] = MFCT;
         vm.expectRevert();
-        HtsSystemContract(HTS_ADDRESS).dissociateTokens(bob, tokens);
+        IHederaTokenService(HTS_ADDRESS).dissociateTokens(bob, tokens);
     }
 
     function test_HTS_get_fungible_token_info() external {
-        (int64 fungibleResponseCode, HtsSystemContract.FungibleTokenInfo memory fungibleTokenInfo)
-            = HtsSystemContract(HTS_ADDRESS).getFungibleTokenInfo(USDC);
+        (int64 fungibleResponseCode, IHederaTokenService.FungibleTokenInfo memory fungibleTokenInfo)
+            = IHederaTokenService(HTS_ADDRESS).getFungibleTokenInfo(USDC);
         assertEq(fungibleResponseCode, HederaResponseCodes.SUCCESS);
         assertEq(fungibleTokenInfo.decimals, 6);
         assertEq(fungibleTokenInfo.tokenInfo.token.name, "USD Coin");
@@ -584,8 +595,8 @@ contract HTSTest is Test, TestSetup {
     }
 
     function test_HTS_get_non_fungible_token_info() external {
-        (int64 nonFungibleResponseCode, HtsSystemContract.NonFungibleTokenInfo memory nonFungibleTokenInfo)
-            = HtsSystemContract(HTS_ADDRESS).getNonFungibleTokenInfo(CFNFTFF, int64(1));
+        (int64 nonFungibleResponseCode, IHederaTokenService.NonFungibleTokenInfo memory nonFungibleTokenInfo)
+            = IHederaTokenService(HTS_ADDRESS).getNonFungibleTokenInfo(CFNFTFF, int64(1));
         assertEq(nonFungibleResponseCode, HederaResponseCodes.SUCCESS);
         assertEq(nonFungibleTokenInfo.serialNumber, int64(1));
         assertEq(nonFungibleTokenInfo.ownerId, CFNFTFF_TREASURY);
@@ -801,7 +812,7 @@ contract HTSTest is Test, TestSetup {
         vm.prank(CFNFTFF_TREASURY);
         vm.expectEmit(token);
         emit IERC721Events.Approval(CFNFTFF_TREASURY, newSpender, 1);
-        int64 responseCodeApprove = HtsSystemContract(HTS_ADDRESS).approveNFT(token, newSpender, 1);
+        int64 responseCodeApprove = IHederaTokenService(HTS_ADDRESS).approveNFT(token, newSpender, 1);
         assertEq(responseCodeApprove, HederaResponseCodes.SUCCESS);
         assertEq(IERC721(token).getApproved(1), newSpender);
     }
@@ -814,7 +825,7 @@ contract HTSTest is Test, TestSetup {
         vm.prank(owner);
         vm.expectEmit(USDC);
         emit IERC20Events.Approval(owner, spender, amount);
-        int64 responseCodeApprove = HtsSystemContract(HTS_ADDRESS).approve(USDC, spender, amount);
+        int64 responseCodeApprove = IHederaTokenService(HTS_ADDRESS).approve(USDC, spender, amount);
         assertEq(responseCodeApprove, HederaResponseCodes.SUCCESS);
         assertEq(IERC20(USDC).allowance(owner, spender), amount);
     }
@@ -825,7 +836,7 @@ contract HTSTest is Test, TestSetup {
         vm.prank(CFNFTFF_TREASURY);
         vm.expectEmit(CFNFTFF);
         emit IERC721Events.ApprovalForAll(CFNFTFF_TREASURY, operator, true);
-        int64 setApprovalForAllResponseCode = HtsSystemContract(HTS_ADDRESS)
+        int64 setApprovalForAllResponseCode = IHederaTokenService(HTS_ADDRESS)
             .setApprovalForAll(CFNFTFF, operator, true);
         assertEq(setApprovalForAllResponseCode, HederaResponseCodes.SUCCESS);
         assertTrue(IERC721(CFNFTFF).isApprovedForAll(CFNFTFF_TREASURY, operator));
