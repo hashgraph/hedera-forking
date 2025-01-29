@@ -217,13 +217,23 @@ contract HtsSystemContractJson is HtsSystemContract {
         tokenInfo.token = _getHederaToken(json);
         tokenInfo.fixedFees = _getFixedFees(json);
         tokenInfo.fractionalFees = _getFractionalFees(json);
-        tokenInfo.royaltyFees = _getRoyaltyFees(json);
+        tokenInfo.royaltyFees = _getRoyaltyFees(_sanitizeFeesStructure(json));
         tokenInfo.ledgerId = _getLedgerId();
         tokenInfo.defaultKycStatus = false; // not available in the fetched JSON from mirror node
         tokenInfo.totalSupply = int64(vm.parseInt(vm.parseJsonString(json, ".total_supply")));
         tokenInfo.deleted = vm.parseJsonBool(json, ".deleted");
         tokenInfo.pauseStatus = keccak256(bytes(vm.parseJsonString(json, ".pause_status"))) == keccak256(bytes("PAUSED"));
         return tokenInfo;
+    }
+
+    // In order to properly decode the bytes returned by the parseJson into the Solidity Structure, the full,
+    // correct structure has to be provided in the input json, with all of the corresponding fields.
+    function _sanitizeFeesStructure(string memory json) private pure returns (string memory) {
+        return vm.replace(
+            json,
+            "\"fallback_fee\":null}",
+            "\"fallback_fee\":{\"amount\":0,\"denominating_token_id\":\"\"}}"
+        );
     }
 
     function _getHederaToken(string memory json) private returns (HederaToken memory token) {
@@ -394,7 +404,6 @@ contract HtsSystemContractJson is HtsSystemContract {
         if (!vm.keyExistsJson(json, ".custom_fees.royalty_fees")) {
             return new RoyaltyFee[](0);
         }
-
         try vm.parseJson(json, ".custom_fees.royalty_fees") returns (bytes memory royaltyFeesBytes) {
             if (royaltyFeesBytes.length == 0) {
                 return new RoyaltyFee[](0);
@@ -404,11 +413,16 @@ contract HtsSystemContractJson is HtsSystemContract {
             for (uint i = 0; i < fees.length; i++) {
                 string memory path = vm.replace(".custom_fees.royalty_fees[{i}]", "{i}", vm.toString(i));
                 address collectorAccount = mirrorNode().getAccountAddress(vm.parseJsonString(json, string.concat(path, ".collector_account_id")));
+                bytes memory denominatingTokenBytes = vm.parseJson(json, string.concat(path, ".denominating_token_id"));
+                address denominatingToken;
+                if (keccak256(denominatingTokenBytes) != keccak256("")) {
+                    denominatingToken = mirrorNode().getAccountAddress(vm.parseJsonString(json, string.concat(path, ".denominating_token_id")));
+                }
                 royaltyFees[i] = RoyaltyFee(
                     int64(vm.parseJsonInt(json, string.concat(path, ".amount.numerator"))),
                     int64(vm.parseJsonInt(json, string.concat(path, ".amount.denominator"))),
                     int64(vm.parseJsonInt(json, string.concat(path, ".fallback_fee.amount"))),
-                    mirrorNode().getAccountAddress(vm.parseJsonString(json, string.concat(path, ".denominating_token_id"))),
+                    denominatingToken,
                     collectorAccount == address(0),
                     collectorAccount
                 );
