@@ -66,6 +66,9 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         (int64 tokenInfoResponseCode, TokenInfo memory tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
         require(tokenInfoResponseCode == HederaResponseCodes.SUCCESS, "mintToken: failed to get token info");
 
+        if (tokenInfo.token.treasury == address(0)) {
+            return (HederaResponseCodes.TOKEN_HAS_NO_SUPPLY_KEY, tokenInfo.totalSupply, new int64[](0));
+        }
         address treasuryAccount = tokenInfo.token.treasury;
         require(treasuryAccount != address(0), "mintToken: invalid account");
 
@@ -87,6 +90,9 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         (int64 tokenInfoResponseCode, TokenInfo memory tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
         require(tokenInfoResponseCode == HederaResponseCodes.SUCCESS, "burnToken: failed to get token info");
 
+        if (tokenInfo.token.treasury == address(0)) {
+            return (HederaResponseCodes.TOKEN_HAS_NO_SUPPLY_KEY, tokenInfo.totalSupply);
+        }
         address treasuryAccount = tokenInfo.token.treasury;
         require(treasuryAccount != address(0), "burnToken: invalid account");
 
