@@ -216,9 +216,10 @@ function visit(slot, baseSlot, obj, path, map) {
  * Secondly, it builds the actual `SlotMap` starting from the declared fields in the storage layout.
  *
  * @param {Record<string, unknown>} token
+ * @param {string} ledgerId
  * @returns {SlotMap}
  */
-function slotMapOf(token) {
+function slotMapOf(token, ledgerId) {
     token['token_type'] = token['type'];
     token['token_supply_type'] = token['supply_type'] === 'FINITE';
     token['default_kyc_status'] = false;
@@ -227,7 +228,7 @@ function slotMapOf(token) {
     // token['inherit_account_key'] = ZERO_HEX_32_BYTE;
     // token['delegatable_contract_id'] = zeroAddress();
     token['treasury'] = token['treasury_account_id'];
-    token['ledger_id'] = '0x00';
+    token['ledger_id'] = ledgerId;
     // Every inner `struct` will be flattened by `visit`,
     // so it uses the last part of the field path, _i.e._, `.second`.
     token['second'] = `${token['expiry_timestamp']}`;
