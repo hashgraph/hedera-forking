@@ -686,7 +686,7 @@ contract HTSTest is Test, TestSetup {
         uint256 serialId = 1;
         vm.startPrank(CFNFTFF_TREASURY);
         vm.expectEmit(CFNFTFF);
-        emit IERC20Events.Transfer(CFNFTFF_TREASURY, to, serialId);
+        emit IERC721Events.Transfer(CFNFTFF_TREASURY, to, serialId);
         IHederaTokenService(HTS_ADDRESS).transferNFT(CFNFTFF, CFNFTFF_TREASURY, to, int64(int256(serialId)));
         vm.stopPrank();
         assertEq(IERC721(CFNFTFF).ownerOf(serialId), to);
@@ -697,7 +697,7 @@ contract HTSTest is Test, TestSetup {
         uint256 serialId = 1;
         vm.startPrank(CFNFTFF_TREASURY);
         vm.expectEmit(CFNFTFF);
-        emit IERC20Events.Transfer(CFNFTFF_TREASURY, to, serialId);
+        emit IERC721Events.Transfer(CFNFTFF_TREASURY, to, serialId);
         IHederaTokenService(HTS_ADDRESS).transferFromNFT(CFNFTFF, CFNFTFF_TREASURY, to, serialId);
         vm.stopPrank();
         assertEq(IERC721(CFNFTFF).ownerOf(serialId), to);
@@ -770,7 +770,7 @@ contract HTSTest is Test, TestSetup {
         to[0] = makeAddr("recipient");
         vm.startPrank(CFNFTFF_TREASURY);
         vm.expectEmit(CFNFTFF);
-        emit IERC20Events.Transfer(CFNFTFF_TREASURY, to[0], serialId[0]);
+        emit IERC721Events.Transfer(CFNFTFF_TREASURY, to[0], serialId[0]);
         IHederaTokenService(HTS_ADDRESS).transferNFT(CFNFTFF, from[0], to[0], int64(int256(serialId[0])));
         vm.stopPrank();
         assertEq(IERC721(CFNFTFF).ownerOf(serialId[0]), to[0]);
@@ -811,7 +811,7 @@ contract HTSTest is Test, TestSetup {
         assertNotEq(IERC721(token).getApproved(1), newSpender);
         vm.prank(CFNFTFF_TREASURY);
         vm.expectEmit(token);
-        emit IERC20Events.Approval(CFNFTFF_TREASURY, newSpender, 1);
+        emit IERC721Events.Approval(CFNFTFF_TREASURY, newSpender, 1);
         int64 responseCodeApprove = IHederaTokenService(HTS_ADDRESS).approveNFT(token, newSpender, 1);
         assertEq(responseCodeApprove, HederaResponseCodes.SUCCESS);
         assertEq(IERC721(token).getApproved(1), newSpender);

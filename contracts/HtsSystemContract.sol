@@ -10,7 +10,7 @@ import {SetTokenInfo} from "./SetTokenInfo.sol";
 
 address constant HTS_ADDRESS = address(0x167);
 
-contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
+contract HtsSystemContract is IHederaTokenService {
 
     /**
      * The slot's value contains the next token ID to use when a token is being created.
@@ -574,7 +574,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
                 address to = address(bytes20(msg.data[72:92]));
                 uint256 amount = uint256(bytes32(msg.data[92:124]));
                 _approve(from, to, amount);
-                emit Approval(from, to, amount);
+                emit IERC20Events.Approval(from, to, amount);
                 return abi.encode(true);
             }
             if (selector == this.approveNFT.selector) {
@@ -670,7 +670,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
             uint256 amount = uint256(bytes32(msg.data[60:92]));
             address owner = msg.sender;
             _approve(owner, spender, amount);
-            emit Approval(owner, spender, amount);
+            emit IERC20Events.Approval(owner, spender, amount);
             return abi.encode(true);
         }
         return _redirectForHRC719(selector);
@@ -844,7 +844,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         require(from != address(0), "hts: invalid sender");
         require(to != address(0), "hts: invalid receiver");
         _update(from, to, amount);
-        emit Transfer(from, to, amount);
+        emit IERC20Events.Transfer(from, to, amount);
     }
 
     function _transferNFT(address sender, address from, address to, uint256 serialId) private {
@@ -872,7 +872,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
 
         // Set the new owner
         assembly { sstore(slot, to) }
-        emit Transfer(from, to, serialId);
+        emit IERC721Events.Transfer(from, to, serialId);
     }
 
     function _update(address from, address to, uint256 amount) public {
@@ -917,8 +917,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         bytes32 slot = _getApprovedSlot(uint32(serialId));
         address newApproved = isApproved ? spender : address(0);
         assembly { sstore(slot, newApproved) }
-
-        emit Approval(owner, spender, serialId);
+        emit IERC721Events.Approval(owner, spender, serialId);
     }
 
     /**
@@ -939,6 +938,6 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         require(operator != address(0) && operator != sender, "setApprovalForAll: invalid operator");
         bytes32 slot = _isApprovedForAllSlot(sender, operator);
         assembly { sstore(slot, approved) }
-        emit ApprovalForAll(sender, operator, approved);
+        emit IERC721Events.ApprovalForAll(sender, operator, approved);
     }
 }
