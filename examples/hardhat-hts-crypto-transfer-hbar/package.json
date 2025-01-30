@@ -1,0 +1,14 @@
+{
+    "name": "hardhat-hts-cryptotransfer-showcase",
+    "scripts": {
+        "compile": "hardhat compile",
+        "test": "hardhat --network hardhat test"
+    },
+    "author": "2024 Hedera Hashgraph, LLC",
+    "license": "Apache-2.0",
+    "devDependencies": {
+        "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+        "dotenv": "^16.3.1",
+        "hardhat": "^2.19.4"
+    }
+}

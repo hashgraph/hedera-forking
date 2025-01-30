@@ -62,6 +62,82 @@ contract HtsSystemContract is IHederaTokenService {
         return bytes32(abi.encodePacked(selector, pad, account));
     }
 
+    function cryptoTransfer(TransferList memory transferList, TokenTransferList[] memory tokenTransfers)
+        htsCall external returns (int64) {
+        int64 responseCode = _checkCryptoFungibleTransfers(address(0), transferList.transfers);
+        if (responseCode != HederaResponseCodes.SUCCESS) return responseCode;
+
+        for (uint256 tokenIndex = 0; tokenIndex < tokenTransfers.length; tokenIndex++) {
+            require(tokenTransfers[tokenIndex].token != address(0), "cryptoTransfer: invalid token");
+
+            // Processing fungible token transfers
+            responseCode = _checkCryptoFungibleTransfers(tokenTransfers[tokenIndex].token, tokenTransfers[tokenIndex].transfers);
+            if (responseCode != HederaResponseCodes.SUCCESS) return responseCode;
+            AccountAmount[] memory transfers = tokenTransfers[tokenIndex].transfers;
+            for (uint256 from = 0; from < transfers.length; from++) {
+                if (transfers[from].amount >= 0) continue;
+                for (uint256 to = 0; to < transfers.length; to++) {
+                    if (transfers[to].amount <= 0) continue;
+                    int64 transferAmount = transfers[to].amount < -transfers[from].amount
+                        ? transfers[to].amount : -transfers[from].amount;
+                    transferToken(
+                        tokenTransfers[tokenIndex].token,
+                        transfers[from].accountID,
+                        transfers[to].accountID,
+                        transferAmount
+                    );
+                    transfers[from].amount += transferAmount;
+                    transfers[to].amount -= transferAmount;
+                    if (transfers[from].amount == 0) break;
+                }
+            }
+
+            // Processing non-fungible token transfers
+            // The IERC721 interface already handles all crucial validations and operations,
+            // but HTS interface need to return correct response code instead of reverting the whole operations.
+            for (uint256 nftIndex = 0; nftIndex < tokenTransfers[tokenIndex].nftTransfers.length; nftIndex++) {
+                NftTransfer memory transfer = tokenTransfers[tokenIndex].nftTransfers[nftIndex];
+
+                // Check if NFT transfer is feasible.
+                if (transfer.senderAccountID != msg.sender) {
+                    if (!transfer.isApproval) return HederaResponseCodes.SENDER_DOES_NOT_OWN_NFT_SERIAL_NO;
+                    address token = tokenTransfers[tokenIndex].token;
+                    bool approvedForAll = IERC721(token).isApprovedForAll(transfer.senderAccountID, msg.sender);
+                    bool approved = IERC721(token).getApproved(uint256(uint64(transfer.serialNumber))) == msg.sender;
+                    if (!approvedForAll && !approved) return HederaResponseCodes.SENDER_DOES_NOT_OWN_NFT_SERIAL_NO;
+                }
+                transferNFT(
+                    tokenTransfers[tokenIndex].token,
+                    transfer.senderAccountID,
+                    transfer.receiverAccountID,
+                    transfer.serialNumber
+                );
+            }
+        }
+
+        // Processing HBAR transfers
+        // To ensure stability, this operation is performed last since the Foundry library implementation
+        // uses forge cheat codes and FT or NFT transfers may potentially trigger reverts.
+        for (uint256 i = 0; i < transferList.transfers.length; i++) {
+            bool from = transferList.transfers[i].amount < 0;
+            address account = transferList.transfers[i].isApproval || !from
+                ? transferList.transfers[i].accountID
+                : msg.sender;
+            uint256 amount = uint256(uint64(
+                from ? -transferList.transfers[i].amount : transferList.transfers[i].amount
+            ));
+            int64 updatingResult = _updateHbarBalanceOnAccount(
+                account, from ? account.balance - amount : account.balance + amount
+            );
+            if (updatingResult != HederaResponseCodes.SUCCESS) revert("cryptoTransfer: hbar transfer is not supported without vm cheatcodes in forked network");
+            if (from && account != msg.sender) {
+                _approve(account, msg.sender, __allowance(account, msg.sender) - amount);
+            }
+        }
+
+        return HederaResponseCodes.SUCCESS;
+    }
+
     function mintToken(address token, int64 amount, bytes[] memory) htsCall external returns (
         int64 responseCode,
         int64 newTotalSupply,
@@ -1031,5 +1107,81 @@ contract HtsSystemContract is IHederaTokenService {
         bytes32 slot = _isApprovedForAllSlot(sender, operator);
         assembly { sstore(slot, approved) }
         emit IERC721.ApprovalForAll(sender, operator, approved);
+    }
+
+    function _cryptoFungibleTransfers(address token, AccountAmount[] memory transfers) internal {
+        for (uint256 from = 0; from < transfers.length; from++) {
+            if (transfers[from].amount >= 0) continue;
+            for (uint256 to = 0; to < transfers.length; to++) {
+                if (transfers[to].amount <= 0) continue;
+                int64 transferAmount = transfers[to].amount < -transfers[from].amount ? transfers[to].amount : -transfers[from].amount;
+                transferToken(
+                    token,
+                    transfers[from].accountID,
+                    transfers[to].accountID,
+                    transferAmount
+                );
+                transfers[from].amount += transferAmount;
+                transfers[to].amount -= transferAmount;
+                if (transfers[from].amount == 0) break;
+            }
+        }
+    }
+
+    function _checkCryptoFungibleTransfers(address token, AccountAmount[] memory transfers) internal returns (int64) {
+        int64 total = 0;
+        AccountAmount[] memory spends = new AccountAmount[](transfers.length);
+        uint256 spendsCount = 0;
+        for (uint256 i = 0; i < transfers.length; i++) {
+            total += transfers[i].amount;
+            if (transfers[i].amount > 0) {
+                continue;
+            }
+            uint256 accountSpendIndex;
+            for (accountSpendIndex = 0; accountSpendIndex <= spendsCount; accountSpendIndex++) {
+                if (accountSpendIndex == spendsCount) {
+                    spends[spendsCount] = AccountAmount(transfers[i].accountID, -transfers[i].amount, false);
+                    spendsCount++;
+                    break;
+                }
+                if (spends[accountSpendIndex].accountID == transfers[i].accountID) {
+                    spends[accountSpendIndex].amount -= transfers[i].amount;
+                    break;
+                }
+            }
+            bool isApproval = transfers[i].accountID != msg.sender;
+            if (transfers[i].isApproval != isApproval) return HederaResponseCodes.SPENDER_DOES_NOT_HAVE_ALLOWANCE;
+            uint256 totalAccountSpend = uint256(uint64(spends[accountSpendIndex].amount));
+            if (isApproval) {
+                uint256 allowanceLimit = token == address(0) ?
+                    __allowance(transfers[i].accountID, msg.sender) :
+                    IERC20(token).allowance(transfers[i].accountID, msg.sender);
+                if (allowanceLimit < totalAccountSpend) return HederaResponseCodes.MAX_ALLOWANCES_EXCEEDED;
+            }
+            if (token == address(0) && transfers[i].accountID.balance < totalAccountSpend) {
+                return HederaResponseCodes.INSUFFICIENT_ACCOUNT_BALANCE;
+            }
+            if (token != address(0) && IERC20(token).balanceOf(transfers[i].accountID) < totalAccountSpend) {
+                return HederaResponseCodes.INSUFFICIENT_TOKEN_BALANCE;
+            }
+        }
+
+        for (uint256 first = 0; first < transfers.length; first++) {
+            for (uint256 second = 0; second < transfers.length; second++) {
+                if (first == second) continue;
+                bool bothToOrFrom = (transfers[first].amount > 0) == (transfers[second].amount > 0);
+                if (transfers[first].accountID == transfers[second].accountID && bothToOrFrom) {
+                    return HederaResponseCodes.ACCOUNT_REPEATED_IN_ACCOUNT_AMOUNTS;
+                }
+            }
+        }
+
+        return total == 0 ? HederaResponseCodes.SUCCESS : HederaResponseCodes.INVALID_ACCOUNT_AMOUNTS;
+    }
+
+    function _updateHbarBalanceOnAccount(address account, uint256 newBalance) internal virtual returns (int64) {
+        if (newBalance == account.balance) return HederaResponseCodes.SUCCESS; // No change required anyway.
+
+        return HederaResponseCodes.NOT_SUPPORTED;
     }
 }
