@@ -505,6 +505,17 @@ contract HtsSystemContractJson is HtsSystemContract {
         return slot;
     }
 
+    function __nftInfoSlot(uint32 serialId) internal override virtual returns (bytes32) {
+        bytes32 slot = super.__nftInfoSlot(serialId);
+        if (_shouldFetch(slot)) {
+            string memory metadata = mirrorNode().getNftMetadata(address(this), serialId);
+            string memory createdTimestamp = mirrorNode().getNftCreatedTimestamp(address(this), serialId);
+            int64 creationTime = int64(vm.parseInt(vm.split(createdTimestamp, ".")[0]));
+            storeBytes(address(this), uint256(slot), abi.encode(creationTime, bytes(metadata)));
+        }
+        return slot;
+    }
+
     function _ownerOfSlot(uint32 serialId) internal override virtual returns (bytes32) {
         bytes32 slot = super._ownerOfSlot(serialId);
         if (_shouldFetch(slot)) {
