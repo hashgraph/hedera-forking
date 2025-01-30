@@ -628,6 +628,13 @@ contract HTSTest is Test, TestSetup {
         assertEq(nonFungibleTokenInfo.tokenInfo.fractionalFees.length, 0);
         assertEq(nonFungibleTokenInfo.tokenInfo.royaltyFees.length, 0);
         assertEq(nonFungibleTokenInfo.tokenInfo.ledgerId, testMode == TestMode.FFI ? "0x01" : "0x00");
+
+        // Additional information, not a part of the IERC721 interface.
+        assertEq(
+            string(nonFungibleTokenInfo.metadata),
+            "aHR0cHM6Ly92ZXJ5LWxvbmctc3RyaW5nLXdoaWNoLWV4Y2VlZHMtMzEtYnl0ZXMtYW5kLXJlcXVpcmVzLW11bHRpcGxlLXN0b3JhZ2Utc2xvdHMuY29tLzE="
+        );
+        assertEq(nonFungibleTokenInfo.creationTime, 1734948254);
     }
 
     function test_HTS_transferToken() external {
