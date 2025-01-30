@@ -244,7 +244,36 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
                 ZERO_HEX_32_BYTE,
                 `Failed to get the metadata of the NFT ${tokenId}#${serialId}`
             );
-        persistentStorage.store(tokenId, blockNumber, nrequestedSlot, atob(metadata));
+        persistentStorage.store(tokenId, blockNumber, nrequestedSlot, atob(metadata),  't_string_storage');
+    }
+    // Encoded `address(tokenId).getNonFungibleTokenInfo(token,serialId)` slot
+    // slot(256) = `getNonFungibleTokenInfo`selector(32) + padding(192) + serialId(32)
+    if (
+        nrequestedSlot >> 32n ===
+        0x287e1da8_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000n
+    ) {
+        const serialId = parseInt(requestedSlot.slice(-8), 16);
+        const { metadata, created_timestamp } = (await mirrorNodeClient.getNftByTokenIdAndSerial(
+            tokenId,
+            serialId,
+            blockNumber
+        )) ?? {
+            metadata: null,
+            created_timestamp: null,
+        };
+        if (typeof metadata !== 'string' || typeof created_timestamp !== 'string')
+            return ret(
+                ZERO_HEX_32_BYTE,
+                `Failed to get the metadata of the NFT ${tokenId}#${serialId}`
+            );
+
+        const timestamp = Number(created_timestamp.split('.')[0]).toString(16).padStart(64, '0');
+
+        const m = Buffer.from(metadata).toString('hex');
+        const value = Buffer.from(timestamp, 'hex');
+
+        console.error( timestamp);
+        persistentStorage.store(tokenId, blockNumber, nrequestedSlot, `${timestamp}${m}`,  't_bytes_storage');
     }
     let unresolvedValues = persistentStorage.load(tokenId, blockNumber, nrequestedSlot);
     if (unresolvedValues === undefined) {
