@@ -436,6 +436,15 @@ contract HtsSystemContractJson is HtsSystemContract {
         return slot;
     }
 
+    function _hasKycGrantedSlot(address account) internal override returns (bytes32) {
+        bytes32 slot = super._hasKycGrantedSlot(account);
+        if (_shouldFetch(slot)) {
+            string memory kycStatus = mirrorNode().getKycStatus(address(this), account);
+            _setValue(slot, bytes32(keccak256(bytes(kycStatus)) == keccak256("REVOKED") ? uint256(0) : uint256(1)));
+        }
+        return slot;
+    }
+
     function _allowanceSlot(address owner, address spender) internal override returns (bytes32) {
         bytes32 slot = super._allowanceSlot(owner, spender);
         if (_shouldFetch(slot)) {
