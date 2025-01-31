@@ -1154,25 +1154,6 @@ contract HtsSystemContract is IHederaTokenService {
         emit IERC721.ApprovalForAll(sender, operator, approved);
     }
 
-    function _cryptoFungibleTransfers(address token, AccountAmount[] memory transfers) internal {
-        for (uint256 from = 0; from < transfers.length; from++) {
-            if (transfers[from].amount >= 0) continue;
-            for (uint256 to = 0; to < transfers.length; to++) {
-                if (transfers[to].amount <= 0) continue;
-                int64 transferAmount = transfers[to].amount < -transfers[from].amount ? transfers[to].amount : -transfers[from].amount;
-                transferToken(
-                    token,
-                    transfers[from].accountID,
-                    transfers[to].accountID,
-                    transferAmount
-                );
-                transfers[from].amount += transferAmount;
-                transfers[to].amount -= transferAmount;
-                if (transfers[from].amount == 0) break;
-            }
-        }
-    }
-
     function _checkCryptoFungibleTransfers(address token, AccountAmount[] memory transfers) internal returns (int64) {
         int64 total = 0;
         AccountAmount[] memory spends = new AccountAmount[](transfers.length);
