@@ -238,17 +238,16 @@ contract HTSTest is Test, TestSetup {
         int64 amount = 1000;
         bytes[] memory metadata = new bytes[](0);
 
-        vm.expectRevert(bytes("mintToken: invalid token"));
+        vm.expectRevert("getTokenInfo: invalid token");
         HtsSystemContract(HTS_ADDRESS).mintToken(token, amount, metadata);
     }
 
     function test_mintToken_should_revert_with_invalid_amount() external {
-        address token = address(0x123);
         int64 amount = 0;
         bytes[] memory metadata = new bytes[](0);
 
         vm.expectRevert(bytes("mintToken: invalid amount"));
-        HtsSystemContract(HTS_ADDRESS).mintToken(token, amount, metadata);
+        HtsSystemContract(HTS_ADDRESS).mintToken(USDC, amount, metadata);
     }
 
     function test_burnToken_should_succeed_with_valid_input() external {
@@ -302,17 +301,16 @@ contract HTSTest is Test, TestSetup {
         int64 amount = 1000;
         int64[] memory serialNumbers = new int64[](0);
 
-        vm.expectRevert(bytes("burnToken: invalid token"));
+        vm.expectRevert("getTokenInfo: invalid token");
         HtsSystemContract(HTS_ADDRESS).burnToken(token, amount, serialNumbers);
     }
 
     function test_burnToken_should_revert_with_invalid_amount() external {
-        address token = address(0x123);
         int64 amount = 0;
         int64[] memory serialNumbers = new int64[](0);
 
         vm.expectRevert(bytes("burnToken: invalid amount"));
-        HtsSystemContract(HTS_ADDRESS).burnToken(token, amount, serialNumbers);
+        HtsSystemContract(HTS_ADDRESS).burnToken(USDC, amount, serialNumbers);
     }
 
     function test_HTS_getApproved_should_return_correct_address() external view {
@@ -722,7 +720,7 @@ contract HTSTest is Test, TestSetup {
         int64[] memory amounts = new int64[](1);
         amounts[0] = 4_000000;
         vm.prank(owner);
-        vm.expectRevert("transferTokens: invalid token");
+        vm.expectRevert("getTokenInfo: invalid token");
         IHederaTokenService(HTS_ADDRESS).transferTokens(address(0), to, amounts);
     }
 
