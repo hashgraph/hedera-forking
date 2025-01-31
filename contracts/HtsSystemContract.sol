@@ -412,18 +412,10 @@ contract HtsSystemContract is IHederaTokenService {
     function getNonFungibleTokenInfo(address token, int64 serialNumber)
         htsCall external
         returns (int64, NonFungibleTokenInfo memory) {
-        (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
-        require(responseCode == HederaResponseCodes.SUCCESS, "getNonFungibleTokenInfo: failed to get token data");
-        (, NonFungibleTokenInfo memory nonFungibleTokenInfo) = IHederaTokenService(token).getNonFungibleTokenInfo(
+        return IHederaTokenService(token).getNonFungibleTokenInfo(
             token,
             serialNumber
         );
-        nonFungibleTokenInfo.tokenInfo = tokenInfo;
-        nonFungibleTokenInfo.serialNumber = serialNumber;
-        nonFungibleTokenInfo.spenderId = IERC721(token).getApproved(uint256(uint64(serialNumber)));
-        nonFungibleTokenInfo.ownerId = IERC721(token).ownerOf(uint256(uint64(serialNumber)));
-
-        return (responseCode, nonFungibleTokenInfo);
     }
 
     function isToken(address token) htsCall external returns (int64, bool) {
@@ -595,11 +587,15 @@ contract HtsSystemContract is IHederaTokenService {
             if (selector == this.getNonFungibleTokenInfo.selector) {
                 require(msg.data.length >= 92, "getNonFungibleTokenInfo: Not enough calldata");
                 uint256 serialId = uint256(bytes32(msg.data[60:92]));
-                NonFungibleTokenInfo memory info;
+                NonFungibleTokenInfo memory nonFungibleTokenInfo;
                 (int64 creationTime, bytes memory metadata) = __nftInfo(serialId);
-                info.creationTime = creationTime;
-                info.metadata = metadata;
-                return abi.encode(HederaResponseCodes.SUCCESS, info);
+                nonFungibleTokenInfo.creationTime = creationTime;
+                nonFungibleTokenInfo.metadata = metadata;
+                nonFungibleTokenInfo.tokenInfo = _tokenInfo;
+                nonFungibleTokenInfo.serialNumber = int64(int256(serialId));
+                nonFungibleTokenInfo.spenderId = __getApproved(serialId);
+                nonFungibleTokenInfo.ownerId = __ownerOf(serialId);
+                return abi.encode(HederaResponseCodes.SUCCESS, nonFungibleTokenInfo);
             }
             if (selector == this._update.selector) {
                 require(msg.data.length >= 124, "update: Not enough calldata");
