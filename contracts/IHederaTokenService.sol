@@ -614,9 +614,9 @@ interface IHederaTokenService {
     /// @param account The account address associated with the token
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
     /// @return kycGranted True if `account` has kyc granted for `token`
-    // function isKyc(address token, address account)
-    //     external
-    //     returns (int64 responseCode, bool kycGranted);
+    function isKyc(address token, address account)
+        external
+        returns (int64 responseCode, bool kycGranted);
 
     /// Operation to delete token
     /// @param token The token address to be deleted
@@ -711,17 +711,17 @@ interface IHederaTokenService {
     /// @param token The token address
     /// @param account The account address to grant kyc
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
-    // function grantTokenKyc(address token, address account)
-    //     external
-    //     returns (int64 responseCode);
+    function grantTokenKyc(address token, address account)
+        external
+        returns (int64 responseCode);
 
     /// Operation to revoke kyc to token account
     /// @param token The token address
     /// @param account The account address to revoke kyc
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
-    // function revokeTokenKyc(address token, address account)
-    //     external
-    //     returns (int64 responseCode);
+    function revokeTokenKyc(address token, address account)
+        external
+        returns (int64 responseCode);
 
     /// Operation to pause token
     /// @param token The token address to be paused
