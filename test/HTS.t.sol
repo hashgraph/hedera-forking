@@ -244,7 +244,7 @@ contract HTSTest is Test, TestSetup {
         int64 amount = 1000;
         bytes[] memory metadata = new bytes[](0);
 
-        vm.expectRevert(bytes("mintToken: invalid token"));
+        vm.expectRevert(bytes("getTokenInfo: invalid token"));
         IHederaTokenService(HTS_ADDRESS).mintToken(token, amount, metadata);
     }
 
