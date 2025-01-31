@@ -4,10 +4,9 @@ pragma solidity ^0.8.0;
 import {HtsSystemContract} from "../contracts/HtsSystemContract.sol";
 import {Test, console} from "forge-std/Test.sol";
 import {IERC721, IERC721Events} from "../contracts/IERC721.sol";
-import {IERC20Events} from "../contracts/IERC20.sol";
 import {TestSetup} from "./lib/TestSetup.sol";
 
-contract ERC721TokenTest is Test, TestSetup, IERC721Events, IERC20Events {
+contract ERC721TokenTest is Test, TestSetup, IERC721Events {
 
     function setUp() external {
         setUpMockStorageForNonFork();

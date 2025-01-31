@@ -13,15 +13,40 @@ import {storeAddress, storeBool, storeBytes, storeInt64, storeString, storeUint}
 contract HtsSystemContractJson is HtsSystemContract {
     Vm private constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
-    MirrorNode private _mirrorNode;
+    /**
+     * This slot value indicates whether the token has been initialized.
+     * In the token initialization, token data is fetched remotely if the token is not local.
+     * This slot is accessed through the address of the token.
+     */
+    bytes32 private constant _initSlot = keccak256("HtsSystemContractJson::_initSlot");
 
-    bool private initialized;
+    /**
+     * This slot value indicates whether the token has been created in locally.
+     * A token that has been created locally does not make any requests to fetch remote data.
+     * This slot is accessed through the address of the token.
+     */
+    bytes32 private constant _isLocalTokenSlot = keccak256("HtsSystemContractJson::_isLocalTokenSlot");
+
+    /**
+     * The Proxy template bytecode as specified by HIP719.
+     * It is treated as a template because the placeholder `fefefefefefefefefefefefefefefefefefefefe`
+     * needs to be replace by the actual token address.
+     * This bytecode is inlined here to avoid reading from file using `vm.readFile`,
+     * which is disallowed unless `fs_permissions` is granted.
+     * See https://book.getfoundry.sh/cheatcodes/fs#description for more details.
+     */
+    string private constant _HIP719TemplateBytecode = "0x6080604052348015600f57600080fd5b506000610167905077618dc65efefefefefefefefefefefefefefefefefefefefe600052366000602037600080366018016008845af43d806000803e8160008114605857816000f35b816000fdfea2646970667358221220d8378feed472ba49a0005514ef7087017f707b45fb9bf56bb81bb93ff19a238b64736f6c634300080b0033";
+
+    /**
+     * The state variable `_mirrorNode` is accessed through the `0x167` address.
+     */
+    MirrorNode private _mirrorNode;
 
     function setMirrorNodeProvider(MirrorNode mirrorNode_) htsCall external {
         _mirrorNode = mirrorNode_;
     }
 
-    /*
+    /**
      * @dev HTS can be used to propagate allow cheat codes flag onto the token Proxies Smart Contracts.
      * We can call `vm.allowCheatcodes` from within the HTS context.
      */
@@ -29,8 +54,11 @@ contract HtsSystemContractJson is HtsSystemContract {
         vm.allowCheatcodes(target);
     }
 
-    // For testing, we support accounts created with `makeAddr`. These accounts will not exist on the mirror node,
-    // so we calculate a deterministic (but unique) ID at runtime as a fallback.
+    /**
+     * @dev For testing, we support accounts created with `makeAddr`.
+     * These accounts will not exist on the mirror node,
+     * so we calculate a deterministic (but unique) ID at runtime as a fallback.
+     */
     function getAccountId(address account) htsCall external view override returns (uint32) {
         return uint32(bytes4(keccak256(abi.encodePacked(account))));
     }
@@ -46,23 +74,30 @@ contract HtsSystemContractJson is HtsSystemContract {
         return MirrorNode(address(uint160(uint256(vm.load(HTS_ADDRESS, slot)))));
     }
 
+    function deploySetTokenInfo(address tokenAddress) override internal {
+        bytes memory creationCode = vm.getCode("SetTokenInfo.sol");
+        vm.etch(tokenAddress, creationCode);
+        (bool success, bytes memory runtimeBytecode) = tokenAddress.call("");
+        require(success, "deploySetTokenInfo: Failed to create runtime bytecode");
+        vm.etch(tokenAddress, runtimeBytecode);
+    }
+
+    function deployHIP719Proxy(address tokenAddress) override internal {
+        string memory placeholder = "fefefefefefefefefefefefefefefefefefefefe";
+        string memory addressString = vm.replace(vm.toString(tokenAddress), "0x", "");
+        string memory proxyBytecode = vm.replace(_HIP719TemplateBytecode, placeholder, addressString);
+        vm.etch(tokenAddress, vm.parseBytes(proxyBytecode));
+    }
+
     /**
-     * @dev Reading Smart Contract's data into it's storage directly from the MirrorNode.
-     * @dev Both `initialized` and `_mirrorNode` are stored in the same slot (with different offsets).
-     * Given how `initialized` is written to (see at the end of the method), it would seem that the
-     * instance variable `_mirrorNode` is overwritten.
-     * However, this is not the case because the slot space for each access is different:
-     * - `_mirrorNode` is accessed through the `0x167` address.
-     * - `initialized` is accessed through the address of the token.
+     * @dev Fetches Smart Contract's token data from the MirrorNode and writes it into its storage.
      */
     function _initTokenData() internal override {
-        bytes32 slot;
-        assembly { slot := initialized.slot }
-        if (vm.load(address(this), slot) == bytes32(uint256(1))) {
-            // Already initialized
+        if (vm.load(address(this), _initSlot) == bytes32(uint256(1))) {
             return;
         }
 
+        bytes32 slot;
         string memory json = mirrorNode().fetchTokenData(address(this));
         if (vm.keyExistsJson(json, "._status")) {
             // Token not found
@@ -74,20 +109,10 @@ contract HtsSystemContractJson is HtsSystemContract {
         assembly { slot := tokenType.slot }
         storeString(address(this), uint256(slot), vm.parseJsonString(json, ".type"));
 
-        assembly { slot := name.slot }
-        storeString(address(this), uint256(slot), vm.parseJsonString(json, ".name"));
-
-        assembly { slot := symbol.slot }
-        storeString(address(this), uint256(slot), vm.parseJsonString(json, ".symbol"));
-
         assembly { slot := decimals.slot }
         storeUint(address(this), uint256(slot), vm.parseJsonUint(json, ".decimals"));
 
-        assembly { slot := totalSupply.slot }
-        storeUint(address(this), uint256(slot), vm.parseJsonUint(json, ".total_supply"));
-
-        assembly { slot := initialized.slot }
-        storeBool(address(this), uint256(slot), true);
+        storeBool(address(this), uint256(_initSlot), true);
 
         _initTokenInfo(json);
     }
@@ -404,7 +429,7 @@ contract HtsSystemContractJson is HtsSystemContract {
 
     function _balanceOfSlot(address account) internal override returns (bytes32) {
         bytes32 slot = super._balanceOfSlot(account);
-        if (vm.load(_scratchAddr(), slot) == bytes32(0)) {
+        if (_shouldFetch(slot)) {
             uint256 amount = mirrorNode().getBalance(address(this), account);
             _setValue(slot, bytes32(amount));
         }
@@ -413,7 +438,7 @@ contract HtsSystemContractJson is HtsSystemContract {
 
     function _allowanceSlot(address owner, address spender) internal override returns (bytes32) {
         bytes32 slot = super._allowanceSlot(owner, spender);
-        if (vm.load(_scratchAddr(), slot) == bytes32(0)) {
+        if (_shouldFetch(slot)) {
             uint256 amount = mirrorNode().getAllowance(address(this), owner, spender);
             _setValue(slot, bytes32(amount));
         }
@@ -422,7 +447,7 @@ contract HtsSystemContractJson is HtsSystemContract {
 
     function _isAssociatedSlot(address account) internal override returns (bytes32) {
         bytes32 slot = super._isAssociatedSlot(account);
-        if (vm.load(_scratchAddr(), slot) == bytes32(0)) {
+        if (_shouldFetch(slot)) {
             bool associated = mirrorNode().isAssociated(address(this), account);
             _setValue(slot, bytes32(uint256(associated ? 1 : 0)));
         }
@@ -431,7 +456,7 @@ contract HtsSystemContractJson is HtsSystemContract {
 
     function _tokenUriSlot(uint32 serialId) internal override virtual returns (bytes32) {
         bytes32 slot = super._tokenUriSlot(serialId);
-        if (vm.load(_scratchAddr(), slot) == bytes32(0)) {
+        if (_shouldFetch(slot)) {
             string memory metadata = mirrorNode().getNftMetadata(address(this), serialId);
             string memory uri = string(decode(metadata));
             storeString(address(this), uint256(slot), uri);
@@ -441,7 +466,7 @@ contract HtsSystemContractJson is HtsSystemContract {
 
     function _ownerOfSlot(uint32 serialId) internal override virtual returns (bytes32) {
         bytes32 slot = super._ownerOfSlot(serialId);
-        if (vm.load(_scratchAddr(), slot) == bytes32(0)) {
+        if (_shouldFetch(slot)) {
             address owner = mirrorNode().getNftOwner(address(this), serialId);
             _setValue(slot, bytes32(uint256(uint160(owner))));
         }
@@ -450,7 +475,7 @@ contract HtsSystemContractJson is HtsSystemContract {
 
     function _getApprovedSlot(uint32 serialId) internal override virtual returns (bytes32) {
         bytes32 slot = super._getApprovedSlot(serialId);
-        if (vm.load(_scratchAddr(), slot) == bytes32(0)) {
+        if (_shouldFetch(slot)) {
             address approved = mirrorNode().getNftSpender(address(this), serialId);
             _setValue(slot, bytes32(uint256(uint160(approved))));
         }
@@ -459,11 +484,16 @@ contract HtsSystemContractJson is HtsSystemContract {
 
     function _isApprovedForAllSlot(address owner, address operator) internal override virtual returns (bytes32) {
         bytes32 slot = super._isApprovedForAllSlot(owner, operator);
-        if (vm.load(_scratchAddr(), slot) == bytes32(0)) {
+        if (_shouldFetch(slot)) {
             bool approved = mirrorNode().isApprovedForAll(address(this), owner, operator);
             _setValue(slot, bytes32(uint256(approved ? 1 : 0)));
         }
         return slot;
+    }
+
+    function _shouldFetch(bytes32 slot) private view returns (bool) {
+        return vm.load(address(this), _isLocalTokenSlot) == bytes32(0)
+            && vm.load(_scratchAddr(), slot) == bytes32(0);
     }
 
     function _setValue(bytes32 slot, bytes32 value) private {
