@@ -247,7 +247,7 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
         persistentStorage.store(tokenId, blockNumber, nrequestedSlot, atob(metadata));
     }
 
-    // Encoded `address(tokenId).isKyc(token,address)` slot
+    // Encoded `address(tokenId).isKyc(tokenId, accountId)` slot
     // slot(256) = `isKyc`selector(32) + padding(192) + accountId(32)
     if (
         nrequestedSlot >> 32n ===
@@ -263,7 +263,7 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
                 `Token ${tokenId} kyc is granted for ${accountId}`
             );
         }
-        return ret(ZERO_HEX_32_BYTE, `Token ${tokenId} not associated with ${accountId}`);
+        return ret(ZERO_HEX_32_BYTE, `Token ${tokenId} kyc not granted for an ${accountId}`);
     }
 
     let unresolvedValues = persistentStorage.load(tokenId, blockNumber, nrequestedSlot);
