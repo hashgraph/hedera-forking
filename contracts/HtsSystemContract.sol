@@ -420,9 +420,9 @@ contract HtsSystemContract is IHederaTokenService {
         );
         nonFungibleTokenInfo.tokenInfo = tokenInfo;
         nonFungibleTokenInfo.serialNumber = serialNumber;
-        uint256 serial = uint256(uint64(serialNumber));
-        nonFungibleTokenInfo.spenderId = IERC721(token).getApproved(serial);
-        nonFungibleTokenInfo.ownerId = IERC721(token).ownerOf(serial);
+        nonFungibleTokenInfo.spenderId = IERC721(token).getApproved(uint256(uint64(serialNumber)));
+        nonFungibleTokenInfo.ownerId = IERC721(token).ownerOf(uint256(uint64(serialNumber)));
+
         return (responseCode, nonFungibleTokenInfo);
     }
 
