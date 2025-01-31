@@ -43,6 +43,51 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         assembly { accountId := sload(slot) }
     }
 
+    /**
+     * @dev Performs a cryptocurrency transfer. It takes two input parameters.
+     * - transferList - This should be a list of HBAR transactions (send them in the transferList.transfers property)
+     *                  that need to be performed when executing this method.
+     *                  Remember that this method is non-payable, so you can't use msg.value to send this amount.
+     *                  On the Hedera mainnet, HTS is solely responsible for performing this operation.
+     *                  It is a service outside of the EVM itself, which makes this possible. However, it is much more
+     *                  difficult to perform on a standalone fork created by a third party, such as Hardhat.
+     *                  Forge supports cheat codes, so in the version of the Hedera-forking library dedicated to Foundry,
+     *                  HBAR transactions are supported.
+     *                  It will NOT be supported on the Hardhat plugin, though. Make sure not to use it.
+     * - tokenTransfers - Each object in tokenTransfers shares the token address field, but each of them additionally
+     *                    supports separate lists of fungible and non-fungible tokens, respectively. NFT transaction
+     *                    interfaces are similar to IERC721, so to understand how to prepare a request, refer to the
+     *                    IERC721 transfer methods description.
+     *                    The isApproval flag indicates that the sender of the transaction (msg.sender) is attempting
+     *                    to transfer someone else's token (ownerId != msg.sender).
+     *                    Make sure to set the proper value of this flag when using the crypto transfer method.
+     *                    It is not enough to simply specify whose token you want to send and to whom.
+     *                    You must explicitly indicate that you are aware you are not the owner of the token by setting
+     *                    isApproval = true (or if you are sending your own token, set isApproval = false).
+     *                    Remember that this method, unlike IERC721, will not revert if you attempt an operation
+     *                    you are not authorized to perform. Instead, it will return a non-success response code,
+     *                    but the transaction will still be mined, and the associated fees will be collected.
+     *
+     * The interface for fungible token and HBAR transfers is completely different from the default ERC20 interface.
+     * In ERC20, you specify who sends a given amount to whom. However, in Hedera's crypto transfer, it is a bit
+     * more complex. You must explicitly define the expected balance changes for each account in the array.
+     *
+     * For example, to transfer an amount of 5 from account A to account B, you need to send two transactions in
+     * the array: the first transaction should record a balance change of -5 on account A, and the second transaction
+     * should record a balance change of +5 on account B.
+     *
+     * When creating the "from" transaction (where a negative amount indicates the spender), if you intend to spend
+     * an allowance granted by another account (accountID !== msg.sender), you must explicitly indicate this by
+     * setting the isApproval flag to true. If the spender account (the account in the array with a negative amount)
+     * is the same as msg.sender, keep the isApproval flag set to false.
+     *
+     * By implementing the method in this way, it is possible to send a specified amount of HBAR or tokens from one
+     * account to multiple recipients within a single transaction. You can also facilitate multiple senders transferring
+     * to a single recipient, or multiple senders to multiple recipients.
+     * Just remember that the total sum of all transactions (which actually represent balance changes rather than
+     * transactions per se—think of them that way) must equal zero. If account B is to receive an amount of 1,
+     * you must ensure that the sum of all transfers with negative amounts totals -1.
+     */
     function cryptoTransfer(TransferList memory transferList, TokenTransferList[] memory tokenTransfers)
         htsCall external returns (int64) {
         int64 responseCode = _checkCryptoFungibleTransfers(address(0), transferList.transfers);
@@ -932,11 +977,21 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         int64 total = 0;
         AccountAmount[] memory spends = new AccountAmount[](transfers.length);
         uint256 spendsCount = 0;
+
+        // This loop checks whether allowances and balances are sufficient to execute all requested transactions.
+        // Additionally, it collects data on the amount in each transfer to ensure that the total sum balances out.
         for (uint256 i = 0; i < transfers.length; i++) {
             total += transfers[i].amount;
+
+            // What matters most is the spender's ability to send the amount to the recipient,
+            // not the other way around, so we can ignore the recipients for now.
             if (transfers[i].amount > 0) {
                 continue;
             }
+
+            // We calculate the total expenditures for each account up to this point to ensure that all account
+            // balances are sufficient to proceed with the transaction.
+            // Allowances are also checked.
             uint256 accountSpendIndex;
             for (accountSpendIndex = 0; accountSpendIndex <= spendsCount; accountSpendIndex++) {
                 if (accountSpendIndex == spendsCount) {
@@ -966,6 +1021,9 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
             }
         }
 
+        // The same account cannot be used twice in the same context.
+        // For example, you cannot create two transactions from the same account with different amounts
+        // for a single token within one transaction.
         for (uint256 first = 0; first < transfers.length; first++) {
             for (uint256 second = 0; second < transfers.length; second++) {
                 if (first == second) continue;
@@ -976,6 +1034,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
             }
         }
 
+        // All transfer amounts must sum to zero. Crypto transfer cannot be used to mint or burn tokens.
         return total == 0 ? HederaResponseCodes.SUCCESS : HederaResponseCodes.INVALID_ACCOUNT_AMOUNTS;
     }
 
