@@ -21,7 +21,7 @@ const { inspect } = require('util');
 
 const { strict: assert } = require('assert');
 const { expect } = require('chai');
-const { Contract, JsonRpcProvider, Wallet /*, getAddress*/ } = require('ethers');
+const { Contract, JsonRpcProvider, Wallet } = require('ethers');
 const c = require('ansi-colors');
 const {
     Hbar,
