@@ -1212,7 +1212,11 @@ contract HtsSystemContract is IHederaTokenService {
     function _getKey(uint keyType, TokenInfo memory tokenInfo) private pure returns (bool, KeyValue memory) {
         for (uint256 i = 0; i < tokenInfo.token.tokenKeys.length; i++) {
             if (tokenInfo.token.tokenKeys[i].keyType == keyType) {
-                return (true, tokenInfo.token.tokenKeys[i].key);
+                bool notEmpty = tokenInfo.token.tokenKeys[i].key.contractId != address(0) ||
+                    tokenInfo.token.tokenKeys[i].key.delegatableContractId != address(0) ||
+                    keccak256(tokenInfo.token.tokenKeys[i].key.ECDSA_secp256k1) != keccak256("") ||
+                    keccak256(tokenInfo.token.tokenKeys[i].key.ed25519) != keccak256("");
+                return (notEmpty, tokenInfo.token.tokenKeys[i].key);
             }
         }
         KeyValue memory value;

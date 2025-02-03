@@ -240,17 +240,15 @@ function slotMapOf(token) {
         ['supply_key', 0x10],
         ['fee_schedule_key', 0x20],
         ['pause_key', 0x40],
-    ])
-        .map(([prop, key_type]) => {
-            const key = token[prop];
-            if (key === null) return { key_type, ed25519: '', _e_c_d_s_a_secp256k1: '' };
-            assert(typeof key === 'object');
-            assert('_type' in key && 'key' in key);
-            if (key._type === 'ED25519')
-                return { key_type, ed25519: key.key, _e_c_d_s_a_secp256k1: '' };
-            return { key_type, ed25519: '', _e_c_d_s_a_secp256k1: key.key };
-        })
-        .filter(key => key.ed25519 !== '' || key._e_c_d_s_a_secp256k1 !== '');
+    ]).map(([prop, key_type]) => {
+        const key = token[prop];
+        if (key === null) return { key_type, ed25519: '', _e_c_d_s_a_secp256k1: '' };
+        assert(typeof key === 'object');
+        assert('_type' in key && 'key' in key);
+        if (key._type === 'ED25519')
+            return { key_type, ed25519: key.key, _e_c_d_s_a_secp256k1: '' };
+        return { key_type, ed25519: '', _e_c_d_s_a_secp256k1: key.key };
+    });
     const customFees = /**@type {Record<string, Record<string, unknown>[]>}*/ (
         token['custom_fees']
     );
