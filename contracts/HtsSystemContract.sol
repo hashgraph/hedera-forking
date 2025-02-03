@@ -15,7 +15,7 @@ contract HtsSystemContract is IHederaTokenService {
     /**
      * The slot's value contains the next token ID to use when a token is being created.
      *
-     * This slot is used in the `0x167` address. 
+     * This slot is used in the `0x167` address.
      * It cannot be used as a state variable directly.
      * This is because JS' `getHtsStorageAt` implementation assumes all state variables
      * declared here are part of the token address space.
@@ -28,7 +28,7 @@ contract HtsSystemContract is IHederaTokenService {
     // See `__redirectForToken` for more details.
     //
     // Moreover, these variables must match the slots defined in `SetTokenInfo`.
-    string internal tokenType; 
+    string internal tokenType;
     uint8 internal decimals;
     TokenInfo internal _tokenInfo;
 
@@ -37,6 +37,13 @@ contract HtsSystemContract is IHederaTokenService {
      */
     modifier htsCall() {
         require(address(this) == HTS_ADDRESS, "htsCall: delegated call");
+        _;
+    }
+
+    modifier kyc() {
+        require(msg.data.length >= 36, "kyc: invalid calldata length");
+        address token = address(bytes20(msg.data[16:36]));
+        require(isValidKyc(token), "kyc: no kyc granted");
         _;
     }
 
@@ -55,15 +62,135 @@ contract HtsSystemContract is IHederaTokenService {
         assembly { accountId := sload(slot) }
     }
 
-    function mintToken(address token, int64 amount, bytes[] memory) htsCall external returns (
+    /**
+     * @dev Performs a cryptocurrency transfer. It takes two input parameters.
+     * - transferList - This should be a list of HBAR transactions (send them in the transferList.transfers property)
+     *                  that need to be performed when executing this method.
+     *                  Remember that this method is non-payable, so you can't use msg.value to send this amount.
+     *                  On the Hedera mainnet, HTS is solely responsible for performing this operation.
+     *                  It is a service outside of the EVM itself, which makes this possible. However, it is much more
+     *                  difficult to perform on a standalone fork created by a third party, such as Hardhat.
+     *                  Forge supports cheat codes, so in the version of the Hedera-forking library dedicated to Foundry,
+     *                  HBAR transactions are supported.
+     *                  It will NOT be supported on the Hardhat plugin, though. Make sure not to use it.
+     * - tokenTransfers - Each object in tokenTransfers shares the token address field, but each of them additionally
+     *                    supports separate lists of fungible and non-fungible tokens, respectively. NFT transaction
+     *                    interfaces are similar to IERC721, so to understand how to prepare a request, refer to the
+     *                    IERC721 transfer methods description.
+     *                    The isApproval flag indicates that the sender of the transaction (msg.sender) is attempting
+     *                    to transfer someone else's token (ownerId != msg.sender).
+     *                    Make sure to set the proper value of this flag when using the crypto transfer method.
+     *                    It is not enough to simply specify whose token you want to send and to whom.
+     *                    You must explicitly indicate that you are aware you are not the owner of the token by setting
+     *                    isApproval = true (or if you are sending your own token, set isApproval = false).
+     *                    Remember that this method, unlike IERC721, will not revert if you attempt an operation
+     *                    you are not authorized to perform. Instead, it will return a non-success response code,
+     *                    but the transaction will still be mined, and the associated fees will be collected.
+     *
+     * The interface for fungible token and HBAR transfers is completely different from the default ERC20 interface.
+     * In ERC20, you specify who sends a given amount to whom. However, in Hedera's crypto transfer, it is a bit
+     * more complex. You must explicitly define the expected balance changes for each account in the array.
+     *
+     * For example, to transfer an amount of 5 from account A to account B, you need to send two transactions in
+     * the array: the first transaction should record a balance change of -5 on account A, and the second transaction
+     * should record a balance change of +5 on account B.
+     *
+     * When creating the "from" transaction (where a negative amount indicates the spender), if you intend to spend
+     * an allowance granted by another account (accountID !== msg.sender), you must explicitly indicate this by
+     * setting the isApproval flag to true. If the spender account (the account in the array with a negative amount)
+     * is the same as msg.sender, keep the isApproval flag set to false.
+     *
+     * By implementing the method in this way, it is possible to send a specified amount of HBAR or tokens from one
+     * account to multiple recipients within a single transaction. You can also facilitate multiple senders transferring
+     * to a single recipient, or multiple senders to multiple recipients.
+     * Just remember that the total sum of all transactions (which actually represent balance changes rather than
+     * transactions per se—think of them that way) must equal zero. If account B is to receive an amount of 1,
+     * you must ensure that the sum of all transfers with negative amounts totals -1.
+     */
+    function cryptoTransfer(TransferList memory transferList, TokenTransferList[] memory tokenTransfers)
+        htsCall external returns (int64) {
+        int64 responseCode = _checkCryptoFungibleTransfers(address(0), transferList.transfers);
+        if (responseCode != HederaResponseCodes.SUCCESS) return responseCode;
+
+        for (uint256 tokenIndex = 0; tokenIndex < tokenTransfers.length; tokenIndex++) {
+            require(tokenTransfers[tokenIndex].token != address(0), "cryptoTransfer: invalid token");
+            require(isValidKyc(tokenTransfers[tokenIndex].token), "cryptoTransfer: no kyc granted");
+            // Processing fungible token transfers
+            responseCode = _checkCryptoFungibleTransfers(tokenTransfers[tokenIndex].token, tokenTransfers[tokenIndex].transfers);
+            if (responseCode != HederaResponseCodes.SUCCESS) return responseCode;
+            AccountAmount[] memory transfers = tokenTransfers[tokenIndex].transfers;
+            for (uint256 from = 0; from < transfers.length; from++) {
+                if (transfers[from].amount >= 0) continue;
+                for (uint256 to = 0; to < transfers.length; to++) {
+                    if (transfers[to].amount <= 0) continue;
+                    int64 transferAmount = transfers[to].amount < -transfers[from].amount
+                        ? transfers[to].amount : -transfers[from].amount;
+                    transferToken(
+                        tokenTransfers[tokenIndex].token,
+                        transfers[from].accountID,
+                        transfers[to].accountID,
+                        transferAmount
+                    );
+                    transfers[from].amount += transferAmount;
+                    transfers[to].amount -= transferAmount;
+                    if (transfers[from].amount == 0) break;
+                }
+            }
+
+            // Processing non-fungible token transfers
+            // The IERC721 interface already handles all crucial validations and operations,
+            // but HTS interface need to return correct response code instead of reverting the whole operations.
+            for (uint256 nftIndex = 0; nftIndex < tokenTransfers[tokenIndex].nftTransfers.length; nftIndex++) {
+                NftTransfer memory transfer = tokenTransfers[tokenIndex].nftTransfers[nftIndex];
+
+                // Check if NFT transfer is feasible.
+                if (transfer.senderAccountID != msg.sender) {
+                    if (!transfer.isApproval) return HederaResponseCodes.SENDER_DOES_NOT_OWN_NFT_SERIAL_NO;
+                    address token = tokenTransfers[tokenIndex].token;
+                    bool approvedForAll = IERC721(token).isApprovedForAll(transfer.senderAccountID, msg.sender);
+                    bool approved = IERC721(token).getApproved(uint256(uint64(transfer.serialNumber))) == msg.sender;
+                    if (!approvedForAll && !approved) return HederaResponseCodes.SENDER_DOES_NOT_OWN_NFT_SERIAL_NO;
+                }
+                transferNFT(
+                    tokenTransfers[tokenIndex].token,
+                    transfer.senderAccountID,
+                    transfer.receiverAccountID,
+                    transfer.serialNumber
+                );
+            }
+        }
+
+        // Processing HBAR transfers
+        // To ensure stability, this operation is performed last since the Foundry library implementation
+        // uses forge cheat codes and FT or NFT transfers may potentially trigger reverts.
+        for (uint256 i = 0; i < transferList.transfers.length; i++) {
+            bool from = transferList.transfers[i].amount < 0;
+            address account = transferList.transfers[i].isApproval || !from
+                ? transferList.transfers[i].accountID
+                : msg.sender;
+            uint256 amount = uint256(uint64(
+                from ? -transferList.transfers[i].amount : transferList.transfers[i].amount
+            ));
+            int64 updatingResult = _updateHbarBalanceOnAccount(
+                account, from ? account.balance - amount : account.balance + amount
+            );
+            if (updatingResult != HederaResponseCodes.SUCCESS) revert("cryptoTransfer: hbar transfer is not supported without vm cheatcodes in forked network");
+            if (from && account != msg.sender) {
+                _approve(account, msg.sender, __allowance(account, msg.sender) - amount);
+            }
+        }
+
+        return HederaResponseCodes.SUCCESS;
+    }
+
+    function mintToken(address token, int64 amount, bytes[] memory) htsCall kyc external returns (
         int64 responseCode,
         int64 newTotalSupply,
         int64[] memory serialNumbers
     ) {
-        require(token != address(0), "mintToken: invalid token");
         require(amount > 0, "mintToken: invalid amount");
 
-        (int64 tokenInfoResponseCode, TokenInfo memory tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
+        (int64 tokenInfoResponseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
         require(tokenInfoResponseCode == HederaResponseCodes.SUCCESS, "mintToken: failed to get token info");
 
         address treasuryAccount = tokenInfo.token.treasury;
@@ -77,14 +204,13 @@ contract HtsSystemContract is IHederaTokenService {
         require(newTotalSupply >= 0, "mintToken: invalid total supply");
     }
 
-    function burnToken(address token, int64 amount, int64[] memory) htsCall external returns (
+    function burnToken(address token, int64 amount, int64[] memory) htsCall kyc external returns (
         int64 responseCode,
         int64 newTotalSupply
     ) {
-        require(token != address(0), "burnToken: invalid token");
         require(amount > 0, "burnToken: invalid amount");
 
-        (int64 tokenInfoResponseCode, TokenInfo memory tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
+        (int64 tokenInfoResponseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
         require(tokenInfoResponseCode == HederaResponseCodes.SUCCESS, "burnToken: failed to get token info");
 
         address treasuryAccount = tokenInfo.token.treasury;
@@ -104,6 +230,7 @@ contract HtsSystemContract is IHederaTokenService {
             "associateTokens: Must be signed by the provided Account's key or called from the accounts contract key"
         );
         for (uint256 i = 0; i < tokens.length; i++) {
+            require(isValidKyc(tokens[i]), "associateTokens: no kyc granted");
             require(tokens[i] != address(0), "associateTokens: invalid token");
             int64 associationResponseCode = IHederaTokenService(tokens[i]).associateToken(account, tokens[i]);
             require(
@@ -115,6 +242,7 @@ contract HtsSystemContract is IHederaTokenService {
     }
 
     function associateToken(address account, address token) htsCall external returns (int64 responseCode) {
+        require(isValidKyc(token), "associateToken: no kyc granted");
         address[] memory tokens = new address[](1);
         tokens[0] = token;
         return associateTokens(account, tokens);
@@ -124,6 +252,7 @@ contract HtsSystemContract is IHederaTokenService {
         require(tokens.length > 0, "dissociateTokens: missing tokens");
         require(account == msg.sender, "dissociateTokens: Must be signed by the provided Account's key or called from the accounts contract key");
         for (uint256 i = 0; i < tokens.length; i++) {
+            require(isValidKyc(tokens[i]), "dissociateTokens: no kyc granted");
             require(tokens[i] != address(0), "dissociateTokens: invalid token");
             int64 dissociationResponseCode = IHederaTokenService(tokens[i]).dissociateToken(account, tokens[i]);
             require(dissociationResponseCode == HederaResponseCodes.SUCCESS, "dissociateTokens: Failed to dissociate token");
@@ -132,6 +261,7 @@ contract HtsSystemContract is IHederaTokenService {
     }
 
     function dissociateToken(address account, address token) htsCall external returns (int64 responseCode) {
+        require(isValidKyc(token), "dissociateToken: no kyc granted");
         address[] memory tokens = new address[](1);
         tokens[0] = token;
         return dissociateTokens(account, tokens);
@@ -238,8 +368,7 @@ contract HtsSystemContract is IHederaTokenService {
         address token,
         address[] memory accountId,
         int64[] memory amount
-    ) htsCall external returns (int64 responseCode) {
-        require(token != address(0), "transferTokens: invalid token");
+    ) htsCall kyc external returns (int64 responseCode) {
         require(accountId.length > 0, "transferTokens: missing recipients");
         require(amount.length == accountId.length, "transferTokens: inconsistent input");
         for (uint256 i = 0; i < accountId.length; i++) {
@@ -254,7 +383,7 @@ contract HtsSystemContract is IHederaTokenService {
         address[] memory sender,
         address[] memory receiver,
         int64[] memory serialNumber
-    ) htsCall external returns (int64 responseCode) {
+    ) htsCall kyc external returns (int64 responseCode) {
         require(token != address(0), "transferNFTs: invalid token");
         require(sender.length > 0, "transferNFTs: missing recipients");
         require(receiver.length == sender.length, "transferNFTs: inconsistent input");
@@ -271,7 +400,7 @@ contract HtsSystemContract is IHederaTokenService {
         address recipient,
         int64 amount
     ) htsCall public returns (int64 responseCode) {
-        require(token != address(0), "transferToken: invalid token");
+        require(isValidKyc(token), "transferToken: no kyc granted");
         address from = sender;
         address to = recipient;
         if (amount < 0) {
@@ -293,13 +422,13 @@ contract HtsSystemContract is IHederaTokenService {
         address sender,
         address recipient,
         int64 serialNumber
-    ) htsCall public returns (int64 responseCode) {
+    ) htsCall kyc public returns (int64 responseCode) {
         uint256 serialId = uint256(uint64(serialNumber));
         HtsSystemContract(token).transferFromNFT(msg.sender, sender, recipient, serialId);
         responseCode = HederaResponseCodes.SUCCESS;
     }
 
-    function approve(address token, address spender, uint256 amount) htsCall public returns (int64 responseCode) {
+    function approve(address token, address spender, uint256 amount) htsCall kyc public returns (int64 responseCode) {
         HtsSystemContract(token).approve(msg.sender, spender, amount);
         responseCode = HederaResponseCodes.SUCCESS;
     }
@@ -309,11 +438,11 @@ contract HtsSystemContract is IHederaTokenService {
         address sender,
         address recipient,
         uint256 amount
-    ) htsCall external returns (int64) {
+    ) htsCall kyc external returns (int64) {
         return transferToken(token, sender, recipient, int64(int256(amount)));
     }
 
-    function allowance(address token, address owner, address spender) htsCall external view returns (int64, uint256) {
+    function allowance(address token, address owner, address spender) htsCall kyc external returns (int64, uint256) {
         return (HederaResponseCodes.SUCCESS, IERC20(token).allowance(owner, spender));
     }
 
@@ -321,7 +450,7 @@ contract HtsSystemContract is IHederaTokenService {
         address token,
         address approved,
         uint256 serialNumber
-    ) htsCall public returns (int64 responseCode) {
+    ) htsCall kyc public returns (int64 responseCode) {
         HtsSystemContract(token).approveNFT(msg.sender, approved, serialNumber);
         responseCode = HederaResponseCodes.SUCCESS;
     }
@@ -331,7 +460,7 @@ contract HtsSystemContract is IHederaTokenService {
         address from,
         address to,
         uint256 serialNumber
-    ) htsCall external returns (int64) {
+    ) htsCall kyc external returns (int64) {
         return transferNFT(token, from, to, int64(int256(serialNumber)));
     }
 
@@ -345,7 +474,7 @@ contract HtsSystemContract is IHederaTokenService {
         address token,
         address operator,
         bool approved
-    ) htsCall external returns (int64 responseCode) {
+    ) htsCall kyc external returns (int64 responseCode) {
         HtsSystemContract(token).setApprovalForAll(msg.sender, operator, approved);
         responseCode = HederaResponseCodes.SUCCESS;
     }
@@ -357,6 +486,17 @@ contract HtsSystemContract is IHederaTokenService {
     ) htsCall external view returns (int64, bool) {
         require(token != address(0), "isApprovedForAll: invalid token");
         return (HederaResponseCodes.SUCCESS, IERC721(token).isApprovedForAll(owner, operator));
+    }
+
+    function isKyc(address token, address account) htsCall public returns (int64, bool) {
+        return IHederaTokenService(token).isKyc(msg.sender, account);
+    }
+
+    function isValidKyc(address token) htsCall internal returns (bool) {
+        (bool hasKey, KeyValue memory keyValue) = _getKey(token, 0x2);
+        if (!hasKey || keyValue.contractId == msg.sender) return true;
+        (, bool hasKyc) =  isKyc(token, msg.sender);
+        return hasKyc;
     }
 
     function getTokenCustomFees(
@@ -427,6 +567,16 @@ contract HtsSystemContract is IHederaTokenService {
         return (responseCode, nonFungibleTokenInfo);
     }
 
+    function grantTokenKyc(address token, address account) htsCall kyc external returns (int64 responseCode) {
+        require(_hasKey(token, 0x2), "grantTokenKyc: Only allowed for kyc tokens");
+        responseCode = IHederaTokenService(token).grantTokenKyc(token, account);
+    }
+
+    function revokeTokenKyc(address token, address account) htsCall kyc external returns (int64 responseCode) {
+        require(_hasKey(token, 0x2), "revokeTokenKyc: Only allowed for kyc tokens");
+        responseCode = IHederaTokenService(token).revokeTokenKyc(token, account);
+    }
+
     function isToken(address token) htsCall external returns (int64, bool) {
         bytes memory payload = abi.encodeWithSignature("getTokenType(address)", token);
         (bool success, bytes memory returnData) = token.call(payload);
@@ -436,6 +586,16 @@ contract HtsSystemContract is IHederaTokenService {
     function getTokenType(address token) htsCall external returns (int64, int32) {
         require(token != address(0), "getTokenType: invalid address");
         return IHederaTokenService(token).getTokenType(token);
+    }
+
+    function _getKey(address token, uint keyType) htsCall private returns (bool, KeyValue memory) {
+        (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
+        require(responseCode == 22, "_getKey: failed to access token info data");
+        return _getKey(keyType, tokenInfo);
+    }
+
+    function _hasKey(address token, uint keyType) htsCall private returns (bool hasKey) {
+        (hasKey, ) = _getKey(token, keyType);
     }
 
     /**
@@ -585,6 +745,11 @@ contract HtsSystemContract is IHederaTokenService {
                 _approve(from, to, serialId, true);
                 return abi.encode(true);
             }
+            if (selector == this.isKyc.selector) {
+                require(msg.data.length >= 48, "associateToken: Not enough calldata");
+                address account = address(bytes20(msg.data[40:60]));
+                return abi.encode(HederaResponseCodes.SUCCESS, __hasKycGranted(account));
+            }
             if (selector == this.setApprovalForAll.selector) {
                 require(msg.data.length >= 124, "setApprovalForAll: Not enough calldata");
                 address from = address(bytes20(msg.data[40:60]));
@@ -592,6 +757,18 @@ contract HtsSystemContract is IHederaTokenService {
                 bool approved = uint256(bytes32(msg.data[92:124])) == 1;
                 _setApprovalForAll(from, to, approved);
                 return abi.encode(true);
+            }
+            if (selector == this.grantTokenKyc.selector) {
+                require(msg.data.length >= 48, "grantTokenKyc: Not enough calldata");
+                address account = address(bytes20(msg.data[40:60]));
+                _updateKyc(account, true);
+                return abi.encode(HederaResponseCodes.SUCCESS);
+            }
+            if (selector == this.revokeTokenKyc.selector) {
+                require(msg.data.length >= 48, "revokeTokenKyc: Not enough calldata");
+                address account = address(bytes20(msg.data[40:60]));
+                _updateKyc(account, false);
+                return abi.encode(HederaResponseCodes.SUCCESS);
             }
             if (selector == this._update.selector) {
                 require(msg.data.length >= 124, "update: Not enough calldata");
@@ -601,6 +778,10 @@ contract HtsSystemContract is IHederaTokenService {
                 _update(from, to, amount);
                 return abi.encode(true);
             }
+        }
+        if (tx.origin != address(0)) {
+            (bool hasKey, KeyValue memory kycKey) = _getKey(0x2, _tokenInfo);
+            require(!hasKey || kycKey.contractId == msg.sender || __hasKycGranted(msg.sender), "hts: no kyc granted");
         }
 
         // Redirect to the appropriate ERC20 method if the token type is fungible.
@@ -808,6 +989,13 @@ contract HtsSystemContract is IHederaTokenService {
         return bytes32(abi.encodePacked(selector, pad, ownerId, operatorId));
     }
 
+    function _hasKycGrantedSlot(address account) internal virtual returns (bytes32) {
+        bytes4 selector = IHederaTokenService.isKyc.selector;
+        uint192 pad = 0x0;
+        uint32 accountId = HtsSystemContract(HTS_ADDRESS).getAccountId(account);
+        return bytes32(abi.encodePacked(selector, pad, accountId));
+    }
+
     function __balanceOf(address account) private returns (uint256 amount) {
         bytes32 slot = _balanceOfSlot(account);
         assembly { amount := sload(slot) }
@@ -840,6 +1028,11 @@ contract HtsSystemContract is IHederaTokenService {
         assembly { approvedForAll := sload(slot) }
     }
 
+    function __hasKycGranted(address account) private returns (bool hasKycGranted) {
+        bytes32 slot = _hasKycGrantedSlot(account);
+        assembly { hasKycGranted := sload(slot) }
+    }
+
     function _transfer(address from, address to, uint256 amount) private {
         require(from != address(0), "hts: invalid sender");
         require(to != address(0), "hts: invalid receiver");
@@ -850,7 +1043,6 @@ contract HtsSystemContract is IHederaTokenService {
     function _transferNFT(address sender, address from, address to, uint256 serialId) private {
         require(from != address(0), "hts: invalid sender");
         require(to != address(0), "hts: invalid receiver");
-
         // Check if the sender is the owner of the token
         bytes32 slot = _ownerOfSlot(uint32(serialId));
         address owner;
@@ -873,6 +1065,11 @@ contract HtsSystemContract is IHederaTokenService {
         // Set the new owner
         assembly { sstore(slot, to) }
         emit IERC721Events.Transfer(from, to, serialId);
+    }
+
+    function _updateKyc(address account, bool hasKycGranted) public {
+        bytes32 kycSlot = _hasKycGrantedSlot(account);
+        assembly { sstore(kycSlot, hasKycGranted) }
     }
 
     function _update(address from, address to, uint256 amount) public {
@@ -939,5 +1136,90 @@ contract HtsSystemContract is IHederaTokenService {
         bytes32 slot = _isApprovedForAllSlot(sender, operator);
         assembly { sstore(slot, approved) }
         emit IERC721Events.ApprovalForAll(sender, operator, approved);
+    }
+
+    function _checkCryptoFungibleTransfers(address token, AccountAmount[] memory transfers) internal returns (int64) {
+        int64 total = 0;
+        AccountAmount[] memory spends = new AccountAmount[](transfers.length);
+        uint256 spendsCount = 0;
+
+        // This loop checks whether allowances and balances are sufficient to execute all requested transactions.
+        // Additionally, it collects data on the amount in each transfer to ensure that the total sum balances out.
+        for (uint256 i = 0; i < transfers.length; i++) {
+            total += transfers[i].amount;
+
+            // What matters most is the spender's ability to send the amount to the recipient,
+            // not the other way around, so we can ignore the recipients for now.
+            if (transfers[i].amount > 0) {
+                continue;
+            }
+
+            // We calculate the total expenditures for each account up to this point to ensure that all account
+            // balances are sufficient to proceed with the transaction.
+            // Allowances are also checked.
+            uint256 accountSpendIndex;
+            for (accountSpendIndex = 0; accountSpendIndex <= spendsCount; accountSpendIndex++) {
+                if (accountSpendIndex == spendsCount) {
+                    spends[spendsCount] = AccountAmount(transfers[i].accountID, -transfers[i].amount, false);
+                    spendsCount++;
+                    break;
+                }
+                if (spends[accountSpendIndex].accountID == transfers[i].accountID) {
+                    spends[accountSpendIndex].amount -= transfers[i].amount;
+                    break;
+                }
+            }
+            bool isApproval = transfers[i].accountID != msg.sender;
+            if (transfers[i].isApproval != isApproval) return HederaResponseCodes.SPENDER_DOES_NOT_HAVE_ALLOWANCE;
+            uint256 totalAccountSpend = uint256(uint64(spends[accountSpendIndex].amount));
+            if (isApproval) {
+                uint256 allowanceLimit = token == address(0) ?
+                    __allowance(transfers[i].accountID, msg.sender) :
+                    IERC20(token).allowance(transfers[i].accountID, msg.sender);
+                if (allowanceLimit < totalAccountSpend) return HederaResponseCodes.MAX_ALLOWANCES_EXCEEDED;
+            }
+            if (token == address(0) && transfers[i].accountID.balance < totalAccountSpend) {
+                return HederaResponseCodes.INSUFFICIENT_ACCOUNT_BALANCE;
+            }
+            if (token != address(0) && IERC20(token).balanceOf(transfers[i].accountID) < totalAccountSpend) {
+                return HederaResponseCodes.INSUFFICIENT_TOKEN_BALANCE;
+            }
+        }
+
+        // The same account cannot be used twice in the same context.
+        // For example, you cannot create two transactions from the same account with different amounts
+        // for a single token within one transaction.
+        for (uint256 first = 0; first < transfers.length; first++) {
+            for (uint256 second = 0; second < transfers.length; second++) {
+                if (first == second) continue;
+                bool bothToOrFrom = (transfers[first].amount > 0) == (transfers[second].amount > 0);
+                if (transfers[first].accountID == transfers[second].accountID && bothToOrFrom) {
+                    return HederaResponseCodes.ACCOUNT_REPEATED_IN_ACCOUNT_AMOUNTS;
+                }
+            }
+        }
+
+        // All transfer amounts must sum to zero. Crypto transfer cannot be used to mint or burn tokens.
+        return total == 0 ? HederaResponseCodes.SUCCESS : HederaResponseCodes.INVALID_ACCOUNT_AMOUNTS;
+    }
+
+    function _updateHbarBalanceOnAccount(address account, uint256 newBalance) internal virtual returns (int64) {
+        if (newBalance == account.balance) return HederaResponseCodes.SUCCESS; // No change required anyway.
+
+        return HederaResponseCodes.NOT_SUPPORTED;
+    }
+
+    function _getKey(uint keyType, TokenInfo memory tokenInfo) private pure returns (bool, KeyValue memory) {
+        for (uint256 i = 0; i < tokenInfo.token.tokenKeys.length; i++) {
+            if (tokenInfo.token.tokenKeys[i].keyType == keyType) {
+                bool notEmpty = tokenInfo.token.tokenKeys[i].key.contractId != address(0) ||
+                    tokenInfo.token.tokenKeys[i].key.delegatableContractId != address(0) ||
+                    keccak256(tokenInfo.token.tokenKeys[i].key.ECDSA_secp256k1) != keccak256("") ||
+                    keccak256(tokenInfo.token.tokenKeys[i].key.ed25519) != keccak256("");
+                return (notEmpty, tokenInfo.token.tokenKeys[i].key);
+            }
+        }
+        KeyValue memory value;
+        return (false, value);
     }
 }

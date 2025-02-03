@@ -246,6 +246,24 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
             );
         persistentStorage.store(tokenId, blockNumber, nrequestedSlot, atob(metadata));
     }
+
+    // Encoded `address(tokenId).isKyc(tokenId, accountId)` slot
+    // slot(256) = `isKyc`selector(32) + padding(192) + accountId(32)
+    if (
+        nrequestedSlot >> 32n ===
+        0xf2c31ff4_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000n
+    ) {
+        const accountId = `0.0.${parseInt(requestedSlot.slice(-8), 16)}`;
+        const { tokens } = (await mirrorNodeClient.getTokenRelationship(accountId, tokenId)) ?? {
+            tokens: [],
+        };
+        const kycGranted = tokens.length > 0 && tokens[0].kyc_status === 'GRANTED';
+        return ret(
+            `0x${toIntHex256(kycGranted ? 1 : 0)}`,
+            `Token ${tokenId} kyc for ${accountId} is ${kycGranted ? 'granted' : 'not granted'}`
+        );
+    }
+
     let unresolvedValues = persistentStorage.load(tokenId, blockNumber, nrequestedSlot);
     if (unresolvedValues === undefined) {
         const token = await mirrorNodeClient.getTokenById(tokenId, blockNumber);
