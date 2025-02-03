@@ -251,19 +251,17 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
     // slot(256) = `isKyc`selector(32) + padding(192) + accountId(32)
     if (
         nrequestedSlot >> 32n ===
-        0xa32d3b08_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000n
+        0xf2c31ff4_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000n
     ) {
         const accountId = `0.0.${parseInt(requestedSlot.slice(-8), 16)}`;
         const { tokens } = (await mirrorNodeClient.getTokenRelationship(accountId, tokenId)) ?? {
             tokens: [],
         };
-        if (tokens?.length > 0) {
-            return ret(
-                `0x${toIntHex256(tokens[0].kyc_status !== 'REVOKED' ? 1 : 0)}`,
-                `Token ${tokenId} kyc is granted for ${accountId}`
-            );
-        }
-        return ret(ZERO_HEX_32_BYTE, `Token ${tokenId} kyc not granted for an ${accountId}`);
+        const isRevoked = tokens.length > 0 && tokens[0].kyc_status === 'REVOKED';
+        return ret(
+            `0x${toIntHex256(!isRevoked ? 1 : 0)}`,
+            `Token ${tokenId} kyc is ${isRevoked ? 'not ' : ''}granted for ${accountId}`
+        );
     }
 
     let unresolvedValues = persistentStorage.load(tokenId, blockNumber, nrequestedSlot);
