@@ -440,7 +440,7 @@ contract HtsSystemContractJson is HtsSystemContract {
         bytes32 slot = super._hasKycGrantedSlot(account);
         if (_shouldFetch(slot)) {
             string memory kycStatus = mirrorNode().getKycStatus(address(this), account);
-            _setValue(slot, bytes32(keccak256(bytes(kycStatus)) == keccak256("REVOKED") ? uint256(0) : uint256(1)));
+            _setValue(slot, bytes32(keccak256(bytes(kycStatus)) == keccak256("GRANTED") ? uint256(1) : uint256(0)));
         }
         return slot;
     }

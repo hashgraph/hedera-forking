@@ -15,7 +15,7 @@ contract HtsSystemContract is IHederaTokenService {
     /**
      * The slot's value contains the next token ID to use when a token is being created.
      *
-     * This slot is used in the `0x167` address. 
+     * This slot is used in the `0x167` address.
      * It cannot be used as a state variable directly.
      * This is because JS' `getHtsStorageAt` implementation assumes all state variables
      * declared here are part of the token address space.
@@ -28,7 +28,7 @@ contract HtsSystemContract is IHederaTokenService {
     // See `__redirectForToken` for more details.
     //
     // Moreover, these variables must match the slots defined in `SetTokenInfo`.
-    string internal tokenType; 
+    string internal tokenType;
     uint8 internal decimals;
     TokenInfo internal _tokenInfo;
 
@@ -43,7 +43,7 @@ contract HtsSystemContract is IHederaTokenService {
     modifier kyc() {
         require(msg.data.length >= 36, "kyc: invalid calldata length");
         address token = address(bytes20(msg.data[16:36]));
-        require(isKyc(token), "kyc: no kyc granted");
+        require(isValidKyc(token), "kyc: no kyc granted");
         _;
     }
 
@@ -114,7 +114,7 @@ contract HtsSystemContract is IHederaTokenService {
 
         for (uint256 tokenIndex = 0; tokenIndex < tokenTransfers.length; tokenIndex++) {
             require(tokenTransfers[tokenIndex].token != address(0), "cryptoTransfer: invalid token");
-            require(isKyc(tokenTransfers[tokenIndex].token), "cryptoTransfer: no kyc granted");
+            require(isValidKyc(tokenTransfers[tokenIndex].token), "cryptoTransfer: no kyc granted");
             // Processing fungible token transfers
             responseCode = _checkCryptoFungibleTransfers(tokenTransfers[tokenIndex].token, tokenTransfers[tokenIndex].transfers);
             if (responseCode != HederaResponseCodes.SUCCESS) return responseCode;
@@ -230,7 +230,7 @@ contract HtsSystemContract is IHederaTokenService {
             "associateTokens: Must be signed by the provided Account's key or called from the accounts contract key"
         );
         for (uint256 i = 0; i < tokens.length; i++) {
-            require(isKyc(tokens[i]), "associateTokens: no kyc granted");
+            require(isValidKyc(tokens[i]), "associateTokens: no kyc granted");
             require(tokens[i] != address(0), "associateTokens: invalid token");
             int64 associationResponseCode = IHederaTokenService(tokens[i]).associateToken(account, tokens[i]);
             require(
@@ -242,7 +242,7 @@ contract HtsSystemContract is IHederaTokenService {
     }
 
     function associateToken(address account, address token) htsCall external returns (int64 responseCode) {
-        require(isKyc(token), "associateToken: no kyc granted");
+        require(isValidKyc(token), "associateToken: no kyc granted");
         address[] memory tokens = new address[](1);
         tokens[0] = token;
         return associateTokens(account, tokens);
@@ -252,7 +252,7 @@ contract HtsSystemContract is IHederaTokenService {
         require(tokens.length > 0, "dissociateTokens: missing tokens");
         require(account == msg.sender, "dissociateTokens: Must be signed by the provided Account's key or called from the accounts contract key");
         for (uint256 i = 0; i < tokens.length; i++) {
-            require(isKyc(tokens[i]), "dissociateTokens: no kyc granted");
+            require(isValidKyc(tokens[i]), "dissociateTokens: no kyc granted");
             require(tokens[i] != address(0), "dissociateTokens: invalid token");
             int64 dissociationResponseCode = IHederaTokenService(tokens[i]).dissociateToken(account, tokens[i]);
             require(dissociationResponseCode == HederaResponseCodes.SUCCESS, "dissociateTokens: Failed to dissociate token");
@@ -261,7 +261,7 @@ contract HtsSystemContract is IHederaTokenService {
     }
 
     function dissociateToken(address account, address token) htsCall external returns (int64 responseCode) {
-        require(isKyc(token), "dissociateToken: no kyc granted");
+        require(isValidKyc(token), "dissociateToken: no kyc granted");
         address[] memory tokens = new address[](1);
         tokens[0] = token;
         return dissociateTokens(account, tokens);
@@ -400,7 +400,7 @@ contract HtsSystemContract is IHederaTokenService {
         address recipient,
         int64 amount
     ) htsCall public returns (int64 responseCode) {
-        require(isKyc(token), "transferToken: no kyc granted");
+        require(isValidKyc(token), "transferToken: no kyc granted");
         address from = sender;
         address to = recipient;
         if (amount < 0) {
@@ -489,12 +489,12 @@ contract HtsSystemContract is IHederaTokenService {
     }
 
     function isKyc(address token, address account) htsCall public returns (int64, bool) {
-        if (!_hasKey(token, 0x2)) return (HederaResponseCodes.SUCCESS, true);
         return IHederaTokenService(token).isKyc(msg.sender, account);
     }
 
-    function isKyc(address token) htsCall internal returns (bool) {
-        if (!_hasKey(token, 0x2)) return true;
+    function isValidKyc(address token) htsCall internal returns (bool) {
+        (bool hasKey, KeyValue memory keyValue) = _getKey(token, 0x2);
+        if (!hasKey || keyValue.contractId == msg.sender) return true;
         (, bool hasKyc) =  isKyc(token, msg.sender);
         return hasKyc;
     }
@@ -586,6 +586,16 @@ contract HtsSystemContract is IHederaTokenService {
     function getTokenType(address token) htsCall external returns (int64, int32) {
         require(token != address(0), "getTokenType: invalid address");
         return IHederaTokenService(token).getTokenType(token);
+    }
+
+    function _getKey(address token, uint keyType) htsCall private returns (bool, KeyValue memory) {
+        (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
+        require(responseCode == 22, "_getKey: failed to access token info data");
+        return _getKey(keyType, tokenInfo);
+    }
+
+    function _hasKey(address token, uint keyType) htsCall private returns (bool hasKey) {
+        (hasKey, ) = _getKey(token, keyType);
     }
 
     /**
@@ -769,7 +779,10 @@ contract HtsSystemContract is IHederaTokenService {
                 return abi.encode(true);
             }
         }
-        require(tx.origin == address(0) || !_hasKey(0x2) || __hasKycGranted(msg.sender), "hts: no kyc granted");
+        if (tx.origin != address(0)) {
+            (bool hasKey, KeyValue memory kycKey) = _getKey(0x2, _tokenInfo);
+            require(!hasKey || kycKey.contractId == msg.sender || __hasKycGranted(msg.sender), "hts: no kyc granted");
+        }
 
         // Redirect to the appropriate ERC20 method if the token type is fungible.
         if (keccak256(bytes(tokenType)) == keccak256(bytes("FUNGIBLE_COMMON"))) {
@@ -1196,25 +1209,7 @@ contract HtsSystemContract is IHederaTokenService {
         return HederaResponseCodes.NOT_SUPPORTED;
     }
 
-    function _hasKey(address token, uint keyType) htsCall private returns (bool hasKey) {
-        (hasKey, ) = _getKey(token, keyType);
-    }
-
-    function _hasKey(uint keyType) private returns (bool hasKey) {
-        (hasKey, ) = _getKey(keyType);
-    }
-
-    function _getKey(address token, uint keyType) htsCall private returns (bool, KeyValue memory) {
-        (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
-        require(responseCode == 22, "_getKey: failed to access token info data");
-        return _getKey(keyType, tokenInfo);
-    }
-
-    function _getKey(uint keyType) private returns (bool, KeyValue memory) {
-        return _getKey(keyType, _tokenInfo);
-    }
-
-    function _getKey(uint keyType, TokenInfo memory tokenInfo) private returns (bool, KeyValue memory) {
+    function _getKey(uint keyType, TokenInfo memory tokenInfo) private pure returns (bool, KeyValue memory) {
         for (uint256 i = 0; i < tokenInfo.token.tokenKeys.length; i++) {
             if (tokenInfo.token.tokenKeys[i].keyType == keyType) {
                 return (true, tokenInfo.token.tokenKeys[i].key);

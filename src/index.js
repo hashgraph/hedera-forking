@@ -257,10 +257,10 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
         const { tokens } = (await mirrorNodeClient.getTokenRelationship(accountId, tokenId)) ?? {
             tokens: [],
         };
-        const isRevoked = tokens.length > 0 && tokens[0].kyc_status === 'REVOKED';
+        const kycGranted = tokens.length > 0 && tokens[0].kyc_status === 'GRANTED';
         return ret(
-            `0x${toIntHex256(!isRevoked ? 1 : 0)}`,
-            `Token ${tokenId} kyc is ${isRevoked ? 'not ' : ''}granted for ${accountId}`
+            `0x${toIntHex256(kycGranted ? 1 : 0)}`,
+            `Token ${tokenId} kyc for ${accountId} is ${kycGranted ? 'granted' : 'not granted'}`
         );
     }
 
