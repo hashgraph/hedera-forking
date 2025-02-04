@@ -494,9 +494,26 @@ contract HtsSystemContract is IHederaTokenService {
 
     function isValidKyc(address token) htsCall internal returns (bool) {
         (bool hasKey, KeyValue memory keyValue) = _getKey(token, 0x2);
-        if (!hasKey || keyValue.contractId == msg.sender) return true;
+        if (!hasKey || keyValue.contractId == msg.sender || msg.sender == address(0x167)) return true;
+        require(1 == 2, addressToString( msg.sender));
         (, bool hasKyc) =  isKyc(token, msg.sender);
         return hasKyc;
+    }
+
+    function addressToString(address _addr) public pure returns (string memory) {
+        bytes memory alphabet = "0123456789abcdef";
+        bytes20 data = bytes20(_addr);
+        bytes memory str = new bytes(42);
+
+        str[0] = "0";
+        str[1] = "x";
+
+        for (uint i = 0; i < 20; i++) {
+            str[2 + i * 2] = alphabet[uint8(data[i] >> 4)];
+            str[3 + i * 2] = alphabet[uint8(data[i] & 0x0f)];
+        }
+
+        return string(str);
     }
 
     function getTokenCustomFees(
@@ -781,7 +798,7 @@ contract HtsSystemContract is IHederaTokenService {
         }
         if (tx.origin != address(0)) {
             (bool hasKey, KeyValue memory kycKey) = _getKey(0x2, _tokenInfo);
-            require(!hasKey || kycKey.contractId == msg.sender || __hasKycGranted(msg.sender), "hts: no kyc granted");
+            require(!hasKey || kycKey.contractId == msg.sender || __hasKycGranted(msg.sender) || msg.sender == address(0x167),addressToString(kycKey.contractId));
         }
 
         // Redirect to the appropriate ERC20 method if the token type is fungible.
