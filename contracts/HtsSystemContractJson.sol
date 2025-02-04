@@ -245,7 +245,7 @@ contract HtsSystemContractJson is HtsSystemContract {
         tokenInfo.token = _getHederaToken(json);
         tokenInfo.fixedFees = _getFixedFees(json);
         tokenInfo.fractionalFees = _getFractionalFees(json);
-        tokenInfo.royaltyFees = _getRoyaltyFees(_sanitizeFeesStructure(json));
+        tokenInfo.royaltyFees = _getRoyaltyFees(_normalizeFallbackFee(json));
         tokenInfo.ledgerId = _getLedgerId();
         tokenInfo.defaultKycStatus = false; // not available in the fetched JSON from mirror node
         tokenInfo.totalSupply = int64(vm.parseInt(vm.parseJsonString(json, ".total_supply")));
@@ -256,7 +256,7 @@ contract HtsSystemContractJson is HtsSystemContract {
 
     // In order to properly decode the bytes returned by the parseJson into the Solidity Structure, the full,
     // correct structure has to be provided in the input json, with all of the corresponding fields.
-    function _sanitizeFeesStructure(string memory json) private pure returns (string memory) {
+    function _normalizeFallbackFee(string memory json) private pure returns (string memory) {
         return vm.replace(
             json,
             "\"fallback_fee\":null}",
