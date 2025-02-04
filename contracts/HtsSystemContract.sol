@@ -15,7 +15,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
     /**
      * The slot's value contains the next token ID to use when a token is being created.
      *
-     * This slot is used in the `0x167` address. 
+     * This slot is used in the `0x167` address.
      * It cannot be used as a state variable directly.
      * This is because JS' `getHtsStorageAt` implementation assumes all state variables
      * declared here are part of the token address space.
@@ -28,7 +28,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
     // See `__redirectForToken` for more details.
     //
     // Moreover, these variables must match the slots defined in `SetTokenInfo`.
-    string internal tokenType; 
+    string internal tokenType;
     uint8 internal decimals;
     TokenInfo internal _tokenInfo;
 
@@ -66,11 +66,10 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         (int64 tokenInfoResponseCode, TokenInfo memory tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
         require(tokenInfoResponseCode == HederaResponseCodes.SUCCESS, "mintToken: failed to get token info");
 
-        if (tokenInfo.token.treasury == address(0)) {
+        address treasuryAccount = tokenInfo.token.treasury;
+        if (treasuryAccount == address(0)) {
             return (HederaResponseCodes.TOKEN_HAS_NO_SUPPLY_KEY, tokenInfo.totalSupply, new int64[](0));
         }
-        address treasuryAccount = tokenInfo.token.treasury;
-        require(treasuryAccount != address(0), "mintToken: invalid account");
 
         HtsSystemContract(token)._update(address(0), treasuryAccount, uint256(uint64(amount)));
 
@@ -90,11 +89,10 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         (int64 tokenInfoResponseCode, TokenInfo memory tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
         require(tokenInfoResponseCode == HederaResponseCodes.SUCCESS, "burnToken: failed to get token info");
 
-        if (tokenInfo.token.treasury == address(0)) {
+        address treasuryAccount = tokenInfo.token.treasury;
+        if (treasuryAccount == address(0)) {
             return (HederaResponseCodes.TOKEN_HAS_NO_SUPPLY_KEY, tokenInfo.totalSupply);
         }
-        address treasuryAccount = tokenInfo.token.treasury;
-        require(treasuryAccount != address(0), "burnToken: invalid account");
 
         HtsSystemContract(token)._update(treasuryAccount, address(0), uint256(uint64(amount)));
 
