@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
-import {Test} from "forge-std/Test.sol";
+import {Test, console} from "forge-std/Test.sol";
 import {htsSetup} from "hedera-forking/contracts/htsSetup.sol";
 import {IERC721} from "hedera-forking/contracts/IERC721.sol";
 
@@ -29,5 +29,15 @@ contract NFTExampleTest is Test {
 
     function test_dealt_nft_assigned_to_local_account() view external {
         assertEq(IERC721(NFT_mainnet).ownerOf(3), user);
+    }
+
+    function test_using_console_log() view external {
+        string memory name = IERC721(NFT_mainnet).name();
+        string memory symbol = IERC721(NFT_mainnet).symbol();
+        string memory tokenURI = IERC721(NFT_mainnet).tokenURI(1);
+        assertEq(name, "THE BARKANEERS");
+        assertEq(symbol, "BARKANEERS");
+        assertEq(tokenURI, "ipfs://bafkreif4hpsgflzzvd7c4abx5u5xwrrjl7wkimbjtndvkxodklxdam5upm");
+        console.log("name: %s, symbol: %s, tokenURI: %s", name, symbol, tokenURI);
     }
 }

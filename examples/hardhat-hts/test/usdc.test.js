@@ -130,4 +130,19 @@ describe('USDC example', function () {
         expect(await usdc['allowance'](holder.address, callTokenAddress)).to.be.equal(1_000_000n);
         expect(await usdc['balanceOf'](receiver.address)).to.be.equal(2_000_000n);
     });
+
+    it('should invoke HTS directly to `getTokenInfo`', async function () {
+        const { receiver } = await loadFixture(id);
+        expect(await usdc['balanceOf'](receiver.address)).to.be.equal(0n);
+
+        const CallToken = await ethers.getContractFactory('CallToken');
+        const callToken = await CallToken.deploy();
+
+        const tx = await (await callToken['invokeHTSDirectly'](usdcAddress)).wait();
+        const logs = tx.logs.map(log => callToken.interface.parseLog(log));
+
+        expect(logs).to.have.length(1);
+        expect(logs[0].signature).to.be.equal('GetTokenInfo(string,string,string)');
+        expect(logs[0].args.toArray()).to.be.deep.equal(['USD Coin', 'USDC', 'USDC HBAR']);
+    });
 });

@@ -21,6 +21,8 @@ const { expect } = require('chai');
 require('@nomicfoundation/hardhat-chai-matchers');
 const hre = require('hardhat');
 
+const IERC20 = require('../../../out/IERC20.sol/IERC20.json');
+
 describe('fork-block-project', function () {
     /**
      * https://hashscan.io/mainnet/token/0.0.1456986
@@ -37,7 +39,7 @@ describe('fork-block-project', function () {
     it('should not fetch token data in a block where token is not yet created', async function () {
         const [account] = await hre.ethers.getSigners();
 
-        const ft = await hre.ethers.getContractAt('IERC20', whbarAddress);
+        const ft = await hre.ethers.getContractAt(IERC20.abi, whbarAddress);
         await expect(ft['name']()).to.be.rejectedWith('could not decode result data');
         await expect(ft['balanceOf'](account.address)).to.be.rejectedWith(
             'could not decode result data'
@@ -48,14 +50,14 @@ describe('fork-block-project', function () {
         // Token creation block
         resetTo(40804822 + 1);
 
-        const ft = await hre.ethers.getContractAt('IERC20', whbarAddress);
+        const ft = await hre.ethers.getContractAt(IERC20.abi, whbarAddress);
         expect(await ft['name']()).to.be.equal('Wrapped Hbar');
         expect(await ft['symbol']()).to.be.equal('WHBAR');
         expect(await ft['decimals']()).to.be.equal(8n);
     });
 
     it("should get account's correct balance at different forking blocks", async function () {
-        const usdc = await hre.ethers.getContractAt('IERC20', usdcAddress);
+        const usdc = await hre.ethers.getContractAt(IERC20.abi, usdcAddress);
         const holderAddress = '0x0000000000000000000000000000000000001887';
 
         expect(await usdc['balanceOf'](holderAddress)).to.be.equal(321444n);
