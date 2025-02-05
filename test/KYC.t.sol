@@ -12,45 +12,77 @@ import {IERC721} from "../contracts/IERC721.sol";
 
 contract KYCTest is Test, TestSetup {
 
-    address private _tokenAddress;
+    address private token;
     address private owner;
+    address private to;
+    uint256 private amount = 4_000000;
 
     function setUp() external {
         setUpMockStorageForNonFork();
 
         if (testMode == TestMode.JSON_RPC) vm.skip(true);
 
-        IHederaTokenService.HederaToken memory token;
-        token.name = "Token name";
-        token.symbol = "Token symbol";
-        token.treasury = makeAddr("Token treasury");
-        token.tokenKeys = new IHederaTokenService.TokenKey[](1);
+        IHederaTokenService.HederaToken memory hederaToken;
+        hederaToken.name = "Token name";
+        hederaToken.symbol = "Token symbol";
+        hederaToken.treasury = makeAddr("Token treasury");
+        hederaToken.tokenKeys = new IHederaTokenService.TokenKey[](1);
         owner = makeAddr("kyc");
 
-        token.tokenKeys[0].key.contractId = owner;
+        hederaToken.tokenKeys[0].key.contractId = owner;
 
-        token.tokenKeys[0].keyType = 0x2;
-        (, _tokenAddress) = IHederaTokenService(HTS_ADDRESS).createFungibleToken{value: 1000}(token, 1000000, 4);
-        vm.assertNotEq(_tokenAddress, address(0));
+        hederaToken.tokenKeys[0].keyType = 0x2;
+        (, token) = IHederaTokenService(HTS_ADDRESS).createFungibleToken{value: 1000}(hederaToken, 1000000, 4);
+        vm.assertNotEq(token, address(0));
+        to = makeAddr("bob");
     }
 
-    function test_HTS_transferTokens_success_with_kyc() public {
-        address[] memory to = new address[](1);
-        to[0] = makeAddr("bob");
-        uint256 amount = 4_000000;
-        int64[] memory amounts = new int64[](1);
-        amounts[0] = int64(int256(amount));
+    function test_HTS_transferToken_success_with_kyc() public {
+        deal(token, owner, amount);
+        uint256 balanceOfOwner = IERC20(token).balanceOf(owner);
+        vm.prank(owner);
+        IHederaTokenService(HTS_ADDRESS).transferToken(token, owner, to, int64(int256(amount)));
+        assertEq(IERC20(token).balanceOf(owner), balanceOfOwner - amount);
+        assertEq(IERC20(token).balanceOf(to), amount);
+    }
 
-        uint256 balanceOfOwner = IERC20(_tokenAddress).balanceOf(owner);
-        assertGt(balanceOfOwner, 0);
-        assertEq(IERC20(_tokenAddress).balanceOf(to[0]), 0);
+    function test_ERC20_transferToken_success_with_kyc() public {
+        deal(token, owner, amount);
+        uint256 balanceOfOwner = IERC20(token).balanceOf(owner);
+        vm.prank(owner);
+        IERC20(token).transfer(to, amount);
+        assertEq(IERC20(token).balanceOf(owner), balanceOfOwner - amount);
+        assertEq(IERC20(token).balanceOf(to), amount);
+    }
 
-        vm.startPrank(owner);
-        require (1 == 2, vm.toString( owner));
-        IHederaTokenService(HTS_ADDRESS).transferTokens(_tokenAddress, to, amounts);
+    function test_HTS_transferToken_failure_without_kyc() public {
+        address from = makeAddr("from");
+        deal(token, from, amount);
+        vm.prank(from);
+        vm.expectRevert("transferToken: no kyc granted");
+        IHederaTokenService(HTS_ADDRESS).transferToken(token, from, to, int64(int256(amount)));
+    }
 
-        assertEq(IERC20(_tokenAddress).balanceOf(owner), balanceOfOwner - amount);
-        assertEq(IERC20(_tokenAddress).balanceOf(to[0]), amount);
-        vm.stopPrank();
+    function test_ERC20_transferToken_failure_without_kyc() public {
+        address from = makeAddr("from");
+        deal(token, from, amount);
+        vm.prank(from);
+        vm.expectRevert("__redirectForToken: no kyc granted");
+        IERC20(token).transfer(to, amount);
+    }
+
+    function test_HTS_transferToken_success_with_kyc_granted() public {
+        address from = makeAddr("from");
+        deal(token, from, amount);
+        uint256 balanceOfFrom = IERC20(token).balanceOf(from);
+        vm.prank(owner);
+
+        IHederaTokenService(HTS_ADDRESS).grantTokenKyc(token, from);
+        vm.prank(from);
+        IHederaTokenService(HTS_ADDRESS).transferToken(token, from, to, int64(int256(amount)));
+
+
+        assertEq(IERC20(token).balanceOf(from), balanceOfFrom - amount);
+        assertEq(IERC20(token).balanceOf(to), amount);
     }
 }

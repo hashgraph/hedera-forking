@@ -493,27 +493,11 @@ contract HtsSystemContract is IHederaTokenService {
     }
 
     function isValidKyc(address token) htsCall internal returns (bool) {
+        if (msg.sender == HTS_ADDRESS) return true; // Usable only on the highest level call
         (bool hasKey, KeyValue memory keyValue) = _getKey(token, 0x2);
-        if (!hasKey || keyValue.contractId == msg.sender || msg.sender == address(0x167)) return true;
-        require(1 == 2, addressToString( msg.sender));
+        if (!hasKey || keyValue.contractId == msg.sender) return true;
         (, bool hasKyc) =  isKyc(token, msg.sender);
         return hasKyc;
-    }
-
-    function addressToString(address _addr) public pure returns (string memory) {
-        bytes memory alphabet = "0123456789abcdef";
-        bytes20 data = bytes20(_addr);
-        bytes memory str = new bytes(42);
-
-        str[0] = "0";
-        str[1] = "x";
-
-        for (uint i = 0; i < 20; i++) {
-            str[2 + i * 2] = alphabet[uint8(data[i] >> 4)];
-            str[3 + i * 2] = alphabet[uint8(data[i] & 0x0f)];
-        }
-
-        return string(str);
     }
 
     function getTokenCustomFees(
@@ -682,6 +666,23 @@ contract HtsSystemContract is IHederaTokenService {
         return __redirectForToken();
     }
 
+
+    function addressToString(address _addr) public pure returns (string memory) {
+        bytes memory alphabet = "0123456789abcdef";
+        bytes20 data = bytes20(_addr);
+        bytes memory str = new bytes(42);
+
+        str[0] = "0";
+        str[1] = "x";
+
+        for (uint i = 0; i < 20; i++) {
+            str[2 + i * 2] = alphabet[uint8(data[i] >> 4)];
+            str[3 + i * 2] = alphabet[uint8(data[i] & 0x0f)];
+        }
+
+        return string(str);
+    }
+
     /**
      * @dev Addresses are word right-padded starting from memory position `28`.
      */
@@ -776,14 +777,14 @@ contract HtsSystemContract is IHederaTokenService {
                 return abi.encode(true);
             }
             if (selector == this.grantTokenKyc.selector) {
-                require(msg.data.length >= 48, "grantTokenKyc: Not enough calldata");
-                address account = address(bytes20(msg.data[40:60]));
+                require(msg.data.length >= 92, "grantTokenKyc: Not enough calldata");
+                address account = address(bytes20(msg.data[72:92]));
                 _updateKyc(account, true);
                 return abi.encode(HederaResponseCodes.SUCCESS);
             }
             if (selector == this.revokeTokenKyc.selector) {
                 require(msg.data.length >= 48, "revokeTokenKyc: Not enough calldata");
-                address account = address(bytes20(msg.data[40:60]));
+                address account = address(bytes20(msg.data[72:92]));
                 _updateKyc(account, false);
                 return abi.encode(HederaResponseCodes.SUCCESS);
             }
@@ -796,9 +797,9 @@ contract HtsSystemContract is IHederaTokenService {
                 return abi.encode(true);
             }
         }
-        if (tx.origin != address(0)) {
+        if (_isKycProtected(selector)) {
             (bool hasKey, KeyValue memory kycKey) = _getKey(0x2, _tokenInfo);
-            require(!hasKey || kycKey.contractId == msg.sender || __hasKycGranted(msg.sender) || msg.sender == address(0x167),addressToString(kycKey.contractId));
+            require(!hasKey || kycKey.contractId == msg.sender || __hasKycGranted(msg.sender), "__redirectForToken: no kyc granted");
         }
 
         // Redirect to the appropriate ERC20 method if the token type is fungible.
@@ -812,6 +813,15 @@ contract HtsSystemContract is IHederaTokenService {
         }
 
         revert ("redirectForToken: token type not supported");
+    }
+
+    function _isKycProtected(bytes4 selector) private pure returns (bool)  {
+        return selector == IERC20.transfer.selector ||
+            selector == IERC20.transferFrom.selector ||
+            selector == IERC20.approve.selector ||
+            selector == IERC721.transferFrom.selector ||
+            selector == IERC721.approve.selector ||
+            selector == IERC721.setApprovalForAll.selector;
     }
 
     function _redirectForERC20(bytes4 selector) private returns (bytes memory) {
