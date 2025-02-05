@@ -43,7 +43,7 @@ contract USDCExampleTest is Test {
     }
 
     function test_HTS_getTokenInfo() view external {
-        (int64 responseCode, IHederaTokenService.TokenInfo memory tokenInfo) = IHederaTokenService(0x167).getTokenInfo(USDC_mainnet);
+        (int64 responseCode, IHederaTokenService.TokenInfo memory tokenInfo) = IHederaTokenService(address(0x167)).getTokenInfo(USDC_mainnet);
         assertEq(responseCode, HederaResponseCodes.SUCCESS);
         assertEq(tokenInfo.token.name, "USD Coin");
         assertEq(tokenInfo.token.symbol, "USDC");
