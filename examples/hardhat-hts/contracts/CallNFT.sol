@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
-import {IERC721} from "./IERC721.sol";
+import {IERC721} from "@hashgraph/system-contracts-forking/contracts/IERC721.sol";
 import {console} from "hardhat/console.sol";
 
 contract CallNFT {
