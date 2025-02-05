@@ -43,20 +43,9 @@ class MirrorNodeClient {
      * Creates a new instance of the `MirrorNodeClient` pointing to `mirrorNodeUrl`.
      *
      * @param {string} mirrorNodeUrl The base URL of the Hedera Mirror Node API.
-     * @param {string} ledgerId Ledger id.
      */
-    constructor(mirrorNodeUrl, ledgerId) {
+    constructor(mirrorNodeUrl) {
         this.mirrorNodeUrl = mirrorNodeUrl;
-        this.ledgerId = ledgerId;
-    }
-
-    /**
-     * Get ledger ID.
-     *
-     * @returns {string}
-     */
-    getLedgerId() {
-        return this.ledgerId;
     }
 
     /**

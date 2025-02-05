@@ -31,7 +31,7 @@ describe('::slotmap', function () {
         ['MFCT', 'USDC'].forEach(symbol => {
             describe(symbol, function () {
                 it(`should have valid slot fields`, async function () {
-                    const map = slotMapOf(require(`../test/data/${symbol}/getToken.json`), '0x00');
+                    const map = slotMapOf(require(`../test/data/${symbol}/getToken.json`));
 
                     [...map._map.entries()].forEach(([slot, values]) => {
                         expect(slot).to.be.not.undefined;

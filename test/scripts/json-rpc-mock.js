@@ -94,9 +94,6 @@ const mirrorNodeClient = {
     append(method, ...args) {
         this.requests.push(`${method}:${args.join(',')}`);
     },
-    getLedgerId() {
-        return '0x00';
-    },
     async getTokenById(tokenId) {
         this.append('getTokenById', tokenId);
         if (tokens[tokenId] === undefined) return null;
