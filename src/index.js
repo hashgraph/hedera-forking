@@ -266,7 +266,7 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
     if (unresolvedValues === undefined) {
         const token = await mirrorNodeClient.getTokenById(tokenId, blockNumber);
         if (token === null) return ret(ZERO_HEX_32_BYTE, `Token \`${tokenId}\` not found`);
-        unresolvedValues = slotMapOf(token, mirrorNodeClient.getLedgerId()).load(nrequestedSlot);
+        unresolvedValues = slotMapOf(token).load(nrequestedSlot);
 
         if (unresolvedValues === undefined)
             return ret(ZERO_HEX_32_BYTE, `Requested slot does not match any field slots`);

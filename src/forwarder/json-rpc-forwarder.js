@@ -33,7 +33,9 @@ const {
 } = require('..');
 
 /** @type {Partial<import('hardhat/types').HardhatNetworkForkingConfig>} */
-const { url: forkUrl, mirrorNodeUrl, chainId, workerPort, localAddresses = [] } = workerData;
+const { url: forkUrl, mirrorNodeUrl, workerPort, localAddresses = [] } = workerData;
+
+require('../slotmap').init(workerData.chainId);
 
 assert(mirrorNodeUrl !== undefined, 'json-rpc-forwarder: Missing Mirror Node URL');
 
@@ -44,15 +46,7 @@ debug(
     mirrorNodeUrl
 );
 
-const chainIdToLedgerIdMap = {
-    295: '0x00',
-    296: '0x01',
-    297: '0x02',
-    298: '0x03',
-};
-const ledgerId =
-    chainIdToLedgerIdMap[/**@type{keyof typeof chainIdToLedgerIdMap}*/ (chainId)] || '0x00';
-const mirrorNodeClient = new MirrorNodeClient(mirrorNodeUrl, ledgerId);
+const mirrorNodeClient = new MirrorNodeClient(mirrorNodeUrl);
 
 /**
  * Function signature for `eth_*` method handlers.

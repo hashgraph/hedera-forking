@@ -42,9 +42,6 @@ describe('::getHtsStorageAt', function () {
 
     /** @type {IMirrorNodeClient} */
     const mirrorNodeClientStub = {
-        getLedgerId() {
-            return '0x00'; // Keep it mocked with default value.
-        },
         async getTokenById(_tokenId) {
             throw Error('Not implemented');
         },
