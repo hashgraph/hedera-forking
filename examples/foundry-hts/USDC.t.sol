@@ -42,7 +42,7 @@ contract USDCExampleTest is Test {
         console.log("name: %s, symbol: %s, decimals: %d", name, symbol, decimals);
     }
 
-    function test_HTS_getTokenInfo() view external {
+    function test_HTS_getTokenInfo() external {
         (int64 responseCode, IHederaTokenService.TokenInfo memory tokenInfo) = IHederaTokenService(address(0x167)).getTokenInfo(USDC_mainnet);
         assertEq(responseCode, HederaResponseCodes.SUCCESS);
         assertEq(tokenInfo.token.name, "USD Coin");
