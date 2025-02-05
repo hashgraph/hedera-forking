@@ -493,6 +493,7 @@ contract HtsSystemContract is IHederaTokenService {
     }
 
     function isValidKyc(address token) htsCall internal returns (bool) {
+        if (msg.sender == HTS_ADDRESS) return true; // Usable only on the highest level call
         (bool hasKey, KeyValue memory keyValue) = _getKey(token, 0x2);
         if (!hasKey || keyValue.contractId == msg.sender) return true;
         (, bool hasKyc) =  isKyc(token, msg.sender);
@@ -759,14 +760,14 @@ contract HtsSystemContract is IHederaTokenService {
                 return abi.encode(true);
             }
             if (selector == this.grantTokenKyc.selector) {
-                require(msg.data.length >= 48, "grantTokenKyc: Not enough calldata");
-                address account = address(bytes20(msg.data[40:60]));
+                require(msg.data.length >= 92, "grantTokenKyc: Not enough calldata");
+                address account = address(bytes20(msg.data[72:92]));
                 _updateKyc(account, true);
                 return abi.encode(HederaResponseCodes.SUCCESS);
             }
             if (selector == this.revokeTokenKyc.selector) {
                 require(msg.data.length >= 48, "revokeTokenKyc: Not enough calldata");
-                address account = address(bytes20(msg.data[40:60]));
+                address account = address(bytes20(msg.data[72:92]));
                 _updateKyc(account, false);
                 return abi.encode(HederaResponseCodes.SUCCESS);
             }
@@ -779,9 +780,9 @@ contract HtsSystemContract is IHederaTokenService {
                 return abi.encode(true);
             }
         }
-        if (tx.origin != address(0)) {
+        if (_isKycProtected(selector)) {
             (bool hasKey, KeyValue memory kycKey) = _getKey(0x2, _tokenInfo);
-            require(!hasKey || kycKey.contractId == msg.sender || __hasKycGranted(msg.sender), "hts: no kyc granted");
+            require(!hasKey || kycKey.contractId == msg.sender || __hasKycGranted(msg.sender), "__redirectForToken: no kyc granted");
         }
 
         // Redirect to the appropriate ERC20 method if the token type is fungible.
@@ -795,6 +796,15 @@ contract HtsSystemContract is IHederaTokenService {
         }
 
         revert ("redirectForToken: token type not supported");
+    }
+
+    function _isKycProtected(bytes4 selector) private pure returns (bool)  {
+        return selector == IERC20.transfer.selector ||
+            selector == IERC20.transferFrom.selector ||
+            selector == IERC20.approve.selector ||
+            selector == IERC721.transferFrom.selector ||
+            selector == IERC721.approve.selector ||
+            selector == IERC721.setApprovalForAll.selector;
     }
 
     function _redirectForERC20(bytes4 selector) private returns (bytes memory) {
