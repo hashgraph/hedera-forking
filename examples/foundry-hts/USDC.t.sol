@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
-import {Test} from "forge-std/Test.sol";
+import {Test, console} from "forge-std/Test.sol";
 import {htsSetup} from "hedera-forking/contracts/htsSetup.sol";
 import {IERC20} from "hedera-forking/contracts/IERC20.sol";
 
@@ -27,5 +27,16 @@ contract USDCExampleTest is Test {
 
     function test_dealt_balance_of_local_account() view external {
         assertEq(IERC20(USDC_mainnet).balanceOf(user1), 1000 * 10e8);
+    }
+
+    function test_using_console_log() view external {
+        string memory name = IERC20(USDC_mainnet).name();
+        string memory symbol = IERC20(USDC_mainnet).symbol();
+        uint8 decimals = IERC20(USDC_mainnet).decimals();
+        assertEq(name, "USD Coin");
+        assertEq(symbol, "USDC");
+        assertEq(decimals, 6);
+
+        console.log("name: %s, symbol: %s, decimals: %d", name, symbol, decimals);
     }
 }
