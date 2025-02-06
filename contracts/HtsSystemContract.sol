@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import {IERC20Events, IERC20} from "./IERC20.sol";
 import {IERC721, IERC721Events} from "./IERC721.sol";
+import {ITokenKey} from "./ITokenKey.sol";
 import {IHRC719} from "./IHRC719.sol";
 import {IHederaTokenService} from "./IHederaTokenService.sol";
 import {HederaResponseCodes} from "./HederaResponseCodes.sol";
@@ -57,13 +58,6 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         assembly { accountId := sload(slot) }
     }
 
-    function getAddressFromKey(string memory publicKey) htsCall external virtual returns (address accountAddress) {
-        bytes4 selector = this.getAddressFromKey.selector;
-        uint64 pad = 0x0;
-        bytes32 slot = bytes32(abi.encodePacked(selector, pad, bytes(publicKey)));
-        assembly { accountAddress := sload(slot) }
-    }
-
     function mintToken(address token, int64 amount, bytes[] memory data) htsCall external returns (
         int64 responseCode,
         int64 newTotalSupply,
@@ -84,7 +78,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         require(tokenInfoResponseCode == HederaResponseCodes.SUCCESS, "mintToken: failed to get token info");
 
         if (!ignoreSupplyKeyCheck) {
-            address supplyAccount = _getKeyAddress(0x10, tokenInfo); // 0x10 - supply key
+            address supplyAccount = ITokenKey(token).getKeyAddress(0x10); // 0x10 - supply key
             if (supplyAccount == address(0) || msg.sender != supplyAccount) {
                 return (HederaResponseCodes.TOKEN_HAS_NO_SUPPLY_KEY, tokenInfo.totalSupply, new int64[](0));
             }
@@ -111,7 +105,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         (int64 tokenInfoResponseCode, TokenInfo memory tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
         require(tokenInfoResponseCode == HederaResponseCodes.SUCCESS, "burnToken: failed to get token info");
 
-        address supplyAccount = _getKeyAddress(0x10, tokenInfo);
+        address supplyAccount = ITokenKey(token).getKeyAddress(0x10); // 0x10 - supply key
         if (supplyAccount == address(0) || msg.sender != supplyAccount) {
             return (HederaResponseCodes.TOKEN_HAS_NO_SUPPLY_KEY, tokenInfo.totalSupply);
         }
@@ -631,6 +625,12 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
             }
         }
 
+        // Returns the address of the key associated with this token.
+        if (selector == ITokenKey.getKeyAddress.selector) {
+            require(msg.data.length >= 60, "getKeyAddress: Not enough calldata");
+            return abi.encode(__key(uint256(bytes32(msg.data[28:60]))));
+        }
+
         // Redirect to the appropriate ERC20 method if the token type is fungible.
         if (keccak256(bytes(tokenType)) == keccak256(bytes("FUNGIBLE_COMMON"))) {
             return _redirectForERC20(selector);
@@ -836,6 +836,12 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         return bytes32(abi.encodePacked(selector, pad, ownerId, operatorId));
     }
 
+    function _keySlot(uint keyType) internal virtual returns (bytes32) {
+        bytes4 selector = ITokenKey.getKeyAddress.selector;
+        uint64 pad = 0x0;
+        return bytes32(abi.encodePacked(selector, pad, keyType));
+    }
+
     function __balanceOf(address account) private returns (uint256 amount) {
         bytes32 slot = _balanceOfSlot(account);
         assembly { amount := sload(slot) }
@@ -866,6 +872,11 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
     function __isApprovedForAll(address owner, address operator) private returns (bool approvedForAll) {
         bytes32 slot = _isApprovedForAllSlot(owner, operator);
         assembly { approvedForAll := sload(slot) }
+    }
+
+    function __key(uint keyType) private returns (address accountAddress) {
+        bytes32 slot = _keySlot(keyType);
+        assembly { accountAddress := sload(slot) }
     }
 
     function _transfer(address from, address to, uint256 amount) private {
@@ -968,44 +979,5 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         bytes32 slot = _isApprovedForAllSlot(sender, operator);
         assembly { sstore(slot, approved) }
         emit ApprovalForAll(sender, operator, approved);
-    }
-
-    function _getKeyAddress(uint keyType, TokenInfo memory tokenInfo) private returns (address) {
-        for (uint256 i = 0; i < tokenInfo.token.tokenKeys.length; i++) {
-            if (tokenInfo.token.tokenKeys[i].keyType == keyType) {
-                KeyValue memory key = tokenInfo.token.tokenKeys[i].key;
-                if (key.contractId != address(0)) {
-                    return key.contractId;
-                }
-                if (key.delegatableContractId != address(0)) {
-                    return key.delegatableContractId;
-                }
-                bytes32 ecdsaPublicKey = keccak256(key.ECDSA_secp256k1);
-                if (ecdsaPublicKey != keccak256("")) {
-                    return HtsSystemContract(HTS_ADDRESS).getAddressFromKey(bytesToString(key.ECDSA_secp256k1));
-                }
-                bytes32 ed25519PublicKey = keccak256(key.ed25519);
-                if (ed25519PublicKey != keccak256("")) {
-                    return HtsSystemContract(HTS_ADDRESS).getAddressFromKey(bytesToString(key.ed25519));
-                }
-            }
-        }
-        return address(0);
-    }
-
-    function addressToString(address _addr) public pure returns (string memory) {
-        bytes memory HEX_SYMBOLS = "0123456789abcdef";
-        bytes20 addrBytes = bytes20(_addr);
-        bytes memory buffer = new bytes(42); // "0x" + 40 hex chars
-
-        buffer[0] = "0";
-        buffer[1] = "x";
-
-        for (uint i = 0; i < 20; i++) {
-            buffer[2 + i * 2] = HEX_SYMBOLS[uint8(addrBytes[i]) >> 4]; // High nibble
-            buffer[3 + i * 2] = HEX_SYMBOLS[uint8(addrBytes[i]) & 0x0f]; // Low nibble
-        }
-
-        return string(buffer);
     }
 }

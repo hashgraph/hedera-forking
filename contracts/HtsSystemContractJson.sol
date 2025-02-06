@@ -62,10 +62,6 @@ contract HtsSystemContractJson is HtsSystemContract {
         return uint32(bytes4(keccak256(abi.encodePacked(account))));
     }
 
-    function getAddressFromKey(string memory publicKey) htsCall external override returns (address accountAddress) {
-        return mirrorNode().getAccountAddressByPublicKey(publicKey);
-    }
-
     function __redirectForToken() internal override returns (bytes memory) {
         HtsSystemContractJson(HTS_ADDRESS).allowCheatcodes(address(this));
         return super.__redirectForToken();
@@ -492,6 +488,40 @@ contract HtsSystemContractJson is HtsSystemContract {
             _setValue(slot, bytes32(uint256(approved ? 1 : 0)));
         }
         return slot;
+    }
+
+    function _keySlot(uint keyType) internal override returns (bytes32) {
+        bytes32 slot = super._keySlot(keyType);
+        if (_shouldFetch(slot)) {
+            address accountAddress = _fetchKeyAddress(keyType);
+            _setValue(slot, bytes32(uint256(uint160(accountAddress))));
+        }
+        return slot;
+    }
+
+    function _fetchKeyAddress(uint keyType) internal returns (address) {
+        for (uint256 i = 0; i < _tokenInfo.token.tokenKeys.length; i++) {
+            if (_tokenInfo.token.tokenKeys[i].keyType != keyType) {
+                continue;
+            }
+            KeyValue memory key = _tokenInfo.token.tokenKeys[i].key;
+            if (key.contractId != address(0)) {
+                return key.contractId;
+            }
+            if (key.delegatableContractId != address(0)) {
+                return key.delegatableContractId;
+            }
+            bytes32 ecdsaPublicKey = keccak256(key.ECDSA_secp256k1);
+            if (ecdsaPublicKey != keccak256("")) {
+                return mirrorNode().getAccountAddressByPublicKey(vm.toString(key.ECDSA_secp256k1));
+            }
+            bytes32 ed25519PublicKey = keccak256(key.ed25519);
+            if (ed25519PublicKey != keccak256("")) {
+                return mirrorNode().getAccountAddressByPublicKey(vm.toString(key.ed25519));
+            }
+        }
+
+        return address(0);
     }
 
     function _shouldFetch(bytes32 slot) private view returns (bool) {
