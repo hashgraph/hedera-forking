@@ -24,6 +24,16 @@ const {
     storageLayout: { storage, types },
 } = require('../out/HtsSystemContract.sol/HtsSystemContract.json');
 
+let ledgerId = '0x00';
+/**
+ * @param {number|undefined} chainId
+ */
+const init = chainId => {
+    const chainIdToLedgerIdMap = { 295: '0x00', 296: '0x01', 297: '0x02', 298: '0x03' };
+    ledgerId =
+        chainIdToLedgerIdMap[/**@type{keyof typeof chainIdToLedgerIdMap}*/ (chainId)] || '0x00';
+};
+
 /**
  * Represents the value in the `SlotMap`.
  * This can be either a `string`, or a function that returns a `string`.
@@ -227,7 +237,7 @@ function slotMapOf(token) {
     // token['inherit_account_key'] = ZERO_HEX_32_BYTE;
     // token['delegatable_contract_id'] = zeroAddress();
     token['treasury'] = token['treasury_account_id'];
-    token['ledger_id'] = '0x00';
+    token['ledger_id'] = ledgerId;
     // Every inner `struct` will be flattened by `visit`,
     // so it uses the last part of the field path, _i.e._, `.second`.
     token['second'] = `${token['expiry_timestamp']}`;
@@ -349,4 +359,4 @@ class PersistentStorageMap {
     }
 }
 
-module.exports = { packValues, slotMapOf, PersistentStorageMap };
+module.exports = { packValues, slotMapOf, PersistentStorageMap, init };
