@@ -62,7 +62,7 @@ contract HtsSystemContractJson is HtsSystemContract {
         return uint32(bytes4(keccak256(abi.encodePacked(account))));
     }
 
-    function getEd25519KeyAddress(string memory publicKey) htsCall external override returns (address accountAddress) {
+    function getAddressFromKey(string memory publicKey) htsCall external override returns (address accountAddress) {
         return mirrorNode().getAccountAddressByPublicKey(publicKey);
     }
 

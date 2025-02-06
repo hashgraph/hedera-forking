@@ -8,6 +8,8 @@ import {IHederaTokenService} from "./IHederaTokenService.sol";
 import {HederaResponseCodes} from "./HederaResponseCodes.sol";
 import {SetTokenInfo} from "./SetTokenInfo.sol";
 
+import {bytesToString} from "./BytesToString.sol";
+
 address constant HTS_ADDRESS = address(0x167);
 
 contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
@@ -55,14 +57,22 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         assembly { accountId := sload(slot) }
     }
 
-    function getEd25519KeyAddress(string memory publicKey) htsCall external virtual returns (address accountAddress) {
-        bytes4 selector = this.getEd25519KeyAddress.selector;
+    function getAddressFromKey(string memory publicKey) htsCall external virtual returns (address accountAddress) {
+        bytes4 selector = this.getAddressFromKey.selector;
         uint64 pad = 0x0;
         bytes32 slot = bytes32(abi.encodePacked(selector, pad, bytes(publicKey)));
         assembly { accountAddress := sload(slot) }
     }
 
-    function mintToken(address token, int64 amount, bytes[] memory) htsCall external returns (
+    function mintToken(address token, int64 amount, bytes[] memory data) htsCall external returns (
+        int64 responseCode,
+        int64 newTotalSupply,
+        int64[] memory serialNumbers
+    ) {
+        return mintToken(token, amount, false);
+    }
+
+    function mintToken(address token, int64 amount, bool ignoreSupplyKeyCheck) htsCall internal returns (
         int64 responseCode,
         int64 newTotalSupply,
         int64[] memory serialNumbers
@@ -73,12 +83,17 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         (int64 tokenInfoResponseCode, TokenInfo memory tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
         require(tokenInfoResponseCode == HederaResponseCodes.SUCCESS, "mintToken: failed to get token info");
 
-        address supplyAccount = _getAddressFromKey(0x10, tokenInfo);
-        if (supplyAccount == address(0)) {
-            return (HederaResponseCodes.TOKEN_HAS_NO_SUPPLY_KEY, tokenInfo.totalSupply, new int64[](0));
+        if (!ignoreSupplyKeyCheck) {
+            address supplyAccount = _getKeyAddress(0x10, tokenInfo); // 0x10 - supply key
+            if (supplyAccount == address(0) || msg.sender != supplyAccount) {
+                return (HederaResponseCodes.TOKEN_HAS_NO_SUPPLY_KEY, tokenInfo.totalSupply, new int64[](0));
+            }
         }
 
-        HtsSystemContract(token)._update(address(0), supplyAccount, uint256(uint64(amount)));
+        address treasuryAccount = tokenInfo.token.treasury;
+        require(treasuryAccount != address(0), "mintToken: invalid account");
+
+        HtsSystemContract(token)._update(address(0), treasuryAccount, uint256(uint64(amount)));
 
         responseCode = HederaResponseCodes.SUCCESS;
         newTotalSupply = int64(uint64(IERC20(token).totalSupply()));
@@ -96,12 +111,14 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         (int64 tokenInfoResponseCode, TokenInfo memory tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
         require(tokenInfoResponseCode == HederaResponseCodes.SUCCESS, "burnToken: failed to get token info");
 
-        address supplyAccount = _getAddressFromKey(0x10, tokenInfo);
-        if (supplyAccount == address(0)) {
+        address supplyAccount = _getKeyAddress(0x10, tokenInfo);
+        if (supplyAccount == address(0) || msg.sender != supplyAccount) {
             return (HederaResponseCodes.TOKEN_HAS_NO_SUPPLY_KEY, tokenInfo.totalSupply);
         }
+        address treasuryAccount = tokenInfo.token.treasury;
+        require(treasuryAccount != address(0), "burnToken: invalid account");
 
-        HtsSystemContract(token)._update(supplyAccount, address(0), uint256(uint64(amount)));
+        HtsSystemContract(token)._update(treasuryAccount, address(0), uint256(uint64(amount)));
 
         responseCode = HederaResponseCodes.SUCCESS;
         newTotalSupply = int64(uint64(IERC20(token).totalSupply()));
@@ -199,7 +216,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         deployHIP719Proxy(tokenAddress);
 
         if (initialTotalSupply > 0) {
-            this.mintToken(tokenAddress, initialTotalSupply, new bytes[](0));
+            mintToken(tokenAddress, initialTotalSupply, true);
         }
 
         responseCode = HederaResponseCodes.SUCCESS;
@@ -953,7 +970,7 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
         emit ApprovalForAll(sender, operator, approved);
     }
 
-    function _getAddressFromKey(uint keyType, TokenInfo memory tokenInfo) private returns (address) {
+    function _getKeyAddress(uint keyType, TokenInfo memory tokenInfo) private returns (address) {
         for (uint256 i = 0; i < tokenInfo.token.tokenKeys.length; i++) {
             if (tokenInfo.token.tokenKeys[i].keyType == keyType) {
                 KeyValue memory key = tokenInfo.token.tokenKeys[i].key;
@@ -965,29 +982,15 @@ contract HtsSystemContract is IHederaTokenService, IERC20Events, IERC721Events {
                 }
                 bytes32 ecdsaPublicKey = keccak256(key.ECDSA_secp256k1);
                 if (ecdsaPublicKey != keccak256("")) {
-                    return address(uint160(uint256(ecdsaPublicKey)));
+                    return HtsSystemContract(HTS_ADDRESS).getAddressFromKey(bytesToString(key.ECDSA_secp256k1));
                 }
                 bytes32 ed25519PublicKey = keccak256(key.ed25519);
                 if (ed25519PublicKey != keccak256("")) {
-                    return HtsSystemContract(HTS_ADDRESS).getEd25519KeyAddress(bytesToString(key.ed25519));
+                    return HtsSystemContract(HTS_ADDRESS).getAddressFromKey(bytesToString(key.ed25519));
                 }
             }
         }
         return address(0);
-    }
-
-    function bytesToString(bytes memory data) public pure returns (string memory) {
-        bytes memory HEX_SYMBOLS = "0123456789abcdef";
-        bytes memory buffer = new bytes(2 + data.length * 2);
-        buffer[0] = "0";
-        buffer[1] = "x";
-
-        for (uint i = 0; i < data.length; i++) {
-            buffer[2 + i * 2] = HEX_SYMBOLS[uint8(data[i]) >> 4];
-            buffer[3 + i * 2] = HEX_SYMBOLS[uint8(data[i]) & 0x0f];
-        }
-
-        return string(buffer);
     }
 
     function addressToString(address _addr) public pure returns (string memory) {
