@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import {Vm} from "forge-std/Vm.sol";
 import {decode} from './Base64.sol';
+import {HederaResponseCodes} from "./HederaResponseCodes.sol";
 import {HtsSystemContract, HTS_ADDRESS} from "./HtsSystemContract.sol";
 import {IERC20} from "./IERC20.sol";
 import {MirrorNode} from "./MirrorNode.sol";
@@ -449,6 +450,15 @@ contract HtsSystemContractJson is HtsSystemContract {
         return slot;
     }
 
+    function _hasKycGrantedSlot(address account) internal override returns (bytes32) {
+        bytes32 slot = super._hasKycGrantedSlot(account);
+        if (_shouldFetch(slot)) {
+            string memory kycStatus = mirrorNode().getKycStatus(address(this), account);
+            _setValue(slot, bytes32(keccak256(bytes(kycStatus)) == keccak256("GRANTED") ? uint256(1) : uint256(0)));
+        }
+        return slot;
+    }
+
     function _allowanceSlot(address owner, address spender) internal override returns (bytes32) {
         bytes32 slot = super._allowanceSlot(owner, spender);
         if (_shouldFetch(slot)) {
@@ -516,5 +526,10 @@ contract HtsSystemContractJson is HtsSystemContract {
 
     function _scratchAddr() private view returns (address) {
         return address(bytes20(keccak256(abi.encode(address(this)))));
+    }
+
+    function _updateHbarBalanceOnAccount(address account, uint256 newBalance) internal override returns (int64) {
+        vm.deal(account, newBalance);
+        return HederaResponseCodes.SUCCESS;
     }
 }
