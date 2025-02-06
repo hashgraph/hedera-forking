@@ -198,7 +198,8 @@ contract HTSTest is Test, TestSetup {
         int64 initialTotalSupply = 10000000005000000;
         uint256 initialTreasuryBalance = IERC20(token).balanceOf(treasury);
         bytes[] memory metadata = new bytes[](0);
-
+        address supplier = 0x00000000000000000000000000000000001c1aEC;
+        vm.prank(supplier);
         (int64 responseCode, int64 newTotalSupply, int64[] memory serialNumbers) = IHederaTokenService(HTS_ADDRESS).mintToken(token, amount, metadata);
         assertEq(responseCode, HederaResponseCodes.SUCCESS);
         assertEq(serialNumbers.length, 0);
@@ -235,8 +236,8 @@ contract HTSTest is Test, TestSetup {
             abi.encode(IHederaTokenService.getTokenInfo.selector),
             abi.encode(HederaResponseCodes.SUCCESS, tokenInfo)
         );
-        vm.expectRevert(bytes("mintToken: invalid account"));
-        IHederaTokenService(HTS_ADDRESS).mintToken(token, amount, metadata);
+        (int64 code, , ) = IHederaTokenService(HTS_ADDRESS).mintToken(token, amount, metadata);
+        assertEq(code, HederaResponseCodes.TOKEN_HAS_NO_SUPPLY_KEY);
     }
 
     function test_mintToken_should_revert_with_invalid_token() external {
@@ -258,12 +259,13 @@ contract HTSTest is Test, TestSetup {
     }
 
     function test_burnToken_should_succeed_with_valid_input() external {
-        address token = MFCT;
-        address treasury = MFCT_TREASURY;
+        address token = USDC;
+        address treasury = USDC_TREASURY;
+        address supplier = 0x00000000000000000000000000000000001c1aEC;
         int64 amount = 1000;
-        int64 initialTotalSupply = 5000;
+        int64 initialTotalSupply = int64(int256(IERC20(token).totalSupply()));
         uint256 initialTreasuryBalance = IERC20(token).balanceOf(treasury);
-
+        vm.startPrank(supplier);
         (int64 responseCodeMint, int64 newTotalSupplyAfterMint, int64[] memory serialNumbers) = IHederaTokenService(HTS_ADDRESS).mintToken(token, amount, new bytes[](0));
         assertEq(responseCodeMint, HederaResponseCodes.SUCCESS);
         assertEq(serialNumbers.length, 0);
@@ -274,7 +276,7 @@ contract HTSTest is Test, TestSetup {
         assertEq(responseCodeBurn, HederaResponseCodes.SUCCESS);
         assertEq(newTotalSupplyAfterBurn, initialTotalSupply);
         assertEq(IERC20(token).balanceOf(treasury), uint64(initialTreasuryBalance));
-
+        vm.stopPrank();
         (int64 responseCodeGet, IHederaTokenService.TokenInfo memory tokenInfo) = IHederaTokenService(HTS_ADDRESS).getTokenInfo(token);
         assertEq(responseCodeGet, HederaResponseCodes.SUCCESS);
 
@@ -304,8 +306,8 @@ contract HTSTest is Test, TestSetup {
             abi.encode(IHederaTokenService.getTokenInfo.selector),
             abi.encode(HederaResponseCodes.SUCCESS, tokenInfo)
         );
-        vm.expectRevert(bytes("burnToken: invalid account"));
-        IHederaTokenService(HTS_ADDRESS).burnToken(token, amount, serialNumbers);
+        (int64 code, ) = IHederaTokenService(HTS_ADDRESS).burnToken(token, amount, serialNumbers);
+        assertEq(code, HederaResponseCodes.TOKEN_HAS_NO_SUPPLY_KEY);
     }
 
     function test_burnToken_should_revert_with_invalid_token() external {
