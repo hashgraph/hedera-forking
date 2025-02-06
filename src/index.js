@@ -249,9 +249,45 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
     let unresolvedValues = persistentStorage.load(tokenId, blockNumber, nrequestedSlot);
     if (unresolvedValues === undefined) {
         const token = await mirrorNodeClient.getTokenById(tokenId, blockNumber);
+
+        // Encoded `address(tokenId).getKeyAddress(serialId)` slot
+        // slot(256) = `tokenURI`selector(32) + padding(192) + tokenType(32)
+        if (
+            nrequestedSlot >> 32n ===
+            0x6a03e163_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000n
+        ) {
+            const keyType = parseInt(requestedSlot.slice(-8), 16);
+            const keyTypes = {
+                0x1: 'admin_key',
+                0x2: 'kyc_key',
+                0x4: 'freeze_key',
+                0x8: 'wipe_key',
+                0x10: 'supply_key',
+                0x20: 'fee_schedule_key',
+                0x40: 'pause_key',
+            };
+            const keyField = keyTypes[/**@type{keyof typeof keyTypes}*/ (keyType)];
+            if (token === null || keyField === undefined || token[keyField] === undefined)
+                return ret(ZERO_HEX_32_BYTE, `Requested key type is not supported`);
+
+            // @ts-expect-error mirrornode api can return this value
+            const publicKey = token[keyField]['key'] || '';
+            if (!publicKey) return ret(ZERO_HEX_32_BYTE, `No account is assigned to this key`);
+
+            const result = await mirrorNodeClient.getAccountsByPublicKey(publicKey);
+            if (!result || result.accounts.length === 0 || !result.accounts[0].evm_address)
+                return ret(
+                    ZERO_HEX_32_BYTE,
+                    `Could not find the account with public key ${publicKey}`
+                );
+            return ret(
+                result.accounts[0].evm_address,
+                `The key ${keyField} assigned to the token ${tokenId} belongs to ${result.accounts[0].evm_address}`
+            );
+        }
+
         if (token === null) return ret(ZERO_HEX_32_BYTE, `Token \`${tokenId}\` not found`);
         unresolvedValues = slotMapOf(token).load(nrequestedSlot);
-
         if (unresolvedValues === undefined)
             return ret(ZERO_HEX_32_BYTE, `Requested slot does not match any field slots`);
     }
