@@ -54,6 +54,9 @@ describe('::getHtsStorageAt', function () {
         async getAccount(_idOrAliasOrEvmAddress) {
             throw Error('Not implemented');
         },
+        async getAccountsByPublicKey(_publicKey) {
+            throw Error('Not implemented');
+        },
         async getBalanceOfToken(_tokenId, _accountId) {
             throw Error('Not implemented');
         },

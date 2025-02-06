@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import {IERC20} from "./IERC20.sol";
 import {IERC721} from "./IERC721.sol";
+import {ITokenKey} from "./ITokenKey.sol";
 import {IHRC719} from "./IHRC719.sol";
 import {IHederaTokenService} from "./IHederaTokenService.sol";
 import {HederaResponseCodes} from "./HederaResponseCodes.sol";
@@ -603,6 +604,12 @@ contract HtsSystemContract is IHederaTokenService {
             }
         }
 
+        // Returns the address of the key associated with this token.
+        if (selector == ITokenKey.getKeyAddress.selector) {
+            require(msg.data.length >= 60, "getKeyAddress: Not enough calldata");
+            return abi.encode(__key(uint256(bytes32(msg.data[28:60]))));
+        }
+
         // Redirect to the appropriate ERC20 method if the token type is fungible.
         if (keccak256(bytes(tokenType)) == keccak256(bytes("FUNGIBLE_COMMON"))) {
             return _redirectForERC20(selector);
@@ -808,6 +815,12 @@ contract HtsSystemContract is IHederaTokenService {
         return bytes32(abi.encodePacked(selector, pad, ownerId, operatorId));
     }
 
+    function _keySlot(uint keyType) internal virtual returns (bytes32) {
+        bytes4 selector = ITokenKey.getKeyAddress.selector;
+        uint64 pad = 0x0;
+        return bytes32(abi.encodePacked(selector, pad, keyType));
+    }
+
     function __balanceOf(address account) private returns (uint256 amount) {
         bytes32 slot = _balanceOfSlot(account);
         assembly { amount := sload(slot) }
@@ -838,6 +851,11 @@ contract HtsSystemContract is IHederaTokenService {
     function __isApprovedForAll(address owner, address operator) private returns (bool approvedForAll) {
         bytes32 slot = _isApprovedForAllSlot(owner, operator);
         assembly { approvedForAll := sload(slot) }
+    }
+
+    function __key(uint keyType) private returns (address accountAddress) {
+        bytes32 slot = _keySlot(keyType);
+        assembly { accountAddress := sload(slot) }
     }
 
     function _transfer(address from, address to, uint256 amount) private {
