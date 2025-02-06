@@ -412,19 +412,10 @@ contract HtsSystemContract is IHederaTokenService {
     function getNonFungibleTokenInfo(address token, int64 serialNumber)
         htsCall external
         returns (int64, NonFungibleTokenInfo memory) {
-        (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
-        require(responseCode == HederaResponseCodes.SUCCESS, "getNonFungibleTokenInfo: failed to get token data");
-        NonFungibleTokenInfo memory nonFungibleTokenInfo;
-        nonFungibleTokenInfo.tokenInfo = tokenInfo;
-        nonFungibleTokenInfo.serialNumber = serialNumber;
-        nonFungibleTokenInfo.spenderId = IERC721(token).getApproved(uint256(uint64(serialNumber)));
-        nonFungibleTokenInfo.ownerId = IERC721(token).ownerOf(uint256(uint64(serialNumber)));
-
-        // ToDo:
-        // nonFungibleTokenInfo.metadata = bytes(IERC721(token).tokenURI(uint256(uint64(serialNumber))));
-        // nonFungibleTokenInfo.creationTime = int64(0);
-
-        return (responseCode, nonFungibleTokenInfo);
+        return IHederaTokenService(token).getNonFungibleTokenInfo(
+            token,
+            serialNumber
+        );
     }
 
     function isToken(address token) htsCall external returns (int64, bool) {
@@ -592,6 +583,19 @@ contract HtsSystemContract is IHederaTokenService {
                 bool approved = uint256(bytes32(msg.data[92:124])) == 1;
                 _setApprovalForAll(from, to, approved);
                 return abi.encode(true);
+            }
+            if (selector == this.getNonFungibleTokenInfo.selector) {
+                require(msg.data.length >= 92, "getNonFungibleTokenInfo: Not enough calldata");
+                uint256 serialId = uint256(bytes32(msg.data[60:92]));
+                NonFungibleTokenInfo memory nonFungibleTokenInfo;
+                (int64 creationTime, bytes memory metadata) = __nftInfo(serialId);
+                nonFungibleTokenInfo.creationTime = creationTime;
+                nonFungibleTokenInfo.metadata = metadata;
+                nonFungibleTokenInfo.tokenInfo = _tokenInfo;
+                nonFungibleTokenInfo.serialNumber = int64(int256(serialId));
+                nonFungibleTokenInfo.spenderId = __getApproved(serialId);
+                nonFungibleTokenInfo.ownerId = __ownerOf(serialId);
+                return abi.encode(HederaResponseCodes.SUCCESS, nonFungibleTokenInfo);
             }
             if (selector == this._update.selector) {
                 require(msg.data.length >= 124, "update: Not enough calldata");
@@ -788,6 +792,12 @@ contract HtsSystemContract is IHederaTokenService {
         return bytes32(abi.encodePacked(selector, pad, serialId));
     }
 
+    function __nftInfoSlot(uint32 serialId) internal virtual returns (bytes32) {
+        bytes4 selector = IHederaTokenService.getNonFungibleTokenInfo.selector;
+        uint192 pad = 0x0;
+        return bytes32(abi.encodePacked(selector, pad, serialId));
+    }
+
     function _ownerOfSlot(uint32 serialId) internal virtual returns (bytes32) {
         bytes4 selector = IERC721.ownerOf.selector;
         uint192 pad = 0x0;
@@ -823,6 +833,13 @@ contract HtsSystemContract is IHederaTokenService {
         string storage _uri;
         assembly { _uri.slot := slot }
         uri = _uri;
+    }
+
+    function __nftInfo(uint256 serialId) private returns (int64, bytes memory) {
+        bytes32 slot = __nftInfoSlot(uint32(serialId));
+        bytes storage _nftInfo;
+        assembly { _nftInfo.slot := slot }
+        return abi.decode(_nftInfo, (int64, bytes));
     }
 
     function __ownerOf(uint256 serialId) private returns (address owner) {
