@@ -62,6 +62,10 @@ contract HtsSystemContractJson is HtsSystemContract {
         return uint32(bytes4(keccak256(abi.encodePacked(account))));
     }
 
+    function getEd25519KeyAddress(string memory publicKey) htsCall external override returns (address accountAddress) {
+        return mirrorNode().getAccountAddressByPublicKey(publicKey);
+    }
+
     function __redirectForToken() internal override returns (bytes memory) {
         HtsSystemContractJson(HTS_ADDRESS).allowCheatcodes(address(this));
         return super.__redirectForToken();

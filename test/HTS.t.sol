@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
-import {Test} from "forge-std/Test.sol";
+import {Test, console} from "forge-std/Test.sol";
 import {HederaResponseCodes} from "../contracts/HederaResponseCodes.sol";
 import {HtsSystemContract, HTS_ADDRESS} from "../contracts/HtsSystemContract.sol";
 import {IHederaTokenService} from "../contracts/IHederaTokenService.sol";
@@ -193,17 +193,17 @@ contract HTSTest is Test, TestSetup {
 
     function test_mintToken_should_succeed_with_valid_input() external {
         address token = USDC;
-        address treasury = USDC_TREASURY;
+        address supplier = 0x00000000000000000000000000000000001c1aEC;
         int64 amount = 1000;
         int64 initialTotalSupply = 10000000005000000;
-        uint256 initialTreasuryBalance = IERC20(token).balanceOf(treasury);
+        uint256 initialTreasuryBalance = IERC20(token).balanceOf(supplier);
         bytes[] memory metadata = new bytes[](0);
-
+        vm.prank(supplier);
         (int64 responseCode, int64 newTotalSupply, int64[] memory serialNumbers) = IHederaTokenService(HTS_ADDRESS).mintToken(token, amount, metadata);
         assertEq(responseCode, HederaResponseCodes.SUCCESS);
         assertEq(serialNumbers.length, 0);
         assertEq(newTotalSupply, initialTotalSupply + amount);
-        assertEq(IERC20(token).balanceOf(treasury), uint64(initialTreasuryBalance) + uint64(amount));
+        assertEq(IERC20(token).balanceOf(supplier), uint64(initialTreasuryBalance) + uint64(amount));
         assertEq(IERC20(token).totalSupply(), uint256(int256(newTotalSupply)));
 
         (int64 responseCodeGet, IHederaTokenService.TokenInfo memory tokenInfo) = IHederaTokenService(HTS_ADDRESS).getTokenInfo(token);
@@ -258,22 +258,22 @@ contract HTSTest is Test, TestSetup {
     }
 
     function test_burnToken_should_succeed_with_valid_input() external {
-        address token = MFCT;
-        address treasury = MFCT_TREASURY;
+        address token = USDC;
+        address supplier = 0x00000000000000000000000000000000001c1aEC;
         int64 amount = 1000;
-        int64 initialTotalSupply = 5000;
-        uint256 initialTreasuryBalance = IERC20(token).balanceOf(treasury);
-
+        int64 initialTotalSupply = int64(int256(IERC20(token).totalSupply()));
+        uint256 initialTreasuryBalance = IERC20(token).balanceOf(supplier);
+        vm.prank(supplier);
         (int64 responseCodeMint, int64 newTotalSupplyAfterMint, int64[] memory serialNumbers) = IHederaTokenService(HTS_ADDRESS).mintToken(token, amount, new bytes[](0));
         assertEq(responseCodeMint, HederaResponseCodes.SUCCESS);
         assertEq(serialNumbers.length, 0);
         assertEq(newTotalSupplyAfterMint, initialTotalSupply + amount);
-        assertEq(IERC20(token).balanceOf(treasury), uint64(initialTreasuryBalance) + uint64(amount));
-
+        assertEq(IERC20(token).balanceOf(supplier), uint64(initialTreasuryBalance) + uint64(amount));
+        vm.prank(supplier);
         (int64 responseCodeBurn, int64 newTotalSupplyAfterBurn) = IHederaTokenService(HTS_ADDRESS).burnToken(token, amount, serialNumbers);
         assertEq(responseCodeBurn, HederaResponseCodes.SUCCESS);
         assertEq(newTotalSupplyAfterBurn, initialTotalSupply);
-        assertEq(IERC20(token).balanceOf(treasury), uint64(initialTreasuryBalance));
+        assertEq(IERC20(token).balanceOf(supplier), uint64(initialTreasuryBalance));
 
         (int64 responseCodeGet, IHederaTokenService.TokenInfo memory tokenInfo) = IHederaTokenService(HTS_ADDRESS).getTokenInfo(token);
         assertEq(responseCodeGet, HederaResponseCodes.SUCCESS);

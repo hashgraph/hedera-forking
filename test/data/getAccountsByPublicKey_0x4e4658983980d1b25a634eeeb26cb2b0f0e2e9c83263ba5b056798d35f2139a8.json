@@ -1,0 +1,47 @@
+{
+    "accounts": [
+        {
+            "account": "0.0.1841900",
+            "alias": null,
+            "auto_renew_period": 7776000,
+            "balance": {
+                "balance": 4121508670,
+                "timestamp": "1717670177.810816518",
+                "tokens": [
+                    {
+                        "token_id": "0.0.2167043",
+                        "balance": 9.223351547055341e18
+                    },
+                    {
+                        "token_id": "0.0.3739114",
+                        "balance": 0
+                    },
+                    {
+                        "token_id": "0.0.3739115",
+                        "balance": 1
+                    }
+                ]
+            },
+            "created_timestamp": "1706848428.168204434",
+            "decline_reward": false,
+            "deleted": false,
+            "ethereum_nonce": 0,
+            "evm_address": "0x00000000000000000000000000000000001c1aec",
+            "expiry_timestamp": "1714624428.168204434",
+            "key": {
+                "_type": "ED25519",
+                "key": "47ec2d32f5ed2e6d8dd8dac3752268957136e6a6e6ee1f5a2d57c2af4fd4be74"
+            },
+            "max_automatic_token_associations": 0,
+            "memo": "",
+            "pending_reward": 0,
+            "receiver_sig_required": false,
+            "staked_account_id": null,
+            "staked_node_id": null,
+            "stake_period_start": null
+        }
+    ],
+    "links": {
+        "next": "/api/v1/accounts?account.publickey=0x47ec2d32f5ed2e6d8dd8dac3752268957136e6a6e6ee1f5a2d57c2af4fd4be74&limit=1&account.id=gt:0.0.1841900"
+    }
+}
