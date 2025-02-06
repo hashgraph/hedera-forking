@@ -56,7 +56,15 @@ contract HtsSystemContract is IHederaTokenService {
         assembly { accountId := sload(slot) }
     }
 
-    function mintToken(address token, int64 amount, bytes[] memory) htsCall external returns (
+    function mintToken(address token, int64 amount, bytes[] memory data) htsCall external returns (
+        int64 responseCode,
+        int64 newTotalSupply,
+        int64[] memory serialNumbers
+    ) {
+        return mintToken(token, amount, false);
+    }
+
+    function mintToken(address token, int64 amount, bool ignoreSupplyKeyCheck) htsCall internal returns (
         int64 responseCode,
         int64 newTotalSupply,
         int64[] memory serialNumbers
@@ -66,6 +74,13 @@ contract HtsSystemContract is IHederaTokenService {
 
         (int64 tokenInfoResponseCode, TokenInfo memory tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
         require(tokenInfoResponseCode == HederaResponseCodes.SUCCESS, "mintToken: failed to get token info");
+
+        if (!ignoreSupplyKeyCheck) {
+            address supplyAccount = ITokenKey(token).getKeyAddress(0x10); // 0x10 - supply key
+            if (supplyAccount == address(0) || msg.sender != supplyAccount) {
+                return (HederaResponseCodes.TOKEN_HAS_NO_SUPPLY_KEY, tokenInfo.totalSupply, new int64[](0));
+            }
+        }
 
         address treasuryAccount = tokenInfo.token.treasury;
         require(treasuryAccount != address(0), "mintToken: invalid account");
@@ -88,6 +103,10 @@ contract HtsSystemContract is IHederaTokenService {
         (int64 tokenInfoResponseCode, TokenInfo memory tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
         require(tokenInfoResponseCode == HederaResponseCodes.SUCCESS, "burnToken: failed to get token info");
 
+        address supplyAccount = ITokenKey(token).getKeyAddress(0x10); // 0x10 - supply key
+        if (supplyAccount == address(0) || msg.sender != supplyAccount) {
+            return (HederaResponseCodes.TOKEN_HAS_NO_SUPPLY_KEY, tokenInfo.totalSupply);
+        }
         address treasuryAccount = tokenInfo.token.treasury;
         require(treasuryAccount != address(0), "burnToken: invalid account");
 
@@ -189,7 +208,7 @@ contract HtsSystemContract is IHederaTokenService {
         deployHIP719Proxy(tokenAddress);
 
         if (initialTotalSupply > 0) {
-            this.mintToken(tokenAddress, initialTotalSupply, new bytes[](0));
+            mintToken(tokenAddress, initialTotalSupply, true);
         }
 
         responseCode = HederaResponseCodes.SUCCESS;
