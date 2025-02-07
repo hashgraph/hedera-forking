@@ -43,6 +43,14 @@ function getHtsCode() {
 const persistentStorage = new PersistentStorageMap();
 
 /**
+ * List of token addresses created locally.
+ * The `eth_getCode` for a token created locally should return the proxy bytecode.
+ *
+ * @type {string[]}
+ */
+const localTokens = [];
+
+/**
  * @param {string} address
  * @param {string} requestedSlot
  * @param {number} blockNumber
@@ -64,6 +72,14 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
     const nrequestedSlot = BigInt(requestedSlot);
 
     if (address === HTSAddress) {
+        // Encoded `address(0x167).deployHIP719Proxy(address)` slot
+        // slot(256) = `deployHIP719Proxy`selector(32) + padding(64) + address(160)
+        if (nrequestedSlot >> 160n === 0x400f4ef3_0000_0000_0000_0000n) {
+            const tokenAddress = '0x' + requestedSlot.slice(-40);
+            localTokens.push(tokenAddress);
+            return ret(ZERO_HEX_32_BYTE, `Create token request for address ${tokenAddress}`);
+        }
+
         // Encoded `address(0x167).getAccountId(address)` slot
         // slot(256) = `getAccountId`selector(32) + padding(64) + address(160)
         if (nrequestedSlot >> 160n === 0xe0b490f7_0000_0000_0000_0000n) {
@@ -265,4 +281,11 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
     return ret(`0x${packValues(values)}`, `Slot matches ${values.map(v => v.path).join('|')}`);
 }
 
-module.exports = { HTSAddress, LONG_ZERO_PREFIX, getHIP719Code, getHtsCode, getHtsStorageAt };
+module.exports = {
+    HTSAddress,
+    LONG_ZERO_PREFIX,
+    localTokens,
+    getHIP719Code,
+    getHtsCode,
+    getHtsStorageAt,
+};

@@ -28,6 +28,7 @@ const { parentPort } = require('worker_threads');
 
 const {
     HTSAddress,
+    localTokens,
     getHIP719Code,
     getHtsCode,
     getHtsStorageAt,
@@ -46,14 +47,6 @@ const c = {
     magenta: (/**@type{unknown}*/ text) => `\x1b[35m${text}\x1b[0m`,
     cyan: (/**@type{unknown}*/ text) => `\x1b[36m${text}\x1b[0m`,
 };
-
-/**
- * List of token addresses created locally.
- * The `eth_getCode` for a token created locally will return the proxy bytecode.
- *
- * @type {string[]}
- */
-const localTokens = [];
 
 /**
  * Determines whether `address` should be treated as a HIP-719 token proxy contract.
@@ -248,18 +241,6 @@ const eth = {
     eth_getStorageAt: async ([address, slot, blockNumber]) => {
         assert(typeof address === 'string');
         assert(typeof slot === 'string');
-
-        if (address === HTSAddress) {
-            const nslot = BigInt(slot);
-            // Encoded `address(0x167).deployHIP719Proxy(address)` slot
-            // slot(256) = `deployHIP719Proxy`selector(32) + padding(64) + address(160)
-            if (nslot >> 160n === 0x400f4ef3_0000_0000_0000_0000n) {
-                const tokenAddress = '0x' + slot.slice(-40);
-                localTokens.push(tokenAddress);
-                console.log(c.magenta('[DEBUG]'), 'Create token request for address', tokenAddress);
-                return ZERO_HEX_32_BYTE;
-            }
-        }
         const value = await getHtsStorageAt(address, slot, Number(blockNumber), mirrorNodeClient);
         return value ?? ZERO_HEX_32_BYTE;
     },
