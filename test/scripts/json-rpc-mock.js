@@ -47,6 +47,9 @@ const c = {
     cyan: (/**@type{unknown}*/ text) => `\x1b[36m${text}\x1b[0m`,
 };
 
+/** @type {string[]} */
+const localTokens = [];
+
 /**
  * Determines whether `address` should be treated as a HIP-719 token proxy contract.
  *
@@ -57,9 +60,9 @@ const c = {
  * @returns {boolean}
  */
 const isHIP719Contract = address =>
-    Object.values(tokens)
-        .map(({ address }) => address.toLowerCase())
-        .includes(address.toLowerCase());
+    [...Object.values(tokens).map(({ address }) => address.toLowerCase()), ...localTokens].includes(
+        address.toLowerCase()
+    );
 
 /**
  * Loads and returns the module indicated by `path` if exists.
@@ -240,6 +243,19 @@ const eth = {
     eth_getStorageAt: async ([address, slot, blockNumber]) => {
         assert(typeof address === 'string');
         assert(typeof slot === 'string');
+
+        if (address === HTSAddress) {
+            const nslot = BigInt(slot);
+            // Encoded `address(0x167).deployHIP719Proxy(address)` slot
+            // slot(256) = `deployHIP719Proxy`selector(32) + padding(64) + address(160)
+            if (nslot >> 160n === 0x400f4ef3_0000_0000_0000_0000n) {
+                const tokenAddress = '0x' + slot.slice(-40);
+                // const tokenId = `0.0.${BigInt(tokenAddress)}`;
+                // tokens[tokenId] = {address: tokenAddress, symbol: 'asdfa'};
+                localTokens.push(tokenAddress);
+                console.log(tokenAddress);
+            }
+        }
         const value = await getHtsStorageAt(address, slot, Number(blockNumber), mirrorNodeClient);
         return value ?? ZERO_HEX_32_BYTE;
     },

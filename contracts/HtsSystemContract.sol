@@ -21,15 +21,10 @@ contract HtsSystemContract is IHederaTokenService {
      */
     bytes32 private constant _nextTokenIdSlot = keccak256("HtsSystemContract::_nextTokenIdSlot");
 
-    bytes32 private constant _initSlot = keccak256("HtsSystemContractJson::_initSlot");
-    bytes32 private constant _isLocalTokenSlot = keccak256("HtsSystemContractJson::_isLocalTokenSlot");
-
     // All state variables belong to an instantiated Fungible/Non-Fungible token.
     // These state variables are accessed with a `delegatecall` from the Token Proxy bytecode.
     // That is, they live in the token address storage space, not in the space of HTS `0x167`.
     // See `__redirectForToken` for more details.
-    //
-    // Moreover, these variables must match the slots defined in `SetTokenInfo`.
     string internal tokenType; 
     uint8 internal decimals;
     TokenInfo internal _tokenInfo;
@@ -139,8 +134,16 @@ contract HtsSystemContract is IHederaTokenService {
         return dissociateTokens(account, tokens);
     }
 
-    function deployHIP719Proxy(address token) virtual internal {
-        //
+    /**
+     * The side effect of this function is to "deploy" proxy bytecode at `tokenAddress`.
+     * The `sload` will trigger a `eth_getStorageAt` in the Forwarder that enables the
+     * proxy bytecode at `tokenAddress`.
+     */
+    function deployHIP719Proxy(address tokenAddress) virtual internal {
+        bytes4 selector = 0x400f4ef3; // cast sig 'deployHIP719Proxy(address)'
+        bytes32 slot = bytes32(abi.encodePacked(selector, uint64(0), tokenAddress));
+        // add `sstore` to avoid `sload` from getting optimized away
+        assembly { sstore(slot, add(sload(slot), 1)) }
     }
 
     function _createToken(
@@ -508,7 +511,8 @@ contract HtsSystemContract is IHederaTokenService {
     function __redirectForToken() internal virtual returns (bytes memory) {
         bytes4 selector = bytes4(msg.data[24:28]);
 
-        // Before `_initTokenData`
+        // If a token is being created locally, then there is not remote data to fetch.
+        // That is why `__setTokenInfo` must be called before `_initTokenData`.
         if (msg.sender == HTS_ADDRESS && selector == this.__setTokenInfo.selector) {
             (string memory tokenType_, IHederaTokenService.TokenInfo memory tokenInfo, int32 decimals_) = abi.decode(msg.data[28:], (string, IHederaTokenService.TokenInfo, int32));
             __setTokenInfo(tokenType_, tokenInfo, decimals_);
@@ -761,19 +765,9 @@ contract HtsSystemContract is IHederaTokenService {
         revert("redirectForToken: not supported");
     }
 
-    function __setTokenInfo(string memory tokenType_, IHederaTokenService.TokenInfo memory tokenInfo, int32 decimals_) public {
+    function __setTokenInfo(string memory tokenType_, IHederaTokenService.TokenInfo memory tokenInfo, int32 decimals_) public virtual {
         tokenType = tokenType_;
         decimals = uint8(uint32(decimals_));
-
-        // Marks the `_tokenInfo` as initialized.
-        // This avoids fetching token data from the Mirror Node.
-        // It is needed because the token only exists in the local EVM state,
-        // not in the remote network.
-        bytes32 initSlot = _initSlot;
-        assembly { sstore(initSlot, 1) }
-
-        bytes32 isLocalTokenSlot = _isLocalTokenSlot;
-        assembly { sstore(isLocalTokenSlot , 1) }
 
         // The assignment
         //

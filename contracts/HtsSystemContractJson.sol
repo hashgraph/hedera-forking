@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import {Vm} from "forge-std/Vm.sol";
 import {decode} from './Base64.sol';
+import {IHederaTokenService} from "./IHederaTokenService.sol";
 import {HtsSystemContract, HTS_ADDRESS} from "./HtsSystemContract.sol";
 import {IERC20} from "./IERC20.sol";
 import {MirrorNode} from "./MirrorNode.sol";
@@ -78,6 +79,19 @@ contract HtsSystemContractJson is HtsSystemContract {
         string memory addressString = vm.replace(vm.toString(tokenAddress), "0x", "");
         string memory proxyBytecode = vm.replace(_HIP719TemplateBytecode, placeholder, addressString);
         vm.etch(tokenAddress, vm.parseBytes(proxyBytecode));
+    }
+
+    function __setTokenInfo(string memory tokenType_, IHederaTokenService.TokenInfo memory tokenInfo, int32 decimals_) public override {
+        // Marks the `_tokenInfo` as initialized.
+        // This avoids fetching token data from the Mirror Node.
+        // It is needed because the token only exists in the local EVM state,
+        // not in the remote network.
+        bytes32 initSlot = _initSlot;
+        assembly { sstore(initSlot, 1) }
+        bytes32 isLocalTokenSlot = _isLocalTokenSlot;
+        assembly { sstore(isLocalTokenSlot , 1) }
+
+        super.__setTokenInfo(tokenType_, tokenInfo, decimals_);
     }
 
     /**
