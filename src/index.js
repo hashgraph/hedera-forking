@@ -253,15 +253,10 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
 
         for (const key of ['admin', 'kyc', 'freeze', 'wipe', 'supply', 'fee_schedule', 'pause']) {
             const value = /**@type{{contractId: string}}*/ (token[`${key}_key`]);
-            if (!value) {
-                continue;
-            }
+            if (!value) continue;
             assert(typeof value === 'object' && 'key' in value && typeof value.key === 'string');
             const result = await mirrorNodeClient.getAccountsByPublicKey(value.key);
-            if (result === undefined || result === null || result.accounts.length === 0) {
-                value.contractId = ZERO_HEX_32_BYTE;
-                continue;
-            }
+            if (result === undefined || !result || result.accounts.length === 0) continue;
             value.contractId = result.accounts[0].evm_address;
         }
 
