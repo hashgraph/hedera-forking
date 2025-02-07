@@ -55,7 +55,15 @@ contract HtsSystemContract is IHederaTokenService {
         assembly { accountId := sload(slot) }
     }
 
-    function mintToken(address token, int64 amount, bytes[] memory) htsCall external returns (
+    function mintToken(address token, int64 amount, bytes[] memory data) htsCall external returns (
+        int64 responseCode,
+        int64 newTotalSupply,
+        int64[] memory serialNumbers
+    ) {
+        return mintToken(token, amount, false);
+    }
+
+    function mintToken(address token, int64 amount, bool ignoreSupplyKeyCheck) htsCall internal returns (
         int64 responseCode,
         int64 newTotalSupply,
         int64[] memory serialNumbers
@@ -64,6 +72,9 @@ contract HtsSystemContract is IHederaTokenService {
         require(amount > 0, "mintToken: invalid amount");
 
         (int64 tokenInfoResponseCode, TokenInfo memory tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
+        if (!ignoreSupplyKeyCheck && _extractKeyAddress(0x10, tokenInfo) == address(0)) { // 0x10 - supply key
+            return (HederaResponseCodes.TOKEN_HAS_NO_SUPPLY_KEY, tokenInfo.totalSupply, new int64[](0));
+        }
         require(tokenInfoResponseCode == HederaResponseCodes.SUCCESS, "mintToken: failed to get token info");
 
         address treasuryAccount = tokenInfo.token.treasury;
@@ -85,6 +96,9 @@ contract HtsSystemContract is IHederaTokenService {
         require(amount > 0, "burnToken: invalid amount");
 
         (int64 tokenInfoResponseCode, TokenInfo memory tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
+        if (_extractKeyAddress(0x10, tokenInfo) == address(0)) {
+            return (HederaResponseCodes.TOKEN_HAS_NO_SUPPLY_KEY, tokenInfo.totalSupply);
+        }
         require(tokenInfoResponseCode == HederaResponseCodes.SUCCESS, "burnToken: failed to get token info");
 
         address treasuryAccount = tokenInfo.token.treasury;
@@ -188,7 +202,7 @@ contract HtsSystemContract is IHederaTokenService {
         deployHIP719Proxy(tokenAddress);
 
         if (initialTotalSupply > 0) {
-            this.mintToken(tokenAddress, initialTotalSupply, new bytes[](0));
+            mintToken(tokenAddress, initialTotalSupply, true);
         }
 
         responseCode = HederaResponseCodes.SUCCESS;
@@ -939,5 +953,14 @@ contract HtsSystemContract is IHederaTokenService {
         bytes32 slot = _isApprovedForAllSlot(sender, operator);
         assembly { sstore(slot, approved) }
         emit IERC721.ApprovalForAll(sender, operator, approved);
+    }
+
+    function _extractKeyAddress(uint keyType, TokenInfo memory tokenInfo) private pure returns (address) {
+        for (uint256 i = 0; i < tokenInfo.token.tokenKeys.length; i++) {
+            if (tokenInfo.token.tokenKeys[i].keyType == keyType) {
+                return tokenInfo.token.tokenKeys[i].key.contractId;
+            }
+        }
+        return address(0);
     }
 }

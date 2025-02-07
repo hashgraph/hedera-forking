@@ -53,6 +53,9 @@ for (const [re, fn] of /** @type {const} */([
 
         return require(`../data/${token.symbol}/getNonFungibleToken_${nftNumber}.json`);
     }],
+    [/^accounts\?limit=1&account\.publickey=([\w.]+)$/, publicKey => {
+        return require(`../data/getAccountsByPublicKey_${publicKey.toLowerCase()}.json`);
+    }],
     [/^accounts\/((0x[0-9a-fA-F]{40})|(0\.0\.\d+))$/, idOrAliasOrEvmAddress => {
         assert(typeof idOrAliasOrEvmAddress === 'string');
         try {
