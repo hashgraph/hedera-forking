@@ -138,10 +138,15 @@ const _types = {
     t_int64: str => [toIntHex256(str ?? 0)],
     t_address: str => [
         str
-            ? (mirrorNode, blockNumber) =>
-                  mirrorNode
-                      .getAccount(str, blockNumber)
-                      .then(acc => toIntHex256(acc?.evm_address ?? str?.replace('0.0.', '') ?? 0))
+            ? async (mirrorNode, blockNumber) => {
+                  return str.startsWith('0x')
+                      ? str.substring(2).padStart(64, '0')
+                      : mirrorNode
+                            .getAccount(str, blockNumber)
+                            .then(acc =>
+                                toIntHex256(acc?.evm_address ?? str?.replace('0.0.', '') ?? 0)
+                            );
+              }
             : toIntHex256(0),
     ],
     t_bool: value => [toIntHex256(value ? 1 : 0)],
@@ -241,13 +246,26 @@ function slotMapOf(token) {
         ['fee_schedule_key', 0x20],
         ['pause_key', 0x40],
     ]).map(([prop, key_type]) => {
-        const key = token[prop];
+        const key = /**@type{{contractId: string}}*/ (token[prop]);
         if (key === null) return { key_type, ed25519: '', _e_c_d_s_a_secp256k1: '' };
         assert(typeof key === 'object');
-        assert('_type' in key && 'key' in key);
+        assert('_type' in key && 'key' in key && typeof key.key === 'string');
+        if (!key.contractId && key.key) {
+            key.contractId = `0x${keccak256(Buffer.from(key.key, 'utf-8')).slice(-40).padStart(64, '0')}`;
+        }
         if (key._type === 'ED25519')
-            return { key_type, ed25519: key.key, _e_c_d_s_a_secp256k1: '' };
-        return { key_type, ed25519: '', _e_c_d_s_a_secp256k1: key.key };
+            return {
+                key_type,
+                contract_id: key.contractId,
+                ed25519: key.key,
+                _e_c_d_s_a_secp256k1: '',
+            };
+        return {
+            key_type,
+            contract_id: key.contractId,
+            ed25519: '',
+            _e_c_d_s_a_secp256k1: key.key,
+        };
     });
     const customFees = /**@type {Record<string, Record<string, unknown>[]>}*/ (
         token['custom_fees']
@@ -267,7 +285,17 @@ function slotMapOf(token) {
         maximum_amount: fee['maximum'],
         fee_collector: fee['collector_account_id'],
     }));
-    token['royalty_fees'] = customFees['royalty_fees'] ?? [];
+    token['royalty_fees'] = (customFees['royalty_fees'] ?? []).map(fee => ({
+        all_collectors_are_exempt: fee['all_collectors_are_exempt'],
+        numerator: /**@type{{numerator: unknown}}*/ (fee['amount'])['numerator'],
+        denominator: /**@type{{denominator: unknown}}*/ (fee['amount'])['denominator'],
+        collector_account_id: fee['collector_account_id'],
+        amount: /**@type{{amount: unknown}}*/ (fee['fallback_fee'] || {})['amount'],
+        tokenId: /**@type{{denominating_token_id: unknown}}*/ (fee['fallback_fee'] || {})[
+            'denominating_token_id'
+        ],
+        fee_collector: fee['collector_account_id'],
+    }));
 
     const map = new SlotMap();
     storage.forEach(slot => visit(slot, 0n, token, '', map));

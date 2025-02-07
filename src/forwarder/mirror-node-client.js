@@ -65,12 +65,11 @@ class MirrorNodeClient {
      *
      * @param {string} tokenId the token ID to fetch.
      * @param {number} serialId the serial ID of the NFT to fetch.
-     * @param {number} blockNumber
+     * @param {number} _blockNumber
      * @returns {Promise<Record<string, unknown> | null>} a `Promise` resolving to the token information or null if not found.
      */
-    async getNftByTokenIdAndSerial(tokenId, serialId, blockNumber) {
-        const timestamp = await this.getBlockQueryParam(blockNumber);
-        return this._get(`tokens/${tokenId}/nft/${serialId}?${timestamp}`);
+    async getNftByTokenIdAndSerial(tokenId, serialId, _blockNumber) {
+        return this._get(`tokens/${tokenId}/nfts/${serialId}`);
     }
 
     /**
@@ -136,6 +135,16 @@ class MirrorNodeClient {
     async getAccount(idOrAliasOrEvmAddress, blockNumber) {
         const timestamp = await this.getBlockQueryParam(blockNumber);
         return this._get(`accounts/${idOrAliasOrEvmAddress}?transactions=false&${timestamp}`);
+    }
+
+    /**
+     * Fetches accounts information by account public key.
+     *
+     * @param {string} publicKey The account public key to fetch.
+     * @returns {Promise<{ accounts: {evm_address: string}[] } | null>} A `Promise` resolving to the account information or `null` if not found.
+     */
+    async getAccountsByPublicKey(publicKey) {
+        return this._get(`accounts?limit=1&account.publickey=${publicKey}`);
     }
 
     /**

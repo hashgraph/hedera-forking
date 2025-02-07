@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 library HederaResponseCodes {
     int32 internal constant NOT_SUPPORTED = 13;
     int32 internal constant SUCCESS = 22; // The transaction succeeded
+    int32 internal constant TOKEN_HAS_NO_SUPPLY_KEY = 180;
     int32 internal constant INSUFFICIENT_ACCOUNT_BALANCE = 28;
     int32 internal constant INVALID_ACCOUNT_AMOUNTS = 48;
     int32 internal constant ACCOUNT_REPEATED_IN_ACCOUNT_AMOUNTS = 74;

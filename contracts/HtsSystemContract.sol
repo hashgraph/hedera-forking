@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
-import {IERC20Events, IERC20} from "./IERC20.sol";
-import {IERC721, IERC721Events} from "./IERC721.sol";
+import {IERC20} from "./IERC20.sol";
+import {IERC721} from "./IERC721.sol";
 import {IHRC719} from "./IHRC719.sol";
 import {IHederaTokenService} from "./IHederaTokenService.sol";
 import {HederaResponseCodes} from "./HederaResponseCodes.sol";
@@ -62,6 +62,7 @@ contract HtsSystemContract is IHederaTokenService {
         assembly { accountId := sload(slot) }
     }
 
+
     /**
      * @dev Performs a cryptocurrency transfer. It takes two input parameters.
      * - transferList - This should be a list of HBAR transactions (send them in the transferList.transfers property)
@@ -108,7 +109,7 @@ contract HtsSystemContract is IHederaTokenService {
      * you must ensure that the sum of all transfers with negative amounts totals -1.
      */
     function cryptoTransfer(TransferList memory transferList, TokenTransferList[] memory tokenTransfers)
-        htsCall external returns (int64) {
+    htsCall external returns (int64) {
         int64 responseCode = _checkCryptoFungibleTransfers(address(0), transferList.transfers);
         if (responseCode != HederaResponseCodes.SUCCESS) return responseCode;
 
@@ -183,7 +184,16 @@ contract HtsSystemContract is IHederaTokenService {
         return HederaResponseCodes.SUCCESS;
     }
 
-    function mintToken(address token, int64 amount, bytes[] memory) htsCall kyc external returns (
+
+    function mintToken(address token, int64 amount, bytes[] memory data) htsCall kyc external returns (
+        int64 responseCode,
+        int64 newTotalSupply,
+        int64[] memory serialNumbers
+    ) {
+        return mintToken(token, amount, false);
+    }
+
+    function mintToken(address token, int64 amount, bool ignoreSupplyKeyCheck) htsCall internal returns (
         int64 responseCode,
         int64 newTotalSupply,
         int64[] memory serialNumbers
@@ -191,6 +201,9 @@ contract HtsSystemContract is IHederaTokenService {
         require(amount > 0, "mintToken: invalid amount");
 
         (int64 tokenInfoResponseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
+        if (!ignoreSupplyKeyCheck && _extractKeyAddress(0x10, tokenInfo) == address(0)) { // 0x10 - supply key
+            return (HederaResponseCodes.TOKEN_HAS_NO_SUPPLY_KEY, tokenInfo.totalSupply, new int64[](0));
+        }
         require(tokenInfoResponseCode == HederaResponseCodes.SUCCESS, "mintToken: failed to get token info");
 
         address treasuryAccount = tokenInfo.token.treasury;
@@ -211,6 +224,9 @@ contract HtsSystemContract is IHederaTokenService {
         require(amount > 0, "burnToken: invalid amount");
 
         (int64 tokenInfoResponseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
+        if (_extractKeyAddress(0x10, tokenInfo) == address(0)) {
+            return (HederaResponseCodes.TOKEN_HAS_NO_SUPPLY_KEY, tokenInfo.totalSupply);
+        }
         require(tokenInfoResponseCode == HederaResponseCodes.SUCCESS, "burnToken: failed to get token info");
 
         address treasuryAccount = tokenInfo.token.treasury;
@@ -318,7 +334,7 @@ contract HtsSystemContract is IHederaTokenService {
         deployHIP719Proxy(tokenAddress);
 
         if (initialTotalSupply > 0) {
-            this.mintToken(tokenAddress, initialTotalSupply, new bytes[](0));
+            mintToken(tokenAddress, initialTotalSupply, true);
         }
 
         responseCode = HederaResponseCodes.SUCCESS;
@@ -735,7 +751,7 @@ contract HtsSystemContract is IHederaTokenService {
                 address to = address(bytes20(msg.data[72:92]));
                 uint256 amount = uint256(bytes32(msg.data[92:124]));
                 _approve(from, to, amount);
-                emit IERC20Events.Approval(from, to, amount);
+                emit IERC20.Approval(from, to, amount);
                 return abi.encode(true);
             }
             if (selector == this.approveNFT.selector) {
@@ -861,7 +877,7 @@ contract HtsSystemContract is IHederaTokenService {
             uint256 amount = uint256(bytes32(msg.data[60:92]));
             address owner = msg.sender;
             _approve(owner, spender, amount);
-            emit IERC20Events.Approval(owner, spender, amount);
+            emit IERC20.Approval(owner, spender, amount);
             return abi.encode(true);
         }
         return _redirectForHRC719(selector);
@@ -1047,7 +1063,7 @@ contract HtsSystemContract is IHederaTokenService {
         require(from != address(0), "hts: invalid sender");
         require(to != address(0), "hts: invalid receiver");
         _update(from, to, amount);
-        emit IERC20Events.Transfer(from, to, amount);
+        emit IERC20.Transfer(from, to, amount);
     }
 
     function _transferNFT(address sender, address from, address to, uint256 serialId) private {
@@ -1074,7 +1090,7 @@ contract HtsSystemContract is IHederaTokenService {
 
         // Set the new owner
         assembly { sstore(slot, to) }
-        emit IERC721Events.Transfer(from, to, serialId);
+        emit IERC721.Transfer(from, to, serialId);
     }
 
     function _updateKyc(address account, bool hasKycGranted) public {
@@ -1124,7 +1140,7 @@ contract HtsSystemContract is IHederaTokenService {
         bytes32 slot = _getApprovedSlot(uint32(serialId));
         address newApproved = isApproved ? spender : address(0);
         assembly { sstore(slot, newApproved) }
-        emit IERC721Events.Approval(owner, spender, serialId);
+        emit IERC721.Approval(owner, spender, serialId);
     }
 
     /**
@@ -1145,7 +1161,16 @@ contract HtsSystemContract is IHederaTokenService {
         require(operator != address(0) && operator != sender, "setApprovalForAll: invalid operator");
         bytes32 slot = _isApprovedForAllSlot(sender, operator);
         assembly { sstore(slot, approved) }
-        emit IERC721Events.ApprovalForAll(sender, operator, approved);
+        emit IERC721.ApprovalForAll(sender, operator, approved);
+    }
+
+    function _extractKeyAddress(uint keyType, TokenInfo memory tokenInfo) private pure returns (address) {
+        for (uint256 i = 0; i < tokenInfo.token.tokenKeys.length; i++) {
+            if (tokenInfo.token.tokenKeys[i].keyType == keyType) {
+                return tokenInfo.token.tokenKeys[i].key.contractId;
+            }
+        }
+        return address(0);
     }
 
     function _checkCryptoFungibleTransfers(address token, AccountAmount[] memory transfers) internal returns (int64) {
@@ -1219,17 +1244,12 @@ contract HtsSystemContract is IHederaTokenService {
         return HederaResponseCodes.NOT_SUPPORTED;
     }
 
-    function _getKey(uint keyType, TokenInfo memory tokenInfo) private pure returns (bool, KeyValue memory) {
+    function _extractKeyAddress(uint keyType, TokenInfo memory tokenInfo) private pure returns (address) {
         for (uint256 i = 0; i < tokenInfo.token.tokenKeys.length; i++) {
             if (tokenInfo.token.tokenKeys[i].keyType == keyType) {
-                bool notEmpty = tokenInfo.token.tokenKeys[i].key.contractId != address(0) ||
-                    tokenInfo.token.tokenKeys[i].key.delegatableContractId != address(0) ||
-                    keccak256(tokenInfo.token.tokenKeys[i].key.ECDSA_secp256k1) != keccak256("") ||
-                    keccak256(tokenInfo.token.tokenKeys[i].key.ed25519) != keccak256("");
-                return (notEmpty, tokenInfo.token.tokenKeys[i].key);
+                return tokenInfo.token.tokenKeys[i].key.contractId;
             }
         }
-        KeyValue memory value;
-        return (false, value);
+        return address(0);
     }
 }

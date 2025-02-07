@@ -28,6 +28,8 @@ abstract contract MirrorNode {
 
     function fetchAccount(string memory account) external virtual returns (string memory json);
 
+    function fetchAccountByPublicKey(string memory publicKey) external virtual returns (string memory json);
+
     function fetchTokenRelationshipOfAccount(string memory account, address token) external virtual returns (string memory json);
 
     function fetchNonFungibleToken(address token, uint32 serial) external virtual returns (string memory json);
@@ -112,6 +114,18 @@ abstract contract MirrorNode {
             }
         } catch {}
         return "NOT_APPLICABLE";
+    }
+
+    function getAccountAddressByPublicKey(string memory publicKey) public returns (address) {
+        try this.fetchAccountByPublicKey(publicKey) returns (string memory json) {
+            if (vm.keyExistsJson(json, ".accounts[0].evm_address")) {
+                return vm.parseJsonAddress(json, ".accounts[0].evm_address");
+            }
+        } catch {
+            // Do nothing
+        }
+        // generate a deterministic address based on the account public key as a fallback
+        return address(uint160(uint256(keccak256(bytes(publicKey)))));
     }
 
     function getAccountAddress(string memory accountId) public returns (address) {

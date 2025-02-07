@@ -5,8 +5,8 @@ import {Test} from "forge-std/Test.sol";
 import {HederaResponseCodes} from "../contracts/HederaResponseCodes.sol";
 import {HtsSystemContract, HTS_ADDRESS} from "../contracts/HtsSystemContract.sol";
 import {IHederaTokenService} from "../contracts/IHederaTokenService.sol";
-import {IERC20Events, IERC20} from "../contracts/IERC20.sol";
-import {IERC721Events, IERC721} from "../contracts/IERC721.sol";
+import {IERC20} from "../contracts/IERC20.sol";
+import {IERC721} from "../contracts/IERC721.sol";
 import {IHRC719} from "../contracts/IHRC719.sol";
 import {TestSetup} from "./lib/TestSetup.sol";
 
@@ -75,21 +75,21 @@ contract HTSTest is Test, TestSetup {
         // AdminKey
         assertEq(tokenInfo.token.tokenKeys[0].keyType, 0x1);
         assertEq(tokenInfo.token.tokenKeys[0].key.inheritAccountKey, false);
-        assertEq(tokenInfo.token.tokenKeys[0].key.contractId, address(0));
+        assertEq(tokenInfo.token.tokenKeys[0].key.contractId, 0xF287CfB303322B6dCDA77ce0824Bd1a3fA5d0e47);
         assertEq(tokenInfo.token.tokenKeys[0].key.ed25519, hex"5db29fb3f19f8618cc4689cf13e78a935621845d67547719faf49f65d5c367cc");
         assertEq(tokenInfo.token.tokenKeys[0].key.ECDSA_secp256k1, bytes(""));
         assertEq(tokenInfo.token.tokenKeys[0].key.delegatableContractId, address(0));
         // FreezeKey
         assertEq(tokenInfo.token.tokenKeys[2].keyType, 0x4);
         assertEq(tokenInfo.token.tokenKeys[2].key.inheritAccountKey, false);
-        assertEq(tokenInfo.token.tokenKeys[2].key.contractId, address(0));
+        assertEq(tokenInfo.token.tokenKeys[2].key.contractId, 0x6c273d045CC8219F98e7F5944B49Ae1e2fdA1449);
         assertEq(tokenInfo.token.tokenKeys[2].key.ed25519, hex"baa2dd1684d8445d41b22f2b2c913484a7d885cf25ce525f8bf3fe8d5c8cb85d");
         assertEq(tokenInfo.token.tokenKeys[2].key.ECDSA_secp256k1, bytes(""));
         assertEq(tokenInfo.token.tokenKeys[2].key.delegatableContractId, address(0));
         // SupplyKey
         assertEq(tokenInfo.token.tokenKeys[4].keyType, 0x10);
         assertEq(tokenInfo.token.tokenKeys[4].key.inheritAccountKey, false);
-        assertEq(tokenInfo.token.tokenKeys[4].key.contractId, address(0));
+        assertEq(tokenInfo.token.tokenKeys[4].key.contractId, 0x4bc2a5E2099e0536C7B21610BD5A0E1EFbb032A0);
         assertEq(tokenInfo.token.tokenKeys[4].key.ed25519, hex"4e4658983980d1b25a634eeeb26cb2b0f0e2e9c83263ba5b056798d35f2139a8");
         assertEq(tokenInfo.token.tokenKeys[4].key.ECDSA_secp256k1, bytes(""));
         assertEq(tokenInfo.token.tokenKeys[4].key.delegatableContractId, address(0));
@@ -218,6 +218,36 @@ contract HTSTest is Test, TestSetup {
         bytes[] memory metadata = new bytes[](0);
         int64 initialTotalSupply = 10000000005000000;
         IHederaTokenService.TokenInfo memory tokenInfo;
+        IHederaTokenService.TokenKey[] memory keys = new IHederaTokenService.TokenKey[](1);
+        keys[0].keyType = 0x10; // Supply key
+        keys[0].key.contractId = msg.sender;
+        tokenInfo.token = IHederaTokenService.HederaToken(
+            "USD Coin",
+            "USDC",
+            address(0),
+            "USDC HBAR",
+            false,
+            initialTotalSupply + amount,
+            false,
+            keys,
+            IHederaTokenService.Expiry(0, address(0), 0)
+        );
+
+        vm.mockCall(
+            token,
+            abi.encode(IHederaTokenService.getTokenInfo.selector),
+            abi.encode(HederaResponseCodes.SUCCESS, tokenInfo)
+        );
+        vm.expectRevert(bytes("mintToken: invalid account"));
+        IHederaTokenService(HTS_ADDRESS).mintToken(token, amount, metadata);
+    }
+
+    function test_mintToken_should_fail_with_np_supplier() external {
+        address token = USDC;
+        int64 amount = 1000;
+        bytes[] memory metadata = new bytes[](0);
+        int64 initialTotalSupply = 10000000005000000;
+        IHederaTokenService.TokenInfo memory tokenInfo;
         tokenInfo.token = IHederaTokenService.HederaToken(
             "USD Coin",
             "USDC",
@@ -235,8 +265,8 @@ contract HTSTest is Test, TestSetup {
             abi.encode(IHederaTokenService.getTokenInfo.selector),
             abi.encode(HederaResponseCodes.SUCCESS, tokenInfo)
         );
-        vm.expectRevert(bytes("mintToken: invalid account"));
-        IHederaTokenService(HTS_ADDRESS).mintToken(token, amount, metadata);
+        (int64 code, , ) = IHederaTokenService(HTS_ADDRESS).mintToken(token, amount, metadata);
+        assertEq(code, HederaResponseCodes.TOKEN_HAS_NO_SUPPLY_KEY);
     }
 
     function test_mintToken_should_revert_with_invalid_token() external {
@@ -257,10 +287,10 @@ contract HTSTest is Test, TestSetup {
     }
 
     function test_burnToken_should_succeed_with_valid_input() external {
-        address token = MFCT;
-        address treasury = MFCT_TREASURY;
+        address token = USDC;
+        address treasury = USDC_TREASURY;
         int64 amount = 1000;
-        int64 initialTotalSupply = 5000;
+        int64 initialTotalSupply = int64(int256(IERC20(token).totalSupply()));
         uint256 initialTreasuryBalance = IERC20(token).balanceOf(treasury);
 
         (int64 responseCodeMint, int64 newTotalSupplyAfterMint, int64[] memory serialNumbers) = IHederaTokenService(HTS_ADDRESS).mintToken(token, amount, new bytes[](0));
@@ -286,6 +316,36 @@ contract HTSTest is Test, TestSetup {
         int64 initialTotalSupply = 5000;
         int64[] memory serialNumbers = new int64[](0);
         IHederaTokenService.TokenInfo memory tokenInfo;
+        IHederaTokenService.TokenKey[] memory keys = new IHederaTokenService.TokenKey[](1);
+        keys[0].keyType = 0x10; // Supply key
+        keys[0].key.contractId = msg.sender;
+        tokenInfo.token = IHederaTokenService.HederaToken(
+            "My Crypto Token is the name which the string length is greater than 31",
+            "Token symbol must be exactly 32!",
+            address(0),
+            "",
+            false,
+            initialTotalSupply + amount,
+            false,
+            keys,
+            IHederaTokenService.Expiry(0, address(0), 0)
+        );
+
+        vm.mockCall(
+            token,
+            abi.encode(IHederaTokenService.getTokenInfo.selector),
+            abi.encode(HederaResponseCodes.SUCCESS, tokenInfo)
+        );
+        vm.expectRevert(bytes("burnToken: invalid account"));
+        IHederaTokenService(HTS_ADDRESS).burnToken(token, amount, serialNumbers);
+    }
+
+    function test_burnToken_should_revert_with_no_supplier() external {
+        address token = MFCT;
+        int64 amount = 1000;
+        int64 initialTotalSupply = 5000;
+        int64[] memory serialNumbers = new int64[](0);
+        IHederaTokenService.TokenInfo memory tokenInfo;
         tokenInfo.token = IHederaTokenService.HederaToken(
             "My Crypto Token is the name which the string length is greater than 31",
             "Token symbol must be exactly 32!",
@@ -303,8 +363,8 @@ contract HTSTest is Test, TestSetup {
             abi.encode(IHederaTokenService.getTokenInfo.selector),
             abi.encode(HederaResponseCodes.SUCCESS, tokenInfo)
         );
-        vm.expectRevert(bytes("burnToken: invalid account"));
-        IHederaTokenService(HTS_ADDRESS).burnToken(token, amount, serialNumbers);
+        (int64 code, ) = IHederaTokenService(HTS_ADDRESS).burnToken(token, amount, serialNumbers);
+        assertEq(code, HederaResponseCodes.TOKEN_HAS_NO_SUPPLY_KEY);
     }
 
     function test_burnToken_should_revert_with_invalid_token() external {
@@ -426,7 +486,7 @@ contract HTSTest is Test, TestSetup {
             = IHederaTokenService(HTS_ADDRESS).getTokenKey(token, 0x1);
         assertEq(adminKeyStatusCode, HederaResponseCodes.SUCCESS);
         assertEq(adminKey.inheritAccountKey, false);
-        assertEq(adminKey.contractId, address(0));
+        assertEq(adminKey.contractId, 0xF287CfB303322B6dCDA77ce0824Bd1a3fA5d0e47);
         assertEq(adminKey.ed25519, hex"5db29fb3f19f8618cc4689cf13e78a935621845d67547719faf49f65d5c367cc");
         assertEq(adminKey.ECDSA_secp256k1, bytes(""));
         assertEq(adminKey.delegatableContractId, address(0));
@@ -435,7 +495,7 @@ contract HTSTest is Test, TestSetup {
             = IHederaTokenService(HTS_ADDRESS).getTokenKey(token, 0x4);
         assertEq(freezeKeyStatusCode, HederaResponseCodes.SUCCESS);
         assertEq(freezeKey.inheritAccountKey, false);
-        assertEq(freezeKey.contractId, address(0));
+        assertEq(freezeKey.contractId, 0x6c273d045CC8219F98e7F5944B49Ae1e2fdA1449);
         assertEq(freezeKey.ed25519, hex"baa2dd1684d8445d41b22f2b2c913484a7d885cf25ce525f8bf3fe8d5c8cb85d");
         assertEq(freezeKey.ECDSA_secp256k1, bytes(""));
         assertEq(freezeKey.delegatableContractId, address(0));
@@ -444,7 +504,7 @@ contract HTSTest is Test, TestSetup {
             = IHederaTokenService(HTS_ADDRESS).getTokenKey(token, 0x10);
         assertEq(supplyKeyStatusCode, HederaResponseCodes.SUCCESS);
         assertEq(supplyKey.inheritAccountKey, false);
-        assertEq(supplyKey.contractId, address(0));
+        assertEq(supplyKey.contractId, 0x4bc2a5E2099e0536C7B21610BD5A0E1EFbb032A0);
         assertEq(supplyKey.ed25519, hex"4e4658983980d1b25a634eeeb26cb2b0f0e2e9c83263ba5b056798d35f2139a8");
         assertEq(supplyKey.ECDSA_secp256k1, bytes(""));
         assertEq(supplyKey.delegatableContractId, address(0));
@@ -560,21 +620,21 @@ contract HTSTest is Test, TestSetup {
         // AdminKey
         assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[0].keyType, 0x1);
         assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[0].key.inheritAccountKey, false);
-        assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[0].key.contractId, address(0));
+        assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[0].key.contractId, 0xF287CfB303322B6dCDA77ce0824Bd1a3fA5d0e47);
         assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[0].key.ed25519, hex"5db29fb3f19f8618cc4689cf13e78a935621845d67547719faf49f65d5c367cc");
         assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[0].key.ECDSA_secp256k1, bytes(""));
         assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[0].key.delegatableContractId, address(0));
         // FreezeKey
         assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[2].keyType, 0x4);
         assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[2].key.inheritAccountKey, false);
-        assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[2].key.contractId, address(0));
+        assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[2].key.contractId, 0x6c273d045CC8219F98e7F5944B49Ae1e2fdA1449);
         assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[2].key.ed25519, hex"baa2dd1684d8445d41b22f2b2c913484a7d885cf25ce525f8bf3fe8d5c8cb85d");
         assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[2].key.ECDSA_secp256k1, bytes(""));
         assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[2].key.delegatableContractId, address(0));
         // SupplyKey
         assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[4].keyType, 0x10);
         assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[4].key.inheritAccountKey, false);
-        assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[4].key.contractId, address(0));
+        assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[4].key.contractId, 0x4bc2a5E2099e0536C7B21610BD5A0E1EFbb032A0);
         assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[4].key.ed25519, hex"4e4658983980d1b25a634eeeb26cb2b0f0e2e9c83263ba5b056798d35f2139a8");
         assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[4].key.ECDSA_secp256k1, bytes(""));
         assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[4].key.delegatableContractId, address(0));
@@ -611,7 +671,7 @@ contract HTSTest is Test, TestSetup {
         // AdminKey
         assertEq(nonFungibleTokenInfo.tokenInfo.token.tokenKeys[0].keyType, 0x1);
         assertEq(nonFungibleTokenInfo.tokenInfo.token.tokenKeys[0].key.inheritAccountKey, false);
-        assertEq(nonFungibleTokenInfo.tokenInfo.token.tokenKeys[0].key.contractId, address(0));
+        assertEq(nonFungibleTokenInfo.tokenInfo.token.tokenKeys[0].key.contractId, 0x435d7D41D4f69F958bda7A8D9f549a0dD9B64c86);
         assertEq(nonFungibleTokenInfo.tokenInfo.token.tokenKeys[0].key.ed25519, bytes(""));
         assertEq(nonFungibleTokenInfo.tokenInfo.token.tokenKeys[0].key.ECDSA_secp256k1, hex"0242b7c3beea2af6dfcc874c41d1332463407e283f602ce8ef2cbe324823561b6f");
         assertEq(nonFungibleTokenInfo.tokenInfo.token.tokenKeys[0].key.delegatableContractId, address(0));
@@ -640,7 +700,7 @@ contract HTSTest is Test, TestSetup {
 
         vm.prank(owner);
         vm.expectEmit(USDC);
-        emit IERC20Events.Transfer(owner, to, amount);
+        emit IERC20.Transfer(owner, to, amount);
         IHederaTokenService(HTS_ADDRESS).transferToken(USDC, owner, to, int64(int256(amount)));
 
         assertEq(IERC20(USDC).balanceOf(owner), balanceOfOwner - amount);
@@ -659,7 +719,7 @@ contract HTSTest is Test, TestSetup {
 
         vm.prank(owner);
         vm.expectEmit(USDC);
-        emit IERC20Events.Transfer(owner, to, amount);
+        emit IERC20.Transfer(owner, to, amount);
         IHederaTokenService(HTS_ADDRESS).transferFrom(USDC, owner, to, amount);
 
         assertEq(IERC20(USDC).balanceOf(owner), balanceOfOwner - amount);
@@ -684,7 +744,7 @@ contract HTSTest is Test, TestSetup {
         uint256 serialId = 1;
         vm.startPrank(CFNFTFF_TREASURY);
         vm.expectEmit(CFNFTFF);
-        emit IERC721Events.Transfer(CFNFTFF_TREASURY, to, serialId);
+        emit IERC721.Transfer(CFNFTFF_TREASURY, to, serialId);
         IHederaTokenService(HTS_ADDRESS).transferNFT(CFNFTFF, CFNFTFF_TREASURY, to, int64(int256(serialId)));
         vm.stopPrank();
         assertEq(IERC721(CFNFTFF).ownerOf(serialId), to);
@@ -695,7 +755,7 @@ contract HTSTest is Test, TestSetup {
         uint256 serialId = 1;
         vm.startPrank(CFNFTFF_TREASURY);
         vm.expectEmit(CFNFTFF);
-        emit IERC721Events.Transfer(CFNFTFF_TREASURY, to, serialId);
+        emit IERC721.Transfer(CFNFTFF_TREASURY, to, serialId);
         IHederaTokenService(HTS_ADDRESS).transferFromNFT(CFNFTFF, CFNFTFF_TREASURY, to, serialId);
         vm.stopPrank();
         assertEq(IERC721(CFNFTFF).ownerOf(serialId), to);
@@ -716,7 +776,7 @@ contract HTSTest is Test, TestSetup {
 
         vm.prank(owner);
         vm.expectEmit(USDC);
-        emit IERC20Events.Transfer(owner, to[0], amount);
+        emit IERC20.Transfer(owner, to[0], amount);
         IHederaTokenService(HTS_ADDRESS).transferTokens(USDC, to, amounts);
 
         assertEq(IERC20(USDC).balanceOf(owner), balanceOfOwner - amount);
@@ -768,7 +828,7 @@ contract HTSTest is Test, TestSetup {
         to[0] = makeAddr("recipient");
         vm.startPrank(CFNFTFF_TREASURY);
         vm.expectEmit(CFNFTFF);
-        emit IERC721Events.Transfer(CFNFTFF_TREASURY, to[0], serialId[0]);
+        emit IERC721.Transfer(CFNFTFF_TREASURY, to[0], serialId[0]);
         IHederaTokenService(HTS_ADDRESS).transferNFT(CFNFTFF, from[0], to[0], int64(int256(serialId[0])));
         vm.stopPrank();
         assertEq(IERC721(CFNFTFF).ownerOf(serialId[0]), to[0]);
@@ -809,7 +869,7 @@ contract HTSTest is Test, TestSetup {
         assertNotEq(IERC721(token).getApproved(1), newSpender);
         vm.prank(CFNFTFF_TREASURY);
         vm.expectEmit(token);
-        emit IERC721Events.Approval(CFNFTFF_TREASURY, newSpender, 1);
+        emit IERC721.Approval(CFNFTFF_TREASURY, newSpender, 1);
         int64 responseCodeApprove = IHederaTokenService(HTS_ADDRESS).approveNFT(token, newSpender, 1);
         assertEq(responseCodeApprove, HederaResponseCodes.SUCCESS);
         assertEq(IERC721(token).getApproved(1), newSpender);
@@ -822,7 +882,7 @@ contract HTSTest is Test, TestSetup {
         assertEq(IERC20(USDC).allowance(owner, spender), 0);
         vm.prank(owner);
         vm.expectEmit(USDC);
-        emit IERC20Events.Approval(owner, spender, amount);
+        emit IERC20.Approval(owner, spender, amount);
         int64 responseCodeApprove = IHederaTokenService(HTS_ADDRESS).approve(USDC, spender, amount);
         assertEq(responseCodeApprove, HederaResponseCodes.SUCCESS);
         assertEq(IERC20(USDC).allowance(owner, spender), amount);
@@ -833,7 +893,7 @@ contract HTSTest is Test, TestSetup {
         assertFalse(IERC721(CFNFTFF).isApprovedForAll(CFNFTFF_TREASURY, operator));
         vm.prank(CFNFTFF_TREASURY);
         vm.expectEmit(CFNFTFF);
-        emit IERC721Events.ApprovalForAll(CFNFTFF_TREASURY, operator, true);
+        emit IERC721.ApprovalForAll(CFNFTFF_TREASURY, operator, true);
         int64 setApprovalForAllResponseCode = IHederaTokenService(HTS_ADDRESS)
             .setApprovalForAll(CFNFTFF, operator, true);
         assertEq(setApprovalForAllResponseCode, HederaResponseCodes.SUCCESS);
@@ -875,9 +935,9 @@ contract HTSTest is Test, TestSetup {
         tokenTransfers[0].transfers[2] = transfer3;
         vm.prank(owner);
         vm.expectEmit(true, true, true, true, token);
-        emit IERC20Events.Transfer(owner, bob, amountToBob);
+        emit IERC20.Transfer(owner, bob, amountToBob);
         vm.expectEmit(true, true, true, true, token);
-        emit IERC20Events.Transfer(owner, alice, amountToAlice);
+        emit IERC20.Transfer(owner, alice, amountToAlice);
         int64 responseCode = IHederaTokenService(HTS_ADDRESS).cryptoTransfer(hbarTransfers, tokenTransfers);
         assertEq(responseCode, HederaResponseCodes.SUCCESS);
         assertEq(IERC20(token).balanceOf(bob), amountToBob);

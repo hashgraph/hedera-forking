@@ -150,6 +150,17 @@ interface IMirrorNodeClient {
         account: string;
         evm_address: string;
     } | null>;
+
+    /**
+     * Get accounts by public key.
+     *
+     * This method should call the Mirror Node API endpoint `GET /api/v1/accounts?limit=1&account.publickey={publicKey}`.
+     *
+     * @param publicKey
+     */
+    getAccountsByPublicKey(publicKey: string): Promise<{
+        accounts: { evm_address: string }[];
+    } | null>;
 }
 
 /**
