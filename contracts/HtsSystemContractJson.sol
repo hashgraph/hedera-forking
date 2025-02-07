@@ -73,14 +73,6 @@ contract HtsSystemContractJson is HtsSystemContract {
         return MirrorNode(address(uint160(uint256(vm.load(HTS_ADDRESS, slot)))));
     }
 
-    function deploySetTokenInfo(address tokenAddress) override internal {
-        bytes memory creationCode = vm.getCode("SetTokenInfo.sol");
-        vm.etch(tokenAddress, creationCode);
-        (bool success, bytes memory runtimeBytecode) = tokenAddress.call("");
-        require(success, "deploySetTokenInfo: Failed to create runtime bytecode");
-        vm.etch(tokenAddress, runtimeBytecode);
-    }
-
     function deployHIP719Proxy(address tokenAddress) override internal {
         string memory placeholder = "fefefefefefefefefefefefefefefefefefefefe";
         string memory addressString = vm.replace(vm.toString(tokenAddress), "0x", "");

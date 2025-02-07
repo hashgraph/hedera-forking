@@ -6,7 +6,6 @@ import {IERC721} from "./IERC721.sol";
 import {IHRC719} from "./IHRC719.sol";
 import {IHederaTokenService} from "./IHederaTokenService.sol";
 import {HederaResponseCodes} from "./HederaResponseCodes.sol";
-import {SetTokenInfo} from "./SetTokenInfo.sol";
 
 address constant HTS_ADDRESS = address(0x167);
 
@@ -21,6 +20,9 @@ contract HtsSystemContract is IHederaTokenService {
      * declared here are part of the token address space.
      */
     bytes32 private constant _nextTokenIdSlot = keccak256("HtsSystemContract::_nextTokenIdSlot");
+
+    bytes32 private constant _initSlot = keccak256("HtsSystemContractJson::_initSlot");
+    bytes32 private constant _isLocalTokenSlot = keccak256("HtsSystemContractJson::_isLocalTokenSlot");
 
     // All state variables belong to an instantiated Fungible/Non-Fungible token.
     // These state variables are accessed with a `delegatecall` from the Token Proxy bytecode.
@@ -137,10 +139,6 @@ contract HtsSystemContract is IHederaTokenService {
         return dissociateTokens(account, tokens);
     }
 
-    function deploySetTokenInfo(address token) virtual internal {
-        //
-    }
-
     function deployHIP719Proxy(address token) virtual internal {
         //
     }
@@ -183,9 +181,8 @@ contract HtsSystemContract is IHederaTokenService {
 
         tokenAddress = address(nextTokenId);
 
-        deploySetTokenInfo(tokenAddress);
-        SetTokenInfo(tokenAddress).setTokenInfo(tokenType_, tokenInfo, decimals_);
         deployHIP719Proxy(tokenAddress);
+        HtsSystemContract(tokenAddress).__setTokenInfo(tokenType_, tokenInfo, decimals_);
 
         if (initialTotalSupply > 0) {
             this.mintToken(tokenAddress, initialTotalSupply, new bytes[](0));
@@ -511,6 +508,13 @@ contract HtsSystemContract is IHederaTokenService {
     function __redirectForToken() internal virtual returns (bytes memory) {
         bytes4 selector = bytes4(msg.data[24:28]);
 
+        // Before `_initTokenData`
+        if (msg.sender == HTS_ADDRESS && selector == this.__setTokenInfo.selector) {
+            (string memory tokenType_, IHederaTokenService.TokenInfo memory tokenInfo, int32 decimals_) = abi.decode(msg.data[28:], (string, IHederaTokenService.TokenInfo, int32));
+            __setTokenInfo(tokenType_, tokenInfo, decimals_);
+            return abi.encode(true);
+        }
+
         _initTokenData();
 
         if (keccak256(bytes(tokenType)) == keccak256(bytes("NOT_FOUND"))) {
@@ -755,6 +759,75 @@ contract HtsSystemContract is IHederaTokenService {
             return abi.encode(res);
         }
         revert("redirectForToken: not supported");
+    }
+
+    function __setTokenInfo(string memory tokenType_, IHederaTokenService.TokenInfo memory tokenInfo, int32 decimals_) public {
+        tokenType = tokenType_;
+        decimals = uint8(uint32(decimals_));
+
+        // Marks the `_tokenInfo` as initialized.
+        // This avoids fetching token data from the Mirror Node.
+        // It is needed because the token only exists in the local EVM state,
+        // not in the remote network.
+        bytes32 initSlot = _initSlot;
+        assembly { sstore(initSlot, 1) }
+
+        bytes32 isLocalTokenSlot = _isLocalTokenSlot;
+        assembly { sstore(isLocalTokenSlot , 1) }
+
+        // The assignment
+        //
+        // _tokenInfo = tokenInfo;
+        //
+        // cannot be used directly because it triggers the following compilation error
+        //
+        // Error (1834): Copying of type struct IHederaTokenService.TokenKey memory[] memory to storage is not supported in legacy (only supported by the IR pipeline).
+        // Hint: try compiling with `--via-ir` (CLI) or the equivalent `viaIR: true` (Standard JSON)
+        //
+        // More specifically, the assigment
+        //
+        // _tokenInfo.token.tokenKeys = tokenInfo.token.tokenKeys;
+        //
+        // triggers the above error as well.
+        //
+        // Array assignments from memory to storage are not supported in legacy codegen https://github.com/ethereum/solidity/issues/3446#issuecomment-1924761902.
+        // And using the `--via-ir` flag as mentioned above increases compilation time substantially
+        // That is why we are better off copying the struct to storage manually.
+
+        _tokenInfo.token.name = tokenInfo.token.name;
+        _tokenInfo.token.symbol = tokenInfo.token.symbol;
+        _tokenInfo.token.treasury = tokenInfo.token.treasury;
+        _tokenInfo.token.memo = tokenInfo.token.memo;
+        _tokenInfo.token.tokenSupplyType = tokenInfo.token.tokenSupplyType;
+        _tokenInfo.token.maxSupply = tokenInfo.token.maxSupply;
+        _tokenInfo.token.freezeDefault = tokenInfo.token.freezeDefault;
+
+        for (uint256 i = 0; i < tokenInfo.token.tokenKeys.length; i++) {
+            _tokenInfo.token.tokenKeys.push(tokenInfo.token.tokenKeys[i]);
+        }
+
+        _tokenInfo.token.expiry = tokenInfo.token.expiry;
+
+        _tokenInfo.totalSupply = tokenInfo.totalSupply;
+        _tokenInfo.deleted = tokenInfo.deleted;
+        _tokenInfo.defaultKycStatus = tokenInfo.defaultKycStatus;
+        _tokenInfo.pauseStatus = tokenInfo.pauseStatus;
+
+        // The same copying issue as mentioned above for fee arrays.
+        // _tokenInfo.fixedFees = tokenInfo.fixedFees;
+        for (uint256 i = 0; i < tokenInfo.fixedFees.length; i++) {
+            _tokenInfo.fixedFees.push(tokenInfo.fixedFees[i]);
+        }
+        // _tokenInfo.fractionalFees = tokenInfo.fractionalFees;
+        for (uint256 i = 0; i < tokenInfo.fractionalFees.length; i++) {
+            _tokenInfo.fractionalFees.push(tokenInfo.fractionalFees[i]);
+        }
+        // _tokenInfo.royaltyFees = tokenInfo.royaltyFees;
+        for (uint256 i = 0; i < tokenInfo.royaltyFees.length; i++) {
+            _tokenInfo.royaltyFees.push(tokenInfo.royaltyFees[i]);
+        }
+
+        _tokenInfo.ledgerId = tokenInfo.ledgerId;
     }
 
     function _initTokenData() internal virtual {
