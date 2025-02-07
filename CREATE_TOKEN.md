@@ -77,7 +77,7 @@ This can be done in two ways.
 Fetching the token state from a remote network, or by creating a token locally altogether.
 
 Compare this to the HTS mock present in the [Smart Contracts repo](https://github.com/hashgraph/hedera-smart-contracts/tree/main/test/foundry/mocks/hts-precompile).
-In addition to provide the same features as the HTS mock, we provide forking capabilities as well.
+In addition to providing the same features as the HTS mock, we provide forking capabilities as well.
 
 ## High-level Specification
 
@@ -96,7 +96,7 @@ They return a `tokenAddress`, which will be the address of the newly created tok
 
 A successful call to any token creation method should have the following effect
 
-- The associated bytecode of `tokenAddress` should be that of the Proxy Contract as defined by [HIP719 _&sect; Specification_](https://hips.hedera.com/hip/hip-719). Note that the `tokenAddress` should be embedded into the bytecode as noted by the HIP.
+- The associated bytecode of `tokenAddress` should be that of the Proxy Contract as defined by [HIP719 _&sect; Specification_](https://hips.hedera.com/hip/hip-719). Note that the `tokenAddress` should be embedded into the Proxy bytecode as noted by the HIP.
 - The balance of the `token.treasury` should be `totalSupply`.
 - The `token.treasury` address should be associated to the token.
 - The token should not have any other balances nor associations.
@@ -126,34 +126,16 @@ A token create method should first check that `token` is valid, _e.g._, `token.n
 Then a `TokenInfo` variable should be created containing `token` and the remaining creation arguments as applicable.
 
 After that, the created `TokenInfo` should be copied into `internal _tokenInfo` of the `tokenAddress` slot space.
-To avoid changing the `redirectForToken` and `_initTokenData` interaction,
-we can deploy a temporary contract that copies `_tokenInfo` into its own storage space.
-After that, we deploy the Proxy Contract bytecode at `tokenAddress`.
+In order to achieve that, the Proxy bytecode is deployed at `tokenAddress` using `vm.etch`.
+Then, a call into `redirectForToken` is used to copy the `TokenInfo` into the storage space of `tokenAddress`.
 
-> [!NOTE]
-> The `vm.etch` cheatcode does not clean up the storage space of `target`.
-> That is, the storage space remains unchanged for a given target after `vm.etch` has been invoked onto that `target`.
->
-> ```solidity
-> address target = address(0x1234);
-> vm.store(target, bytes32(uint256(0x0)), bytes32(uint256(1111)));
-> vm.store(target, bytes32(uint256(0x1)), bytes32(uint256(2222)));
->
-> vm.etch(target, address(new C()).code);
->
-> C c = C(target);
-> console.log(c.val1());
-> console.log(c.val2());
-> ```
->
-> ```console
-> $ foundry test
-> [...]
-> Logs:
->   1111
->   2222
-> [...]
-> ```
+> [!NOTE] > ~~To avoid changing the `redirectForToken` and `_initTokenData` interaction,
+> we can deploy a temporary contract that copies `_tokenInfo` into its own storage space.~~ > ~~After that, we deploy the Proxy Contract bytecode at `tokenAddress`.~~
+> In a previous iteration, a temporary contract was used to copy `_tokenInfo` into the token's storage space.
+> However, this did not play well using Hardhat.
+> Replacing the contract bytecode from within the EVM is only possible in Hardhat when the cache is disabled.
+> But disabling the cache would have a heavy performance penalty for users.
+> That is why we decided to go with the single deployment approach.
 
 ## Hardhat plugin
 
