@@ -35,7 +35,7 @@ describe('message-call-project', function () {
         const contract = await hre.ethers.deployContract('CallToken');
         const tx = await (
             await contract['createToken'](name, symbol, decimals, treasury.address, {
-                value: 1_000_000n,
+                value: 1_000n,
             })
         ).wait();
         const logs = tx.logs.map(

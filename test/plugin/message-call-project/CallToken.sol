@@ -23,7 +23,7 @@ contract CallToken {
         token.symbol = symbol;
         token.treasury = treasury;
 
-        (int64 responseCode, address tokenAddress) = IHederaTokenService(address(0x167)).createFungibleToken{value: 1000}(token, 10000, decimals);
+        (int64 responseCode, address tokenAddress) = IHederaTokenService(address(0x167)).createFungibleToken{value: msg.value}(token, 10000, decimals);
         require(responseCode == 22, "HTS createToken failed");
         emit TokenCreated(tokenAddress);
     }
