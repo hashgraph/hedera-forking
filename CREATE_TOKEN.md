@@ -129,8 +129,10 @@ After that, the created `TokenInfo` should be copied into `internal _tokenInfo` 
 In order to achieve that, the Proxy bytecode is deployed at `tokenAddress` using `vm.etch`.
 Then, a call into `redirectForToken` is used to copy the `TokenInfo` into the storage space of `tokenAddress`.
 
-> [!NOTE] > ~~To avoid changing the `redirectForToken` and `_initTokenData` interaction,
-> we can deploy a temporary contract that copies `_tokenInfo` into its own storage space.~~ > ~~After that, we deploy the Proxy Contract bytecode at `tokenAddress`.~~
+> [!NOTE]
+>
+> ~~To avoid changing the `redirectForToken` and `_initTokenData` interaction, we can deploy a temporary contract that copies `_tokenInfo` into its own storage space. After that, we deploy the Proxy Contract bytecode at `tokenAddress`.~~
+>
 > In a previous iteration, a temporary contract was used to copy `_tokenInfo` into the token's storage space.
 > However, this did not play well using Hardhat.
 > Replacing the contract bytecode from within the EVM is only possible in Hardhat when the cache is disabled.
