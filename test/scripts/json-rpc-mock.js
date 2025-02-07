@@ -47,7 +47,12 @@ const c = {
     cyan: (/**@type{unknown}*/ text) => `\x1b[36m${text}\x1b[0m`,
 };
 
-/** @type {string[]} */
+/**
+ * List of token addresses created locally.
+ * The `eth_getCode` for a token created locally will return the proxy bytecode.
+ *
+ * @type {string[]}
+ */
 const localTokens = [];
 
 /**
@@ -250,10 +255,9 @@ const eth = {
             // slot(256) = `deployHIP719Proxy`selector(32) + padding(64) + address(160)
             if (nslot >> 160n === 0x400f4ef3_0000_0000_0000_0000n) {
                 const tokenAddress = '0x' + slot.slice(-40);
-                // const tokenId = `0.0.${BigInt(tokenAddress)}`;
-                // tokens[tokenId] = {address: tokenAddress, symbol: 'asdfa'};
                 localTokens.push(tokenAddress);
-                console.log(tokenAddress);
+                console.log(c.magenta('[DEBUG]'), 'Create token request for address', tokenAddress);
+                return ZERO_HEX_32_BYTE;
             }
         }
         const value = await getHtsStorageAt(address, slot, Number(blockNumber), mirrorNodeClient);
