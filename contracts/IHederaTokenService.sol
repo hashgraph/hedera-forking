@@ -695,17 +695,17 @@ interface IHederaTokenService {
     /// @param token The token address
     /// @param account The account address to be frozen
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
-    function freezeToken(address token, address account)
-        external
-        returns (int64 responseCode);
+    // function freezeToken(address token, address account)
+    //    external
+    //    returns (int64 responseCode);
 
     /// Operation to unfreeze token account
     /// @param token The token address
     /// @param account The account address to be unfrozen
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
-    function unfreezeToken(address token, address account)
-        external
-        returns (int64 responseCode);
+    // function unfreezeToken(address token, address account)
+    //    external
+    //    returns (int64 responseCode);
 
     /// Operation to grant kyc to token account
     /// @param token The token address
@@ -726,12 +726,12 @@ interface IHederaTokenService {
     /// Operation to pause token
     /// @param token The token address to be paused
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
-    // function pauseToken(address token) external returns (int64 responseCode);
+    function pauseToken(address token) external returns (int64 responseCode);
 
     /// Operation to unpause token
     /// @param token The token address to be unpaused
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
-    // function unpauseToken(address token) external returns (int64 responseCode);
+    function unpauseToken(address token) external returns (int64 responseCode);
 
     /// Operation to wipe fungible tokens from account
     /// @param token The token address

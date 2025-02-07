@@ -47,12 +47,20 @@ contract HtsSystemContract is IHederaTokenService {
         _;
     }
 
-    modifier unfrozen() {
-        require(msg.data.length >= 36, "unfrozen: invalid calldata length");
+    modifier notPaused() {
+        require(msg.data.length >= 36, "unpaused: invalid calldata length");
         address token = address(bytes20(msg.data[16:36]));
-        require(isNotFrozen(token), "unfrozen: token frozen");
+        (, TokenInfo memory info) = getTokenInfo(token);
+        require (isNotPaused(token), "unpaused: token paused");
         _;
     }
+
+  //  modifier unfrozen() {
+  //      require(msg.data.length >= 36, "unfrozen: invalid calldata length");
+  //      address token = address(bytes20(msg.data[16:36]));
+  //      require(isNotFrozen(token), "unfrozen: token frozen");
+  //      _;
+ //   }
 
 
     /**
@@ -124,6 +132,7 @@ contract HtsSystemContract is IHederaTokenService {
         for (uint256 tokenIndex = 0; tokenIndex < tokenTransfers.length; tokenIndex++) {
             require(tokenTransfers[tokenIndex].token != address(0), "cryptoTransfer: invalid token");
             require(isValidKyc(tokenTransfers[tokenIndex].token), "cryptoTransfer: no kyc granted");
+            require(isNotPaused(tokenTransfers[tokenIndex].token), "cryptoTransfer: is paused");
             // Processing fungible token transfers
             responseCode = _checkCryptoFungibleTransfers(tokenTransfers[tokenIndex].token, tokenTransfers[tokenIndex].transfers);
             if (responseCode != HederaResponseCodes.SUCCESS) return responseCode;
@@ -193,7 +202,7 @@ contract HtsSystemContract is IHederaTokenService {
     }
 
 
-    function mintToken(address token, int64 amount, bytes[] memory data) htsCall kyc external returns (
+    function mintToken(address token, int64 amount, bytes[] memory data) htsCall kyc notPaused external returns (
         int64 responseCode,
         int64 newTotalSupply,
         int64[] memory serialNumbers
@@ -225,7 +234,7 @@ contract HtsSystemContract is IHederaTokenService {
         require(newTotalSupply >= 0, "mintToken: invalid total supply");
     }
 
-    function burnToken(address token, int64 amount, int64[] memory) htsCall kyc external returns (
+    function burnToken(address token, int64 amount, int64[] memory) htsCall kyc notPaused external returns (
         int64 responseCode,
         int64 newTotalSupply
     ) {
@@ -254,8 +263,9 @@ contract HtsSystemContract is IHederaTokenService {
             "associateTokens: Must be signed by the provided Account's key or called from the accounts contract key"
         );
         for (uint256 i = 0; i < tokens.length; i++) {
-            require(isValidKyc(tokens[i]), "associateTokens: no kyc granted");
             require(tokens[i] != address(0), "associateTokens: invalid token");
+            require(isValidKyc(tokens[i]), "associateTokens: no kyc granted");
+            require(isNotPaused(tokens[i]), "associateTokens: paused");
             int64 associationResponseCode = IHederaTokenService(tokens[i]).associateToken(account, tokens[i]);
             require(
                 associationResponseCode == HederaResponseCodes.SUCCESS,
@@ -267,6 +277,7 @@ contract HtsSystemContract is IHederaTokenService {
 
     function associateToken(address account, address token) htsCall external returns (int64 responseCode) {
         require(isValidKyc(token), "associateToken: no kyc granted");
+        require(isNotPaused(token), "associateToken: paused");
         address[] memory tokens = new address[](1);
         tokens[0] = token;
         return associateTokens(account, tokens);
@@ -276,8 +287,9 @@ contract HtsSystemContract is IHederaTokenService {
         require(tokens.length > 0, "dissociateTokens: missing tokens");
         require(account == msg.sender, "dissociateTokens: Must be signed by the provided Account's key or called from the accounts contract key");
         for (uint256 i = 0; i < tokens.length; i++) {
-            require(isValidKyc(tokens[i]), "dissociateTokens: no kyc granted");
             require(tokens[i] != address(0), "dissociateTokens: invalid token");
+            require(isValidKyc(tokens[i]), "dissociateTokens: no kyc granted");
+            require(isNotPaused(tokens[i]), "dissociateTokens: paused");
             int64 dissociationResponseCode = IHederaTokenService(tokens[i]).dissociateToken(account, tokens[i]);
             require(dissociationResponseCode == HederaResponseCodes.SUCCESS, "dissociateTokens: Failed to dissociate token");
         }
@@ -286,6 +298,7 @@ contract HtsSystemContract is IHederaTokenService {
 
     function dissociateToken(address account, address token) htsCall external returns (int64 responseCode) {
         require(isValidKyc(token), "dissociateToken: no kyc granted");
+        require(isNotPaused(token), "dissociateToken: paused");
         address[] memory tokens = new address[](1);
         tokens[0] = token;
         return dissociateTokens(account, tokens);
@@ -392,7 +405,7 @@ contract HtsSystemContract is IHederaTokenService {
         address token,
         address[] memory accountId,
         int64[] memory amount
-    ) htsCall kyc external returns (int64 responseCode) {
+    ) htsCall kyc notPaused external returns (int64 responseCode) {
         require(accountId.length > 0, "transferTokens: missing recipients");
         require(amount.length == accountId.length, "transferTokens: inconsistent input");
         for (uint256 i = 0; i < accountId.length; i++) {
@@ -407,7 +420,7 @@ contract HtsSystemContract is IHederaTokenService {
         address[] memory sender,
         address[] memory receiver,
         int64[] memory serialNumber
-    ) htsCall kyc external returns (int64 responseCode) {
+    ) htsCall kyc notPaused external returns (int64 responseCode) {
         require(token != address(0), "transferNFTs: invalid token");
         require(sender.length > 0, "transferNFTs: missing recipients");
         require(receiver.length == sender.length, "transferNFTs: inconsistent input");
@@ -425,6 +438,7 @@ contract HtsSystemContract is IHederaTokenService {
         int64 amount
     ) htsCall public returns (int64 responseCode) {
         require(isValidKyc(token), "transferToken: no kyc granted");
+        require(isNotPaused(token), "transferToken: paused");
         address from = sender;
         address to = recipient;
         if (amount < 0) {
@@ -446,13 +460,13 @@ contract HtsSystemContract is IHederaTokenService {
         address sender,
         address recipient,
         int64 serialNumber
-    ) htsCall kyc public returns (int64 responseCode) {
+    ) htsCall kyc notPaused public returns (int64 responseCode) {
         uint256 serialId = uint256(uint64(serialNumber));
         HtsSystemContract(token).transferFromNFT(msg.sender, sender, recipient, serialId);
         responseCode = HederaResponseCodes.SUCCESS;
     }
 
-    function approve(address token, address spender, uint256 amount) htsCall kyc public returns (int64 responseCode) {
+    function approve(address token, address spender, uint256 amount) htsCall kyc notPaused public returns (int64 responseCode) {
         HtsSystemContract(token).approve(msg.sender, spender, amount);
         responseCode = HederaResponseCodes.SUCCESS;
     }
@@ -462,11 +476,11 @@ contract HtsSystemContract is IHederaTokenService {
         address sender,
         address recipient,
         uint256 amount
-    ) htsCall kyc external returns (int64) {
+    ) htsCall kyc notPaused external returns (int64) {
         return transferToken(token, sender, recipient, int64(int256(amount)));
     }
 
-    function allowance(address token, address owner, address spender) htsCall kyc external returns (int64, uint256) {
+    function allowance(address token, address owner, address spender) htsCall kyc notPaused external returns (int64, uint256) {
         return (HederaResponseCodes.SUCCESS, IERC20(token).allowance(owner, spender));
     }
 
@@ -474,7 +488,7 @@ contract HtsSystemContract is IHederaTokenService {
         address token,
         address approved,
         uint256 serialNumber
-    ) htsCall kyc public returns (int64 responseCode) {
+    ) htsCall kyc notPaused public returns (int64 responseCode) {
         HtsSystemContract(token).approveNFT(msg.sender, approved, serialNumber);
         responseCode = HederaResponseCodes.SUCCESS;
     }
@@ -484,7 +498,7 @@ contract HtsSystemContract is IHederaTokenService {
         address from,
         address to,
         uint256 serialNumber
-    ) htsCall kyc external returns (int64) {
+    ) htsCall kyc notPaused external returns (int64) {
         return transferNFT(token, from, to, int64(int256(serialNumber)));
     }
 
@@ -498,7 +512,7 @@ contract HtsSystemContract is IHederaTokenService {
         address token,
         address operator,
         bool approved
-    ) htsCall kyc external returns (int64 responseCode) {
+    ) htsCall kyc notPaused external returns (int64 responseCode) {
         HtsSystemContract(token).setApprovalForAll(msg.sender, operator, approved);
         responseCode = HederaResponseCodes.SUCCESS;
     }
@@ -525,10 +539,16 @@ contract HtsSystemContract is IHederaTokenService {
         return hasKyc;
     }
 
-    function isFrozen(address token, address account) htsCall external returns (int64, bool) {
+    function isNotPaused(address token) htsCall internal returns (bool) {
+        if (msg.sender == HTS_ADDRESS) return true; // Usable only on the highest level call
         (, TokenInfo memory info) = getTokenInfo(token);
-        return (HederaResponseCodes.SUCCESS, false);
+        return keccak256(info.pauseStatus) != keccak256("PAUSED");
     }
+
+  //  function isFrozen(address token, address account) htsCall external returns (int64, bool) {
+ //       (, TokenInfo memory info) = getTokenInfo(token);
+ //       return (HederaResponseCodes.SUCCESS, false);
+ //   }
 
     function getTokenCustomFees(
         address token
@@ -598,13 +618,27 @@ contract HtsSystemContract is IHederaTokenService {
         return (responseCode, nonFungibleTokenInfo);
     }
 
-    function grantTokenKyc(address token, address account) htsCall kyc external returns (int64 responseCode) {
+    function grantTokenKyc(address token, address account) htsCall kyc notPaused external returns (int64 responseCode) {
         (, TokenInfo memory info) = getTokenInfo(token);
         require(_extractKeyAddress(0x2, info) != address(0), "grantTokenKyc: Only allowed for kyc tokens");
         responseCode = IHederaTokenService(token).grantTokenKyc(token, account);
     }
 
-    function revokeTokenKyc(address token, address account) htsCall kyc external returns (int64 responseCode) {
+    function pauseToken(address token) htsCall kyc external returns (int64 responseCode) {
+        (, TokenInfo memory info) = getTokenInfo(token);
+        require(_extractKeyAddress(0x40, info) == msg.sender, "pauseToken: only allowed for pause key");
+        require(keccak256(info.pauseStatus) != keccak256("NOT_APPLICABLE"), "pauseToken: not applicable");
+        responseCode = IHederaTokenService(token).pauseToken(token);
+    }
+
+    function unpauseToken(address token) htsCall kyc external returns (int64 responseCode) {
+        (, TokenInfo memory info) = getTokenInfo(token);
+        require(_extractKeyAddress(0x40, info) == msg.sender, "pauseToken: only allowed for pause key");
+        require(keccak256(info.pauseStatus) != keccak256("NOT_APPLICABLE"), "pauseToken: not applicable");
+        responseCode = IHederaTokenService(token).unpauseToken(token);
+    }
+
+    function revokeTokenKyc(address token, address account) htsCall kyc notPaused external returns (int64 responseCode) {
         (, TokenInfo memory info) = getTokenInfo(token);
         require(_extractKeyAddress(0x2, info) != address(0), "revokeTokenKyc: Only allowed for kyc tokens");
         responseCode = IHederaTokenService(token).revokeTokenKyc(token, account);
@@ -793,6 +827,14 @@ contract HtsSystemContract is IHederaTokenService {
                 _updateKyc(account, false);
                 return abi.encode(HederaResponseCodes.SUCCESS);
             }
+            if (selector == this.pauseToken.selector) {
+                _tokenInfo.pauseStatus = "NOT_PAUSED";
+                return abi.encode(HederaResponseCodes.SUCCESS);
+            }
+            if (selector == this.unpauseToken.selector) {
+                _tokenInfo.pauseStatus = "PAUSED";
+                return abi.encode(HederaResponseCodes.SUCCESS);
+            }
             if (selector == this._update.selector) {
                 require(msg.data.length >= 124, "update: Not enough calldata");
                 address from = address(bytes20(msg.data[40:60]));
@@ -809,6 +851,8 @@ contract HtsSystemContract is IHederaTokenService {
                 "__redirectForToken: no kyc granted"
             );
         }
+
+        require(keccak256(_tokenInfo.pauseStatus) != keccak256("PAUSED"), "__redirectForToken: paused");
 
         // Redirect to the appropriate ERC20 method if the token type is fungible.
         if (keccak256(bytes(tokenType)) == keccak256(bytes("FUNGIBLE_COMMON"))) {
