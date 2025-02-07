@@ -47,6 +47,14 @@ contract HtsSystemContract is IHederaTokenService {
         _;
     }
 
+    modifier unfrozen() {
+        require(msg.data.length >= 36, "unfrozen: invalid calldata length");
+        address token = address(bytes20(msg.data[16:36]));
+        require(isNotFrozen(token), "unfrozen: token frozen");
+        _;
+    }
+
+
     /**
      * @dev Returns the account id (omitting both shard and realm numbers) of the given `address`.
      * The storage adapter, _i.e._, `getHtsStorageAt`, assumes that both shard and realm numbers are zero.
@@ -510,10 +518,16 @@ contract HtsSystemContract is IHederaTokenService {
 
     function isValidKyc(address token) htsCall internal returns (bool) {
         if (msg.sender == HTS_ADDRESS) return true; // Usable only on the highest level call
-        (bool hasKey, KeyValue memory keyValue) = _getKey(token, 0x2);
-        if (!hasKey || keyValue.contractId == msg.sender) return true;
+        (, TokenInfo memory info) = getTokenInfo(token);
+        address allowed = _extractKeyAddress(0x2, info);
+        if (allowed == address(0) || allowed == msg.sender) return true;
         (, bool hasKyc) =  isKyc(token, msg.sender);
         return hasKyc;
+    }
+
+    function isFrozen(address token, address account) htsCall external returns (int64, bool) {
+        (, TokenInfo memory info) = getTokenInfo(token);
+        return (HederaResponseCodes.SUCCESS, false);
     }
 
     function getTokenCustomFees(
@@ -585,12 +599,14 @@ contract HtsSystemContract is IHederaTokenService {
     }
 
     function grantTokenKyc(address token, address account) htsCall kyc external returns (int64 responseCode) {
-        require(_hasKey(token, 0x2), "grantTokenKyc: Only allowed for kyc tokens");
+        (, TokenInfo memory info) = getTokenInfo(token);
+        require(_extractKeyAddress(0x2, info) != address(0), "grantTokenKyc: Only allowed for kyc tokens");
         responseCode = IHederaTokenService(token).grantTokenKyc(token, account);
     }
 
     function revokeTokenKyc(address token, address account) htsCall kyc external returns (int64 responseCode) {
-        require(_hasKey(token, 0x2), "revokeTokenKyc: Only allowed for kyc tokens");
+        (, TokenInfo memory info) = getTokenInfo(token);
+        require(_extractKeyAddress(0x2, info) != address(0), "revokeTokenKyc: Only allowed for kyc tokens");
         responseCode = IHederaTokenService(token).revokeTokenKyc(token, account);
     }
 
@@ -603,16 +619,6 @@ contract HtsSystemContract is IHederaTokenService {
     function getTokenType(address token) htsCall external returns (int64, int32) {
         require(token != address(0), "getTokenType: invalid address");
         return IHederaTokenService(token).getTokenType(token);
-    }
-
-    function _getKey(address token, uint keyType) htsCall private returns (bool, KeyValue memory) {
-        (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
-        require(responseCode == 22, "_getKey: failed to access token info data");
-        return _getKey(keyType, tokenInfo);
-    }
-
-    function _hasKey(address token, uint keyType) htsCall private returns (bool hasKey) {
-        (hasKey, ) = _getKey(token, keyType);
     }
 
     /**
@@ -797,8 +803,11 @@ contract HtsSystemContract is IHederaTokenService {
             }
         }
         if (_isKycProtected(selector)) {
-            (bool hasKey, KeyValue memory kycKey) = _getKey(0x2, _tokenInfo);
-            require(!hasKey || kycKey.contractId == msg.sender || __hasKycGranted(msg.sender), "__redirectForToken: no kyc granted");
+            address allowed = _extractKeyAddress(0x2, _tokenInfo);
+            require(
+                allowed == address(0) || allowed == msg.sender || __hasKycGranted(msg.sender),
+                "__redirectForToken: no kyc granted"
+            );
         }
 
         // Redirect to the appropriate ERC20 method if the token type is fungible.
@@ -1162,15 +1171,6 @@ contract HtsSystemContract is IHederaTokenService {
         bytes32 slot = _isApprovedForAllSlot(sender, operator);
         assembly { sstore(slot, approved) }
         emit IERC721.ApprovalForAll(sender, operator, approved);
-    }
-
-    function _extractKeyAddress(uint keyType, TokenInfo memory tokenInfo) private pure returns (address) {
-        for (uint256 i = 0; i < tokenInfo.token.tokenKeys.length; i++) {
-            if (tokenInfo.token.tokenKeys[i].keyType == keyType) {
-                return tokenInfo.token.tokenKeys[i].key.contractId;
-            }
-        }
-        return address(0);
     }
 
     function _checkCryptoFungibleTransfers(address token, AccountAmount[] memory transfers) internal returns (int64) {
