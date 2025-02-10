@@ -10,7 +10,7 @@ import {HederaResponseCodes} from "../contracts/HederaResponseCodes.sol";
 import {IERC20} from "../contracts/IERC20.sol";
 import {IERC721} from "../contracts/IERC721.sol";
 
-contract PauseTest is Test, TestSetup {
+contract FreezeTest is Test, TestSetup {
 
     address private token;
     address private owner;
@@ -31,38 +31,43 @@ contract PauseTest is Test, TestSetup {
 
         hederaToken.tokenKeys[0].key.contractId = owner;
 
-        hederaToken.tokenKeys[0].keyType = 0x40;
+        hederaToken.tokenKeys[0].keyType = 0x4;
         (, token) = IHederaTokenService(HTS_ADDRESS).createFungibleToken{value: 1000}(hederaToken, 1000000, 4);
         vm.assertNotEq(token, address(0));
         to = makeAddr("bob");
     }
 
-    function test_HTS_transferToken_success_when_not_paused() public {
-        deal(token, owner, amount);
-        uint256 balanceOfOwner = IERC20(token).balanceOf(owner);
-        vm.prank(owner);
-        IHederaTokenService(HTS_ADDRESS).transferToken(token, owner, to, int64(int256(amount)));
-        assertEq(IERC20(token).balanceOf(owner), balanceOfOwner - amount);
+    function test_HTS_transferToken_success_when_not_frozen() public {
+        address from = makeAddr("from");
+        deal(token, from, amount);
+        vm.prank(from);
+        IHederaTokenService(HTS_ADDRESS).transferToken(token, from, to, int64(int256(amount)));
         assertEq(IERC20(token).balanceOf(to), amount);
     }
 
-    function test_HTS_pausing_success_with_correct_key() public {
-        vm.prank(owner);
-        int64 code = IHederaTokenService(HTS_ADDRESS).pauseToken(token);
-        assertEq(code, HederaResponseCodes.SUCCESS);
+    function test_HTS_freezing_success_with_correct_key() public {
+        address from = makeAddr("bob");
+        vm.startPrank(owner);
+        int64 freezeCode = IHederaTokenService(HTS_ADDRESS).freezeToken(token, from);
+        assertEq(freezeCode, HederaResponseCodes.SUCCESS);
+        int64 unfreezeCode = IHederaTokenService(HTS_ADDRESS).unfreezeToken(token, from);
+        assertEq(unfreezeCode, HederaResponseCodes.SUCCESS);
+        vm.stopPrank();
     }
 
-    function test_HTS_pausing_failure_with_incorrect_key() public {
-        vm.expectRevert("pauseToken: only allowed for pause key");
-        vm.prank(makeAddr("from"));
-        IHederaTokenService(HTS_ADDRESS).pauseToken(token);
+    function test_HTS_freezing_failure_with_incorrect_key() public {
+        vm.expectRevert("freezeToken: only allowed for freezable tokens");
+        vm.prank(makeAddr("bob"));
+        IHederaTokenService(HTS_ADDRESS).freezeToken(token, makeAddr("alice"));
     }
 
     function test_HTS_transferToken_failure_when_paused() public {
-        deal(token, owner, amount);
-        vm.startPrank(owner);
-        IHederaTokenService(HTS_ADDRESS).pauseToken(token);
-        vm.expectRevert("unpaused: token paused");
-        IHederaTokenService(HTS_ADDRESS).transferToken(token, owner, to, int64(int256(amount)));
+        address from = makeAddr("bob");
+        deal(token, from, amount);
+        vm.prank(owner);
+        IHederaTokenService(HTS_ADDRESS).freezeToken(token, from);
+        vm.expectRevert("notFrozen: token frozen");
+        vm.prank(from);
+        IHederaTokenService(HTS_ADDRESS).transferToken(token, from, to, int64(int256(amount)));
     }
 }

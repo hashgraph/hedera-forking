@@ -623,7 +623,7 @@ contract HtsSystemContract is IHederaTokenService {
 
     function freezeToken(address token, address account) htsCall kyc(token) notPaused(token) external returns (int64 responseCode) {
         (, TokenInfo memory info) = getTokenInfo(token);
-        require(_extractKeyAddress(0x4, info) == msg.sender, "grantTokenKyc: Only allowed for freezable tokens");
+        require(_extractKeyAddress(0x4, info) == msg.sender, "freezeToken: only allowed for freezable tokens");
         responseCode = IHederaTokenService(token).freezeToken(token, account);
     }
 

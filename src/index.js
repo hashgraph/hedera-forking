@@ -264,6 +264,23 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
         );
     }
 
+    // Encoded `address(tokenId).isFrozen(tokenId, accountId)` slot
+    // slot(256) = `isFrozen`selector(32) + padding(192) + accountId(32)
+    if (
+        nrequestedSlot >> 32n ===
+        0x46de0fb1_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000n
+    ) {
+        const accountId = `0.0.${parseInt(requestedSlot.slice(-8), 16)}`;
+        const { tokens } = (await mirrorNodeClient.getTokenRelationship(accountId, tokenId)) ?? {
+            tokens: [],
+        };
+        const isFrozen = tokens.length > 0 && tokens[0].frozen_status === 'FROZEN';
+        return ret(
+            `0x${toIntHex256(isFrozen ? 1 : 0)}`,
+            `Token ${tokenId} is ${isFrozen ? 'frozen' : 'not frozen'} for account ${accountId}`
+        );
+    }
+
     let unresolvedValues = persistentStorage.load(tokenId, blockNumber, nrequestedSlot);
     if (unresolvedValues === undefined) {
         const token = await mirrorNodeClient.getTokenById(tokenId, blockNumber);
