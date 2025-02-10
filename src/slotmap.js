@@ -138,10 +138,15 @@ const _types = {
     t_int64: str => [toIntHex256(str ?? 0)],
     t_address: str => [
         str
-            ? (mirrorNode, blockNumber) =>
-                  mirrorNode
-                      .getAccount(str, blockNumber)
-                      .then(acc => toIntHex256(acc?.evm_address ?? str?.replace('0.0.', '') ?? 0))
+            ? async (mirrorNode, blockNumber) => {
+                  return str.startsWith('0x')
+                      ? str.substring(2).padStart(64, '0')
+                      : mirrorNode
+                            .getAccount(str, blockNumber)
+                            .then(acc =>
+                                toIntHex256(acc?.evm_address ?? str?.replace('0.0.', '') ?? 0)
+                            );
+              }
             : toIntHex256(0),
     ],
     t_bool: value => [toIntHex256(value ? 1 : 0)],

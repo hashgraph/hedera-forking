@@ -246,10 +246,55 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
             );
         persistentStorage.store(tokenId, blockNumber, nrequestedSlot, atob(metadata));
     }
+
+    // Encoded `address(tokenId).isKyc(tokenId, accountId)` slot
+    // slot(256) = `isKyc`selector(32) + padding(192) + accountId(32)
+    if (
+        nrequestedSlot >> 32n ===
+        0xf2c31ff4_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000n
+    ) {
+        const accountId = `0.0.${parseInt(requestedSlot.slice(-8), 16)}`;
+        const { tokens } = (await mirrorNodeClient.getTokenRelationship(accountId, tokenId)) ?? {
+            tokens: [],
+        };
+        const kycGranted = tokens.length > 0 && tokens[0].kyc_status === 'GRANTED';
+        return ret(
+            `0x${toIntHex256(kycGranted ? 1 : 0)}`,
+            `Token ${tokenId} kyc for ${accountId} is ${kycGranted ? 'granted' : 'not granted'}`
+        );
+    }
+
+    // Encoded `address(tokenId).isFrozen(tokenId, accountId)` slot
+    // slot(256) = `isFrozen`selector(32) + padding(192) + accountId(32)
+    if (
+        nrequestedSlot >> 32n ===
+        0x46de0fb1_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000n
+    ) {
+        const accountId = `0.0.${parseInt(requestedSlot.slice(-8), 16)}`;
+        const { tokens } = (await mirrorNodeClient.getTokenRelationship(accountId, tokenId)) ?? {
+            tokens: [],
+        };
+        const isFrozen = tokens.length > 0 && tokens[0].frozen_status === 'FROZEN';
+        return ret(
+            `0x${toIntHex256(isFrozen ? 1 : 0)}`,
+            `Token ${tokenId} is ${isFrozen ? 'frozen' : 'not frozen'} for account ${accountId}`
+        );
+    }
+
     let unresolvedValues = persistentStorage.load(tokenId, blockNumber, nrequestedSlot);
     if (unresolvedValues === undefined) {
         const token = await mirrorNodeClient.getTokenById(tokenId, blockNumber);
         if (token === null) return ret(ZERO_HEX_32_BYTE, `Token \`${tokenId}\` not found`);
+
+        for (const key of ['admin', 'kyc', 'freeze', 'wipe', 'supply', 'fee_schedule', 'pause']) {
+            const value = /**@type{{contractId: string}}*/ (token[`${key}_key`]);
+            if (!value) continue;
+            assert(typeof value === 'object' && 'key' in value && typeof value.key === 'string');
+            const result = await mirrorNodeClient.getAccountsByPublicKey(value.key);
+            if (result === undefined || !result || result.accounts.length === 0) continue;
+            value.contractId = result.accounts[0].evm_address;
+        }
+
         unresolvedValues = slotMapOf(token).load(nrequestedSlot);
 
         if (unresolvedValues === undefined)

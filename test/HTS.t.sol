@@ -75,21 +75,21 @@ contract HTSTest is Test, TestSetup {
         // AdminKey
         assertEq(tokenInfo.token.tokenKeys[0].keyType, 0x1);
         assertEq(tokenInfo.token.tokenKeys[0].key.inheritAccountKey, false);
-        assertEq(tokenInfo.token.tokenKeys[0].key.contractId, address(0));
+        assertEq(tokenInfo.token.tokenKeys[0].key.contractId, 0xF287CfB303322B6dCDA77ce0824Bd1a3fA5d0e47);
         assertEq(tokenInfo.token.tokenKeys[0].key.ed25519, hex"5db29fb3f19f8618cc4689cf13e78a935621845d67547719faf49f65d5c367cc");
         assertEq(tokenInfo.token.tokenKeys[0].key.ECDSA_secp256k1, bytes(""));
         assertEq(tokenInfo.token.tokenKeys[0].key.delegatableContractId, address(0));
         // FreezeKey
         assertEq(tokenInfo.token.tokenKeys[2].keyType, 0x4);
         assertEq(tokenInfo.token.tokenKeys[2].key.inheritAccountKey, false);
-        assertEq(tokenInfo.token.tokenKeys[2].key.contractId, address(0));
+        assertEq(tokenInfo.token.tokenKeys[2].key.contractId, 0x6c273d045CC8219F98e7F5944B49Ae1e2fdA1449);
         assertEq(tokenInfo.token.tokenKeys[2].key.ed25519, hex"baa2dd1684d8445d41b22f2b2c913484a7d885cf25ce525f8bf3fe8d5c8cb85d");
         assertEq(tokenInfo.token.tokenKeys[2].key.ECDSA_secp256k1, bytes(""));
         assertEq(tokenInfo.token.tokenKeys[2].key.delegatableContractId, address(0));
         // SupplyKey
         assertEq(tokenInfo.token.tokenKeys[4].keyType, 0x10);
         assertEq(tokenInfo.token.tokenKeys[4].key.inheritAccountKey, false);
-        assertEq(tokenInfo.token.tokenKeys[4].key.contractId, address(0));
+        assertEq(tokenInfo.token.tokenKeys[4].key.contractId, 0x4bc2a5E2099e0536C7B21610BD5A0E1EFbb032A0);
         assertEq(tokenInfo.token.tokenKeys[4].key.ed25519, hex"4e4658983980d1b25a634eeeb26cb2b0f0e2e9c83263ba5b056798d35f2139a8");
         assertEq(tokenInfo.token.tokenKeys[4].key.ECDSA_secp256k1, bytes(""));
         assertEq(tokenInfo.token.tokenKeys[4].key.delegatableContractId, address(0));
@@ -218,6 +218,36 @@ contract HTSTest is Test, TestSetup {
         bytes[] memory metadata = new bytes[](0);
         int64 initialTotalSupply = 10000000005000000;
         IHederaTokenService.TokenInfo memory tokenInfo;
+        IHederaTokenService.TokenKey[] memory keys = new IHederaTokenService.TokenKey[](1);
+        keys[0].keyType = 0x10; // Supply key
+        keys[0].key.contractId = msg.sender;
+        tokenInfo.token = IHederaTokenService.HederaToken(
+            "USD Coin",
+            "USDC",
+            address(0),
+            "USDC HBAR",
+            false,
+            initialTotalSupply + amount,
+            false,
+            keys,
+            IHederaTokenService.Expiry(0, address(0), 0)
+        );
+
+        vm.mockCall(
+            token,
+            abi.encode(IHederaTokenService.getTokenInfo.selector),
+            abi.encode(HederaResponseCodes.SUCCESS, tokenInfo)
+        );
+        vm.expectRevert(bytes("mintToken: invalid account"));
+        IHederaTokenService(HTS_ADDRESS).mintToken(token, amount, metadata);
+    }
+
+    function test_mintToken_should_fail_with_np_supplier() external {
+        address token = USDC;
+        int64 amount = 1000;
+        bytes[] memory metadata = new bytes[](0);
+        int64 initialTotalSupply = 10000000005000000;
+        IHederaTokenService.TokenInfo memory tokenInfo;
         tokenInfo.token = IHederaTokenService.HederaToken(
             "USD Coin",
             "USDC",
@@ -235,8 +265,8 @@ contract HTSTest is Test, TestSetup {
             abi.encode(IHederaTokenService.getTokenInfo.selector),
             abi.encode(HederaResponseCodes.SUCCESS, tokenInfo)
         );
-        vm.expectRevert(bytes("mintToken: invalid account"));
-        IHederaTokenService(HTS_ADDRESS).mintToken(token, amount, metadata);
+        (int64 code, , ) = IHederaTokenService(HTS_ADDRESS).mintToken(token, amount, metadata);
+        assertEq(code, HederaResponseCodes.TOKEN_HAS_NO_SUPPLY_KEY);
     }
 
     function test_mintToken_should_revert_with_invalid_token() external {
@@ -244,24 +274,23 @@ contract HTSTest is Test, TestSetup {
         int64 amount = 1000;
         bytes[] memory metadata = new bytes[](0);
 
-        vm.expectRevert(bytes("mintToken: invalid token"));
+        vm.expectRevert(bytes("getTokenInfo: invalid token"));
         IHederaTokenService(HTS_ADDRESS).mintToken(token, amount, metadata);
     }
 
     function test_mintToken_should_revert_with_invalid_amount() external {
-        address token = address(0x123);
         int64 amount = 0;
         bytes[] memory metadata = new bytes[](0);
 
         vm.expectRevert(bytes("mintToken: invalid amount"));
-        IHederaTokenService(HTS_ADDRESS).mintToken(token, amount, metadata);
+        IHederaTokenService(HTS_ADDRESS).mintToken(USDC, amount, metadata);
     }
 
     function test_burnToken_should_succeed_with_valid_input() external {
-        address token = MFCT;
-        address treasury = MFCT_TREASURY;
+        address token = USDC;
+        address treasury = USDC_TREASURY;
         int64 amount = 1000;
-        int64 initialTotalSupply = 5000;
+        int64 initialTotalSupply = int64(int256(IERC20(token).totalSupply()));
         uint256 initialTreasuryBalance = IERC20(token).balanceOf(treasury);
 
         (int64 responseCodeMint, int64 newTotalSupplyAfterMint, int64[] memory serialNumbers) = IHederaTokenService(HTS_ADDRESS).mintToken(token, amount, new bytes[](0));
@@ -287,6 +316,36 @@ contract HTSTest is Test, TestSetup {
         int64 initialTotalSupply = 5000;
         int64[] memory serialNumbers = new int64[](0);
         IHederaTokenService.TokenInfo memory tokenInfo;
+        IHederaTokenService.TokenKey[] memory keys = new IHederaTokenService.TokenKey[](1);
+        keys[0].keyType = 0x10; // Supply key
+        keys[0].key.contractId = msg.sender;
+        tokenInfo.token = IHederaTokenService.HederaToken(
+            "My Crypto Token is the name which the string length is greater than 31",
+            "Token symbol must be exactly 32!",
+            address(0),
+            "",
+            false,
+            initialTotalSupply + amount,
+            false,
+            keys,
+            IHederaTokenService.Expiry(0, address(0), 0)
+        );
+
+        vm.mockCall(
+            token,
+            abi.encode(IHederaTokenService.getTokenInfo.selector),
+            abi.encode(HederaResponseCodes.SUCCESS, tokenInfo)
+        );
+        vm.expectRevert(bytes("burnToken: invalid account"));
+        IHederaTokenService(HTS_ADDRESS).burnToken(token, amount, serialNumbers);
+    }
+
+    function test_burnToken_should_revert_with_no_supplier() external {
+        address token = MFCT;
+        int64 amount = 1000;
+        int64 initialTotalSupply = 5000;
+        int64[] memory serialNumbers = new int64[](0);
+        IHederaTokenService.TokenInfo memory tokenInfo;
         tokenInfo.token = IHederaTokenService.HederaToken(
             "My Crypto Token is the name which the string length is greater than 31",
             "Token symbol must be exactly 32!",
@@ -304,8 +363,8 @@ contract HTSTest is Test, TestSetup {
             abi.encode(IHederaTokenService.getTokenInfo.selector),
             abi.encode(HederaResponseCodes.SUCCESS, tokenInfo)
         );
-        vm.expectRevert(bytes("burnToken: invalid account"));
-        IHederaTokenService(HTS_ADDRESS).burnToken(token, amount, serialNumbers);
+        (int64 code, ) = IHederaTokenService(HTS_ADDRESS).burnToken(token, amount, serialNumbers);
+        assertEq(code, HederaResponseCodes.TOKEN_HAS_NO_SUPPLY_KEY);
     }
 
     function test_burnToken_should_revert_with_invalid_token() external {
@@ -313,17 +372,16 @@ contract HTSTest is Test, TestSetup {
         int64 amount = 1000;
         int64[] memory serialNumbers = new int64[](0);
 
-        vm.expectRevert(bytes("burnToken: invalid token"));
+        vm.expectRevert(bytes("getTokenInfo: invalid token"));
         IHederaTokenService(HTS_ADDRESS).burnToken(token, amount, serialNumbers);
     }
 
     function test_burnToken_should_revert_with_invalid_amount() external {
-        address token = address(0x123);
         int64 amount = 0;
         int64[] memory serialNumbers = new int64[](0);
 
         vm.expectRevert(bytes("burnToken: invalid amount"));
-        IHederaTokenService(HTS_ADDRESS).burnToken(token, amount, serialNumbers);
+        IHederaTokenService(HTS_ADDRESS).burnToken(USDC, amount, serialNumbers);
     }
 
     function test_HTS_getApproved_should_return_correct_address() external view {
@@ -428,7 +486,7 @@ contract HTSTest is Test, TestSetup {
             = IHederaTokenService(HTS_ADDRESS).getTokenKey(token, 0x1);
         assertEq(adminKeyStatusCode, HederaResponseCodes.SUCCESS);
         assertEq(adminKey.inheritAccountKey, false);
-        assertEq(adminKey.contractId, address(0));
+        assertEq(adminKey.contractId, 0xF287CfB303322B6dCDA77ce0824Bd1a3fA5d0e47);
         assertEq(adminKey.ed25519, hex"5db29fb3f19f8618cc4689cf13e78a935621845d67547719faf49f65d5c367cc");
         assertEq(adminKey.ECDSA_secp256k1, bytes(""));
         assertEq(adminKey.delegatableContractId, address(0));
@@ -437,7 +495,7 @@ contract HTSTest is Test, TestSetup {
             = IHederaTokenService(HTS_ADDRESS).getTokenKey(token, 0x4);
         assertEq(freezeKeyStatusCode, HederaResponseCodes.SUCCESS);
         assertEq(freezeKey.inheritAccountKey, false);
-        assertEq(freezeKey.contractId, address(0));
+        assertEq(freezeKey.contractId, 0x6c273d045CC8219F98e7F5944B49Ae1e2fdA1449);
         assertEq(freezeKey.ed25519, hex"baa2dd1684d8445d41b22f2b2c913484a7d885cf25ce525f8bf3fe8d5c8cb85d");
         assertEq(freezeKey.ECDSA_secp256k1, bytes(""));
         assertEq(freezeKey.delegatableContractId, address(0));
@@ -446,7 +504,7 @@ contract HTSTest is Test, TestSetup {
             = IHederaTokenService(HTS_ADDRESS).getTokenKey(token, 0x10);
         assertEq(supplyKeyStatusCode, HederaResponseCodes.SUCCESS);
         assertEq(supplyKey.inheritAccountKey, false);
-        assertEq(supplyKey.contractId, address(0));
+        assertEq(supplyKey.contractId, 0x4bc2a5E2099e0536C7B21610BD5A0E1EFbb032A0);
         assertEq(supplyKey.ed25519, hex"4e4658983980d1b25a634eeeb26cb2b0f0e2e9c83263ba5b056798d35f2139a8");
         assertEq(supplyKey.ECDSA_secp256k1, bytes(""));
         assertEq(supplyKey.delegatableContractId, address(0));
@@ -562,21 +620,21 @@ contract HTSTest is Test, TestSetup {
         // AdminKey
         assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[0].keyType, 0x1);
         assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[0].key.inheritAccountKey, false);
-        assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[0].key.contractId, address(0));
+        assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[0].key.contractId, 0xF287CfB303322B6dCDA77ce0824Bd1a3fA5d0e47);
         assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[0].key.ed25519, hex"5db29fb3f19f8618cc4689cf13e78a935621845d67547719faf49f65d5c367cc");
         assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[0].key.ECDSA_secp256k1, bytes(""));
         assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[0].key.delegatableContractId, address(0));
         // FreezeKey
         assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[2].keyType, 0x4);
         assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[2].key.inheritAccountKey, false);
-        assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[2].key.contractId, address(0));
+        assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[2].key.contractId, 0x6c273d045CC8219F98e7F5944B49Ae1e2fdA1449);
         assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[2].key.ed25519, hex"baa2dd1684d8445d41b22f2b2c913484a7d885cf25ce525f8bf3fe8d5c8cb85d");
         assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[2].key.ECDSA_secp256k1, bytes(""));
         assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[2].key.delegatableContractId, address(0));
         // SupplyKey
         assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[4].keyType, 0x10);
         assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[4].key.inheritAccountKey, false);
-        assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[4].key.contractId, address(0));
+        assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[4].key.contractId, 0x4bc2a5E2099e0536C7B21610BD5A0E1EFbb032A0);
         assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[4].key.ed25519, hex"4e4658983980d1b25a634eeeb26cb2b0f0e2e9c83263ba5b056798d35f2139a8");
         assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[4].key.ECDSA_secp256k1, bytes(""));
         assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[4].key.delegatableContractId, address(0));
@@ -613,7 +671,7 @@ contract HTSTest is Test, TestSetup {
         // AdminKey
         assertEq(nonFungibleTokenInfo.tokenInfo.token.tokenKeys[0].keyType, 0x1);
         assertEq(nonFungibleTokenInfo.tokenInfo.token.tokenKeys[0].key.inheritAccountKey, false);
-        assertEq(nonFungibleTokenInfo.tokenInfo.token.tokenKeys[0].key.contractId, address(0));
+        assertEq(nonFungibleTokenInfo.tokenInfo.token.tokenKeys[0].key.contractId, 0x435d7D41D4f69F958bda7A8D9f549a0dD9B64c86);
         assertEq(nonFungibleTokenInfo.tokenInfo.token.tokenKeys[0].key.ed25519, bytes(""));
         assertEq(nonFungibleTokenInfo.tokenInfo.token.tokenKeys[0].key.ECDSA_secp256k1, hex"0242b7c3beea2af6dfcc874c41d1332463407e283f602ce8ef2cbe324823561b6f");
         assertEq(nonFungibleTokenInfo.tokenInfo.token.tokenKeys[0].key.delegatableContractId, address(0));
@@ -733,7 +791,7 @@ contract HTSTest is Test, TestSetup {
         int64[] memory amounts = new int64[](1);
         amounts[0] = 4_000000;
         vm.prank(owner);
-        vm.expectRevert("transferTokens: invalid token");
+        vm.expectRevert("getTokenInfo: invalid token");
         IHederaTokenService(HTS_ADDRESS).transferTokens(address(0), to, amounts);
     }
 
@@ -840,5 +898,183 @@ contract HTSTest is Test, TestSetup {
             .setApprovalForAll(CFNFTFF, operator, true);
         assertEq(setApprovalForAllResponseCode, HederaResponseCodes.SUCCESS);
         assertTrue(IERC721(CFNFTFF).isApprovedForAll(CFNFTFF_TREASURY, operator));
+    }
+
+    function test_HTS_cryptoTransfer() external {
+        address owner = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
+        address bob = makeAddr("bob");
+        address alice = makeAddr("alice");
+        uint256 amountToBob = 1_000000;
+        uint256 amountToAlice = 3_000000;
+        address token = USDC;
+        IHederaTokenService.AccountAmount memory transfer1 = IHederaTokenService.AccountAmount(
+            owner,
+            -int64(uint64(amountToBob + amountToAlice)),
+            false
+        );
+        IHederaTokenService.AccountAmount memory transfer2 = IHederaTokenService.AccountAmount(
+            bob,
+            int64(uint64(amountToBob)),
+            false
+        );
+        IHederaTokenService.AccountAmount memory transfer3 = IHederaTokenService.AccountAmount(
+            alice,
+            int64(uint64(amountToAlice)),
+            false
+        );
+        IHederaTokenService.TokenTransferList[] memory tokenTransfers = new IHederaTokenService.TokenTransferList[](1);
+        IHederaTokenService.TransferList memory hbarTransfers;
+        IHederaTokenService.AccountAmount[] memory transfers = new IHederaTokenService.AccountAmount[](3);
+        tokenTransfers[0] = IHederaTokenService.TokenTransferList(
+            token,
+            transfers,
+            new IHederaTokenService.NftTransfer[](0)
+        );
+        tokenTransfers[0].transfers[0] = transfer1;
+        tokenTransfers[0].transfers[1] = transfer2;
+        tokenTransfers[0].transfers[2] = transfer3;
+        vm.prank(owner);
+        vm.expectEmit(true, true, true, true, token);
+        emit IERC20.Transfer(owner, bob, amountToBob);
+        vm.expectEmit(true, true, true, true, token);
+        emit IERC20.Transfer(owner, alice, amountToAlice);
+        int64 responseCode = IHederaTokenService(HTS_ADDRESS).cryptoTransfer(hbarTransfers, tokenTransfers);
+        assertEq(responseCode, HederaResponseCodes.SUCCESS);
+        assertEq(IERC20(token).balanceOf(bob), amountToBob);
+        assertEq(IERC20(token).balanceOf(alice), amountToAlice);
+    }
+
+    function test_HTS_cryptoTransfer_non_payable_hbar_transfer_without_vm_cheats_fail() external {
+        vm.skip(testMode != TestMode.JSON_RPC);
+        address owner = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
+        address recipient = makeAddr("recipient1");
+        uint256 amount = 1 ether;
+        IHederaTokenService.AccountAmount memory transferFrom = IHederaTokenService.AccountAmount(
+            owner,
+            -int64(uint64(amount)),
+            false
+        );
+        IHederaTokenService.AccountAmount memory transferTo = IHederaTokenService.AccountAmount(
+            recipient,
+            int64(uint64(amount)),
+            false
+        );
+        IHederaTokenService.TransferList memory transferList;
+        transferList.transfers = new IHederaTokenService.AccountAmount[](2);
+        transferList.transfers[0] = transferFrom;
+        transferList.transfers[1] = transferTo;
+        vm.deal(owner, amount + 100);
+        vm.prank(owner);
+        vm.expectRevert("cryptoTransfer: hbar transfer is not supported without vm cheatcodes in forked network");
+        IHederaTokenService(HTS_ADDRESS).cryptoTransfer(
+            transferList,
+            new IHederaTokenService.TokenTransferList[](0)
+        );
+    }
+
+    function test_HTS_cryptoTransfer_hbar() external {
+        vm.skip(testMode == TestMode.JSON_RPC);
+        address owner = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
+        address recipient1 = makeAddr("recipient1");
+        address recipient2 = makeAddr("recipient2");
+        uint256 hbarToRecipient1 = 1 ether;
+        uint256 hbarToRecipient2 = 2 ether;
+        IHederaTokenService.AccountAmount memory transfer1 = IHederaTokenService.AccountAmount(
+            owner,
+            -int64(uint64(hbarToRecipient1 + hbarToRecipient2)),
+            false
+        );
+        IHederaTokenService.AccountAmount memory transfer2 = IHederaTokenService.AccountAmount(
+            recipient1,
+            int64(uint64(hbarToRecipient1)),
+            false
+        );
+        IHederaTokenService.AccountAmount memory transfer3 = IHederaTokenService.AccountAmount(
+            recipient2,
+            int64(uint64(hbarToRecipient2)),
+            false
+        );
+        IHederaTokenService.TransferList memory transferList;
+        transferList.transfers = new IHederaTokenService.AccountAmount[](3);
+        transferList.transfers[0] = transfer1;
+        transferList.transfers[1] = transfer2;
+        transferList.transfers[2] = transfer3;
+        vm.deal(owner, hbarToRecipient1 + hbarToRecipient2 + 100);
+        uint256 initialOwnerBalance = address(owner).balance;
+        uint256 initialRecipient1Balance = address(recipient1).balance;
+        uint256 initialRecipient2Balance = address(recipient2).balance;
+        assertGt(initialOwnerBalance, hbarToRecipient1 + hbarToRecipient2);
+        assertEq(initialRecipient1Balance, 0);
+        assertEq(initialRecipient2Balance, 0);
+        vm.prank(owner);
+        int64 code = IHederaTokenService(HTS_ADDRESS).cryptoTransfer(
+            transferList,
+            new IHederaTokenService.TokenTransferList[](0)
+        );
+        assertEq(code, HederaResponseCodes.SUCCESS);
+
+        assertEq(address(recipient1).balance, initialRecipient1Balance + hbarToRecipient1);
+        assertEq(address(recipient2).balance, initialRecipient2Balance + hbarToRecipient2);
+        assertEq(address(owner).balance, initialOwnerBalance - hbarToRecipient1 - hbarToRecipient2);
+    }
+
+    function test_HTS_cryptoTransfer_test_invalid_sender() external {
+        address owner = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
+        address sender = makeAddr("sender");
+        address recipient = makeAddr("recipient");
+        uint256 hbarToRecipient = 1 ether;
+        IHederaTokenService.AccountAmount memory transfer1 = IHederaTokenService.AccountAmount(
+            sender,
+            -int64(uint64(hbarToRecipient)),
+            false
+        );
+        IHederaTokenService.AccountAmount memory transfer2 = IHederaTokenService.AccountAmount(
+            recipient,
+            int64(uint64(hbarToRecipient)),
+            false
+        );
+        IHederaTokenService.TransferList memory transferList;
+        transferList.transfers = new IHederaTokenService.AccountAmount[](2);
+        transferList.transfers[0] = transfer1;
+        transferList.transfers[1] = transfer2;
+        vm.deal(owner, hbarToRecipient);
+        vm.deal(sender, hbarToRecipient);
+        vm.prank(owner);
+        int64 code = IHederaTokenService(HTS_ADDRESS).cryptoTransfer(
+            transferList,
+            new IHederaTokenService.TokenTransferList[](0)
+        );
+        assertEq(code, HederaResponseCodes.SPENDER_DOES_NOT_HAVE_ALLOWANCE);
+    }
+
+    function test_HTS_cryptoTransfer_test_reject_insufficient_balance() external {
+        address owner = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
+        address recipient = makeAddr("recipient");
+        uint256 hbarToRecipient = 1 ether;
+        vm.deal(owner, 0.5 ether); // Not enough
+        IHederaTokenService.AccountAmount memory transfer1 = IHederaTokenService.AccountAmount(
+            owner,
+            -int64(uint64(hbarToRecipient)),
+            false
+        );
+        IHederaTokenService.AccountAmount memory transfer2 = IHederaTokenService.AccountAmount(
+            recipient,
+            int64(uint64(hbarToRecipient)),
+            false
+        );
+        IHederaTokenService.TransferList memory transferList;
+        transferList.transfers = new IHederaTokenService.AccountAmount[](2);
+        transferList.transfers[0] = transfer1;
+        transferList.transfers[1] = transfer2;
+        vm.prank(owner);
+        int64 code = IHederaTokenService(HTS_ADDRESS).cryptoTransfer(
+            transferList,
+            new IHederaTokenService.TokenTransferList[](0)
+        );
+        assertEq(code, HederaResponseCodes.INSUFFICIENT_ACCOUNT_BALANCE);
+    }
+
+    function test_HTS_cryptoTransfer_test_reject_insufficient_token_balance() external {
+
     }
 }

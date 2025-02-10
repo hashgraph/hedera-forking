@@ -23,9 +23,15 @@ const { strict: assert } = require('assert');
 const { expect } = require('chai');
 const { Contract, JsonRpcProvider, Wallet } = require('ethers');
 const c = require('ansi-colors');
-
-// @ts-expect-error https://github.com/hashgraph/hedera-sdk-js/issues/2722
-const { Hbar, Client, PrivateKey, TokenCreateTransaction } = require('@hashgraph/sdk');
+const {
+    Hbar,
+    Client,
+    PrivateKey,
+    TokenCreateTransaction,
+    TokenType,
+    TokenMintTransaction,
+    // @ts-expect-error https://github.com/hashgraph/hedera-sdk-js/issues/2722
+} = require('@hashgraph/sdk');
 const { HTSAddress, getHIP719Code } = require('@hashgraph/system-contracts-forking');
 
 const { jsonRPCForwarder } = require('@hashgraph/system-contracts-forking/forwarder');
@@ -33,6 +39,7 @@ const { anvil } = require('./.anvil.js');
 
 const IHederaTokenService = require('../out/IHederaTokenService.sol/IHederaTokenService.json');
 const IERC20 = require('../out/IERC20.sol/IERC20.json');
+const IERC721 = require('../out/IERC721.sol/IERC721.json');
 const IHRC719 = require('../out/IHRC719.sol/IHRC719.json');
 
 const RedirectAbi = [
@@ -76,6 +83,19 @@ const ft = {
     symbol: 'RFT',
     totalSupply: 5_000_000,
     decimals: 3,
+    treasury: {
+        id: '0.0.1021',
+        evmAddress: '0x17b2b8c63fa35402088640e426c6709a254c7ffb',
+        privateKey: '0xeae4e00ece872dd14fb6dc7a04f390563c7d69d16326f2a703ec8e0934060cc7',
+    },
+};
+
+const nft = {
+    tokenId: '',
+    tokenAddress: '',
+
+    name: 'Random NFT Collection',
+    symbol: 'RNC',
     treasury: {
         id: '0.0.1021',
         evmAddress: '0x17b2b8c63fa35402088640e426c6709a254c7ffb',
@@ -134,6 +154,46 @@ async function createToken({ noSupplyKey } = {}) {
 }
 
 /**
+ * @returns
+ */
+async function createNFT() {
+    const accountId = '0.0.2';
+    const privateKey =
+        '302e020100300506032b65700422042091132178e72057a1d7528025956fe39b0b847f200ab59b2fdd367017f3087137';
+
+    const client = Client.forNetwork({ '127.0.0.1:50211': '0.0.3' })
+        .setOperator(accountId, PrivateKey.fromStringDer(privateKey))
+        .setDefaultMaxTransactionFee(new Hbar(100))
+        .setDefaultMaxQueryPayment(new Hbar(50));
+
+    const transaction = await new TokenCreateTransaction()
+        .setTokenName(nft.name)
+        .setTokenSymbol(nft.symbol)
+        .setTokenType(TokenType.NonFungibleUnique)
+        .setTreasuryAccountId(nft.treasury.id)
+        .setAdminKey(PrivateKey.fromStringDer(privateKey))
+        .setSupplyKey(PrivateKey.fromStringECDSA(nft.treasury.privateKey))
+        .freezeWith(client)
+        .sign(PrivateKey.fromStringECDSA(nft.treasury.privateKey));
+
+    const receipt = await (await transaction.execute(client)).getReceipt(client);
+    const tokenId = receipt.tokenId;
+
+    const mintTx = await new TokenMintTransaction()
+        .setTokenId(tokenId || '')
+        .setMetadata([Buffer.from('ipfs://sample-url')])
+        .freezeWith(client)
+        .sign(PrivateKey.fromStringECDSA(nft.treasury.privateKey));
+
+    const mintTxResponse = await mintTx.execute(client);
+    await mintTxResponse.getReceipt(client);
+
+    client.close();
+    assert(tokenId !== null);
+    return tokenId.toString();
+}
+
+/**
  * @param {number} time
  * @param {string} why
  * @returns
@@ -144,7 +204,7 @@ function sleep(time, why) {
 }
 
 describe('::e2e', function () {
-    this.timeout(60000);
+    this.timeout(120000);
 
     const jsonRpcRelayUrl = 'http://localhost:7546';
     const mirrorNodeUrl = 'http://localhost:5551/api/v1/';
@@ -181,6 +241,7 @@ describe('::e2e', function () {
     /** @type {string} */ let tokenAddress;
     /** @type {Contract} */ let HTS;
     /** @type {Contract} */ let ERC20;
+    /** @type {Contract} */ let ERC721;
     /** @type {Wallet} */ let treasury;
     /** @type {{ [accountNum: number]: Wallet}} */ let wallets;
 
@@ -297,6 +358,262 @@ describe('::e2e', function () {
                     const postTotalSupply = await ERC20['totalSupply']();
                     expect(postTotalSupply).to.be.equal(preTotalSupply - amount);
                 });
+
+                it('should perform a transfer using crypto transfer', async function () {
+                    const alice = wallets[1012];
+                    const preTreasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
+                    const preAliceBalance = await ERC20['balanceOf'](alice.address);
+                    const amount = 1_000n;
+                    await waitForTx(
+                        sendAs(HTS, treasury)['cryptoTransfer'](
+                            { transfers: [] },
+                            [
+                                {
+                                    token: tokenAddress,
+                                    nftTransfers: [],
+                                    transfers: [
+                                        {
+                                            accountID: ft.treasury.evmAddress,
+                                            amount: -amount,
+                                            isApproval: false,
+                                        },
+                                        {
+                                            accountID: alice.address,
+                                            amount: amount,
+                                            isApproval: false,
+                                        },
+                                    ],
+                                },
+                            ],
+                            OPTS
+                        )
+                    );
+
+                    const postTreasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
+                    expect(postTreasuryBalance).to.be.equal(preTreasuryBalance - amount);
+
+                    const postAliceBalance = await ERC20['balanceOf'](alice.address);
+                    expect(postAliceBalance).to.be.equal(preAliceBalance + amount);
+                });
+
+                it('should perform a transfer using approved crypto transfer', async function () {
+                    const optsIncreasedGasLimit = { gasLimit: 5_000_000 };
+                    const preTreasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
+                    const bob = wallets[1013];
+
+                    const alice = wallets[1012];
+                    const preTreasuryBalanceOfSender = await ERC20['balanceOf'](bob.address);
+                    const preAliceBalance = await ERC20['balanceOf'](alice.address);
+                    const amount = 1_000n;
+
+                    await waitForTx(
+                        sendAs(HTS, treasury)['approve'](
+                            tokenAddress,
+                            bob.address,
+                            amount,
+                            optsIncreasedGasLimit
+                        )
+                    );
+                    const allowance = await ERC20['allowance'](treasury.address, bob.address);
+                    expect(allowance).to.be.equal(amount);
+                    await waitForTx(
+                        sendAs(HTS, bob)['cryptoTransfer'](
+                            { transfers: [] },
+                            [
+                                {
+                                    token: tokenAddress,
+                                    nftTransfers: [],
+                                    transfers: [
+                                        {
+                                            accountID: ft.treasury.evmAddress,
+                                            amount: -amount,
+                                            isApproval: true,
+                                        },
+                                        {
+                                            accountID: alice.address,
+                                            amount: amount,
+                                            isApproval: false,
+                                        },
+                                    ],
+                                },
+                            ],
+                            OPTS
+                        )
+                    );
+                    const postTreasuryBalanceOfSender = await ERC20['balanceOf'](bob.address);
+                    expect(postTreasuryBalanceOfSender).to.be.equal(preTreasuryBalanceOfSender);
+
+                    const postTreasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
+                    expect(postTreasuryBalance).to.be.equal(preTreasuryBalance - amount);
+
+                    const postAliceBalance = await ERC20['balanceOf'](alice.address);
+                    expect(postAliceBalance).to.be.equal(preAliceBalance + amount);
+                });
+
+                it('should perform a transfer using approved crypto transfer from multiple accounts', async function () {
+                    const optsIncreasedGasLimit = { gasLimit: 5_000_000 };
+                    const bob = wallets[1013];
+                    const alice = wallets[1012];
+
+                    const amountFromBob = 300n;
+                    const amountFromTreasury = 700n;
+
+                    await waitForTx(
+                        sendAs(ERC20, treasury)['transfer'](
+                            bob.address,
+                            amountFromBob,
+                            optsIncreasedGasLimit
+                        )
+                    );
+                    const preBobBalance = await ERC20['balanceOf'](bob.address);
+                    const preAliceBalance = await ERC20['balanceOf'](alice.address);
+                    const preTreasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
+                    await waitForTx(
+                        sendAs(HTS, treasury)['approve'](
+                            tokenAddress,
+                            bob.address,
+                            amountFromTreasury,
+                            optsIncreasedGasLimit
+                        )
+                    );
+                    const allowance = await ERC20['allowance'](treasury.address, bob.address);
+                    expect(allowance).to.be.equal(amountFromTreasury);
+                    await waitForTx(
+                        sendAs(HTS, bob)['cryptoTransfer'](
+                            { transfers: [] },
+                            [
+                                {
+                                    token: tokenAddress,
+                                    nftTransfers: [],
+                                    transfers: [
+                                        {
+                                            accountID: bob.address,
+                                            amount: -amountFromBob,
+                                            isApproval: false,
+                                        },
+                                        {
+                                            accountID: ft.treasury.evmAddress,
+                                            amount: -amountFromTreasury,
+                                            isApproval: true,
+                                        },
+                                        {
+                                            accountID: alice.address,
+                                            amount: amountFromTreasury + amountFromBob,
+                                            isApproval: false,
+                                        },
+                                    ],
+                                },
+                            ],
+                            OPTS
+                        )
+                    );
+                    const postTreasuryBalanceOfSender = await ERC20['balanceOf'](bob.address);
+                    expect(postTreasuryBalanceOfSender).to.be.equal(preBobBalance - amountFromBob);
+
+                    const postTreasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
+                    expect(postTreasuryBalance).to.be.equal(
+                        preTreasuryBalance - amountFromTreasury
+                    );
+
+                    const postAliceBalance = await ERC20['balanceOf'](alice.address);
+                    expect(postAliceBalance).to.be.equal(
+                        preAliceBalance + amountFromTreasury + amountFromBob
+                    );
+                });
+
+                it('should perform a transfer using crypto transfer to multiple accounts', async function () {
+                    const optsIncreasedGasLimit = { gasLimit: 5_000_000 };
+                    const bob = wallets[1013];
+                    const alice = wallets[1012];
+                    const preTreasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
+                    const preBobBalance = await ERC20['balanceOf'](bob.address);
+                    const preAliceBalance = await ERC20['balanceOf'](alice.address);
+                    const amountToAlice = 500n;
+                    const amountToBob = 100n;
+                    await waitForTx(
+                        sendAs(HTS, treasury)['cryptoTransfer'](
+                            { transfers: [] },
+                            [
+                                {
+                                    token: tokenAddress,
+                                    nftTransfers: [],
+                                    transfers: [
+                                        {
+                                            accountID: ft.treasury.evmAddress,
+                                            amount: -(amountToAlice + amountToBob),
+                                            isApproval: false,
+                                        },
+                                        {
+                                            accountID: alice.address,
+                                            amount: amountToAlice,
+                                            isApproval: false,
+                                        },
+                                        {
+                                            accountID: bob.address,
+                                            amount: amountToBob,
+                                            isApproval: false,
+                                        },
+                                    ],
+                                },
+                            ],
+                            optsIncreasedGasLimit
+                        )
+                    );
+
+                    const postTreasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
+                    expect(postTreasuryBalance).to.be.equal(
+                        preTreasuryBalance - amountToAlice - amountToBob
+                    );
+
+                    const postAliceBalance = await ERC20['balanceOf'](alice.address);
+                    expect(postAliceBalance).to.be.equal(preAliceBalance + amountToAlice);
+
+                    const postBobBalance = await ERC20['balanceOf'](bob.address);
+                    expect(postBobBalance).to.be.equal(preBobBalance + amountToBob);
+                });
+
+                it('should fail to transfer using crypto transfer not balancing', async function () {
+                    const optsIncreasedGasLimit = { gasLimit: 5_000_000 };
+                    const bob = wallets[1013];
+                    const alice = wallets[1012];
+                    const amountToAlice = 500n;
+                    const amountToBob = 100n;
+                    try {
+                        await waitForTx(
+                            sendAs(HTS, treasury)['cryptoTransfer'](
+                                { transfers: [] },
+                                [
+                                    {
+                                        token: tokenAddress,
+                                        nftTransfers: [],
+                                        transfers: [
+                                            {
+                                                accountID: ft.treasury.evmAddress,
+                                                amount: -(amountToAlice + amountToBob - 100n),
+                                                isApproval: false,
+                                            },
+                                            {
+                                                accountID: alice.address,
+                                                amount: amountToAlice,
+                                                isApproval: false,
+                                            },
+                                            {
+                                                accountID: bob.address,
+                                                amount: amountToBob,
+                                                isApproval: false,
+                                            },
+                                        ],
+                                    },
+                                ],
+                                optsIncreasedGasLimit
+                            )
+                        );
+                    } catch (e) {
+                        if (e instanceof Error) {
+                            expect(e.message).to.contain('transaction execution reverted');
+                        }
+                    }
+                });
             },
         },
 
@@ -318,6 +635,44 @@ describe('::e2e', function () {
                     expect(postTreasuryBalance).to.be.equal(preTreasuryBalance);
                     const postTotalSupply = await ERC20['totalSupply']();
                     expect(postTotalSupply).to.be.equal(preTotalSupply);
+                });
+            },
+        },
+
+        {
+            title: 'with Non Fungible Token',
+            create: () => createNFT(),
+            tokenInfo: undefined,
+            tests() {
+                const nonAssocAddress0 = '0x0000000000000000000000000000000001234567';
+                const nonAssocAddress1 = '0xdadB0d80178819F2319190D340ce9A924f783711';
+                it("should retrieve token's `name` and `symbol` - NFT", async function () {
+                    expect(await ERC721['name']()).to.be.equal(nft.name);
+                    expect(await ERC721['symbol']()).to.be.equal(nft.symbol);
+                });
+
+                it('should retrieve `balanceOf` treasury account - NFT', async function () {
+                    const value = await ERC721['balanceOf'](nft.treasury.evmAddress);
+                    expect(value).to.be.equal(BigInt(1n));
+                });
+
+                it('should retrieve zero `balanceOf` for non-associated accounts - NFT', async function () {
+                    expect(await ERC721['balanceOf'](nonAssocAddress0)).to.be.equal(0n);
+                    expect(await ERC721['balanceOf'](nonAssocAddress1)).to.be.equal(0n);
+                });
+
+                it('should get it `isAssociated` for treasury account - NFT', async function () {
+                    const value = await ERC721['isAssociated']({ from: ft.treasury.evmAddress });
+                    expect(value).to.be.equal(true);
+                });
+
+                it('should get not `isAssociated` for existing non-associated account - NFT', async function () {
+                    expect(
+                        await ERC721['isAssociated']({ from: toAddress('0.0.1002') })
+                    ).to.be.equal(false);
+                    expect(
+                        await ERC721['isAssociated']({ from: wallets[1012].address })
+                    ).to.be.equal(false);
                 });
             },
         },
@@ -343,6 +698,7 @@ describe('::e2e', function () {
                             aliasKeys.map(([accId, pk]) => [accId, new Wallet(pk, rpc)])
                         );
                         ERC20 = new Contract(tokenAddress, [...IERC20.abi, ...IHRC719.abi], rpc);
+                        ERC721 = new Contract(tokenAddress, [...IERC721.abi, ...IHRC719.abi], rpc);
                     });
 
                     suite.tests();

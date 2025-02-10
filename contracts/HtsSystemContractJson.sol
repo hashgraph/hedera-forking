@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import {Vm} from "forge-std/Vm.sol";
 import {decode} from './Base64.sol';
+import {HederaResponseCodes} from "./HederaResponseCodes.sol";
 import {HtsSystemContract, HTS_ADDRESS} from "./HtsSystemContract.sol";
 import {IERC20} from "./IERC20.sol";
 import {MirrorNode} from "./MirrorNode.sol";
@@ -265,7 +266,7 @@ contract HtsSystemContractJson is HtsSystemContract {
         return token;
     }
 
-    function _getTokenKeys(string memory json) private pure returns (TokenKey[] memory tokenKeys) {
+    function _getTokenKeys(string memory json) private returns (TokenKey[] memory tokenKeys) {
         tokenKeys = new TokenKey[](7);
 
         try vm.parseJson(json, ".admin_key") returns (bytes memory keyBytes) {
@@ -320,9 +321,8 @@ contract HtsSystemContractJson is HtsSystemContract {
         return tokenKeys;
     }
 
-    function _getTokenKey(IMirrorNodeResponses.Key memory key, uint8 keyType) internal pure returns (TokenKey memory) {
+    function _getTokenKey(IMirrorNodeResponses.Key memory key, uint8 keyType) internal returns (TokenKey memory) {
         bool inheritAccountKey = false;
-        address contractId = address(0);
         address delegatableContractId = address(0);
         bytes memory ed25519 = keccak256(bytes(key._type)) == keccak256(bytes("ED25519"))
             ? vm.parseBytes(key.key)
@@ -330,6 +330,9 @@ contract HtsSystemContractJson is HtsSystemContract {
         bytes memory ECDSA_secp256k1 = keccak256(bytes(key._type)) == keccak256(bytes("ECDSA_SECP256K1"))
             ? vm.parseBytes(key.key)
             : new bytes(0);
+        address contractId = ed25519.length + ECDSA_secp256k1.length > 0
+            ? mirrorNode().getAccountAddressByPublicKey(key.key)
+            : address(0);
         return TokenKey(
             keyType,
             KeyValue(
@@ -449,6 +452,24 @@ contract HtsSystemContractJson is HtsSystemContract {
         return slot;
     }
 
+    function _isFrozenSlot(address account) internal override returns (bytes32) {
+        bytes32 slot = super._isFrozenSlot(account);
+        if (_shouldFetch(slot)) {
+            string memory freezeStatus = mirrorNode().getFreezeStatus(address(this), account);
+            _setValue(slot, bytes32(keccak256(bytes(freezeStatus)) == keccak256("FROZEN") ? uint256(1) : uint256(0)));
+        }
+        return slot;
+    }
+
+    function _hasKycGrantedSlot(address account) internal override returns (bytes32) {
+        bytes32 slot = super._hasKycGrantedSlot(account);
+        if (_shouldFetch(slot)) {
+            string memory kycStatus = mirrorNode().getKycStatus(address(this), account);
+            _setValue(slot, bytes32(keccak256(bytes(kycStatus)) == keccak256("GRANTED") ? uint256(1) : uint256(0)));
+        }
+        return slot;
+    }
+
     function _allowanceSlot(address owner, address spender) internal override returns (bytes32) {
         bytes32 slot = super._allowanceSlot(owner, spender);
         if (_shouldFetch(slot)) {
@@ -516,5 +537,10 @@ contract HtsSystemContractJson is HtsSystemContract {
 
     function _scratchAddr() private view returns (address) {
         return address(bytes20(keccak256(abi.encode(address(this)))));
+    }
+
+    function _updateHbarBalanceOnAccount(address account, uint256 newBalance) internal override returns (int64) {
+        vm.deal(account, newBalance);
+        return HederaResponseCodes.SUCCESS;
     }
 }

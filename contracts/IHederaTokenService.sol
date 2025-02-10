@@ -304,9 +304,9 @@ interface IHederaTokenService {
     /// @param transferList the list of hbar transfers to do
     /// @param tokenTransfers the list of token transfers to do
     /// @custom:version 0.3.0 the signature of the previous version was cryptoTransfer(TokenTransferList[] memory tokenTransfers)
-    // function cryptoTransfer(TransferList memory transferList, TokenTransferList[] memory tokenTransfers)
-    //     external
-    //     returns (int64 responseCode);
+    function cryptoTransfer(TransferList memory transferList, TokenTransferList[] memory tokenTransfers)
+        external
+        returns (int64 responseCode);
 
     /// Mints an amount of the token to the defined treasury account
     /// @param token The token for which to mint tokens. If token does not exist, transaction results in
@@ -605,18 +605,18 @@ interface IHederaTokenService {
     /// @param account The account address associated with the token
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
     /// @return frozen True if `account` is frozen for `token`
-    // function isFrozen(address token, address account)
-    //     external
-    //     returns (int64 responseCode, bool frozen);
+    function isFrozen(address token, address account)
+       external
+       returns (int64 responseCode, bool frozen);
 
     /// Query if token account has kyc granted
     /// @param token The token address to check
     /// @param account The account address associated with the token
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
     /// @return kycGranted True if `account` has kyc granted for `token`
-    // function isKyc(address token, address account)
-    //     external
-    //     returns (int64 responseCode, bool kycGranted);
+    function isKyc(address token, address account)
+        external
+        returns (int64 responseCode, bool kycGranted);
 
     /// Operation to delete token
     /// @param token The token address to be deleted
@@ -695,43 +695,43 @@ interface IHederaTokenService {
     /// @param token The token address
     /// @param account The account address to be frozen
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
-    // function freezeToken(address token, address account)
-    //     external
-    //     returns (int64 responseCode);
+    function freezeToken(address token, address account)
+       external
+       returns (int64 responseCode);
 
     /// Operation to unfreeze token account
     /// @param token The token address
     /// @param account The account address to be unfrozen
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
-    // function unfreezeToken(address token, address account)
-    //     external
-    //     returns (int64 responseCode);
+    function unfreezeToken(address token, address account)
+       external
+       returns (int64 responseCode);
 
     /// Operation to grant kyc to token account
     /// @param token The token address
     /// @param account The account address to grant kyc
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
-    // function grantTokenKyc(address token, address account)
-    //     external
-    //     returns (int64 responseCode);
+    function grantTokenKyc(address token, address account)
+        external
+        returns (int64 responseCode);
 
     /// Operation to revoke kyc to token account
     /// @param token The token address
     /// @param account The account address to revoke kyc
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
-    // function revokeTokenKyc(address token, address account)
-    //     external
-    //     returns (int64 responseCode);
+    function revokeTokenKyc(address token, address account)
+        external
+        returns (int64 responseCode);
 
     /// Operation to pause token
     /// @param token The token address to be paused
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
-    // function pauseToken(address token) external returns (int64 responseCode);
+    function pauseToken(address token) external returns (int64 responseCode);
 
     /// Operation to unpause token
     /// @param token The token address to be unpaused
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
-    // function unpauseToken(address token) external returns (int64 responseCode);
+    function unpauseToken(address token) external returns (int64 responseCode);
 
     /// Operation to wipe fungible tokens from account
     /// @param token The token address
