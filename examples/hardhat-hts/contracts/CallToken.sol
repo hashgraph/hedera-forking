@@ -10,6 +10,8 @@ contract CallToken {
 
     event GetTokenInfo(string name, string symbol, string memo);
 
+    event TokenCreated(address indexed tokenAddress);
+
     function getTokenName(address tokenAddress) external view returns (string memory) {
         return IERC20(tokenAddress).name();
     }
@@ -21,10 +23,21 @@ contract CallToken {
         IERC20(tokenAddress).transferFrom(msg.sender, to, amount);
     }
 
-    function invokeHTSDirectly(address tokenAddress) external {
+    function getTokenInfo(address tokenAddress) external {
         (int64 responseCode, IHederaTokenService.TokenInfo memory tokenInfo) = IHederaTokenService(address(0x167)).getTokenInfo(tokenAddress);
         require(responseCode == HederaResponseCodes.SUCCESS, "HTS call failed");
         console.log("getTokenInfo: %s (%s) memo: %s ", tokenInfo.token.name, tokenInfo.token.symbol, tokenInfo.token.memo);
         emit GetTokenInfo(tokenInfo.token.name, tokenInfo.token.symbol, tokenInfo.token.memo);
+    }
+
+    function createToken(string memory name, string memory symbol, int32 decimals, address treasury) external payable {
+        IHederaTokenService.HederaToken memory token;
+        token.name = name;
+        token.symbol = symbol;
+        token.treasury = treasury;
+
+        (int64 responseCode, address tokenAddress) = IHederaTokenService(address(0x167)).createFungibleToken{value: msg.value}(token, 10000, decimals);
+        require(responseCode == 22, "HTS createToken failed");
+        emit TokenCreated(tokenAddress);
     }
 }
