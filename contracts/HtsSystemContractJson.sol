@@ -452,6 +452,15 @@ contract HtsSystemContractJson is HtsSystemContract {
         return slot;
     }
 
+    function _isFrozenSlot(address account) internal override returns (bytes32) {
+        bytes32 slot = super._isFrozenSlot(account);
+        if (_shouldFetch(slot)) {
+            string memory freezeStatus = mirrorNode().getFreezeStatus(address(this), account);
+            _setValue(slot, bytes32(keccak256(bytes(freezeStatus)) == keccak256("FROZEN") ? uint256(1) : uint256(0)));
+        }
+        return slot;
+    }
+
     function _hasKycGrantedSlot(address account) internal override returns (bytes32) {
         bytes32 slot = super._hasKycGrantedSlot(account);
         if (_shouldFetch(slot)) {

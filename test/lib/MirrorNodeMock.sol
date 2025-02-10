@@ -52,7 +52,7 @@ contract MirrorNodeMock is MirrorNode {
         return vm.readFile(path);
     }
 
-    function fetchAccountByPublicKey(string memory publicKey) external override returns (string memory) {
+    function fetchAccountByPublicKey(string memory publicKey) external override view returns (string memory) {
         string memory path = string.concat("./test/data/getAccountsByPublicKey_", vm.toLowercase(publicKey), ".json");
         return vm.readFile(path);
     }

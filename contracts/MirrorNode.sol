@@ -103,6 +103,19 @@ abstract contract MirrorNode {
         return false;
     }
 
+    function getFreezeStatus(address token, address account) external returns (string memory) {
+        try this.fetchTokenRelationshipOfAccount(vm.toString(account), token) returns (string memory json) {
+            if (vm.keyExistsJson(json, ".tokens")) {
+                bytes memory tokens = vm.parseJson(json, ".tokens");
+                IMirrorNodeResponses.TokenRelationship[] memory relationships = abi.decode(tokens, (IMirrorNodeResponses.TokenRelationship[]));
+                if (relationships.length > 0) {
+                    return relationships[0].freeze_status;
+                }
+            }
+        } catch {}
+        return "NOT_APPLICABLE";
+    }
+
     function getKycStatus(address token, address account) external returns (string memory) {
         try this.fetchTokenRelationshipOfAccount(vm.toString(account), token) returns (string memory json) {
             if (vm.keyExistsJson(json, ".tokens")) {
