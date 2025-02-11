@@ -250,16 +250,6 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
     if (unresolvedValues === undefined) {
         const token = await mirrorNodeClient.getTokenById(tokenId, blockNumber);
         if (token === null) return ret(ZERO_HEX_32_BYTE, `Token \`${tokenId}\` not found`);
-
-        for (const key of ['admin', 'kyc', 'freeze', 'wipe', 'supply', 'fee_schedule', 'pause']) {
-            const value = /**@type{{contractId: string}}*/ (token[`${key}_key`]);
-            if (!value) continue;
-            assert(typeof value === 'object' && 'key' in value && typeof value.key === 'string');
-            const result = await mirrorNodeClient.getAccountsByPublicKey(value.key);
-            if (result === undefined || !result || result.accounts.length === 0) continue;
-            value.contractId = result.accounts[0].evm_address;
-        }
-
         unresolvedValues = slotMapOf(token).load(nrequestedSlot);
 
         if (unresolvedValues === undefined)

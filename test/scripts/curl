@@ -53,17 +53,7 @@ for (const [re, fn] of /** @type {const} */([
 
         return require(`../data/${token.symbol}/getNonFungibleToken_${nftNumber}.json`);
     }],
-    [/^accounts$/, () => {
-        const publicKey = searchParams.get('account.publickey');
-        if (publicKey === undefined || !publicKey) return undefined;
-        try {
-            return require(`../data/getAccountsByPublicKey_${publicKey.toLowerCase()}.json`);
-        } catch {
-            return undefined;
-        }
-    }],
     [/^accounts\/((0x[0-9a-fA-F]{40})|(0\.0\.\d+))$/, idOrAliasOrEvmAddress => {
-        appendFileSync(join(__dirname, 'curl1.log'), 'GOT IT 1 ' + idOrAliasOrEvmAddress + "\n", 'utf-8');
         assert(typeof idOrAliasOrEvmAddress === 'string');
         try {
             return require(`../data/getAccount_${idOrAliasOrEvmAddress.toLowerCase()}.json`);
@@ -137,9 +127,6 @@ for (const [re, fn] of /** @type {const} */([
             return;
         }
         break;
-    }
-    if (endpoint) {
-        appendFileSync(join(__dirname, 'curl3.log'), endpoint + ' ' + (match !== null ? 'GOT IT!' : 'SADGE :( ' + fn.toString()) + "\n", 'utf-8');
     }
 }
 

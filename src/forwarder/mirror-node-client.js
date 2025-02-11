@@ -138,16 +138,6 @@ class MirrorNodeClient {
     }
 
     /**
-     * Fetches accounts information by account public key.
-     *
-     * @param {string} publicKey The account public key to fetch.
-     * @returns {Promise<{ accounts: {evm_address: string}[] } | null>} A `Promise` resolving to the account information or `null` if not found.
-     */
-    async getAccountsByPublicKey(publicKey) {
-        return this._get(`accounts?limit=1&account.publickey=${publicKey}`);
-    }
-
-    /**
      * @param {number} blockNumber
      * @returns {Promise<{timestamp: {to: string}} | null>}
      */

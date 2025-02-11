@@ -320,8 +320,9 @@ contract HtsSystemContractJson is HtsSystemContract {
         return tokenKeys;
     }
 
-    function _getTokenKey(IMirrorNodeResponses.Key memory key, uint8 keyType) internal returns (TokenKey memory) {
+    function _getTokenKey(IMirrorNodeResponses.Key memory key, uint8 keyType) internal pure returns (TokenKey memory) {
         bool inheritAccountKey = false;
+        address contractId = address(0);
         address delegatableContractId = address(0);
         bytes memory ed25519 = keccak256(bytes(key._type)) == keccak256(bytes("ED25519"))
             ? vm.parseBytes(key.key)
@@ -329,9 +330,6 @@ contract HtsSystemContractJson is HtsSystemContract {
         bytes memory ECDSA_secp256k1 = keccak256(bytes(key._type)) == keccak256(bytes("ECDSA_SECP256K1"))
             ? vm.parseBytes(key.key)
             : new bytes(0);
-        address contractId = ed25519.length + ECDSA_secp256k1.length > 0
-            ? mirrorNode().getAccountAddressByPublicKey(key.key)
-            : address(0);
         return TokenKey(
             keyType,
             KeyValue(

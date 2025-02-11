@@ -72,7 +72,7 @@ contract HtsSystemContract is IHederaTokenService {
         require(amount > 0, "mintToken: invalid amount");
 
         (int64 tokenInfoResponseCode, TokenInfo memory tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
-        if (!ignoreSupplyKeyCheck && _extractKeyAddress(0x10, tokenInfo) == address(0)) { // 0x10 - supply key
+        if (!ignoreSupplyKeyCheck && !_keyExists(0x10, tokenInfo)) { // 0x10 - supply key
             return (HederaResponseCodes.TOKEN_HAS_NO_SUPPLY_KEY, tokenInfo.totalSupply, new int64[](0));
         }
         require(tokenInfoResponseCode == HederaResponseCodes.SUCCESS, "mintToken: failed to get token info");
@@ -96,7 +96,7 @@ contract HtsSystemContract is IHederaTokenService {
         require(amount > 0, "burnToken: invalid amount");
 
         (int64 tokenInfoResponseCode, TokenInfo memory tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
-        if (_extractKeyAddress(0x10, tokenInfo) == address(0)) {
+        if (!_keyExists(0x10, tokenInfo)) {
             return (HederaResponseCodes.TOKEN_HAS_NO_SUPPLY_KEY, tokenInfo.totalSupply);
         }
         require(tokenInfoResponseCode == HederaResponseCodes.SUCCESS, "burnToken: failed to get token info");
@@ -955,12 +955,13 @@ contract HtsSystemContract is IHederaTokenService {
         emit IERC721.ApprovalForAll(sender, operator, approved);
     }
 
-    function _extractKeyAddress(uint keyType, TokenInfo memory tokenInfo) private pure returns (address) {
+    function _keyExists(uint keyType, TokenInfo memory tokenInfo) private pure returns (bool) {
         for (uint256 i = 0; i < tokenInfo.token.tokenKeys.length; i++) {
             if (tokenInfo.token.tokenKeys[i].keyType == keyType) {
-                return tokenInfo.token.tokenKeys[i].key.contractId;
+                KeyValue memory key = tokenInfo.token.tokenKeys[i].key;
+                return key.contractId != address(0) || (key.ECDSA_secp256k1.length + key.ed25519.length) > 0;
             }
         }
-        return address(0);
+        return false;
     }
 }

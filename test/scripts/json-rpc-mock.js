@@ -112,9 +112,6 @@ const mirrorNodeClient = {
         }
         return requireOrDefault(`getAccount_${idOrAliasOrEvmAddress.toLowerCase()}.json`, null);
     },
-    async getAccountsByPublicKey(publicKey) {
-        return requireOrDefault(`getAccountsByPublicKey_${publicKey.toLowerCase()}.json`, null);
-    },
     async getBalanceOfToken(tokenId, accountId, blockNumber) {
         this.append('getBalanceOfToken', tokenId, accountId, blockNumber);
         const noBalance = { balances: [] };
