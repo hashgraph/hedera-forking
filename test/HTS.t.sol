@@ -1073,8 +1073,4 @@ contract HTSTest is Test, TestSetup {
         );
         assertEq(code, HederaResponseCodes.INSUFFICIENT_ACCOUNT_BALANCE);
     }
-
-    function test_HTS_cryptoTransfer_test_reject_insufficient_token_balance() external {
-
-    }
 }
