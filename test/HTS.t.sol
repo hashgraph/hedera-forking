@@ -937,9 +937,9 @@ contract HTSTest is Test, TestSetup {
         tokenTransfers[0].transfers[2] = transfer3;
         vm.prank(owner);
         vm.expectEmit(true, true, true, true, token);
-        emit IERC20Events.Transfer(owner, bob, amountToBob);
+        emit IERC20.Transfer(owner, bob, amountToBob);
         vm.expectEmit(true, true, true, true, token);
-        emit IERC20Events.Transfer(owner, alice, amountToAlice);
+        emit IERC20.Transfer(owner, alice, amountToAlice);
         int64 responseCode = IHederaTokenService(HTS_ADDRESS).cryptoTransfer(hbarTransfers, tokenTransfers);
         assertEq(responseCode, HederaResponseCodes.SUCCESS);
         assertEq(IERC20(token).balanceOf(bob), amountToBob);
