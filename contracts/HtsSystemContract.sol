@@ -622,39 +622,33 @@ contract HtsSystemContract is IHederaTokenService {
     }
 
     function freezeToken(address token, address account) htsCall kyc(token) notPaused(token) external returns (int64 responseCode) {
-        (, TokenInfo memory info) = getTokenInfo(token);
         require(getKeyOwner(token, 0x4) == msg.sender, "freezeToken: only allowed for freezable tokens");
         responseCode = IHederaTokenService(token).freezeToken(token, account);
     }
 
     function unfreezeToken(address token, address account) htsCall kyc(token) notPaused(token) external returns (int64 responseCode) {
-        (, TokenInfo memory info) = getTokenInfo(token);
         require(getKeyOwner(token, 0x4) == msg.sender, "unfreezeToken: Only allowed for freezable key");
         responseCode = IHederaTokenService(token).unfreezeToken(token, account);
     }
 
     function grantTokenKyc(address token, address account) htsCall
         notFrozen(token) kyc(token) notPaused(token) external returns (int64 responseCode) {
-        (, TokenInfo memory info) = getTokenInfo(token);
         require(getKeyOwner(token, 0x2) != address(0), "grantTokenKyc: Only allowed for kyc tokens");
         responseCode = IHederaTokenService(token).grantTokenKyc(token, account);
     }
 
     function revokeTokenKyc(address token, address account) htsCall
         notFrozen(token) kyc(token) notPaused(token) external returns (int64 responseCode) {
-        (, TokenInfo memory info) = getTokenInfo(token);
         require(getKeyOwner(token, 0x2) != address(0), "revokeTokenKyc: Only allowed for kyc tokens");
         responseCode = IHederaTokenService(token).revokeTokenKyc(token, account);
     }
 
     function pauseToken(address token) htsCall notFrozen(token) kyc(token) external returns (int64 responseCode) {
-        (, TokenInfo memory info) = getTokenInfo(token);
         require(getKeyOwner(token, 0x40) == msg.sender, "pauseToken: only allowed for pause key");
         responseCode = IHederaTokenService(token).pauseToken(token);
     }
 
     function unpauseToken(address token) htsCall notFrozen(token)  kyc(token) external returns (int64 responseCode) {
-        (, TokenInfo memory info) = getTokenInfo(token);
         require(getKeyOwner(token, 0x40) == msg.sender, "pauseToken: only allowed for pause key");
         responseCode = IHederaTokenService(token).unpauseToken(token);
     }
@@ -868,9 +862,9 @@ contract HtsSystemContract is IHederaTokenService {
                 return abi.encode(HederaResponseCodes.SUCCESS);
             }
             if (selector == this.getKeyOwner.selector) {
-                require(msg.data.length >= 60, "_keyOwner: Not enough calldata");
-                uint256 keyType = uint256(bytes32(msg.data[28:60]));
-                return abi.encode(__keyOwner(uint8(keyType)));
+                require(msg.data.length >= 30, "getKeyOwner: Not enough calldata");
+                uint8 keyType = uint8(bytes1(msg.data[91:92]));
+                return abi.encode(__keyOwner(keyType));
             }
             if (selector == this._update.selector) {
                 require(msg.data.length >= 124, "update: Not enough calldata");
@@ -1123,7 +1117,7 @@ contract HtsSystemContract is IHederaTokenService {
     function _keyOwnerSlot(uint8 keyType) internal virtual returns (bytes32) {
         bytes4 selector = IHederaTokenService.getTokenKey.selector;
         uint192 pad = 0x0;
-        return bytes32(abi.encodePacked(selector, pad, uint256(keyType)));
+        return bytes32(abi.encodePacked(selector, pad, keyType));
     }
 
     function __balanceOf(address account) private returns (uint256 amount) {
@@ -1355,7 +1349,7 @@ contract HtsSystemContract is IHederaTokenService {
         return HederaResponseCodes.NOT_SUPPORTED;
     }
 
-    function getKeyOwner(address token, uint8 keyType) public returns (address) {
+    function getKeyOwner(address token, uint8 keyType) public htsCall returns (address) {
         return HtsSystemContract(token).getKeyOwner(token, keyType);
     }
 }
