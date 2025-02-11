@@ -26,7 +26,7 @@ module.exports = {
      */
     projectTestConfig: {
         mocha: {
-            timeout: 60000,
+            timeout: 30000,
         },
         solidity: '0.8.9',
         paths: {
