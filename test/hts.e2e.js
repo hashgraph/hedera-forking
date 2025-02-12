@@ -305,7 +305,7 @@ describe('::e2e', function () {
             create: () => createToken({ noSupplyKey: true }),
             tests: () => {
                 // https://github.com/hashgraph/hedera-forking/issues/167
-                it.skip('should not mint because there is no supply key', async function () {
+                it('should not mint because there is no supply key', async function () {
                     const preTreasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
                     const preTotalSupply = await ERC20['totalSupply']();
 
