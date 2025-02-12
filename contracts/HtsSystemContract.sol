@@ -61,7 +61,7 @@ contract HtsSystemContract is IHederaTokenService {
         return _mintToken(token, amount, true);
     }
 
-    function _mintToken(address token, int64 amount, bool checkSupplyKey) htsCall internal returns (
+    function _mintToken(address token, int64 amount, bool checkSupplyKey) private returns (
         int64 responseCode,
         int64 newTotalSupply,
         int64[] memory serialNumbers
