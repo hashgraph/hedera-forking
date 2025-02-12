@@ -243,7 +243,7 @@ function slotMapOf(token) {
     token['ledger_id'] = ledgerId;
     // Every inner `struct` will be flattened by `visit`,
     // so it uses the last part of the field path, _i.e._, `.second`.
-    token['second'] = `${token['expiry_timestamp']}`;
+    token['second'] = `${BigInt(`${token['expiry_timestamp']}`) / 1_000_000_000n}`;
     token['pause_status'] = token['pause_status'] === 'PAUSED';
     token['token_keys'] = /**@type {const}*/ ([
         ['admin_key', 0x1],
