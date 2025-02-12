@@ -265,7 +265,7 @@ contract HtsSystemContractJson is HtsSystemContract {
         return token;
     }
 
-    function _getTokenKeys(string memory json) private returns (TokenKey[] memory tokenKeys) {
+    function _getTokenKeys(string memory json) private pure returns (TokenKey[] memory tokenKeys) {
         tokenKeys = new TokenKey[](7);
 
         try vm.parseJson(json, ".admin_key") returns (bytes memory keyBytes) {

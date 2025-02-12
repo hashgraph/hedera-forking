@@ -220,7 +220,7 @@ contract HTSTest is Test, TestSetup {
         IHederaTokenService.TokenInfo memory tokenInfo;
         IHederaTokenService.TokenKey[] memory keys = new IHederaTokenService.TokenKey[](1);
         keys[0].keyType = 0x10; // Supply key
-        keys[0].key.contractId = msg.sender;
+        keys[0].key.ECDSA_secp256k1 = hex"0242b7c3beea2af6dfcc874c41d1332463407e283f602ce8ef2cbe324823561b6f";
         tokenInfo.token = IHederaTokenService.HederaToken(
             "USD Coin",
             "USDC",
@@ -242,7 +242,7 @@ contract HTSTest is Test, TestSetup {
         IHederaTokenService(HTS_ADDRESS).mintToken(token, amount, metadata);
     }
 
-    function test_mintToken_should_fail_with_np_supplier() external {
+    function test_mintToken_should_fail_with_no_supplyKey() external {
         address token = USDC;
         int64 amount = 1000;
         bytes[] memory metadata = new bytes[](0);
@@ -319,7 +319,7 @@ contract HTSTest is Test, TestSetup {
         IHederaTokenService.TokenInfo memory tokenInfo;
         IHederaTokenService.TokenKey[] memory keys = new IHederaTokenService.TokenKey[](1);
         keys[0].keyType = 0x10; // Supply key
-        keys[0].key.contractId = msg.sender;
+        keys[0].key.contractId = hex"0242b7c3beea2af6dfcc874c41d1332463407e283f602ce8ef2cbe324823561b6f";
         tokenInfo.token = IHederaTokenService.HederaToken(
             "My Crypto Token is the name which the string length is greater than 31",
             "Token symbol must be exactly 32!",
