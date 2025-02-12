@@ -168,7 +168,7 @@ describe('::e2e', function () {
             expect('_status' in token, `Token "${title}" \`${tokenId}\` not found`).to.be.false;
         }
 
-        const { host: forwarderUrl } = await jsonRPCForwarder(jsonRpcRelayUrl, mirrorNodeUrl);
+        const { host: forwarderUrl } = await jsonRPCForwarder(jsonRpcRelayUrl, mirrorNodeUrl, 298);
         anvilHost = await anvil(forwarderUrl);
 
         // Ensure HTS emulation is reachable

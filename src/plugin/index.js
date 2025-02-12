@@ -126,9 +126,15 @@ extendEnvironment(hre => {
     if ('forking' in hre.network.config) {
         const forking = hre.network.config.forking;
         if (forking.chainId !== undefined) {
-            const { url, mirrorNodeUrl, workerPort, localAddresses } = forking;
+            const { url, mirrorNodeUrl, chainId, workerPort, localAddresses } = forking;
             assert(mirrorNodeUrl !== undefined);
-            hre.jsonRPCForwarder = jsonRPCForwarder(url, mirrorNodeUrl, workerPort, localAddresses);
+            hre.jsonRPCForwarder = jsonRPCForwarder(
+                url,
+                mirrorNodeUrl,
+                chainId,
+                workerPort,
+                localAddresses
+            );
             forking.url = `http://127.0.0.1:${forking.workerPort}`;
         }
     }
