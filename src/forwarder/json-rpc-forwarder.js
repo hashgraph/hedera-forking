@@ -26,6 +26,7 @@ const { MirrorNodeClient } = require('./mirror-node-client');
 const {
     getHtsCode,
     getHtsStorageAt,
+    localTokens,
     HTSAddress,
     LONG_ZERO_PREFIX,
     getHIP719Code,
@@ -78,6 +79,10 @@ const eth = {
         if (address === HTSAddress) {
             debug(c.yellow('loading HTS Code at address %s'), address);
             return getHtsCode();
+        }
+        if (localTokens.includes(address)) {
+            debug(c.yellow('loading HIP719 proxy code for local token at %s'), address);
+            return getHIP719Code(address);
         }
         // Don't try to fetch token for Hardhat's `console.log`
         // https://github.com/NomicFoundation/hardhat/blob/e4e2b86776791840299db76cb13f7cecb6640c06/packages/hardhat-core/console.sol#L6

@@ -28,6 +28,7 @@ const { parentPort } = require('worker_threads');
 
 const {
     HTSAddress,
+    localTokens,
     getHIP719Code,
     getHtsCode,
     getHtsStorageAt,
@@ -57,9 +58,9 @@ const c = {
  * @returns {boolean}
  */
 const isHIP719Contract = address =>
-    Object.values(tokens)
-        .map(({ address }) => address.toLowerCase())
-        .includes(address.toLowerCase());
+    [...Object.values(tokens).map(({ address }) => address.toLowerCase()), ...localTokens].includes(
+        address.toLowerCase()
+    );
 
 /**
  * Loads and returns the module indicated by `path` if exists.

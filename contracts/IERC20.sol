@@ -2,34 +2,34 @@
 pragma solidity ^0.8.0;
 
 /**
- * These events should be emitted by `transfer|transferFrom` and `approve` respectively.
+ * @dev Interface of the ERC-20 standard as defined in the ERC.
  *
- * See https://ethereum.org/en/developers/docs/standards/tokens/erc-20/#events for more information.
+ * https://hips.hedera.com/hip/hip-218
+ * https://hips.hedera.com/hip/hip-376
  */
-interface IERC20Events {
+interface IERC20 {
     /**
      * @dev Emitted when `value` tokens are moved from one account (`from`) to
      * another (`to`).
      *
      * Note that `value` may be zero.
+     *
+     * This event should be emitted by `transfer` and `transferFrom` methods.
+     *
+     * See https://ethereum.org/en/developers/docs/standards/tokens/erc-20/#events for more information.
      */
     event Transfer(address indexed from, address indexed to, uint256 amount);
 
     /**
      * @dev Emitted when the allowance of a `spender` for an `owner` is set by
      * a call to {approve}. `value` is the new allowance.
+     *
+     * This event should be emitted by the `approve` method.
+     *
+     * See https://ethereum.org/en/developers/docs/standards/tokens/erc-20/#events for more information.
      */
     event Approval(address indexed owner, address indexed spender, uint256 amount);
-}
 
-/**
- * No need to inherit `IERC20Events` here.
- * This interface is used to get the selectors and for testing.
- *
- * https://hips.hedera.com/hip/hip-218
- * https://hips.hedera.com/hip/hip-376
- */
-interface IERC20 {
     /**
      * @dev Returns the name of the token.
      */
@@ -52,7 +52,7 @@ interface IERC20 {
 
     /**
      * @dev Returns the value of tokens owned by `account`.
-     */    
+     */
     function balanceOf(address account) external view returns (uint256);
 
     /**
