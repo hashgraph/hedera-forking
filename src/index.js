@@ -283,7 +283,11 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
 
     let unresolvedValues = persistentStorage.load(tokenId, blockNumber, nrequestedSlot);
     if (unresolvedValues === undefined) {
-        const token = /**@type{{token_keys: {key_type: string}[]}}*/ await mirrorNodeClient.getTokenById(tokenId, blockNumber);
+        const token =
+            /**@type{{token_keys: {key_type: string}[]}}*/ await mirrorNodeClient.getTokenById(
+                tokenId,
+                blockNumber
+            );
         if (token === null) return ret(ZERO_HEX_32_BYTE, `Token \`${tokenId}\` not found`);
         unresolvedValues = slotMapOf(token).load(nrequestedSlot);
 
@@ -294,13 +298,21 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
             0xc3c18f7c_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000n
         ) {
             const keyType = parseInt(requestedSlot.slice(-1), 16);
-            const keys = /**@type{Array<{key_type: string}>}*/(token['token_keys'])deej;
+            const keys =
+                /**@type{Array<{key_type: number, key: string, _e_c_d_s_a_secp256k1: string, ed25519: string}>}*/ (
+                    token['token_keys']
+                );
             const noKeyRes = ret(
                 ZERO_HEX_32_BYTE,
                 `Token ${tokenId} has not set the owner of the key ${keyType}`
             );
-            const keyFound = keys['find']((/**@type{{key_type: number}}*/ key) => key.key_type === keyType);
-            await mirrorNodeClient.getAccountsByPublicKey(keyFound);
+            const keyFound = keys['find'](
+                (
+                    /**@type{{key_type: number, key: string, _e_c_d_s_a_secp256k1: string, ed25519: string}}*/ key
+                ) => key.key_type === keyType
+            );
+            if (keyFound === undefined) return noKeyRes;
+            await mirrorNodeClient.getAccountsByPublicKey(keyFound['key']);
             const keyString = keyFound['_e_c_d_s_a_secp256k1'] || keyFound['ed25519'];
             if (!keyString) return noKeyRes;
             const result = await mirrorNodeClient.getAccountsByPublicKey(keyString);
