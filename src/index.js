@@ -283,19 +283,33 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
 
     let unresolvedValues = persistentStorage.load(tokenId, blockNumber, nrequestedSlot);
     if (unresolvedValues === undefined) {
-        const token = await mirrorNodeClient.getTokenById(tokenId, blockNumber);
+        const token = /**@type{{token_keys: {key_type: string}[]}}*/ await mirrorNodeClient.getTokenById(tokenId, blockNumber);
         if (token === null) return ret(ZERO_HEX_32_BYTE, `Token \`${tokenId}\` not found`);
-
-        for (const key of ['admin', 'kyc', 'freeze', 'wipe', 'supply', 'fee_schedule', 'pause']) {
-            const value = /**@type{{contractId: string}}*/ (token[`${key}_key`]);
-            if (!value) continue;
-            assert(typeof value === 'object' && 'key' in value && typeof value.key === 'string');
-            const result = await mirrorNodeClient.getAccountsByPublicKey(value.key);
-            if (result === undefined || !result || result.accounts.length === 0) continue;
-            value.contractId = result.accounts[0].evm_address;
-        }
-
         unresolvedValues = slotMapOf(token).load(nrequestedSlot);
+
+        // Encoded `address(tokenId).getKeyOwner(tokenId, keyType)` slot
+        // slot(256) = `getKeyOwner`selector(32) + padding(192) + keyType(32)
+        if (
+            nrequestedSlot >> 32n ===
+            0xc3c18f7c_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000n
+        ) {
+            const keyType = parseInt(requestedSlot.slice(-1), 16);
+            const keys = /**@type{Array<{key_type: string}>}*/(token['token_keys'])deej;
+            const noKeyRes = ret(
+                ZERO_HEX_32_BYTE,
+                `Token ${tokenId} has not set the owner of the key ${keyType}`
+            );
+            const keyFound = keys['find']((/**@type{{key_type: number}}*/ key) => key.key_type === keyType);
+            await mirrorNodeClient.getAccountsByPublicKey(keyFound);
+            const keyString = keyFound['_e_c_d_s_a_secp256k1'] || keyFound['ed25519'];
+            if (!keyString) return noKeyRes;
+            const result = await mirrorNodeClient.getAccountsByPublicKey(keyString);
+            if (result === undefined || !result || result.accounts.length === 0) return noKeyRes;
+            return ret(
+                result.accounts[0].evm_address,
+                `Token ${tokenId} has set the owner of the key ${keyType}: ${result.accounts[0].evm_address}`
+            );
+        }
 
         if (unresolvedValues === undefined)
             return ret(ZERO_HEX_32_BYTE, `Requested slot does not match any field slots`);
