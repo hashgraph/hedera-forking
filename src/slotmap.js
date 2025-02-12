@@ -24,17 +24,17 @@ const {
     storageLayout: { storage, types },
 } = require('../out/HtsSystemContract.sol/HtsSystemContract.json');
 
-let ledgerId = '0x00';
 /**
- * Sets the `ledgerId` used when retrieving fungible and non-fungible tokens.
- * The `ledgerId` depends on the `chainId` of the remote network it is forking from.
- *
- * @param {number} chainId
+ * The `ledgerId` used when retrieving fungible and non-fungible tokens.
+ */
+let ledgerId = '0x00';
+
+/**
+ * @param {number=} chainId
  */
 function setLedgerId(chainId) {
-    const chainIdToLedgerIdMap = { 295: '0x00', 296: '0x01', 297: '0x02', 298: '0x03' };
-    ledgerId =
-        chainIdToLedgerIdMap[/**@type{keyof typeof chainIdToLedgerIdMap}*/ (chainId)] || '0x00';
+    const chainIdToLedgerId = { 295: '0x00', 296: '0x01', 297: '0x02', 298: '0x03' };
+    ledgerId = chainIdToLedgerId[/**@type{keyof typeof chainIdToLedgerId}*/ (chainId)] ?? '0x00';
 }
 
 /**

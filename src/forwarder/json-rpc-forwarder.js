@@ -34,9 +34,9 @@ const {
 } = require('..');
 
 /** @type {Partial<import('hardhat/types').HardhatNetworkForkingConfig>} */
-const { url: forkUrl, mirrorNodeUrl, workerPort, localAddresses = [] } = workerData;
+const { url: forkUrl, mirrorNodeUrl, chainId, workerPort, localAddresses = [] } = workerData;
 
-setLedgerId(workerData.chainId);
+setLedgerId(chainId);
 
 assert(mirrorNodeUrl !== undefined, 'json-rpc-forwarder: Missing Mirror Node URL');
 
