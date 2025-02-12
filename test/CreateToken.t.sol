@@ -61,8 +61,6 @@ contract CreateTokenTest is Test, TestSetup {
     }
 
     function test_createFungibleToken_should_succeed_when_tokenInfo_is_valid() external {
-        if (testMode == TestMode.JSON_RPC) vm.skip(true);
-
         IHederaTokenService.HederaToken memory token;
         token.name = "Token name";
         token.symbol = "Token symbol";
@@ -111,8 +109,6 @@ contract CreateTokenTest is Test, TestSetup {
     }
 
     function test_createFungibleToken_should_succeed_when_initialTotalSupply_is_zero() external {
-        if (testMode == TestMode.JSON_RPC) vm.skip(true);
-
         IHederaTokenService.HederaToken memory token;
         token.name = "Token name";
         token.symbol = "Token symbol";
@@ -140,8 +136,6 @@ contract CreateTokenTest is Test, TestSetup {
     }
 
     function test_createFungibleTokenWithCustomFees_should_succeed_when_tokenInfo_is_valid() external {
-        if (testMode == TestMode.JSON_RPC) vm.skip(true);
-
         IHederaTokenService.HederaToken memory token;
         token.name = "Token name";
         token.symbol = "Token symbol";
@@ -171,8 +165,6 @@ contract CreateTokenTest is Test, TestSetup {
     }
 
     function test_createFungibleToken_should_succeed_when_called_multiple_times() external {
-        if (testMode == TestMode.JSON_RPC) vm.skip(true);
-
         int64 responseCode;
         address tokenAddress;
         IHederaTokenService.HederaToken[2] memory token;
@@ -210,8 +202,6 @@ contract CreateTokenTest is Test, TestSetup {
     }
 
     function test_createNonFungibleToken_should_succeed_when_tokenInfo_is_valid() external {
-        if (testMode == TestMode.JSON_RPC) vm.skip(true);
-
         IHederaTokenService.HederaToken memory token;
         token.name = "NFT name";
         token.symbol = "NFT symbol";
@@ -250,5 +240,4 @@ contract CreateTokenTest is Test, TestSetup {
         vm.assertEq(IERC721(tokenAddress).symbol(), token.symbol);
         vm.assertEq(IERC721(tokenAddress).totalSupply(), 0);
     }
-
 }

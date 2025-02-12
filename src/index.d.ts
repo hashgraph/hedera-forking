@@ -176,6 +176,12 @@ export const HTSAddress: string;
 export const LONG_ZERO_PREFIX: string;
 
 /**
+ * List of token addresses created locally.
+ * The `eth_getCode` for a token created locally should return the proxy bytecode.
+ */
+export const localTokens: string[];
+
+/**
  * Returns the token proxy contract bytecode for the given `address`.
  * Based on the proxy contract defined by [HIP-719](https://hips.hedera.com/hip/hip-719).
  *
