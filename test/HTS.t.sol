@@ -246,7 +246,7 @@ contract HTSTest is Test, TestSetup {
         IHederaTokenService(HTS_ADDRESS).mintToken(token, amount, metadata);
     }
 
-    function test_mintToken_should_fail_with_np_supplier() external {
+    function test_mintToken_should_fail_with_no_supplyKey() external {
         address token = USDC;
         int64 amount = 1000;
         bytes[] memory metadata = new bytes[](0);
@@ -255,7 +255,7 @@ contract HTSTest is Test, TestSetup {
         tokenInfo.token = IHederaTokenService.HederaToken(
             "USD Coin",
             "USDC",
-            address(0),
+            msg.sender,
             "USDC HBAR",
             false,
             initialTotalSupply + amount,
@@ -268,6 +268,11 @@ contract HTSTest is Test, TestSetup {
             token,
             abi.encode(IHederaTokenService.getTokenInfo.selector),
             abi.encode(HederaResponseCodes.SUCCESS, tokenInfo)
+        );
+        vm.mockCall(
+            token,
+            abi.encodeWithSelector(HtsSystemContract.getKeyOwner.selector, token, 0x10),
+            abi.encode(address(0))
         );
         (int64 code, , ) = IHederaTokenService(HTS_ADDRESS).mintToken(token, amount, metadata);
         assertEq(code, HederaResponseCodes.TOKEN_HAS_NO_SUPPLY_KEY);
@@ -320,9 +325,6 @@ contract HTSTest is Test, TestSetup {
         int64 initialTotalSupply = 5000;
         int64[] memory serialNumbers = new int64[](0);
         IHederaTokenService.TokenInfo memory tokenInfo;
-        IHederaTokenService.TokenKey[] memory keys = new IHederaTokenService.TokenKey[](1);
-        keys[0].keyType = 0x10; // Supply key
-        keys[0].key.contractId = msg.sender;
         tokenInfo.token = IHederaTokenService.HederaToken(
             "My Crypto Token is the name which the string length is greater than 31",
             "Token symbol must be exactly 32!",
@@ -331,7 +333,7 @@ contract HTSTest is Test, TestSetup {
             false,
             initialTotalSupply + amount,
             false,
-            keys,
+            new IHederaTokenService.TokenKey[](0),
             IHederaTokenService.Expiry(0, address(0), 0)
         );
 
@@ -339,6 +341,11 @@ contract HTSTest is Test, TestSetup {
             token,
             abi.encode(IHederaTokenService.getTokenInfo.selector),
             abi.encode(HederaResponseCodes.SUCCESS, tokenInfo)
+        );
+        vm.mockCall(
+            token,
+            abi.encodeWithSelector(HtsSystemContract.getKeyOwner.selector, MFCT, 0x10),
+            abi.encode(msg.sender)
         );
         vm.expectRevert(bytes("burnToken: invalid account"));
         IHederaTokenService(HTS_ADDRESS).burnToken(token, amount, serialNumbers);

@@ -633,13 +633,13 @@ contract HtsSystemContract is IHederaTokenService {
 
     function grantTokenKyc(address token, address account) htsCall
         notFrozen(token) kyc(token) notPaused(token) external returns (int64 responseCode) {
-        require(getKeyOwner(token, 0x2) != address(0), "grantTokenKyc: Only allowed for kyc tokens");
+        require(getKeyOwner(token, 0x2) != address(0), "grantTokenKyc: only allowed for kyc tokens");
         responseCode = IHederaTokenService(token).grantTokenKyc(token, account);
     }
 
     function revokeTokenKyc(address token, address account) htsCall
         notFrozen(token) kyc(token) notPaused(token) external returns (int64 responseCode) {
-        require(getKeyOwner(token, 0x2) != address(0), "revokeTokenKyc: Only allowed for kyc tokens");
+        require(getKeyOwner(token, 0x2) != address(0), "revokeTokenKyc: only allowed for kyc tokens");
         responseCode = IHederaTokenService(token).revokeTokenKyc(token, account);
     }
 

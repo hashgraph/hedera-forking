@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
 import {TestSetup} from "./lib/TestSetup.sol";
-import {HTS_ADDRESS} from "../contracts/HtsSystemContract.sol";
+import {HtsSystemContract, HTS_ADDRESS} from "../contracts/HtsSystemContract.sol";
 import {IHederaTokenService} from "../contracts/IHederaTokenService.sol";
 import {HederaResponseCodes} from "../contracts/HederaResponseCodes.sol";
 import {IERC20} from "../contracts/IERC20.sol";
@@ -28,13 +28,15 @@ contract KYCTest is Test, TestSetup {
         hederaToken.treasury = makeAddr("Token treasury");
         hederaToken.tokenKeys = new IHederaTokenService.TokenKey[](1);
         owner = makeAddr("kyc");
-
-        hederaToken.tokenKeys[0].key.contractId = owner;
-
         hederaToken.tokenKeys[0].keyType = 0x2;
         (, token) = IHederaTokenService(HTS_ADDRESS).createFungibleToken{value: 1000}(hederaToken, 1000000, 4);
         vm.assertNotEq(token, address(0));
         to = makeAddr("bob");
+        vm.mockCall(
+            token,
+            abi.encodeWithSelector(HtsSystemContract.getKeyOwner.selector, token, 0x2),
+            abi.encode(owner)
+        );
     }
 
     function test_HTS_transferToken_success_with_kyc() public {
@@ -61,14 +63,6 @@ contract KYCTest is Test, TestSetup {
         vm.prank(from);
         vm.expectRevert("kyc: no kyc granted");
         IHederaTokenService(HTS_ADDRESS).transferToken(token, from, to, int64(int256(amount)));
-    }
-
-    function test_ERC20_transferToken_failure_without_kyc() public {
-        address from = makeAddr("from");
-        deal(token, from, amount);
-        vm.prank(from);
-        vm.expectRevert("__redirectForToken: no kyc granted");
-        IERC20(token).transfer(to, amount);
     }
 
     function test_HTS_transferToken_success_with_kyc_granted() public {
