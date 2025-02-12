@@ -94,7 +94,7 @@ contract HTSTest is Test, TestSetup {
         assertEq(tokenInfo.token.tokenKeys[4].key.ECDSA_secp256k1, bytes(""));
         assertEq(tokenInfo.token.tokenKeys[4].key.delegatableContractId, address(0));
         // Expiry
-        assertEq(tokenInfo.token.expiry.second, 1706825707000718000);
+        assertEq(tokenInfo.token.expiry.second, 1706825707);
         assertEq(tokenInfo.token.expiry.autoRenewAccount, address(0));
         assertEq(tokenInfo.token.expiry.autoRenewPeriod, 0);
         assertEq(tokenInfo.totalSupply, 10000000005000000);
@@ -415,7 +415,7 @@ contract HTSTest is Test, TestSetup {
         (int64 expiryStatusCode, IHederaTokenService.Expiry memory expiry)
             = IHederaTokenService(HTS_ADDRESS).getTokenExpiryInfo(USDC);
         assertEq(expiryStatusCode, HederaResponseCodes.SUCCESS);
-        assertEq(expiry.second, 1706825707000718000);
+        assertEq(expiry.second, 1706825707);
         assertEq(expiry.autoRenewAccount, address(0));
         assertEq(expiry.autoRenewPeriod, 0);
     }
@@ -581,7 +581,7 @@ contract HTSTest is Test, TestSetup {
         assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[4].key.ECDSA_secp256k1, bytes(""));
         assertEq(fungibleTokenInfo.tokenInfo.token.tokenKeys[4].key.delegatableContractId, address(0));
         // Expiry
-        assertEq(fungibleTokenInfo.tokenInfo.token.expiry.second, 1706825707000718000);
+        assertEq(fungibleTokenInfo.tokenInfo.token.expiry.second, 1706825707);
         assertEq(fungibleTokenInfo.tokenInfo.token.expiry.autoRenewAccount, address(0));
         assertEq(fungibleTokenInfo.tokenInfo.token.expiry.autoRenewPeriod, 0);
         assertEq(fungibleTokenInfo.tokenInfo.totalSupply, 10000000005000000);
