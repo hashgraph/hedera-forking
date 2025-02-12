@@ -238,7 +238,7 @@ describe('::e2e', function () {
                 });
 
                 // To enable this, we need to change `getTokenInfo` to a `view` function
-                it.skip("should retrieve token's metadata through `getTokenInfo`", async function () {
+                it("should retrieve token's metadata through `getTokenInfo`", async function () {
                     const info = await HTS['getTokenInfo'](tokenAddress);
                     console.log(inspect(info, { depth: null }));
                     if (self.tokenInfo === undefined) {
