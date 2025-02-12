@@ -138,7 +138,7 @@ describe('USDC example', function () {
         const CallToken = await ethers.getContractFactory('CallToken');
         const callToken = await CallToken.deploy();
 
-        const tx = await (await callToken['invokeHTSDirectly'](usdcAddress)).wait();
+        const tx = await (await callToken['getTokenInfo'](usdcAddress)).wait();
         const logs = tx.logs.map(log => callToken.interface.parseLog(log));
 
         expect(logs).to.have.length(1);

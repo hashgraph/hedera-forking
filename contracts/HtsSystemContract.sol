@@ -7,7 +7,6 @@ import {IHRC719} from "./IHRC719.sol";
 import {IHederaTokenService} from "./IHederaTokenService.sol";
 import {HederaResponseCodes} from "./HederaResponseCodes.sol";
 import {KeyLib} from "./KeyLib.sol";
-import {SetTokenInfo} from "./SetTokenInfo.sol";
 
 address constant HTS_ADDRESS = address(0x167);
 
@@ -27,8 +26,6 @@ contract HtsSystemContract is IHederaTokenService {
     // These state variables are accessed with a `delegatecall` from the Token Proxy bytecode.
     // That is, they live in the token address storage space, not in the space of HTS `0x167`.
     // See `__redirectForToken` for more details.
-    //
-    // Moreover, these variables must match the slots defined in `SetTokenInfo`.
     string internal tokenType; 
     uint8 internal decimals;
     TokenInfo internal _tokenInfo;
@@ -152,12 +149,16 @@ contract HtsSystemContract is IHederaTokenService {
         return dissociateTokens(account, tokens);
     }
 
-    function deploySetTokenInfo(address token) virtual internal {
-        //
-    }
-
-    function deployHIP719Proxy(address token) virtual internal {
-        //
+    /**
+     * The side effect of this function is to "deploy" proxy bytecode at `tokenAddress`.
+     * The `sload` will trigger a `eth_getStorageAt` in the Forwarder that enables the
+     * proxy bytecode at `tokenAddress`.
+     */
+    function deployHIP719Proxy(address tokenAddress) virtual internal {
+        bytes4 selector = 0x400f4ef3; // cast sig 'deployHIP719Proxy(address)'
+        bytes32 slot = bytes32(abi.encodePacked(selector, uint64(0), tokenAddress));
+        // add `sstore` to avoid `sload` from getting optimized away
+        assembly { sstore(slot, add(sload(slot), 1)) }
     }
 
     function _createToken(
@@ -198,9 +199,8 @@ contract HtsSystemContract is IHederaTokenService {
 
         tokenAddress = address(nextTokenId);
 
-        deploySetTokenInfo(tokenAddress);
-        SetTokenInfo(tokenAddress).setTokenInfo(tokenType_, tokenInfo, decimals_);
         deployHIP719Proxy(tokenAddress);
+        HtsSystemContract(tokenAddress).__setTokenInfo(tokenType_, tokenInfo, decimals_);
 
         if (initialTotalSupply > 0) {
             _mintToken(tokenAddress, initialTotalSupply, false);
@@ -376,27 +376,27 @@ contract HtsSystemContract is IHederaTokenService {
 
     function getTokenCustomFees(
         address token
-    ) htsCall external returns (int64, FixedFee[] memory, FractionalFee[] memory, RoyaltyFee[] memory) {
+    ) htsCall external view returns (int64, FixedFee[] memory, FractionalFee[] memory, RoyaltyFee[] memory) {
         (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
         return (responseCode, tokenInfo.fixedFees, tokenInfo.fractionalFees, tokenInfo.royaltyFees);
     }
 
-    function getTokenDefaultFreezeStatus(address token) htsCall external returns (int64, bool) {
+    function getTokenDefaultFreezeStatus(address token) htsCall external view returns (int64, bool) {
         (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
         return (responseCode, tokenInfo.token.freezeDefault);
     }
 
-    function getTokenDefaultKycStatus(address token) htsCall external returns (int64, bool) {
+    function getTokenDefaultKycStatus(address token) htsCall external view returns (int64, bool) {
         (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
         return (responseCode, tokenInfo.defaultKycStatus);
     }
 
-    function getTokenExpiryInfo(address token) htsCall external returns (int64, Expiry memory expiry) {
+    function getTokenExpiryInfo(address token) htsCall external view returns (int64, Expiry memory expiry) {
         (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
         return (responseCode, tokenInfo.token.expiry);
     }
 
-    function getFungibleTokenInfo(address token) htsCall external returns (int64, FungibleTokenInfo memory) {
+    function getFungibleTokenInfo(address token) htsCall external view returns (int64, FungibleTokenInfo memory) {
         (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
         require(responseCode == HederaResponseCodes.SUCCESS, "getFungibleTokenInfo: failed to get token data");
         FungibleTokenInfo memory fungibleTokenInfo;
@@ -406,13 +406,13 @@ contract HtsSystemContract is IHederaTokenService {
         return (responseCode, fungibleTokenInfo);
     }
 
-    function getTokenInfo(address token) htsCall public returns (int64, TokenInfo memory) {
+    function getTokenInfo(address token) htsCall public view returns (int64, TokenInfo memory) {
         require(token != address(0), "getTokenInfo: invalid token");
 
         return IHederaTokenService(token).getTokenInfo(token);
     }
 
-    function getTokenKey(address token, uint keyType) htsCall external returns (int64, KeyValue memory) {
+    function getTokenKey(address token, uint keyType) htsCall view external returns (int64, KeyValue memory) {
         (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
         require(responseCode == HederaResponseCodes.SUCCESS, "getTokenKey: failed to get token data");
         for (uint256 i = 0; i < tokenInfo.token.tokenKeys.length; i++) {
@@ -425,7 +425,7 @@ contract HtsSystemContract is IHederaTokenService {
     }
 
     function getNonFungibleTokenInfo(address token, int64 serialNumber)
-        htsCall external
+        htsCall external view
         returns (int64, NonFungibleTokenInfo memory) {
         (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
         require(responseCode == HederaResponseCodes.SUCCESS, "getNonFungibleTokenInfo: failed to get token data");
@@ -442,13 +442,13 @@ contract HtsSystemContract is IHederaTokenService {
         return (responseCode, nonFungibleTokenInfo);
     }
 
-    function isToken(address token) htsCall external returns (int64, bool) {
+    function isToken(address token) htsCall external view returns (int64, bool) {
         bytes memory payload = abi.encodeWithSignature("getTokenType(address)", token);
-        (bool success, bytes memory returnData) = token.call(payload);
+        (bool success, bytes memory returnData) = token.staticcall(payload);
         return (HederaResponseCodes.SUCCESS, success && returnData.length > 0);
     }
 
-    function getTokenType(address token) htsCall external returns (int64, int32) {
+    function getTokenType(address token) htsCall external view returns (int64, int32) {
         require(token != address(0), "getTokenType: invalid address");
         return IHederaTokenService(token).getTokenType(token);
     }
@@ -525,6 +525,14 @@ contract HtsSystemContract is IHederaTokenService {
      */
     function __redirectForToken() internal virtual returns (bytes memory) {
         bytes4 selector = bytes4(msg.data[24:28]);
+
+        // If a token is being created locally, then there is not remote data to fetch.
+        // That is why `__setTokenInfo` must be called before `_initTokenData`.
+        if (msg.sender == HTS_ADDRESS && selector == this.__setTokenInfo.selector) {
+            (string memory tokenType_, IHederaTokenService.TokenInfo memory tokenInfo, int32 decimals_) = abi.decode(msg.data[28:], (string, IHederaTokenService.TokenInfo, int32));
+            __setTokenInfo(tokenType_, tokenInfo, decimals_);
+            return abi.encode(true);
+        }
 
         _initTokenData();
 
@@ -770,6 +778,65 @@ contract HtsSystemContract is IHederaTokenService {
             return abi.encode(res);
         }
         revert("redirectForToken: not supported");
+    }
+
+    function __setTokenInfo(string memory tokenType_, IHederaTokenService.TokenInfo memory tokenInfo, int32 decimals_) public virtual {
+        tokenType = tokenType_;
+        decimals = uint8(uint32(decimals_));
+
+        // The assignment
+        //
+        // _tokenInfo = tokenInfo;
+        //
+        // cannot be used directly because it triggers the following compilation error
+        //
+        // Error (1834): Copying of type struct IHederaTokenService.TokenKey memory[] memory to storage is not supported in legacy (only supported by the IR pipeline).
+        // Hint: try compiling with `--via-ir` (CLI) or the equivalent `viaIR: true` (Standard JSON)
+        //
+        // More specifically, the assigment
+        //
+        // _tokenInfo.token.tokenKeys = tokenInfo.token.tokenKeys;
+        //
+        // triggers the above error as well.
+        //
+        // Array assignments from memory to storage are not supported in legacy codegen https://github.com/ethereum/solidity/issues/3446#issuecomment-1924761902.
+        // And using the `--via-ir` flag as mentioned above increases compilation time substantially
+        // That is why we are better off copying the struct to storage manually.
+
+        _tokenInfo.token.name = tokenInfo.token.name;
+        _tokenInfo.token.symbol = tokenInfo.token.symbol;
+        _tokenInfo.token.treasury = tokenInfo.token.treasury;
+        _tokenInfo.token.memo = tokenInfo.token.memo;
+        _tokenInfo.token.tokenSupplyType = tokenInfo.token.tokenSupplyType;
+        _tokenInfo.token.maxSupply = tokenInfo.token.maxSupply;
+        _tokenInfo.token.freezeDefault = tokenInfo.token.freezeDefault;
+
+        for (uint256 i = 0; i < tokenInfo.token.tokenKeys.length; i++) {
+            _tokenInfo.token.tokenKeys.push(tokenInfo.token.tokenKeys[i]);
+        }
+
+        _tokenInfo.token.expiry = tokenInfo.token.expiry;
+
+        _tokenInfo.totalSupply = tokenInfo.totalSupply;
+        _tokenInfo.deleted = tokenInfo.deleted;
+        _tokenInfo.defaultKycStatus = tokenInfo.defaultKycStatus;
+        _tokenInfo.pauseStatus = tokenInfo.pauseStatus;
+
+        // The same copying issue as mentioned above for fee arrays.
+        // _tokenInfo.fixedFees = tokenInfo.fixedFees;
+        for (uint256 i = 0; i < tokenInfo.fixedFees.length; i++) {
+            _tokenInfo.fixedFees.push(tokenInfo.fixedFees[i]);
+        }
+        // _tokenInfo.fractionalFees = tokenInfo.fractionalFees;
+        for (uint256 i = 0; i < tokenInfo.fractionalFees.length; i++) {
+            _tokenInfo.fractionalFees.push(tokenInfo.fractionalFees[i]);
+        }
+        // _tokenInfo.royaltyFees = tokenInfo.royaltyFees;
+        for (uint256 i = 0; i < tokenInfo.royaltyFees.length; i++) {
+            _tokenInfo.royaltyFees.push(tokenInfo.royaltyFees[i]);
+        }
+
+        _tokenInfo.ledgerId = tokenInfo.ledgerId;
     }
 
     function _initTokenData() internal virtual {
