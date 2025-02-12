@@ -20,7 +20,7 @@ const { strict: assert } = require('assert');
 const debug = require('util').debuglog('hts-forking');
 
 const { ZERO_HEX_32_BYTE, toIntHex256 } = require('./utils');
-const { slotMapOf, packValues, PersistentStorageMap } = require('./slotmap');
+const { slotMapOf, packValues, PersistentStorageMap, setLedgerId } = require('./slotmap');
 const { deployedBytecode } = require('../out/HtsSystemContract.sol/HtsSystemContract.json');
 
 const HTSAddress = '0x0000000000000000000000000000000000000167';
@@ -265,4 +265,11 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
     return ret(`0x${packValues(values)}`, `Slot matches ${values.map(v => v.path).join('|')}`);
 }
 
-module.exports = { HTSAddress, LONG_ZERO_PREFIX, getHIP719Code, getHtsCode, getHtsStorageAt };
+module.exports = {
+    HTSAddress,
+    LONG_ZERO_PREFIX,
+    getHIP719Code,
+    getHtsCode,
+    getHtsStorageAt,
+    setLedgerId,
+};

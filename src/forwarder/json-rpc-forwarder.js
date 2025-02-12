@@ -23,12 +23,19 @@ const debug = require('util').debuglog('hedera-forking-rpc');
 const c = require('ansi-colors');
 
 const { MirrorNodeClient } = require('./mirror-node-client');
-const { getHtsCode, getHtsStorageAt, HTSAddress, LONG_ZERO_PREFIX, getHIP719Code } = require('..');
+const {
+    getHtsCode,
+    getHtsStorageAt,
+    HTSAddress,
+    LONG_ZERO_PREFIX,
+    getHIP719Code,
+    setLedgerId,
+} = require('..');
 
 /** @type {Partial<import('hardhat/types').HardhatNetworkForkingConfig>} */
 const { url: forkUrl, mirrorNodeUrl, workerPort, localAddresses = [] } = workerData;
 
-require('../slotmap').setLedgerId(workerData.chainId);
+setLedgerId(workerData.chainId);
 
 assert(mirrorNodeUrl !== undefined, 'json-rpc-forwarder: Missing Mirror Node URL');
 
