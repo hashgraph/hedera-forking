@@ -542,7 +542,7 @@ interface IHederaTokenService {
         address token,
         address owner,
         address spender
-    ) external returns (int64 responseCode, uint256 allowance);
+    ) external view returns (int64 responseCode, uint256 allowance);
 
     /// Allow or reaffirm the approved address to transfer an NFT the approved address does not own.
     /// Only Applicable to NFT Tokens
@@ -572,7 +572,7 @@ interface IHederaTokenService {
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
     /// @return approved The approved address for this NFT, or the zero address if there is none
     function getApproved(address token, uint256 serialNumber)
-        external
+        external view
         returns (int64 responseCode, address approved);
 
     /// Enable or disable approval for a third party ("operator") to manage
@@ -598,7 +598,7 @@ interface IHederaTokenService {
         address token,
         address owner,
         address operator
-    ) external returns (int64 responseCode, bool approved);
+    ) external view returns (int64 responseCode, bool approved);
 
     /// Query if token account is frozen
     /// @param token The token address to check
@@ -630,7 +630,7 @@ interface IHederaTokenService {
     /// @return fractionalFees Set of fractional fees for `token`
     /// @return royaltyFees Set of royalty fees for `token`
     function getTokenCustomFees(address token)
-        external
+        external view
         returns (int64 responseCode, FixedFee[] memory fixedFees, FractionalFee[] memory fractionalFees, RoyaltyFee[] memory royaltyFees);
 
     /// Query token default freeze status
@@ -638,7 +638,7 @@ interface IHederaTokenService {
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
     /// @return defaultFreezeStatus True if `token` default freeze status is frozen.
     function getTokenDefaultFreezeStatus(address token)
-        external
+        external view
         returns (int64 responseCode, bool defaultFreezeStatus);
 
     /// Query token default kyc status
@@ -646,7 +646,7 @@ interface IHederaTokenService {
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
     /// @return defaultKycStatus True if `token` default kyc status is KycNotApplicable and false if Revoked.
     function getTokenDefaultKycStatus(address token)
-        external
+        external view
         returns (int64 responseCode, bool defaultKycStatus);
 
     /// Query token expiry info
@@ -654,7 +654,7 @@ interface IHederaTokenService {
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
     /// @return expiry Expiry info for `token`
     function getTokenExpiryInfo(address token)
-        external
+        external view
         returns (int64 responseCode, Expiry memory expiry);
 
     /// Query fungible token info
@@ -662,7 +662,7 @@ interface IHederaTokenService {
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
     /// @return fungibleTokenInfo FungibleTokenInfo info for `token`
     function getFungibleTokenInfo(address token)
-        external
+        external view
         returns (int64 responseCode, FungibleTokenInfo memory fungibleTokenInfo);
 
     /// Query token info
@@ -670,7 +670,7 @@ interface IHederaTokenService {
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
     /// @return tokenInfo TokenInfo info for `token`
     function getTokenInfo(address token)
-        external
+        external view
         returns (int64 responseCode, TokenInfo memory tokenInfo);
 
     /// Query token KeyValue
@@ -679,7 +679,7 @@ interface IHederaTokenService {
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
     /// @return key KeyValue info for key of type `keyType`
     function getTokenKey(address token, uint keyType)
-        external
+        external view
         returns (int64 responseCode, KeyValue memory key);
 
     /// Query non fungible token info
@@ -688,7 +688,7 @@ interface IHederaTokenService {
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
     /// @return nonFungibleTokenInfo NonFungibleTokenInfo info for `token` `serialNumber`
     function getNonFungibleTokenInfo(address token, int64 serialNumber)
-        external
+        external view
         returns (int64 responseCode, NonFungibleTokenInfo memory nonFungibleTokenInfo);
 
     /// Operation to freeze token account
@@ -784,7 +784,7 @@ interface IHederaTokenService {
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
     /// @return isToken True if valid token found for the given address
     function isToken(address token)
-        external returns
+        external view returns
         (int64 responseCode, bool isToken);
 
     /// Query to return the token type for a given address
@@ -792,7 +792,7 @@ interface IHederaTokenService {
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
     /// @return tokenType the token type. 0 is FUNGIBLE_COMMON, 1 is NON_FUNGIBLE_UNIQUE, -1 is UNRECOGNIZED
     function getTokenType(address token)
-        external returns
+        external view returns
         (int64 responseCode, int32 tokenType);
 
     /// Initiates a Redirect For Token

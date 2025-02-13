@@ -6,6 +6,7 @@ import {IERC721} from "./IERC721.sol";
 import {IHRC719} from "./IHRC719.sol";
 import {IHederaTokenService} from "./IHederaTokenService.sol";
 import {HederaResponseCodes} from "./HederaResponseCodes.sol";
+import {KeyLib} from "./KeyLib.sol";
 
 address constant HTS_ADDRESS = address(0x167);
 
@@ -178,10 +179,21 @@ contract HtsSystemContract is IHederaTokenService {
         int64 newTotalSupply,
         int64[] memory serialNumbers
     ) {
+        return _mintToken(token, amount, true);
+    }
+
+    function _mintToken(address token, int64 amount, bool checkSupplyKey) private returns (
+        int64 responseCode,
+        int64 newTotalSupply,
+        int64[] memory serialNumbers
+    ) {
         require(token != address(0), "mintToken: invalid token");
         require(amount > 0, "mintToken: invalid amount");
 
         (int64 tokenInfoResponseCode, TokenInfo memory tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
+        if (checkSupplyKey && !KeyLib.keyExists(0x10, tokenInfo)) { // 0x10 - supply key
+            return (HederaResponseCodes.TOKEN_HAS_NO_SUPPLY_KEY, tokenInfo.totalSupply, new int64[](0));
+        }
         require(tokenInfoResponseCode == HederaResponseCodes.SUCCESS, "mintToken: failed to get token info");
 
         address treasuryAccount = tokenInfo.token.treasury;
@@ -203,6 +215,9 @@ contract HtsSystemContract is IHederaTokenService {
         require(amount > 0, "burnToken: invalid amount");
 
         (int64 tokenInfoResponseCode, TokenInfo memory tokenInfo) = IHederaTokenService(token).getTokenInfo(token);
+        if (!KeyLib.keyExists(0x10, tokenInfo)) {
+            return (HederaResponseCodes.TOKEN_HAS_NO_SUPPLY_KEY, tokenInfo.totalSupply);
+        }
         require(tokenInfoResponseCode == HederaResponseCodes.SUCCESS, "burnToken: failed to get token info");
 
         address treasuryAccount = tokenInfo.token.treasury;
@@ -309,7 +324,7 @@ contract HtsSystemContract is IHederaTokenService {
         HtsSystemContract(tokenAddress).__setTokenInfo(tokenType_, tokenInfo, decimals_);
 
         if (initialTotalSupply > 0) {
-            this.mintToken(tokenAddress, initialTotalSupply, new bytes[](0));
+            _mintToken(tokenAddress, initialTotalSupply, false);
         }
 
         responseCode = HederaResponseCodes.SUCCESS;
@@ -482,27 +497,27 @@ contract HtsSystemContract is IHederaTokenService {
 
     function getTokenCustomFees(
         address token
-    ) htsCall external returns (int64, FixedFee[] memory, FractionalFee[] memory, RoyaltyFee[] memory) {
+    ) htsCall external view returns (int64, FixedFee[] memory, FractionalFee[] memory, RoyaltyFee[] memory) {
         (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
         return (responseCode, tokenInfo.fixedFees, tokenInfo.fractionalFees, tokenInfo.royaltyFees);
     }
 
-    function getTokenDefaultFreezeStatus(address token) htsCall external returns (int64, bool) {
+    function getTokenDefaultFreezeStatus(address token) htsCall external view returns (int64, bool) {
         (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
         return (responseCode, tokenInfo.token.freezeDefault);
     }
 
-    function getTokenDefaultKycStatus(address token) htsCall external returns (int64, bool) {
+    function getTokenDefaultKycStatus(address token) htsCall external view returns (int64, bool) {
         (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
         return (responseCode, tokenInfo.defaultKycStatus);
     }
 
-    function getTokenExpiryInfo(address token) htsCall external returns (int64, Expiry memory expiry) {
+    function getTokenExpiryInfo(address token) htsCall external view returns (int64, Expiry memory expiry) {
         (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
         return (responseCode, tokenInfo.token.expiry);
     }
 
-    function getFungibleTokenInfo(address token) htsCall external returns (int64, FungibleTokenInfo memory) {
+    function getFungibleTokenInfo(address token) htsCall external view returns (int64, FungibleTokenInfo memory) {
         (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
         require(responseCode == HederaResponseCodes.SUCCESS, "getFungibleTokenInfo: failed to get token data");
         FungibleTokenInfo memory fungibleTokenInfo;
@@ -512,13 +527,13 @@ contract HtsSystemContract is IHederaTokenService {
         return (responseCode, fungibleTokenInfo);
     }
 
-    function getTokenInfo(address token) htsCall public returns (int64, TokenInfo memory) {
+    function getTokenInfo(address token) htsCall public view returns (int64, TokenInfo memory) {
         require(token != address(0), "getTokenInfo: invalid token");
 
         return IHederaTokenService(token).getTokenInfo(token);
     }
 
-    function getTokenKey(address token, uint keyType) htsCall external returns (int64, KeyValue memory) {
+    function getTokenKey(address token, uint keyType) htsCall view external returns (int64, KeyValue memory) {
         (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
         require(responseCode == HederaResponseCodes.SUCCESS, "getTokenKey: failed to get token data");
         for (uint256 i = 0; i < tokenInfo.token.tokenKeys.length; i++) {
@@ -531,7 +546,7 @@ contract HtsSystemContract is IHederaTokenService {
     }
 
     function getNonFungibleTokenInfo(address token, int64 serialNumber)
-        htsCall external
+        htsCall external view
         returns (int64, NonFungibleTokenInfo memory) {
         (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
         require(responseCode == HederaResponseCodes.SUCCESS, "getNonFungibleTokenInfo: failed to get token data");
@@ -548,13 +563,13 @@ contract HtsSystemContract is IHederaTokenService {
         return (responseCode, nonFungibleTokenInfo);
     }
 
-    function isToken(address token) htsCall external returns (int64, bool) {
+    function isToken(address token) htsCall external view returns (int64, bool) {
         bytes memory payload = abi.encodeWithSignature("getTokenType(address)", token);
-        (bool success, bytes memory returnData) = token.call(payload);
+        (bool success, bytes memory returnData) = token.staticcall(payload);
         return (HederaResponseCodes.SUCCESS, success && returnData.length > 0);
     }
 
-    function getTokenType(address token) htsCall external returns (int64, int32) {
+    function getTokenType(address token) htsCall external view returns (int64, int32) {
         require(token != address(0), "getTokenType: invalid address");
         return IHederaTokenService(token).getTokenType(token);
     }

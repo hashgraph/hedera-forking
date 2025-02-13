@@ -60,7 +60,7 @@ contract HTSTest is Test, TestSetup {
         assertTrue(revertsAsExpected, "expectRevert: call did not revert");
     }
 
-    function test_HTS_getTokenInfo_should_return_token_info_for_valid_token() external {
+    function test_HTS_getTokenInfo_should_return_token_info_for_valid_token() external view {
         address token = USDC;
         (int64 responseCode, IHederaTokenService.TokenInfo memory tokenInfo) = IHederaTokenService(HTS_ADDRESS).getTokenInfo(token);
         assertEq(responseCode, HederaResponseCodes.SUCCESS);
@@ -107,7 +107,7 @@ contract HTSTest is Test, TestSetup {
         assertEq(tokenInfo.ledgerId, testMode == TestMode.FFI ? "0x01" : "0x00");
     }
 
-    function test_HTS_getTokenInfo_should_return_custom_fees_for_valid_token() external {
+    function test_HTS_getTokenInfo_should_return_custom_fees_for_valid_token() external view {
         (int64 responseCode, IHederaTokenService.TokenInfo memory tokenInfo) = IHederaTokenService(HTS_ADDRESS).getTokenInfo(CTCF);
         assertEq(responseCode, HederaResponseCodes.SUCCESS);
         assertEq(tokenInfo.token.name, "Crypto Token with Custom Fees");
@@ -218,6 +218,36 @@ contract HTSTest is Test, TestSetup {
         bytes[] memory metadata = new bytes[](0);
         int64 initialTotalSupply = 10000000005000000;
         IHederaTokenService.TokenInfo memory tokenInfo;
+        IHederaTokenService.TokenKey[] memory keys = new IHederaTokenService.TokenKey[](1);
+        keys[0].keyType = 0x10; // Supply key
+        keys[0].key.ECDSA_secp256k1 = hex"0242b7c3beea2af6dfcc874c41d1332463407e283f602ce8ef2cbe324823561b6f";
+        tokenInfo.token = IHederaTokenService.HederaToken(
+            "USD Coin",
+            "USDC",
+            address(0),
+            "USDC HBAR",
+            false,
+            initialTotalSupply + amount,
+            false,
+            keys,
+            IHederaTokenService.Expiry(0, address(0), 0)
+        );
+
+        vm.mockCall(
+            token,
+            abi.encode(IHederaTokenService.getTokenInfo.selector),
+            abi.encode(HederaResponseCodes.SUCCESS, tokenInfo)
+        );
+        vm.expectRevert(bytes("mintToken: invalid account"));
+        IHederaTokenService(HTS_ADDRESS).mintToken(token, amount, metadata);
+    }
+
+    function test_mintToken_should_fail_with_no_supplyKey() external {
+        address token = USDC;
+        int64 amount = 1000;
+        bytes[] memory metadata = new bytes[](0);
+        int64 initialTotalSupply = 10000000005000000;
+        IHederaTokenService.TokenInfo memory tokenInfo;
         tokenInfo.token = IHederaTokenService.HederaToken(
             "USD Coin",
             "USDC",
@@ -235,8 +265,8 @@ contract HTSTest is Test, TestSetup {
             abi.encode(IHederaTokenService.getTokenInfo.selector),
             abi.encode(HederaResponseCodes.SUCCESS, tokenInfo)
         );
-        vm.expectRevert(bytes("mintToken: invalid account"));
-        IHederaTokenService(HTS_ADDRESS).mintToken(token, amount, metadata);
+        (int64 code, , ) = IHederaTokenService(HTS_ADDRESS).mintToken(token, amount, metadata);
+        assertEq(code, HederaResponseCodes.TOKEN_HAS_NO_SUPPLY_KEY);
     }
 
     function test_mintToken_should_revert_with_invalid_token() external {
@@ -258,10 +288,10 @@ contract HTSTest is Test, TestSetup {
     }
 
     function test_burnToken_should_succeed_with_valid_input() external {
-        address token = MFCT;
-        address treasury = MFCT_TREASURY;
+        address token = USDC;
+        address treasury = USDC_TREASURY;
         int64 amount = 1000;
-        int64 initialTotalSupply = 5000;
+        int64 initialTotalSupply = int64(int256(IERC20(token).totalSupply()));
         uint256 initialTreasuryBalance = IERC20(token).balanceOf(treasury);
 
         (int64 responseCodeMint, int64 newTotalSupplyAfterMint, int64[] memory serialNumbers) = IHederaTokenService(HTS_ADDRESS).mintToken(token, amount, new bytes[](0));
@@ -287,6 +317,36 @@ contract HTSTest is Test, TestSetup {
         int64 initialTotalSupply = 5000;
         int64[] memory serialNumbers = new int64[](0);
         IHederaTokenService.TokenInfo memory tokenInfo;
+        IHederaTokenService.TokenKey[] memory keys = new IHederaTokenService.TokenKey[](1);
+        keys[0].keyType = 0x10; // Supply key
+        keys[0].key.ECDSA_secp256k1 = hex"0242b7c3beea2af6dfcc874c41d1332463407e283f602ce8ef2cbe324823561b6f";
+        tokenInfo.token = IHederaTokenService.HederaToken(
+            "My Crypto Token is the name which the string length is greater than 31",
+            "Token symbol must be exactly 32!",
+            address(0),
+            "",
+            false,
+            initialTotalSupply + amount,
+            false,
+            keys,
+            IHederaTokenService.Expiry(0, address(0), 0)
+        );
+
+        vm.mockCall(
+            token,
+            abi.encode(IHederaTokenService.getTokenInfo.selector),
+            abi.encode(HederaResponseCodes.SUCCESS, tokenInfo)
+        );
+        vm.expectRevert(bytes("burnToken: invalid account"));
+        IHederaTokenService(HTS_ADDRESS).burnToken(token, amount, serialNumbers);
+    }
+
+    function test_burnToken_should_revert_with_no_supplier() external {
+        address token = MFCT;
+        int64 amount = 1000;
+        int64 initialTotalSupply = 5000;
+        int64[] memory serialNumbers = new int64[](0);
+        IHederaTokenService.TokenInfo memory tokenInfo;
         tokenInfo.token = IHederaTokenService.HederaToken(
             "My Crypto Token is the name which the string length is greater than 31",
             "Token symbol must be exactly 32!",
@@ -304,8 +364,8 @@ contract HTSTest is Test, TestSetup {
             abi.encode(IHederaTokenService.getTokenInfo.selector),
             abi.encode(HederaResponseCodes.SUCCESS, tokenInfo)
         );
-        vm.expectRevert(bytes("burnToken: invalid account"));
-        IHederaTokenService(HTS_ADDRESS).burnToken(token, amount, serialNumbers);
+        (int64 code, ) = IHederaTokenService(HTS_ADDRESS).burnToken(token, amount, serialNumbers);
+        assertEq(code, HederaResponseCodes.TOKEN_HAS_NO_SUPPLY_KEY);
     }
 
     function test_burnToken_should_revert_with_invalid_token() external {
@@ -349,7 +409,7 @@ contract HTSTest is Test, TestSetup {
         assertFalse(isApproved);
     }
 
-    function test_HTS_getTokenCustomFees_should_return_custom_fees_for_valid_token() external {
+    function test_HTS_getTokenCustomFees_should_return_custom_fees_for_valid_token() external view {
         (
             int64 responseCode,
             IHederaTokenService.FixedFee[] memory fixedFees,
@@ -397,21 +457,21 @@ contract HTSTest is Test, TestSetup {
         assertEq(royaltyFees.length, 0);
     }
 
-    function test_HTS_getTokenDefaultFreezeStatus_should_return_correct_value_for_valid_token() external {
+    function test_HTS_getTokenDefaultFreezeStatus_should_return_correct_value_for_valid_token() external view {
         address token = CFNFTFF;
         (int64 freezeStatus, bool defaultFreeze) = IHederaTokenService(HTS_ADDRESS).getTokenDefaultFreezeStatus(token);
         assertEq(freezeStatus, HederaResponseCodes.SUCCESS);
         assertFalse(defaultFreeze);
     }
 
-    function test_HTS_getTokenDefaultKycStatus_should_return_correct_value_for_valid_token() external {
+    function test_HTS_getTokenDefaultKycStatus_should_return_correct_value_for_valid_token() external view {
         address token = CFNFTFF;
         (int64 kycStatus, bool defaultKyc) = IHederaTokenService(HTS_ADDRESS).getTokenDefaultKycStatus(token);
         assertEq(kycStatus, HederaResponseCodes.SUCCESS);
         assertFalse(defaultKyc);
     }
 
-    function test_HTS_getTokenExpiryInfo_should_return_correct_value_for_valid_token() external {
+    function test_HTS_getTokenExpiryInfo_should_return_correct_value_for_valid_token() external view {
         (int64 expiryStatusCode, IHederaTokenService.Expiry memory expiry)
             = IHederaTokenService(HTS_ADDRESS).getTokenExpiryInfo(USDC);
         assertEq(expiryStatusCode, HederaResponseCodes.SUCCESS);
@@ -420,7 +480,7 @@ contract HTSTest is Test, TestSetup {
         assertEq(expiry.autoRenewPeriod, 0);
     }
 
-    function test_HTS_getTokenKey_should_return_correct_key_value() external {
+    function test_HTS_getTokenKey_should_return_correct_key_value() external view {
         address token = USDC;
 
         // AdminKey
@@ -452,7 +512,7 @@ contract HTSTest is Test, TestSetup {
         assertEq(supplyKey.delegatableContractId, address(0));
     }
 
-    function test_HTS_getTokenType_should_return_correct_token_type_for_existing_token() external {
+    function test_HTS_getTokenType_should_return_correct_token_type_for_existing_token() external view {
         (int64 ftTypeStatusCode, int32 ftType) = IHederaTokenService(HTS_ADDRESS).getTokenType(USDC);
         assertEq(ftTypeStatusCode, HederaResponseCodes.SUCCESS);
         assertEq(ftType, int32(0));
@@ -462,7 +522,7 @@ contract HTSTest is Test, TestSetup {
         assertEq(nftType, int32(1));
     }
 
-    function test_HTS_isToken_should_return_correct_is_token_info() external {
+    function test_HTS_isToken_should_return_correct_is_token_info() external view {
         (int64 ftIsTokenStatusCode, bool ftIsToken) = IHederaTokenService(HTS_ADDRESS).isToken(USDC);
         assertEq(ftIsTokenStatusCode, HederaResponseCodes.SUCCESS);
         assertTrue(ftIsToken);
@@ -545,7 +605,7 @@ contract HTSTest is Test, TestSetup {
         IHederaTokenService(HTS_ADDRESS).dissociateTokens(bob, tokens);
     }
 
-    function test_HTS_get_fungible_token_info() external {
+    function test_HTS_get_fungible_token_info() external view {
         (int64 fungibleResponseCode, IHederaTokenService.FungibleTokenInfo memory fungibleTokenInfo)
             = IHederaTokenService(HTS_ADDRESS).getFungibleTokenInfo(USDC);
         assertEq(fungibleResponseCode, HederaResponseCodes.SUCCESS);
@@ -594,7 +654,7 @@ contract HTSTest is Test, TestSetup {
         assertEq(fungibleTokenInfo.tokenInfo.ledgerId, testMode == TestMode.FFI ? "0x01" : "0x00");
     }
 
-    function test_HTS_get_non_fungible_token_info() external {
+    function test_HTS_get_non_fungible_token_info() external view {
         (int64 nonFungibleResponseCode, IHederaTokenService.NonFungibleTokenInfo memory nonFungibleTokenInfo)
             = IHederaTokenService(HTS_ADDRESS).getNonFungibleTokenInfo(CFNFTFF, int64(1));
         assertEq(nonFungibleResponseCode, HederaResponseCodes.SUCCESS);
@@ -786,7 +846,7 @@ contract HTSTest is Test, TestSetup {
         vm.stopPrank();
     }
 
-    function test_HTS_allowance_from_remote() external {
+    function test_HTS_allowance_from_remote() external view {
         // https://hashscan.io/testnet/account/0.0.4233295
         address owner = address(0x000000000000000000000000000000000040984F);
         // https://hashscan.io/testnet/account/0.0.1335
