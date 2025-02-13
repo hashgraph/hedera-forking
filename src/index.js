@@ -22,6 +22,7 @@ const debug = require('util').debuglog('hts-forking');
 const { ZERO_HEX_32_BYTE, toIntHex256 } = require('./utils');
 const { slotMapOf, packValues, PersistentStorageMap, setLedgerId } = require('./slotmap');
 const { deployedBytecode } = require('../out/HtsSystemContract.sol/HtsSystemContract.json');
+const { keccak256 } = require('ethers');
 
 const HTSAddress = '0x0000000000000000000000000000000000000167';
 
@@ -262,11 +263,84 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
             );
         persistentStorage.store(tokenId, blockNumber, nrequestedSlot, atob(metadata));
     }
+
+    // Encoded `address(tokenId).isKyc(tokenId, accountId)` slot
+    // slot(256) = `isKyc`selector(32) + padding(192) + accountId(32)
+    if (
+        nrequestedSlot >> 32n ===
+        0xf2c31ff4_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000n
+    ) {
+        const accountId = `0.0.${parseInt(requestedSlot.slice(-8), 16)}`;
+        const { tokens } = (await mirrorNodeClient.getTokenRelationship(accountId, tokenId)) ?? {
+            tokens: [],
+        };
+        const kycGranted = tokens.length > 0 && tokens[0].kyc_status === 'GRANTED';
+        return ret(
+            `0x${toIntHex256(kycGranted ? 1 : 0)}`,
+            `Token ${tokenId} kyc for ${accountId} is ${kycGranted ? 'granted' : 'not granted'}`
+        );
+    }
+
+    // Encoded `address(tokenId).isFrozen(tokenId, accountId)` slot
+    // slot(256) = `isFrozen`selector(32) + padding(192) + accountId(32)
+    if (
+        nrequestedSlot >> 32n ===
+        0x46de0fb1_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000n
+    ) {
+        const accountId = `0.0.${parseInt(requestedSlot.slice(-8), 16)}`;
+        const { tokens } = (await mirrorNodeClient.getTokenRelationship(accountId, tokenId)) ?? {
+            tokens: [],
+        };
+        const isFrozen = tokens.length > 0 && tokens[0].frozen_status === 'FROZEN';
+        return ret(
+            `0x${toIntHex256(isFrozen ? 1 : 0)}`,
+            `Token ${tokenId} is ${isFrozen ? 'frozen' : 'not frozen'} for account ${accountId}`
+        );
+    }
+
     let unresolvedValues = persistentStorage.load(tokenId, blockNumber, nrequestedSlot);
     if (unresolvedValues === undefined) {
-        const token = await mirrorNodeClient.getTokenById(tokenId, blockNumber);
+        const token =
+            /**@type{{token_keys: {key_type: string}[]}}*/ await mirrorNodeClient.getTokenById(
+                tokenId,
+                blockNumber
+            );
         if (token === null) return ret(ZERO_HEX_32_BYTE, `Token \`${tokenId}\` not found`);
         unresolvedValues = slotMapOf(token).load(nrequestedSlot);
+        // Encoded `address(tokenId).getTokenKey(tokenId, keyType)` slot
+        // slot(256) = `getTokenKey`selector(32) + padding(192) + keyType(32)
+        if (
+            nrequestedSlot >> 32n ===
+            0x3c4dd32e_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000n
+        ) {
+            const keyType = parseInt(requestedSlot.slice(-2), 16);
+            const keys =
+                /**@type{Array<{key_type: number, key: string, _e_c_d_s_a_secp256k1: string, ed25519: string}>}*/ (
+                    token['token_keys']
+                );
+            const noKeyRes = ret(
+                ZERO_HEX_32_BYTE,
+                `Token ${tokenId} has not set the owner of the key ${keyType}`
+            );
+            const keyFound = keys['find'](
+                (
+                    /**@type{{key_type: number, key: string, _e_c_d_s_a_secp256k1: string, ed25519: string}}*/ key
+                ) => key.key_type === keyType
+            );
+            if (keyFound === undefined) return noKeyRes;
+            const keyString = keyFound['_e_c_d_s_a_secp256k1'] || keyFound['ed25519'];
+            if (!keyString) return noKeyRes;
+            const result = await mirrorNodeClient.getAccountsByPublicKey(keyString);
+            if (result === undefined || !result || result.accounts.length === 0)
+                return ret(
+                    `0x${keccak256(Buffer.from(keyString, 'utf-8')).slice(-40).padStart(64, '0')}`,
+                    `Fallback value returned for ${tokenId} key ${keyType}`
+                );
+            return ret(
+                result.accounts[0].evm_address,
+                `Token ${tokenId} has set the owner of the key ${keyType}`
+            );
+        }
 
         if (unresolvedValues === undefined)
             return ret(ZERO_HEX_32_BYTE, `Requested slot does not match any field slots`);
