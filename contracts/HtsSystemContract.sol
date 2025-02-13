@@ -206,7 +206,7 @@ contract HtsSystemContract is IHederaTokenService {
         return _mintToken(token, amount, true);
     }
 
-    function _mintToken(address token, int64 amount, bool ignoreSupplyKeyCheck) htsCall internal returns (
+    function _mintToken(address token, int64 amount, bool checkSupplyKey) private returns (
         int64 responseCode,
         int64 newTotalSupply,
         int64[] memory serialNumbers
@@ -214,7 +214,7 @@ contract HtsSystemContract is IHederaTokenService {
         require(amount > 0, "mintToken: invalid amount");
 
         (int64 tokenInfoResponseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
-        if (!ignoreSupplyKeyCheck && getKeyOwner(token, 0x10) == address(0)) { // 0x10 - supply key
+        if (checkSupplyKey && !KeyLib.keyExists(0x10, tokenInfo)) { // 0x10 - supply key
             return (HederaResponseCodes.TOKEN_HAS_NO_SUPPLY_KEY, tokenInfo.totalSupply, new int64[](0));
         }
         require(tokenInfoResponseCode == HederaResponseCodes.SUCCESS, "mintToken: failed to get token info");
@@ -479,7 +479,7 @@ contract HtsSystemContract is IHederaTokenService {
     }
 
     function allowance(address token, address owner, address spender) htsCall
-        notFrozen(token) kyc(token) notPaused(token) external returns (int64, uint256) {
+        notFrozen(token) kyc(token) notPaused(token) external view returns (int64, uint256) {
         return (HederaResponseCodes.SUCCESS, IERC20(token).allowance(owner, spender));
     }
 
