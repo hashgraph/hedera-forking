@@ -22,6 +22,7 @@ const debug = require('util').debuglog('hts-forking');
 const { ZERO_HEX_32_BYTE, toIntHex256 } = require('./utils');
 const { slotMapOf, packValues, PersistentStorageMap } = require('./slotmap');
 const { deployedBytecode } = require('../out/HtsSystemContract.sol/HtsSystemContract.json');
+const { keccak256 } = require('ethers');
 
 const HTSAddress = '0x0000000000000000000000000000000000000167';
 
@@ -65,7 +66,6 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
      * @returns {string|null}
      */
     const ret = (value, msg) => (debug(`${msg}, returning \`${value}\``), value);
-
     if (!address.startsWith(LONG_ZERO_PREFIX))
         return ret(null, `${address} does not start with \`${LONG_ZERO_PREFIX}\``);
 
@@ -103,7 +103,6 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
     }
 
     const tokenId = `0.0.${parseInt(address, 16)}`;
-    debug(`Getting storage for \`${address}\` (tokenId=${tokenId}) at slot=${requestedSlot}`);
 
     // Encoded `address(tokenId).balanceOf(address)` slot
     // slot(256) = `balanceOf`selector(32) + padding(192) + accountId(32)
@@ -306,14 +305,13 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
             );
         if (token === null) return ret(ZERO_HEX_32_BYTE, `Token \`${tokenId}\` not found`);
         unresolvedValues = slotMapOf(token).load(nrequestedSlot);
-
         // Encoded `address(tokenId).getKeyOwner(tokenId, keyType)` slot
         // slot(256) = `getKeyOwner`selector(32) + padding(192) + keyType(32)
         if (
             nrequestedSlot >> 32n ===
-            0xc3c18f7c_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000n
+            0x3c4dd32e_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000n
         ) {
-            const keyType = parseInt(requestedSlot.slice(-1), 16);
+            const keyType = parseInt(requestedSlot.slice(-2), 16);
             const keys =
                 /**@type{Array<{key_type: number, key: string, _e_c_d_s_a_secp256k1: string, ed25519: string}>}*/ (
                     token['token_keys']
@@ -328,14 +326,17 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
                 ) => key.key_type === keyType
             );
             if (keyFound === undefined) return noKeyRes;
-            await mirrorNodeClient.getAccountsByPublicKey(keyFound['key']);
             const keyString = keyFound['_e_c_d_s_a_secp256k1'] || keyFound['ed25519'];
             if (!keyString) return noKeyRes;
             const result = await mirrorNodeClient.getAccountsByPublicKey(keyString);
-            if (result === undefined || !result || result.accounts.length === 0) return noKeyRes;
+            if (result === undefined || !result || result.accounts.length === 0)
+                return ret(
+                    `0x${keccak256(Buffer.from(keyString, 'utf-8')).slice(-40).padStart(64, '0')}`,
+                    `Fallback value returned for ${tokenId} key ${keyType}`
+                );
             return ret(
                 result.accounts[0].evm_address,
-                `Token ${tokenId} has set the owner of the key ${keyType}: ${result.accounts[0].evm_address}`
+                `Token ${tokenId} has set the owner of the key ${keyType}`
             );
         }
 

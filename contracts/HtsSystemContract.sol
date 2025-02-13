@@ -530,7 +530,6 @@ contract HtsSystemContract is IHederaTokenService {
     }
 
     function _isValidKyc(address token) private view returns (bool) {
-        if (msg.sender == HTS_ADDRESS) return true; // Usable only on the highest level call
         address allowed = getKeyOwner(token, 0x2);
         if (allowed == address(0) || allowed == msg.sender) return true;
         (, bool hasKyc) =  isKyc(token, msg.sender);
@@ -1184,7 +1183,7 @@ contract HtsSystemContract is IHederaTokenService {
 
     function _keyOwnerSlot(uint8 keyType) internal virtual returns (bytes32) {
         bytes4 selector = IHederaTokenService.getTokenKey.selector;
-        uint192 pad = 0x0;
+        uint216 pad = 0x0;
         return bytes32(abi.encodePacked(selector, pad, keyType));
     }
 
@@ -1418,6 +1417,7 @@ contract HtsSystemContract is IHederaTokenService {
     }
 
     function getKeyOwner(address token, uint8 keyType) public view htsCall returns (address) {
+        if (address(0) == token) return address(0);
         return HtsSystemContract(token).getKeyOwner(token, keyType);
     }
 }

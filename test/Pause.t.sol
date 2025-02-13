@@ -19,9 +19,6 @@ contract PauseTest is Test, TestSetup {
 
     function setUp() external {
         setUpMockStorageForNonFork();
-
-        if (testMode == TestMode.JSON_RPC) vm.skip(true);
-
         IHederaTokenService.HederaToken memory hederaToken;
         hederaToken.name = "Token name";
         hederaToken.symbol = "Token symbol";
