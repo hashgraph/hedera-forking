@@ -16,9 +16,6 @@
  * limitations under the License.
  */
 
-/* eslint-disable mocha/no-skipped-tests */
-const { inspect } = require('util');
-
 const { strict: assert } = require('assert');
 const { expect } = require('chai');
 const { Contract, JsonRpcProvider, Wallet } = require('ethers');
@@ -168,7 +165,7 @@ describe('::e2e', function () {
             expect('_status' in token, `Token "${title}" \`${tokenId}\` not found`).to.be.false;
         }
 
-        const { host: forwarderUrl } = await jsonRPCForwarder(jsonRpcRelayUrl, mirrorNodeUrl);
+        const { host: forwarderUrl } = await jsonRPCForwarder(jsonRpcRelayUrl, mirrorNodeUrl, 298);
         anvilHost = await anvil(forwarderUrl);
 
         // Ensure HTS emulation is reachable
@@ -239,12 +236,11 @@ describe('::e2e', function () {
 
                 // To enable this, we need to change `getTokenInfo` to a `view` function
                 it("should retrieve token's metadata through `getTokenInfo`", async function () {
-                    const info = await HTS['getTokenInfo'](tokenAddress);
-                    console.log(inspect(info, { depth: null }));
+                    const tokenInfo = await HTS['getTokenInfo'](tokenAddress);
                     if (self.tokenInfo === undefined) {
-                        self.tokenInfo = info;
+                        self.tokenInfo = tokenInfo;
                     } else {
-                        expect(info).to.be.deep.equal(self.tokenInfo);
+                        expect(self.tokenInfo).to.be.deep.equal(tokenInfo);
                     }
                 });
 

@@ -55,7 +55,7 @@ describe('::forwarder', function () {
 
     before(async function () {
         const forkUrl = /**@type{string}*/ (/**@type{unknown}*/ (undefined));
-        const { host } = await jsonRPCForwarder(forkUrl, '', undefined, [
+        const { host } = await jsonRPCForwarder(forkUrl, '', undefined, undefined, [
             '0x70997970c51812dc3a010c7d01b50e0d17dc79c8',
         ]);
         provider = new Provider(host);
