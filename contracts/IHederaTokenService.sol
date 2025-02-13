@@ -606,7 +606,7 @@ interface IHederaTokenService {
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
     /// @return frozen True if `account` is frozen for `token`
     function isFrozen(address token, address account)
-       external
+       external view
        returns (int64 responseCode, bool frozen);
 
     /// Query if token account has kyc granted
@@ -615,7 +615,7 @@ interface IHederaTokenService {
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
     /// @return kycGranted True if `account` has kyc granted for `token`
     function isKyc(address token, address account)
-        external
+        external view
         returns (int64 responseCode, bool kycGranted);
 
     /// Operation to delete token

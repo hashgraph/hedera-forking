@@ -41,13 +41,13 @@ contract HtsSystemContract is IHederaTokenService {
     }
 
     modifier kyc(address token) {
-        require(isValidKyc(token), "kyc: no kyc granted");
+        require(_isValidKyc(token), "kyc: no kyc granted");
         _;
     }
 
     modifier notPaused(address token) {
         (, TokenInfo memory info) = getTokenInfo(token);
-        require (!isPaused(token), "unpaused: token paused");
+        require (!_isPaused(token), "unpaused: token paused");
         _;
     }
 
@@ -125,9 +125,9 @@ contract HtsSystemContract is IHederaTokenService {
 
         for (uint256 tokenIndex = 0; tokenIndex < tokenTransfers.length; tokenIndex++) {
             require(tokenTransfers[tokenIndex].token != address(0), "cryptoTransfer: invalid token");
-            require(!isFrozen(tokenTransfers[tokenIndex].token), "cryptoTransfer: frozen");
-            require(isValidKyc(tokenTransfers[tokenIndex].token), "cryptoTransfer: no kyc granted");
-            require(!isPaused(tokenTransfers[tokenIndex].token), "cryptoTransfer: is paused");
+            require(!_isFrozen(tokenTransfers[tokenIndex].token), "cryptoTransfer: frozen");
+            require(_isValidKyc(tokenTransfers[tokenIndex].token), "cryptoTransfer: no kyc granted");
+            require(!_isPaused(tokenTransfers[tokenIndex].token), "cryptoTransfer: is paused");
             // Processing fungible token transfers
             responseCode = _checkCryptoFungibleTransfers(tokenTransfers[tokenIndex].token, tokenTransfers[tokenIndex].transfers);
             if (responseCode != HederaResponseCodes.SUCCESS) return responseCode;
@@ -260,9 +260,9 @@ contract HtsSystemContract is IHederaTokenService {
         );
         for (uint256 i = 0; i < tokens.length; i++) {
             require(tokens[i] != address(0), "associateTokens: invalid token");
-            require(!isFrozen(tokens[i]), "associateTokens: frozen");
-            require(isValidKyc(tokens[i]), "associateTokens: no kyc granted");
-            require(!isPaused(tokens[i]), "associateTokens: paused");
+            require(!_isFrozen(tokens[i]), "associateTokens: frozen");
+            require(_isValidKyc(tokens[i]), "associateTokens: no kyc granted");
+            require(!_isPaused(tokens[i]), "associateTokens: paused");
             int64 associationResponseCode = IHederaTokenService(tokens[i]).associateToken(account, tokens[i]);
             require(
                 associationResponseCode == HederaResponseCodes.SUCCESS,
@@ -284,9 +284,9 @@ contract HtsSystemContract is IHederaTokenService {
         require(account == msg.sender, "dissociateTokens: Must be signed by the provided Account's key or called from the accounts contract key");
         for (uint256 i = 0; i < tokens.length; i++) {
             require(tokens[i] != address(0), "dissociateTokens: invalid token");
-            require(!isFrozen(tokens[i]), "dissociateTokens: frozen");
-            require(isValidKyc(tokens[i]), "dissociateTokens: no kyc granted");
-            require(!isPaused(tokens[i]), "dissociateTokens: paused");
+            require(!_isFrozen(tokens[i]), "dissociateTokens: frozen");
+            require(_isValidKyc(tokens[i]), "dissociateTokens: no kyc granted");
+            require(!_isPaused(tokens[i]), "dissociateTokens: paused");
             int64 dissociationResponseCode = IHederaTokenService(tokens[i]).dissociateToken(account, tokens[i]);
             require(dissociationResponseCode == HederaResponseCodes.SUCCESS, "dissociateTokens: Failed to dissociate token");
         }
@@ -354,7 +354,7 @@ contract HtsSystemContract is IHederaTokenService {
         HtsSystemContract(tokenAddress).__setTokenInfo(tokenType_, tokenInfo, decimals_);
 
         if (initialTotalSupply > 0) {
-            _mintToken(tokenAddress, initialTotalSupply, true);
+            _mintToken(tokenAddress, initialTotalSupply, false);
         }
 
         responseCode = HederaResponseCodes.SUCCESS;
@@ -525,11 +525,11 @@ contract HtsSystemContract is IHederaTokenService {
         return (HederaResponseCodes.SUCCESS, IERC721(token).isApprovedForAll(owner, operator));
     }
 
-    function isKyc(address token, address account) htsCall public returns (int64, bool) {
+    function isKyc(address token, address account) htsCall public view returns (int64, bool) {
         return IHederaTokenService(token).isKyc(msg.sender, account);
     }
 
-    function isValidKyc(address token) htsCall internal returns (bool) {
+    function _isValidKyc(address token) private view returns (bool) {
         if (msg.sender == HTS_ADDRESS) return true; // Usable only on the highest level call
         (, TokenInfo memory info) = getTokenInfo(token);
         address allowed = getKeyOwner(token, 0x2);
@@ -538,20 +538,20 @@ contract HtsSystemContract is IHederaTokenService {
         return hasKyc;
     }
 
-    function isPaused(address token) htsCall internal returns (bool) {
+    function _isPaused(address token) private view returns (bool) {
         if (msg.sender == HTS_ADDRESS) return true; // Usable only on the highest level call
         (, TokenInfo memory info) = getTokenInfo(token);
         return info.pauseStatus;
     }
 
-    function isFrozen(address token, address account) htsCall public returns (int64, bool) {
+    function isFrozen(address token, address account) htsCall public view returns (int64, bool) {
         if (token == address(0)) {
             return (HederaResponseCodes.SUCCESS, false);
         }
         return IHederaTokenService(token).isFrozen(token, account);
     }
 
-    function isFrozen(address token) htsCall internal returns (bool frozenStatus) {
+    function _isFrozen(address token) private view returns (bool frozenStatus) {
         (, frozenStatus)  = isFrozen(token, msg.sender);
     }
 
@@ -1418,7 +1418,7 @@ contract HtsSystemContract is IHederaTokenService {
         return HederaResponseCodes.NOT_SUPPORTED;
     }
 
-    function getKeyOwner(address token, uint8 keyType) public htsCall returns (address) {
+    function getKeyOwner(address token, uint8 keyType) public view htsCall returns (address) {
         return HtsSystemContract(token).getKeyOwner(token, keyType);
     }
 }
