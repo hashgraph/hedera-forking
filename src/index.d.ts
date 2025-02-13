@@ -169,6 +169,21 @@ export const LONG_ZERO_PREFIX: string;
 export const localTokens: string[];
 
 /**
+ * Sets the `ledgerId` used when retrieving fungible and non-fungible tokens.
+ *
+ * The `ledgerId` depends on the `chainId` of the remote network it is forking from.
+ *
+ * This mapping is as follows:
+ *   - 295: 0x00 (mainnet)
+ *   - 296: 0x01 (testnet)
+ *   - 297: 0x02 (previewnet)
+ *   - 298: 0x03 (local node)
+ *
+ * @param chainId Chain id used to determine the corresponding ledger id.
+ */
+export function setLedgerId(chainId?: number);
+
+/**
  * Returns the token proxy contract bytecode for the given `address`.
  * Based on the proxy contract defined by [HIP-719](https://hips.hedera.com/hip/hip-719).
  *

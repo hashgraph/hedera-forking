@@ -30,11 +30,12 @@ const debug = require('util').debuglog('hedera-forking-rpc');
  *
  * @param {string} forkUrl the URL to forward calls to.
  * @param {string} mirrorNodeUrl used to fetch Hedera entity data.
+ * @param {number=} chainId the `chainId` of the network it is forwarding to, if any.
  * @param {number=} workerPort a TCP port where the JSON-RPC Forwarder will listen. If not provided, a default value will be used.
  * @param {string[]=} localAddresses List of local addresses used by the local Network when forking.
  * @returns {Promise<Worker & {host: string}>} the running worker together with `host` the forwarder is listening on.
  */
-function jsonRPCForwarder(forkUrl, mirrorNodeUrl, workerPort, localAddresses) {
+function jsonRPCForwarder(forkUrl, mirrorNodeUrl, chainId, workerPort, localAddresses) {
     return new Promise(resolve => {
         const scriptPath = path.resolve(__dirname, 'json-rpc-forwarder');
         debug(`Creating JSON-RPC Forwarder server from \`${scriptPath}\``);
@@ -42,6 +43,7 @@ function jsonRPCForwarder(forkUrl, mirrorNodeUrl, workerPort, localAddresses) {
             workerData: {
                 url: forkUrl,
                 mirrorNodeUrl,
+                chainId,
                 workerPort,
                 localAddresses,
             },

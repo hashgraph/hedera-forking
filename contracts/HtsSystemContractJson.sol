@@ -250,7 +250,7 @@ contract HtsSystemContractJson is HtsSystemContract {
         token.tokenSupplyType = keccak256(bytes(vm.parseJsonString(json, ".supply_type"))) == keccak256(bytes("FINITE"));
         token.maxSupply = int64(vm.parseInt(vm.parseJsonString(json, ".max_supply")));
         token.freezeDefault = vm.parseJsonBool(json, ".freeze_default");
-        token.expiry.second = abi.decode(vm.parseJson(json, ".expiry_timestamp"), (int64));
+        token.expiry.second = abi.decode(vm.parseJson(json, ".expiry_timestamp"), (int64)) / 1_000_000_000;
 
         try vm.parseJsonString(json, ".auto_renew_account") returns (string memory autoRenewAccount) {
             if (keccak256(bytes(autoRenewAccount)) != keccak256(bytes("null"))) {
@@ -443,6 +443,7 @@ contract HtsSystemContractJson is HtsSystemContract {
         if (block.chainid == 295) return "0x00"; // Mainnet
         if (block.chainid == 296) return "0x01"; // Testnet
         if (block.chainid == 297) return "0x02"; // Previewnet
+        if (block.chainid == 298) return "0x03"; // Localhost
         return "0x00"; // Default to Mainnet
     }
 
