@@ -531,7 +531,6 @@ contract HtsSystemContract is IHederaTokenService {
 
     function _isValidKyc(address token) private view returns (bool) {
         if (msg.sender == HTS_ADDRESS) return true; // Usable only on the highest level call
-        (, TokenInfo memory info) = getTokenInfo(token);
         address allowed = getKeyOwner(token, 0x2);
         if (allowed == address(0) || allowed == msg.sender) return true;
         (, bool hasKyc) =  isKyc(token, msg.sender);
