@@ -6,6 +6,7 @@ import {IERC721} from "./IERC721.sol";
 import {IHRC719} from "./IHRC719.sol";
 import {IHederaTokenService} from "./IHederaTokenService.sol";
 import {HederaResponseCodes} from "./HederaResponseCodes.sol";
+import {KeyLib} from "./KeyLib.sol";
 
 address constant HTS_ADDRESS = address(0x167);
 
@@ -202,10 +203,10 @@ contract HtsSystemContract is IHederaTokenService {
         int64 newTotalSupply,
         int64[] memory serialNumbers
     ) {
-        return mintToken(token, amount, false);
+        return _mintToken(token, amount, true);
     }
 
-    function mintToken(address token, int64 amount, bool ignoreSupplyKeyCheck) htsCall internal returns (
+    function _mintToken(address token, int64 amount, bool ignoreSupplyKeyCheck) htsCall internal returns (
         int64 responseCode,
         int64 newTotalSupply,
         int64[] memory serialNumbers
@@ -235,9 +236,8 @@ contract HtsSystemContract is IHederaTokenService {
         int64 newTotalSupply
     ) {
         require(amount > 0, "burnToken: invalid amount");
-
         (int64 tokenInfoResponseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
-        if (getKeyOwner( token, 0x10) == address(0)) {
+        if (!KeyLib.keyExists(0x10, tokenInfo)) {
             return (HederaResponseCodes.TOKEN_HAS_NO_SUPPLY_KEY, tokenInfo.totalSupply);
         }
         require(tokenInfoResponseCode == HederaResponseCodes.SUCCESS, "burnToken: failed to get token info");
@@ -354,7 +354,7 @@ contract HtsSystemContract is IHederaTokenService {
         HtsSystemContract(tokenAddress).__setTokenInfo(tokenType_, tokenInfo, decimals_);
 
         if (initialTotalSupply > 0) {
-            mintToken(tokenAddress, initialTotalSupply, true);
+            _mintToken(tokenAddress, initialTotalSupply, true);
         }
 
         responseCode = HederaResponseCodes.SUCCESS;

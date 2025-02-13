@@ -224,7 +224,7 @@ contract HTSTest is Test, TestSetup {
         IHederaTokenService.TokenInfo memory tokenInfo;
         IHederaTokenService.TokenKey[] memory keys = new IHederaTokenService.TokenKey[](1);
         keys[0].keyType = 0x10; // Supply key
-        keys[0].key.contractId = msg.sender;
+        keys[0].key.ECDSA_secp256k1 = hex"0242b7c3beea2af6dfcc874c41d1332463407e283f602ce8ef2cbe324823561b6f";
         tokenInfo.token = IHederaTokenService.HederaToken(
             "USD Coin",
             "USDC",
@@ -325,6 +325,9 @@ contract HTSTest is Test, TestSetup {
         int64 initialTotalSupply = 5000;
         int64[] memory serialNumbers = new int64[](0);
         IHederaTokenService.TokenInfo memory tokenInfo;
+        IHederaTokenService.TokenKey[] memory keys = new IHederaTokenService.TokenKey[](1);
+        keys[0].keyType = 0x10; // Supply key
+        keys[0].key.ECDSA_secp256k1 = hex"0242b7c3beea2af6dfcc874c41d1332463407e283f602ce8ef2cbe324823561b6f";
         tokenInfo.token = IHederaTokenService.HederaToken(
             "My Crypto Token is the name which the string length is greater than 31",
             "Token symbol must be exactly 32!",
@@ -333,7 +336,7 @@ contract HTSTest is Test, TestSetup {
             false,
             initialTotalSupply + amount,
             false,
-            new IHederaTokenService.TokenKey[](0),
+            keys,
             IHederaTokenService.Expiry(0, address(0), 0)
         );
 
