@@ -26,8 +26,6 @@ contract HtsSystemContract is IHederaTokenService {
     // These state variables are accessed with a `delegatecall` from the Token Proxy bytecode.
     // That is, they live in the token address storage space, not in the space of HTS `0x167`.
     // See `__redirectForToken` for more details.
-    //
-    // Moreover, these variables must match the slots defined in `SetTokenInfo`.
     string internal tokenType;
     uint8 internal decimals;
     TokenInfo internal _tokenInfo;

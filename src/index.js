@@ -66,6 +66,7 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
      * @returns {string|null}
      */
     const ret = (value, msg) => (debug(`${msg}, returning \`${value}\``), value);
+
     if (!address.startsWith(LONG_ZERO_PREFIX))
         return ret(null, `${address} does not start with \`${LONG_ZERO_PREFIX}\``);
 
@@ -103,6 +104,7 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
     }
 
     const tokenId = `0.0.${parseInt(address, 16)}`;
+    debug(`Getting storage for \`${address}\` (tokenId=${tokenId}) at slot=${requestedSlot}`);
 
     // Encoded `address(tokenId).balanceOf(address)` slot
     // slot(256) = `balanceOf`selector(32) + padding(192) + accountId(32)
@@ -305,8 +307,8 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
             );
         if (token === null) return ret(ZERO_HEX_32_BYTE, `Token \`${tokenId}\` not found`);
         unresolvedValues = slotMapOf(token).load(nrequestedSlot);
-        // Encoded `address(tokenId).getKeyOwner(tokenId, keyType)` slot
-        // slot(256) = `getKeyOwner`selector(32) + padding(192) + keyType(32)
+        // Encoded `address(tokenId).getTokenKey(tokenId, keyType)` slot
+        // slot(256) = `getTokenKey`selector(32) + padding(192) + keyType(32)
         if (
             nrequestedSlot >> 32n ===
             0x3c4dd32e_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000n
