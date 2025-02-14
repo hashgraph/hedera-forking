@@ -3,7 +3,7 @@
 The following is a collection of common issues or errors developers first encounter when working with Hedera System Contracts in a forked environment.
 
 The Hedera Forking project solves these issues by providing an emulation of Hedera System Contracts written in Solidity.
-Enable either the [Foundry library](README#foundry-library) or the [Hardhat plugin](README#hardhat-plugin) to solve them.
+Enable either the [Foundry library](./README.md#foundry-library) or the [Hardhat plugin](./README.md#hardhat-plugin) to solve them.
 
 ## Foundry
 
