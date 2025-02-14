@@ -465,21 +465,25 @@ contract HtsSystemContractJson is HtsSystemContract {
         return slot;
     }
 
-    function _existsSlot(address account) internal override view returns (bytes32) {
-        bytes32 slot = super._existsSlot(account);
-        if (_shouldFetch(slot)) {
-            bool exists = mirrorNode().doAccountExist(account);
-            vm.store(address(this), slot, bytes32(uint256(exists ? 1 : 0)));
-        }
-        return slot;
-    }
-
     function _isAssociatedSlot(address account) internal override returns (bytes32) {
         bytes32 slot = super._isAssociatedSlot(account);
         if (_shouldFetch(slot)) {
             bool associated = mirrorNode().isAssociated(address(this), account);
             _setValue(slot, bytes32(uint256(associated ? 1 : 0)));
         }
+        return slot;
+    }
+
+    function _accountExistsSlot(address account) internal override returns (bytes32) {
+        bytes32 slot = super._accountExistsSlot(account);
+        address htsScratchAddress = address(bytes20(keccak256(abi.encode(HTS_ADDRESS))));
+        bool shouldFetchIntoHTS = vm.load(htsScratchAddress, slot) == bytes32(0);
+        if (shouldFetchIntoHTS) {
+            bool exists = mirrorNode().doAccountExist(account);
+            vm.store(HTS_ADDRESS, slot, bytes32(uint256(exists ? 1 : 0)));
+            vm.store(htsScratchAddress, slot, bytes32(uint256(1)));
+        }
+        if (_shouldFetch(slot)) _setValue(slot, vm.load(HTS_ADDRESS, slot));
         return slot;
     }
 

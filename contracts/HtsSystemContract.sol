@@ -53,9 +53,8 @@ contract HtsSystemContract is IHederaTokenService {
         assembly { accountId := sload(slot) }
     }
 
-    function accountExists(address account) htsCall external view returns (bool exists) {
-        bytes32 slot = _existsSlot(account);
-        assembly { exists := sload(slot) }
+    function accountExists(address) htsCall external view returns (bool exists) {
+        return true;
     }
 
     function mintToken(address token, int64 amount, bytes[] memory) htsCall external returns (
@@ -777,8 +776,11 @@ contract HtsSystemContract is IHederaTokenService {
             return abi.encode(true);
         }
         if (selector == IHRC719.isAssociated.selector) {
-            address account = address(bytes20(msg.data[40:60]));
-            require(HtsSystemContract(HTS_ADDRESS).accountExists(account), "isAssociated: account does not exist");
+            bytes32 existsSlot = _accountExistsSlot(msg.sender);
+            bool exists;
+            assembly { exists := sload(existsSlot) }
+            require(exists, "account does not exist");
+
             bytes32 slot = _isAssociatedSlot(msg.sender);
             bool res;
             assembly { res := sload(slot) }
@@ -864,7 +866,8 @@ contract HtsSystemContract is IHederaTokenService {
         return bytes32(abi.encodePacked(selector, pad, spenderId, ownerId));
     }
 
-    function _existsSlot(address account) internal virtual view returns (bytes32) {
+    function _accountExistsSlot(address account) internal virtual returns (bytes32) {
+        return _isAssociatedSlot(account);
         bytes4 selector = HtsSystemContract.accountExists.selector;
         uint192 pad = 0x0;
         uint32 accountId = HtsSystemContract(HTS_ADDRESS).getAccountId(account);
