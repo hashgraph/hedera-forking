@@ -1,4 +1,14 @@
+<div align="center">
+
 # Hedera Forking for System Contracts
+
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/hashgraph/hedera-forking/test.yml?style=flat-square)](https://github.com/hashgraph/hedera-forking/actions/workflows/test.yml)
+[![npm](https://img.shields.io/npm/v/@hashgraph/system-contracts-forking?style=flat-square)](https://www.npmjs.com/package/@hashgraph/system-contracts-forking)
+![downloads](https://img.shields.io/npm/dt/@hashgraph/system-contracts-forking?style=flat-square)
+[![License](https://img.shields.io/github/license/hashgraph/hedera-forking?style=flat-square)](LICENSE)
+[![Discord](https://img.shields.io/badge/discord-join%20chat-blue.svg)](https://hedera.com/discord)
+
+</div>
 
 **This projects allows Smart Contract developers working on Hedera to use fork testing while using Hedera System Contracts.**
 It does so by providing an emulation layer for the [Hedera Token Service](https://hedera.com/token-service) _(more System Contracts to come)_ written in Solidity.
