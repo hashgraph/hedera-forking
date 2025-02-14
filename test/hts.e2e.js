@@ -225,7 +225,7 @@ describe('::e2e', function () {
 
                 // These reverts instead of returning `false`.
                 // Should we have the same behavior in emulated HTS?
-                it.skip('should get not `isAssociated` for non-existing non-associated accounts', async function () {
+                it('should get not `isAssociated` for non-existing non-associated accounts', async function () {
                     expect(await ERC20['isAssociated']({ from: nonAssocAddress0 })).to.be.equal(
                         false
                     );

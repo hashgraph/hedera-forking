@@ -45,7 +45,7 @@ contract IHRC719TokenAssociationTest is Test, TestSetup {
         assertEq(IHRC719(USDC).isAssociated(), false);
         vm.stopPrank();
     }
-    
+
     function test_IHRC719_different_accounts() external {
         address alice = makeAddr("alice");
         address bob = makeAddr("bob");
@@ -53,7 +53,7 @@ contract IHRC719TokenAssociationTest is Test, TestSetup {
         vm.startPrank(alice);
         assertEq(IHRC719(USDC).associate(), 1);
         assertEq(IHRC719(USDC).isAssociated(), true);
-        
+
         vm.startPrank(bob);
         assertEq(IHRC719(USDC).isAssociated(), false);
         assertEq(IHRC719(USDC).associate(), 1);
