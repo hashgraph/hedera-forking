@@ -28,6 +28,9 @@ See [Hedera Token Service Supported Methods](#hedera-token-service-supported-met
 
 > For detailed information on how this project works, see [Internals](./INTERNALS.md).
 
+> [!NOTE]
+> The [FAQ](./FAQ.md) provides common issues that this project solves.
+
 ## Foundry library
 
 We provide a Foundry library that enables fork testing when using HTS Tokens.
