@@ -101,6 +101,13 @@ abstract contract MirrorNode {
         return false;
     }
 
+    function doAccountExist(address account) external returns (bool) {
+        try this.fetchAccount(vm.toString(account)) returns (string memory json) {
+            return vm.keyExistsJson(json, ".evm_address");
+        } catch {}
+        return false;
+    }
+
     function getAccountAddress(string memory accountId) public returns (address) {
         if (bytes(accountId).length == 0
         || keccak256(bytes(accountId)) == keccak256(bytes("null"))

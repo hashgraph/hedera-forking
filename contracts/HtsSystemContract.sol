@@ -15,7 +15,7 @@ contract HtsSystemContract is IHederaTokenService {
     /**
      * The slot's value contains the next token ID to use when a token is being created.
      *
-     * This slot is used in the `0x167` address. 
+     * This slot is used in the `0x167` address.
      * It cannot be used as a state variable directly.
      * This is because JS' `getHtsStorageAt` implementation assumes all state variables
      * declared here are part of the token address space.
@@ -26,7 +26,7 @@ contract HtsSystemContract is IHederaTokenService {
     // These state variables are accessed with a `delegatecall` from the Token Proxy bytecode.
     // That is, they live in the token address storage space, not in the space of HTS `0x167`.
     // See `__redirectForToken` for more details.
-    string internal tokenType; 
+    string internal tokenType;
     uint8 internal decimals;
     TokenInfo internal _tokenInfo;
 
@@ -51,6 +51,11 @@ contract HtsSystemContract is IHederaTokenService {
         uint64 pad = 0x0;
         bytes32 slot = bytes32(abi.encodePacked(selector, pad, account));
         assembly { accountId := sload(slot) }
+    }
+
+    function accountExists(address account) htsCall external view returns (bool exists) {
+        bytes32 slot = _existsSlot(account);
+        assembly { exists := sload(slot) }
     }
 
     function mintToken(address token, int64 amount, bytes[] memory) htsCall external returns (
@@ -772,6 +777,8 @@ contract HtsSystemContract is IHederaTokenService {
             return abi.encode(true);
         }
         if (selector == IHRC719.isAssociated.selector) {
+            address account = address(bytes20(msg.data[40:60]));
+            require(HtsSystemContract(HTS_ADDRESS).accountExists(account), "isAssociated: account does not exist");
             bytes32 slot = _isAssociatedSlot(msg.sender);
             bool res;
             assembly { res := sload(slot) }
@@ -855,6 +862,13 @@ contract HtsSystemContract is IHederaTokenService {
         uint32 ownerId = HtsSystemContract(HTS_ADDRESS).getAccountId(owner);
         uint32 spenderId = HtsSystemContract(HTS_ADDRESS).getAccountId(spender);
         return bytes32(abi.encodePacked(selector, pad, spenderId, ownerId));
+    }
+
+    function _existsSlot(address account) internal virtual view returns (bytes32) {
+        bytes4 selector = HtsSystemContract.accountExists.selector;
+        uint192 pad = 0x0;
+        uint32 accountId = HtsSystemContract(HTS_ADDRESS).getAccountId(account);
+        return bytes32(abi.encodePacked(selector, pad, accountId));
     }
 
     function _isAssociatedSlot(address account) internal virtual returns (bytes32) {
