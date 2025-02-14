@@ -40,6 +40,14 @@ abstract contract MirrorNode {
         return "";
     }
 
+    function getNftCreatedTimestamp(address token, uint32 serial) external returns (string memory) {
+        string memory json = this.fetchNonFungibleToken(token, serial);
+        if (vm.keyExistsJson(json, ".created_timestamp")) {
+            return vm.parseJsonString(json, ".created_timestamp");
+        }
+        return "";
+    }
+
     function getNftOwner(address token, uint32 serial) external returns (address) {
         string memory json = this.fetchNonFungibleToken(token, serial);
         if (vm.keyExistsJson(json, ".account_id")) {
