@@ -124,6 +124,13 @@ abstract contract MirrorNode {
         return address(uint160(accountNum));
     }
 
+    function accountExist(address account) external returns (bool) {
+        try this.fetchAccount(vm.toString(account)) returns (string memory json) {
+            return vm.keyExistsJson(json, ".evm_address");
+        } catch {}
+        return false;
+    }
+
     // Lets store the response somewhere in order to prevent multiple calls for the same account id
     function _getAccountNum(address account) private returns (uint32) {
         if ((uint160(account) >> 32) == 0) {

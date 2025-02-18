@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import {IERC20} from "./IERC20.sol";
 import {IERC721} from "./IERC721.sol";
 import {IHRC719} from "./IHRC719.sol";
+import {IHederaAccounts} from "./IHederaAccounts.sol";
 import {IHederaTokenService} from "./IHederaTokenService.sol";
 import {HederaResponseCodes} from "./HederaResponseCodes.sol";
 import {KeyLib} from "./KeyLib.sol";
@@ -15,7 +16,7 @@ contract HtsSystemContract is IHederaTokenService {
     /**
      * The slot's value contains the next token ID to use when a token is being created.
      *
-     * This slot is used in the `0x167` address. 
+     * This slot is used in the `0x167` address.
      * It cannot be used as a state variable directly.
      * This is because JS' `getHtsStorageAt` implementation assumes all state variables
      * declared here are part of the token address space.
@@ -26,7 +27,7 @@ contract HtsSystemContract is IHederaTokenService {
     // These state variables are accessed with a `delegatecall` from the Token Proxy bytecode.
     // That is, they live in the token address storage space, not in the space of HTS `0x167`.
     // See `__redirectForToken` for more details.
-    string internal tokenType; 
+    string internal tokenType;
     uint8 internal decimals;
     TokenInfo internal _tokenInfo;
 
@@ -509,6 +510,10 @@ contract HtsSystemContract is IHederaTokenService {
         // 28: (bytes args for HTS method call, if any)
         require(msg.data.length >= 28, "fallback: not enough calldata");
 
+        if (address(this) == HTS_ADDRESS && bytes4(msg.data[0:4]) == IHederaAccounts.accountExists.selector) {
+            return abi.encode(__accountExists(address(bytes20(msg.data[16:36]))));
+        }
+
         uint256 fallbackSelector = uint32(bytes4(msg.data[0:4]));
         require(fallbackSelector == 0x618dc65e, "fallback: unsupported selector");
 
@@ -772,6 +777,7 @@ contract HtsSystemContract is IHederaTokenService {
             return abi.encode(true);
         }
         if (selector == IHRC719.isAssociated.selector) {
+            require(IHederaAccounts(HTS_ADDRESS).accountExists(msg.sender));
             bytes32 slot = _isAssociatedSlot(msg.sender);
             bool res;
             assembly { res := sload(slot) }
@@ -1021,5 +1027,16 @@ contract HtsSystemContract is IHederaTokenService {
         bytes32 slot = _isApprovedForAllSlot(sender, operator);
         assembly { sstore(slot, approved) }
         emit IERC721.ApprovalForAll(sender, operator, approved);
+    }
+
+    function __accountExists(address account) private returns (bool exists) {
+        bytes32 slot = _accountExistsSlot(account);
+        assembly { exists := sload(slot) }
+    }
+
+    function _accountExistsSlot(address account) internal virtual returns (bytes32) {
+        bytes4 selector = bytes4(msg.data[0:4]);
+        uint64 pad = 0x0;
+        return bytes32(abi.encodePacked(selector, pad, account));
     }
 }

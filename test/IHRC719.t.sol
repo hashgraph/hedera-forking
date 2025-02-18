@@ -11,55 +11,44 @@ contract IHRC719TokenAssociationTest is Test, TestSetup {
     }
 
     function test_IHRC719_isAssociated() external {
-        address alice = makeAddr("alice");
-
-        vm.prank(alice);
+        vm.prank(MFCT_TREASURY);
         assertEq(IHRC719(USDC).isAssociated(), false);
     }
 
     function test_IHRC719_associate() external {
-        address alice = makeAddr("alice");
-
-        vm.startPrank(alice);
+        vm.startPrank(MFCT_TREASURY);
         assertEq(IHRC719(USDC).associate(), 1);
         assertEq(IHRC719(USDC).isAssociated(), true);
         vm.stopPrank();
     }
 
     function test_IHRC719_dissociate() external {
-        address alice = makeAddr("alice");
-
-        vm.startPrank(alice);
+        vm.startPrank(MFCT_TREASURY);
         assertEq(IHRC719(USDC).dissociate(), 1);
         assertEq(IHRC719(USDC).isAssociated(), false);
         vm.stopPrank();
     }
 
      function test_IHRC719_associate_then_dissociate() external {
-        address alice = makeAddr("alice");
-
-        vm.startPrank(alice);
+        vm.startPrank(MFCT_TREASURY);
         assertEq(IHRC719(USDC).associate(), 1);
         assertEq(IHRC719(USDC).isAssociated(), true);
         assertEq(IHRC719(USDC).dissociate(), 1);
         assertEq(IHRC719(USDC).isAssociated(), false);
         vm.stopPrank();
     }
-    
-    function test_IHRC719_different_accounts() external {
-        address alice = makeAddr("alice");
-        address bob = makeAddr("bob");
 
-        vm.startPrank(alice);
+    function test_IHRC719_different_accounts() external {
+        vm.startPrank(MFCT_TREASURY);
         assertEq(IHRC719(USDC).associate(), 1);
         assertEq(IHRC719(USDC).isAssociated(), true);
-        
-        vm.startPrank(bob);
+
+        vm.startPrank(CFNFTFF_TREASURY);
         assertEq(IHRC719(USDC).isAssociated(), false);
         assertEq(IHRC719(USDC).associate(), 1);
         assertEq(IHRC719(USDC).isAssociated(), true);
 
-        vm.startPrank(alice);
+        vm.startPrank(MFCT_TREASURY);
         assertEq(IHRC719(USDC).dissociate(), 1);
         assertEq(IHRC719(USDC).isAssociated(), false);
 
@@ -78,5 +67,12 @@ contract IHRC719TokenAssociationTest is Test, TestSetup {
         assertEq(IHRC719(MFCT).isAssociated(), false);
 
         vm.stopPrank();
+    }
+
+    function test_IHRC719_with_non_existing_account() external {
+        vm.expectRevert();
+        address alice = makeAddr('alice');
+        vm.prank(alice);
+        IHRC719(USDC).isAssociated();
     }
 }

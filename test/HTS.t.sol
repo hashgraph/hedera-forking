@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import {Test} from "forge-std/Test.sol";
 import {HederaResponseCodes} from "../contracts/HederaResponseCodes.sol";
 import {HtsSystemContract, HTS_ADDRESS} from "../contracts/HtsSystemContract.sol";
+import {IHederaAccounts} from "../contracts/IHederaAccounts.sol";
 import {IHederaTokenService} from "../contracts/IHederaTokenService.sol";
 import {IERC20} from "../contracts/IERC20.sol";
 import {IERC721} from "../contracts/IERC721.sol";
@@ -900,5 +901,14 @@ contract HTSTest is Test, TestSetup {
             .setApprovalForAll(CFNFTFF, operator, true);
         assertEq(setApprovalForAllResponseCode, HederaResponseCodes.SUCCESS);
         assertTrue(IERC721(CFNFTFF).isApprovedForAll(CFNFTFF_TREASURY, operator));
+    }
+
+    function test_HTS_accountExists_should_return_true_for_existing_account() view external {
+        assertTrue(IHederaAccounts(HTS_ADDRESS).accountExists(CFNFTFF_TREASURY));
+    }
+
+    function test_HTS_accountExists_should_return_false_for_non_existing_account() external {
+        address alice = makeAddr("alice");
+        assertFalse(IHederaAccounts(HTS_ADDRESS).accountExists(alice));
     }
 }

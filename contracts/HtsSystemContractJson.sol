@@ -511,6 +511,15 @@ contract HtsSystemContractJson is HtsSystemContract {
         return slot;
     }
 
+    function _accountExistsSlot(address account) internal override returns (bytes32) {
+        bytes32 slot = super._accountExistsSlot(account);
+        if (_shouldFetch(slot)) {
+            bool exists = mirrorNode().accountExist(account);
+            _setValue(slot, bytes32(uint256(exists ? 1 : 0)));
+        }
+        return slot;
+    }
+
     function _shouldFetch(bytes32 slot) private view returns (bool) {
         return vm.load(address(this), _isLocalTokenSlot) == bytes32(0)
             && vm.load(_scratchAddr(), slot) == bytes32(0);
