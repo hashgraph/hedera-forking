@@ -58,8 +58,8 @@ contract KYCTest is Test, TestSetup {
         address from = makeAddr("from");
         deal(token, from, amount);
         vm.prank(from);
-        vm.expectRevert("kyc: no kyc granted");
-        IHederaTokenService(HTS_ADDRESS).transferToken(token, from, to, int64(int256(amount)));
+        (int64 code) = IHederaTokenService(HTS_ADDRESS).transferToken(token, from, to, int64(int256(amount)));
+        assertEq(code, HederaResponseCodes.ACCOUNT_KYC_NOT_GRANTED_FOR_TOKEN);
     }
 
     function test_HTS_transferToken_success_with_kyc_granted() public {

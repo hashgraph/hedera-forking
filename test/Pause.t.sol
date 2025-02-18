@@ -61,7 +61,7 @@ contract PauseTest is Test, TestSetup {
         deal(token, owner, amount);
         vm.startPrank(owner);
         IHederaTokenService(HTS_ADDRESS).pauseToken(token);
-        vm.expectRevert("unpaused: token paused");
-        IHederaTokenService(HTS_ADDRESS).transferToken(token, owner, to, int64(int256(amount)));
+        (int64 code) = IHederaTokenService(HTS_ADDRESS).transferToken(token, owner, to, int64(int256(amount)));
+        assertEq(code, HederaResponseCodes.TOKEN_IS_PAUSED);
     }
 }

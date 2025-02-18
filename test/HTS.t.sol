@@ -283,8 +283,8 @@ contract HTSTest is Test, TestSetup {
         int64 amount = 1000;
         bytes[] memory metadata = new bytes[](0);
 
-        vm.expectRevert(bytes("getTokenInfo: invalid token"));
-        IHederaTokenService(HTS_ADDRESS).mintToken(token, amount, metadata);
+        (int64 code, ,) = IHederaTokenService(HTS_ADDRESS).mintToken(token, amount, metadata);
+        assertEq(code, HederaResponseCodes.INVALID_TOKEN_ID);
     }
 
     function test_mintToken_should_revert_with_invalid_amount() external {
@@ -385,9 +385,8 @@ contract HTSTest is Test, TestSetup {
         address token = address(0);
         int64 amount = 1000;
         int64[] memory serialNumbers = new int64[](0);
-
-        vm.expectRevert(bytes("getTokenInfo: invalid token"));
-        IHederaTokenService(HTS_ADDRESS).burnToken(token, amount, serialNumbers);
+        (int64 code, ) = IHederaTokenService(HTS_ADDRESS).burnToken(token, amount, serialNumbers);
+        assertEq(code, HederaResponseCodes.INVALID_TOKEN_ID);
     }
 
     function test_burnToken_should_revert_with_invalid_amount() external {
@@ -805,8 +804,8 @@ contract HTSTest is Test, TestSetup {
         int64[] memory amounts = new int64[](1);
         amounts[0] = 4_000000;
         vm.prank(owner);
-        vm.expectRevert("getTokenInfo: invalid token");
-        IHederaTokenService(HTS_ADDRESS).transferTokens(address(0), to, amounts);
+        (int64 code) = IHederaTokenService(HTS_ADDRESS).transferTokens(address(0), to, amounts);
+        assertEq(code, HederaResponseCodes.INVALID_TOKEN_ID);
     }
 
     function test_HTS_transferTokens_inconsistent_input() public {

@@ -66,8 +66,9 @@ contract FreezeTest is Test, TestSetup {
         deal(token, from, amount);
         vm.prank(owner);
         IHederaTokenService(HTS_ADDRESS).freezeToken(token, from);
-        vm.expectRevert("notFrozen: token frozen");
+
         vm.prank(from);
-        IHederaTokenService(HTS_ADDRESS).transferToken(token, from, to, int64(int256(amount)));
+        (int64 code) = IHederaTokenService(HTS_ADDRESS).transferToken(token, from, to, int64(int256(amount)));
+        assertEq(code, HederaResponseCodes.ACCOUNT_FROZEN_FOR_TOKEN);
     }
 }
