@@ -1,0 +1,83 @@
+{
+    "accounts": [
+        {
+            "account": "0.0.4436613",
+            "alias": "HIQQEQVXYO7OUKXW37GIOTCB2EZSIY2APYUD6YBM5DXSZPRSJARVMG3P",
+            "auto_renew_period": 7776000,
+            "balance": {
+                "balance": 93759089270,
+                "timestamp": "1738160761.562934888",
+                "tokens": [
+                    {
+                        "token_id": "0.0.4966953",
+                        "balance": 1000
+                    },
+                    {
+                        "token_id": "0.0.5308300",
+                        "balance": 0
+                    },
+                    {
+                        "token_id": "0.0.5308324",
+                        "balance": 2
+                    },
+                    {
+                        "token_id": "0.0.5308343",
+                        "balance": 2
+                    },
+                    {
+                        "token_id": "0.0.5308348",
+                        "balance": 2
+                    },
+                    {
+                        "token_id": "0.0.5308353",
+                        "balance": 2
+                    },
+                    {
+                        "token_id": "0.0.5308359",
+                        "balance": 2
+                    },
+                    {
+                        "token_id": "0.0.5308360",
+                        "balance": 2
+                    },
+                    {
+                        "token_id": "0.0.5308364",
+                        "balance": 2
+                    },
+                    {
+                        "token_id": "0.0.5308365",
+                        "balance": 2
+                    },
+                    {
+                        "token_id": "0.0.5308378",
+                        "balance": 2
+                    },
+                    {
+                        "token_id": "0.0.5308380",
+                        "balance": 2
+                    }
+                ]
+            },
+            "created_timestamp": "1718132880.546033646",
+            "decline_reward": false,
+            "deleted": false,
+            "ethereum_nonce": 62,
+            "evm_address": "0x435d7d41d4f69f958bda7a8d9f549a0dd9b64c86",
+            "expiry_timestamp": "1725908880.546033646",
+            "key": {
+                "_type": "ECDSA_SECP256K1",
+                "key": "0242b7c3beea2af6dfcc874c41d1332463407e283f602ce8ef2cbe324823561b6f"
+            },
+            "max_automatic_token_associations": 0,
+            "memo": "auto-created account",
+            "pending_reward": 0,
+            "receiver_sig_required": false,
+            "staked_account_id": null,
+            "staked_node_id": null,
+            "stake_period_start": null
+        }
+    ],
+    "links": {
+        "next": "/api/v1/accounts?account.publickey=0242b7c3beea2af6dfcc874c41d1332463407e283f602ce8ef2cbe324823561b6f&limit=1&account.id=gt:0.0.4436613"
+    }
+}

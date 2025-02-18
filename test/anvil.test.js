@@ -76,7 +76,7 @@ describe('::anvil', function () {
             decimals: 6n,
             // 1 request for each field: `tokenType` (implicit), `name`, `symbol` and `decimals` (4)
             // (both `name` and `symbol` have less than 32 bytes)
-            nrequests: 4,
+            nrequests: 5,
         },
         /**
          * https://hashscan.io/testnet/token/0.0.4730999
@@ -89,7 +89,7 @@ describe('::anvil', function () {
             decimals: 0n,
             // 1 request for each field: `tokenType` (implicit), `name`, `symbol` and `decimals` (4)
             // plus (3) for additional `name` words and (1) for additional `symbol` word
-            nrequests: 8,
+            nrequests: 9,
         },
     ].forEach(({ address, name, symbol, decimals, nrequests }) => {
         it(`should get token metadata for token \`${name}\``, async function () {

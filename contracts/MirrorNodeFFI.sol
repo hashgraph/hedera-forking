@@ -71,6 +71,10 @@ contract MirrorNodeFFI is MirrorNode {
         ));
     }
 
+    function fetchAccountByPublicKey(string memory publicKey) external override returns (string memory) {
+        return _get(string.concat("accounts?limit=1&account.publickey=", publicKey));
+    }
+
     function fetchTokenRelationshipOfAccount(string memory idOrAliasOrEvmAddress, address token) external override returns (string memory) {
         return _get(string.concat(
             "accounts/",
