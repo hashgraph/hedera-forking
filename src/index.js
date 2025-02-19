@@ -96,18 +96,7 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
                 return ret(ZERO_HEX_32_BYTE, `shardNum in \`${account.account}\` is not zero`);
             if (realmNum !== '0')
                 return ret(ZERO_HEX_32_BYTE, `realmNum in \`${account.account}\` is not zero`);
-            return ret(`0x${toIntHex256(accountNum)}`, 'address to accountNum');
-        }
-
-        // Encoded `address(0x167).accountExists(address)` slot
-        // slot(256) = `accountExists`selector(32) + padding(64) + address(160)
-        if (nrequestedSlot >> 160n === 0x75cd51ed_0000_0000_0000_0000n) {
-            const encodedAddress = requestedSlot.slice(-40);
-            const account = await mirrorNodeClient.getAccount(encodedAddress, blockNumber);
-            return ret(
-                account === null ? ZERO_HEX_32_BYTE : `0x${toIntHex256(1)}`,
-                `Address ${encodedAddress} ${account === null ? 'does not exist' : 'exists'}`
-            );
+            return ret(`0x01${toIntHex256(accountNum).slice(2)}`, 'address to accountNum');
         }
 
         return ret(ZERO_HEX_32_BYTE, `Requested slot for 0x167 matches field, not found`);
@@ -116,7 +105,7 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
     const tokenId = `0.0.${parseInt(address, 16)}`;
     debug(`Getting storage for \`${address}\` (tokenId=${tokenId}) at slot=${requestedSlot}`);
 
-    // Encoded `address(HTS).accountExists(address)` slot
+    // Encoded `address(tokenId).balanceOf(address)` slot
     // slot(256) = `balanceOf`selector(32) + padding(192) + accountId(32)
     if (
         nrequestedSlot >> 32n ===

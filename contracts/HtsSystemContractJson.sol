@@ -54,15 +54,6 @@ contract HtsSystemContractJson is HtsSystemContract {
         vm.allowCheatcodes(target);
     }
 
-    /**
-     * @dev For testing, we support accounts created with `makeAddr`.
-     * These accounts will not exist on the mirror node,
-     * so we calculate a deterministic (but unique) ID at runtime as a fallback.
-     */
-    function getAccountId(address account) htsCall external view override returns (uint32) {
-        return uint32(bytes4(keccak256(abi.encodePacked(account))));
-    }
-
     function __redirectForToken() internal override returns (bytes memory) {
         HtsSystemContractJson(HTS_ADDRESS).allowCheatcodes(address(this));
         return super.__redirectForToken();
@@ -511,11 +502,19 @@ contract HtsSystemContractJson is HtsSystemContract {
         return slot;
     }
 
-    function _accountExistsSlot(address account) internal override returns (bytes32) {
-        bytes32 slot = super._accountExistsSlot(account);
+    /**
+     * @dev For testing, we support accounts created with `makeAddr`.
+     * These accounts will not exist on the mirror node,
+     * so we calculate a deterministic (but unique) ID at runtime as a fallback.
+     * We make a call to the Mirror Node solely to verify the existence of the account.
+     */
+    function _accountIdSlot(address account) internal override returns (bytes32) {
+        bytes32 slot = super._accountIdSlot(account);
         if (_shouldFetch(slot)) {
+            bytes32 result = bytes32(uint256(uint32(bytes4(keccak256(abi.encodePacked(account))))));
             bool exists = mirrorNode().accountExist(account);
-            _setValue(slot, bytes32(uint256(exists ? 1 : 0)));
+            if (exists) result |= bytes32(uint256(1) << 248);
+            _setValue(slot, result);
         }
         return slot;
     }
