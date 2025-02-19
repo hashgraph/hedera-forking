@@ -2,7 +2,6 @@
 pragma solidity ^0.8.0;
 
 import {Vm} from "forge-std/Vm.sol";
-import {Surl} from "surl/src/Surl.sol";
 import {MirrorNode} from "./MirrorNode.sol";
 import {HtsSystemContract, HTS_ADDRESS} from "./HtsSystemContract.sol";
 import {storeString} from "./StrStore.sol";
@@ -119,7 +118,7 @@ contract MirrorNodeFFI is MirrorNode {
     function _get(string memory endpoint) private returns (string memory json) {
         json = _responses[endpoint];
         if (bytes(json).length == 0) {
-            (uint256 status, bytes memory result) = Surl.get(string.concat(_mirrorNodeUrl(), endpoint));
+            (uint256 status, bytes memory result) = _surl(string.concat(_mirrorNodeUrl(), endpoint));
             json = string(result);
             require(status == 200 || status == 404, json);
 
@@ -129,6 +128,20 @@ contract MirrorNodeFFI is MirrorNode {
             assembly { slot := _responses.slot }
             storeString(address(this), uint256(keccak256(abi.encodePacked(endpoint, slot))), json);
         }
+    }
+
+    function _surl(string memory self) private returns (uint256 status, bytes memory data) {
+        string memory scriptStart = 'response=$(curl -s -w "\\n%{http_code}" ';
+        string memory scriptEnd = '); status=$(tail -n1 <<< "$response"); data=$(sed "$ d" <<< "$response");data=$(echo "$data" | tr -d "\\n"); cast abi-encode "response(uint256,string)" "$status" "$data";';
+        string memory curlParams = "";
+        curlParams = string.concat(curlParams, " -X ", "GET", " ");
+        string memory quotedURL = string.concat('"', self, '"');
+        string[] memory inputs = new string[](3);
+        inputs[0] = "bash";
+        inputs[1] = "-c";
+        inputs[2] = string.concat(scriptStart, curlParams, quotedURL, scriptEnd, "");
+        bytes memory res = vm.ffi(inputs);
+        (status, data) = abi.decode(res, (uint256, bytes));
     }
 
     /**
