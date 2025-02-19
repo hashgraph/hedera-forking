@@ -130,12 +130,12 @@ contract MirrorNodeFFI is MirrorNode {
         }
     }
 
-    function _surl(string memory self) private returns (uint256 status, bytes memory data) {
+    function _surl(string memory url) private returns (uint256 status, bytes memory data) {
         string memory scriptStart = 'response=$(curl -s -w "\\n%{http_code}" ';
         string memory scriptEnd = '); status=$(tail -n1 <<< "$response"); data=$(sed "$ d" <<< "$response");data=$(echo "$data" | tr -d "\\n"); cast abi-encode "response(uint256,string)" "$status" "$data";';
         string memory curlParams = "";
         curlParams = string.concat(curlParams, " -X ", "GET", " ");
-        string memory quotedURL = string.concat('"', self, '"');
+        string memory quotedURL = string.concat('"', url, '"');
         string[] memory inputs = new string[](3);
         inputs[0] = "bash";
         inputs[1] = "-c";
