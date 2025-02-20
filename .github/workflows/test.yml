@@ -230,7 +230,10 @@ jobs:
           forge build
 
       - name: Run Forge Coverage
-        run: forge coverage --report summary > summary.info
+        run: forge coverage --summary > summary.info
+
+      - name: Public Coverage
+        run: .github/publish.sh
 
      # - name: Upload Coverage
      #   uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
