@@ -497,14 +497,15 @@ contract HtsSystemContract is IHederaTokenService {
 
         bytes4 selector = bytes4(msg.data[0:4]);
 
-        // Support for methods that query data stored in HTS 0x167 storage.
+        // The implementation of the IHederaAccounts.getAccountId function logic is handled in the fallback function
+        // rather than a separate method because getAccountId must remain a view.
+        // This allows contracts inheriting from this one to override its logic
+        // using VM cheat codes to modify the contract's state before returning a value.
+        // Such modifications would not be possible if the function were strictly defined as view.
         if (selector == IHederaAccounts.getAccountId.selector) {
             require(address(this) == HTS_ADDRESS, "htsCall: delegated call");
-            return abi.encode(__accountId(address(bytes20(msg.data[16:36]))));
-        }
-        if (selector == IHederaAccounts.accountExists.selector) {
-            require(address(this) == HTS_ADDRESS, "htsCall: delegated call");
-            return abi.encode(__accountExists(address(bytes20(msg.data[16:36]))));
+            bytes32 data = __accountIdBytes(address(bytes20(msg.data[16:36])));
+            return abi.encode(uint32(uint256(data)), uint8(data[0]) == 1);
         }
 
         require(selector == 0x618dc65e, "fallback: unsupported selector");
@@ -769,7 +770,8 @@ contract HtsSystemContract is IHederaTokenService {
             return abi.encode(true);
         }
         if (selector == IHRC719.isAssociated.selector) {
-            require(IHederaAccounts(HTS_ADDRESS).accountExists(msg.sender));
+            ( , bool exists) = IHederaAccounts(HTS_ADDRESS).getAccountId(msg.sender);
+            require(exists);
             bytes32 slot = _isAssociatedSlot(msg.sender);
             bool res;
             assembly { res := sload(slot) }
@@ -843,22 +845,22 @@ contract HtsSystemContract is IHederaTokenService {
     function _balanceOfSlot(address account) internal virtual returns (bytes32) {
         bytes4 selector = IERC20.balanceOf.selector;
         uint192 pad = 0x0;
-        uint32 accountId = IHederaAccounts(HTS_ADDRESS).getAccountId(account);
+        (uint32 accountId, ) = IHederaAccounts(HTS_ADDRESS).getAccountId(account);
         return bytes32(abi.encodePacked(selector, pad, accountId));
     }
 
     function _allowanceSlot(address owner, address spender) internal virtual returns (bytes32) {
         bytes4 selector = IERC20.allowance.selector;
         uint160 pad = 0x0;
-        uint32 ownerId = IHederaAccounts(HTS_ADDRESS).getAccountId(owner);
-        uint32 spenderId = IHederaAccounts(HTS_ADDRESS).getAccountId(spender);
+        (uint32 ownerId, ) = IHederaAccounts(HTS_ADDRESS).getAccountId(owner);
+        (uint32 spenderId, ) = IHederaAccounts(HTS_ADDRESS).getAccountId(spender);
         return bytes32(abi.encodePacked(selector, pad, spenderId, ownerId));
     }
 
     function _isAssociatedSlot(address account) internal virtual returns (bytes32) {
         bytes4 selector = IHRC719.isAssociated.selector;
         uint192 pad = 0x0;
-        uint32 accountId = IHederaAccounts(HTS_ADDRESS).getAccountId(account);
+        (uint32 accountId, ) = IHederaAccounts(HTS_ADDRESS).getAccountId(account);
         return bytes32(abi.encodePacked(selector, pad, accountId));
     }
 
@@ -883,8 +885,8 @@ contract HtsSystemContract is IHederaTokenService {
     function _isApprovedForAllSlot(address owner, address operator) internal virtual returns (bytes32) {
         bytes4 selector = IERC721.isApprovedForAll.selector;
         uint160 pad = 0x0;
-        uint32 ownerId = IHederaAccounts(HTS_ADDRESS).getAccountId(owner);
-        uint32 operatorId = IHederaAccounts(HTS_ADDRESS).getAccountId(operator);
+        (uint32 ownerId, ) = IHederaAccounts(HTS_ADDRESS).getAccountId(owner);
+        (uint32 operatorId, ) = IHederaAccounts(HTS_ADDRESS).getAccountId(operator);
         return bytes32(abi.encodePacked(selector, pad, ownerId, operatorId));
     }
 
@@ -1021,18 +1023,9 @@ contract HtsSystemContract is IHederaTokenService {
         emit IERC721.ApprovalForAll(sender, operator, approved);
     }
 
-    function __accountExists(address account) private returns (bool) {
+    function __accountIdBytes(address account) private returns (bytes32 data) {
         bytes32 slot = _accountIdSlot(account);
-        bytes32 data;
         assembly { data := sload(slot) }
-        return uint8(data[0]) == 1;
-    }
-
-    function __accountId(address account) private returns (uint32) {
-        bytes32 slot = _accountIdSlot(account);
-        bytes32 data;
-        assembly { data := sload(slot) }
-        return uint32(uint256(data));
     }
 
     function _accountIdSlot(address account) internal virtual returns (bytes32) {

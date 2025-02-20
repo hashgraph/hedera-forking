@@ -42,13 +42,13 @@ contract HTSTest is Test, TestSetup {
     function test_HTS_getAccountId_should_return_account_number() view external {
         // https://hashscan.io/testnet/account/0.0.1421
         address alice = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
-        uint32 accountId = IHederaAccounts(HTS_ADDRESS).getAccountId(alice);
+        (uint32 accountId, ) = IHederaAccounts(HTS_ADDRESS).getAccountId(alice);
         assertEq(accountId, testMode != TestMode.JSON_RPC
             ? uint32(bytes4(keccak256(abi.encodePacked(alice))))
             : 1421
         );
 
-        accountId = IHederaAccounts(HTS_ADDRESS).getAccountId(unknownUser);
+        (accountId, ) = IHederaAccounts(HTS_ADDRESS).getAccountId(unknownUser);
         assertEq(accountId, testMode != TestMode.JSON_RPC
             ? uint32(bytes4(keccak256(abi.encodePacked(unknownUser))))
             : uint32(uint160(unknownUser))
@@ -901,14 +901,5 @@ contract HTSTest is Test, TestSetup {
             .setApprovalForAll(CFNFTFF, operator, true);
         assertEq(setApprovalForAllResponseCode, HederaResponseCodes.SUCCESS);
         assertTrue(IERC721(CFNFTFF).isApprovedForAll(CFNFTFF_TREASURY, operator));
-    }
-
-    function test_HTS_accountExists_should_return_true_for_existing_account() view external {
-        assertTrue(IHederaAccounts(HTS_ADDRESS).accountExists(CFNFTFF_TREASURY));
-    }
-
-    function test_HTS_accountExists_should_return_false_for_non_existing_account() external {
-        address alice = makeAddr("alice");
-        assertFalse(IHederaAccounts(HTS_ADDRESS).accountExists(alice));
     }
 }
