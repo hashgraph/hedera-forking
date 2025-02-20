@@ -70,9 +70,9 @@ contract IHRC719TokenAssociationTest is Test, TestSetup {
     }
 
     function test_IHRC719_with_non_existing_account() external {
-        vm.expectRevert();
         address alice = makeAddr('alice');
         vm.prank(alice);
+        vm.expectRevert();
         IHRC719(USDC).isAssociated();
     }
 }
