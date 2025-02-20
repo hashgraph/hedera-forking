@@ -6,7 +6,7 @@ import "../contracts/Surl.sol";
 
 contract SurlTest is Test {
     string constant VALID_URL = "https://testnet.mirrornode.hedera.com/api/v1/accounts/0.0.4436613?transactions=false";
-    string constant NOT_FOUND_URL = "https://testnet.mirrornode.hedera.com/api/v1/accounts/0.0.0";
+    string constant NOT_FOUND_URL = "https://testnet.mirrornode.hedera.com/api/v1/accounts/9.0.0";
 
     bool isFFI;
 
