@@ -770,8 +770,6 @@ contract HtsSystemContract is IHederaTokenService {
             return abi.encode(true);
         }
         if (selector == IHRC719.isAssociated.selector) {
-            ( , bool exists) = IHederaAccounts(HTS_ADDRESS).getAccountId(msg.sender);
-            require(exists);
             bytes32 slot = _isAssociatedSlot(msg.sender);
             bool res;
             assembly { res := sload(slot) }
@@ -860,7 +858,8 @@ contract HtsSystemContract is IHederaTokenService {
     function _isAssociatedSlot(address account) internal virtual returns (bytes32) {
         bytes4 selector = IHRC719.isAssociated.selector;
         uint192 pad = 0x0;
-        (uint32 accountId, ) = IHederaAccounts(HTS_ADDRESS).getAccountId(account);
+        (uint32 accountId, bool exists) = IHederaAccounts(HTS_ADDRESS).getAccountId(account);
+        require(exists);
         return bytes32(abi.encodePacked(selector, pad, accountId));
     }
 
