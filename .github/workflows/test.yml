@@ -205,6 +205,48 @@ jobs:
       - name: Run Forge tests using JSON-RPC mock server for storage emulation (with forking)
         run: forge test -vvv --fork-url http://localhost:7546 --no-storage-caching
 
+  sol-tests-coverage:
+    name: 'Forge tests w/RPC mock server'
+    runs-on: smart-contracts-linux-medium
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@5c7944e73c4c2a096b17a9cb74d65b6c2bbafbde # v2.9.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout Code
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: step-security/foundry-toolchain@01e2d127ea061e2ce8fa34340de71ca8518f093e # v1.2.1
+        with:
+          version: nightly
+
+      - name: Run Forge build
+        run: |
+          forge --version
+          forge build
+
+      - name: Run Forge Coverage
+        run: forge coverage --report summary > summary.info
+
+     # - name: Upload Coverage
+     #   uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
+     #   with:
+     #     name: Coverage
+     #     path: summary.info
+
+    #  - name: Publish Test Report
+    #    uses: step-security/publish-unit-test-result-action@cc82caac074385ae176d39d2d143ad05e1130b2d # v2.18.0
+    #    if: ${{ !cancelled() }}
+    #    with:
+    #      check_name: 'Tests Coverage'
+    #      comment_mode: errors
+    #      json_thousands_separator: ','
+    #      files: 'summary.info'
+
   foundry-example-tests:
     name: 'Foundry example tests w/mainnet'
     runs-on: smart-contracts-linux-medium
