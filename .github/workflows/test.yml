@@ -233,22 +233,10 @@ jobs:
         run: forge coverage --summary > summary.info
 
       - name: Public Coverage
-        run: .github/publish.sh
-
-     # - name: Upload Coverage
-     #   uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
-     #   with:
-     #     name: Coverage
-     #     path: summary.info
-
-    #  - name: Publish Test Report
-    #    uses: step-security/publish-unit-test-result-action@cc82caac074385ae176d39d2d143ad05e1130b2d # v2.18.0
-    #    if: ${{ !cancelled() }}
-    #    with:
-    #      check_name: 'Tests Coverage'
-    #      comment_mode: errors
-    #      json_thousands_separator: ','
-    #      files: 'summary.info'
+        run: cat summary.info | .github/publish.sh
+        env:
+          GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_TOKEN: ${{ secrets.TOKEN }}
 
   foundry-example-tests:
     name: 'Foundry example tests w/mainnet'
