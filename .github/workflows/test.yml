@@ -47,7 +47,8 @@ jobs:
 
       - name: Run Forge Coverage
         run: forge coverage --summary > summary.info
-
+        env:
+          FOUNDRY_DISABLE_NIGHTLY_WARNING: true
       - name: Public Coverage
         run: cat summary.info | .github/publish.sh
         env:
