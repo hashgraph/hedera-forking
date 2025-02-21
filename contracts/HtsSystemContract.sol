@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 import {IERC20} from "./IERC20.sol";
 import {IERC721} from "./IERC721.sol";
 import {IHRC719} from "./IHRC719.sol";
-import {IHederaAccounts} from "./IHederaAccounts.sol";
 import {IHederaTokenService} from "./IHederaTokenService.sol";
 import {HederaResponseCodes} from "./HederaResponseCodes.sol";
 import {KeyLib} from "./KeyLib.sol";
@@ -37,6 +36,30 @@ contract HtsSystemContract is IHederaTokenService {
     modifier htsCall() {
         require(address(this) == HTS_ADDRESS, "htsCall: delegated call");
         _;
+    }
+
+    /**
+     * @dev Returns the Account ID and a flag indicating whether the account exists on the forked network (if any).
+     * - `accountId` a `uint32` representing the Account ID (excluding both shard and realm numbers) for the given `address`.
+     *   The storage adapter, _i.e._, `getHtsStorageAt`, assumes that both shard and realm
+     *   numbers are zero, allowing them to be omitted from the Account ID.
+     * - `exists` a boolean flag indicating whether the account exists on the forked network.
+     *
+     * See https://docs.hedera.com/hedera/core-concepts/accounts/account-properties
+     * for more info on account properties.
+     */
+    function getAccountId(address account) htsCall external view returns (uint32 accountId, bool exists) {
+        bytes32 slot = _getAccountIdSlot(account);
+        bytes32 value;
+        assembly { value := sload(slot) }
+        accountId = uint32(uint256(value));
+        exists = uint8(value[0]) == 1;
+    }
+
+    function _getAccountIdSlot(address account) internal virtual view returns (bytes32) {
+        bytes4 selector = this.getAccountId.selector;
+        uint64 pad = 0x0;
+        return bytes32(abi.encodePacked(selector, pad, account));
     }
 
     function mintToken(address token, int64 amount, bytes[] memory) htsCall external returns (
@@ -495,20 +518,8 @@ contract HtsSystemContract is IHederaTokenService {
         // 28: (bytes args for HTS method call, if any)
         require(msg.data.length >= 28, "fallback: not enough calldata");
 
-        bytes4 selector = bytes4(msg.data[0:4]);
-
-        // The implementation of the IHederaAccounts.getAccountId function logic is handled in the fallback function
-        // rather than a separate method because getAccountId must remain a view.
-        // This allows contracts inheriting from this one to override its logic
-        // using VM cheat codes to modify the contract's state before returning a value.
-        // Such modifications would not be possible if the function were strictly defined as view.
-        if (selector == IHederaAccounts.getAccountId.selector) {
-            require(address(this) == HTS_ADDRESS, "htsCall: delegated call");
-            bytes32 data = __accountIdBytes(address(bytes20(msg.data[16:36])));
-            return abi.encode(uint32(uint256(data)), uint8(data[0]) == 1);
-        }
-
-        require(selector == 0x618dc65e, "fallback: unsupported selector");
+        uint256 fallbackSelector = uint32(bytes4(msg.data[0:4]));
+        require(fallbackSelector == 0x618dc65e, "fallback: unsupported selector");
 
         address token = address(bytes20(msg.data[4:24]));
         require(token == address(this), "fallback: token is not caller");
@@ -843,22 +854,22 @@ contract HtsSystemContract is IHederaTokenService {
     function _balanceOfSlot(address account) internal virtual returns (bytes32) {
         bytes4 selector = IERC20.balanceOf.selector;
         uint192 pad = 0x0;
-        (uint32 accountId, ) = IHederaAccounts(HTS_ADDRESS).getAccountId(account);
+        (uint32 accountId, ) = HtsSystemContract(HTS_ADDRESS).getAccountId(account);
         return bytes32(abi.encodePacked(selector, pad, accountId));
     }
 
     function _allowanceSlot(address owner, address spender) internal virtual returns (bytes32) {
         bytes4 selector = IERC20.allowance.selector;
         uint160 pad = 0x0;
-        (uint32 ownerId, ) = IHederaAccounts(HTS_ADDRESS).getAccountId(owner);
-        (uint32 spenderId, ) = IHederaAccounts(HTS_ADDRESS).getAccountId(spender);
+        (uint32 ownerId, ) = HtsSystemContract(HTS_ADDRESS).getAccountId(owner);
+        (uint32 spenderId, ) = HtsSystemContract(HTS_ADDRESS).getAccountId(spender);
         return bytes32(abi.encodePacked(selector, pad, spenderId, ownerId));
     }
 
     function _isAssociatedSlot(address account) internal virtual returns (bytes32) {
         bytes4 selector = IHRC719.isAssociated.selector;
         uint192 pad = 0x0;
-        (uint32 accountId, bool exists) = IHederaAccounts(HTS_ADDRESS).getAccountId(account);
+        (uint32 accountId, bool exists) = HtsSystemContract(HTS_ADDRESS).getAccountId(account);
         require(exists);
         return bytes32(abi.encodePacked(selector, pad, accountId));
     }
@@ -884,8 +895,8 @@ contract HtsSystemContract is IHederaTokenService {
     function _isApprovedForAllSlot(address owner, address operator) internal virtual returns (bytes32) {
         bytes4 selector = IERC721.isApprovedForAll.selector;
         uint160 pad = 0x0;
-        (uint32 ownerId, ) = IHederaAccounts(HTS_ADDRESS).getAccountId(owner);
-        (uint32 operatorId, ) = IHederaAccounts(HTS_ADDRESS).getAccountId(operator);
+        (uint32 ownerId, ) = HtsSystemContract(HTS_ADDRESS).getAccountId(owner);
+        (uint32 operatorId, ) = HtsSystemContract(HTS_ADDRESS).getAccountId(operator);
         return bytes32(abi.encodePacked(selector, pad, ownerId, operatorId));
     }
 
@@ -1020,16 +1031,5 @@ contract HtsSystemContract is IHederaTokenService {
         bytes32 slot = _isApprovedForAllSlot(sender, operator);
         assembly { sstore(slot, approved) }
         emit IERC721.ApprovalForAll(sender, operator, approved);
-    }
-
-    function __accountIdBytes(address account) private returns (bytes32 data) {
-        bytes32 slot = _accountIdSlot(account);
-        assembly { data := sload(slot) }
-    }
-
-    function _accountIdSlot(address account) internal virtual returns (bytes32) {
-        bytes4 selector = IHederaAccounts.getAccountId.selector;
-        uint64 pad = 0x0;
-        return bytes32(abi.encodePacked(selector, pad, account));
     }
 }
