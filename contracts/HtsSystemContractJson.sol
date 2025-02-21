@@ -58,9 +58,30 @@ contract HtsSystemContractJson is HtsSystemContract {
      * @dev For testing, we support accounts created with `makeAddr`.
      * These accounts will not exist on the mirror node,
      * so we calculate a deterministic (but unique) ID at runtime as a fallback.
+     * The call to the Mirror Node verifies the existence of the account.
      */
-    function getAccountId(address account) htsCall external view override returns (uint32) {
-        return uint32(bytes4(keccak256(abi.encodePacked(account))));
+    function _getAccountIdSlot(address account) internal view override returns (bytes32) {
+        bytes32 slot = super._getAccountIdSlot(account);
+        if (_shouldFetch(slot)) {
+            uint32 accountId = uint32(bytes4(keccak256(abi.encodePacked(account))));
+            bytes32 value = bytes32(uint256(accountId));
+
+            // It uses low-level `statiscall`s to enable this function to be `view`.
+            bool success;
+            bytes memory json;
+            (success, json) = address(mirrorNode()).staticcall(abi.encodeWithSignature("fetchAccount(string)", vm.toString(account)));
+            if (success) {
+                if (vm.keyExistsJson(abi.decode(json, (string)), ".evm_address")) {
+                    value |= bytes32(uint256(1) << 248);
+                }
+            }
+
+            (success, ) = address(vm).staticcall(abi.encodeWithSignature("store(address,bytes32,bytes32)", address(this), slot, value));
+            require(success);
+            (success, ) = address(vm).staticcall(abi.encodeWithSignature("store(address,bytes32,bytes32)", _scratchAddr(), slot, bytes32(uint(1))));
+            require(success);
+        }
+        return slot;
     }
 
     function __redirectForToken() internal override returns (bytes memory) {

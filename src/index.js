@@ -96,7 +96,7 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
                 return ret(ZERO_HEX_32_BYTE, `shardNum in \`${account.account}\` is not zero`);
             if (realmNum !== '0')
                 return ret(ZERO_HEX_32_BYTE, `realmNum in \`${account.account}\` is not zero`);
-            return ret(`0x${toIntHex256(accountNum)}`, 'address to accountNum');
+            return ret(`0x01${toIntHex256(accountNum).slice(2)}`, 'address to accountNum');
         }
 
         return ret(ZERO_HEX_32_BYTE, `Requested slot for 0x167 matches field, not found`);

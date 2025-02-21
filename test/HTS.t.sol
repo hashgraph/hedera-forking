@@ -41,13 +41,13 @@ contract HTSTest is Test, TestSetup {
     function test_HTS_getAccountId_should_return_account_number() view external {
         // https://hashscan.io/testnet/account/0.0.1421
         address alice = 0x4D1c823b5f15bE83FDf5adAF137c2a9e0E78fE15;
-        uint32 accountId = HtsSystemContract(HTS_ADDRESS).getAccountId(alice);
+        (uint32 accountId, ) = HtsSystemContract(HTS_ADDRESS).getAccountId(alice);
         assertEq(accountId, testMode != TestMode.JSON_RPC
             ? uint32(bytes4(keccak256(abi.encodePacked(alice))))
             : 1421
         );
 
-        accountId = HtsSystemContract(HTS_ADDRESS).getAccountId(unknownUser);
+        (accountId, ) = HtsSystemContract(HTS_ADDRESS).getAccountId(unknownUser);
         assertEq(accountId, testMode != TestMode.JSON_RPC
             ? uint32(bytes4(keccak256(abi.encodePacked(unknownUser))))
             : uint32(uint160(unknownUser))

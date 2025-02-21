@@ -15,7 +15,7 @@ contract HtsSystemContract is IHederaTokenService {
     /**
      * The slot's value contains the next token ID to use when a token is being created.
      *
-     * This slot is used in the `0x167` address. 
+     * This slot is used in the `0x167` address.
      * It cannot be used as a state variable directly.
      * This is because JS' `getHtsStorageAt` implementation assumes all state variables
      * declared here are part of the token address space.
@@ -26,7 +26,7 @@ contract HtsSystemContract is IHederaTokenService {
     // These state variables are accessed with a `delegatecall` from the Token Proxy bytecode.
     // That is, they live in the token address storage space, not in the space of HTS `0x167`.
     // See `__redirectForToken` for more details.
-    string internal tokenType; 
+    string internal tokenType;
     uint8 internal decimals;
     TokenInfo internal _tokenInfo;
 
@@ -39,18 +39,27 @@ contract HtsSystemContract is IHederaTokenService {
     }
 
     /**
-     * @dev Returns the account id (omitting both shard and realm numbers) of the given `address`.
-     * The storage adapter, _i.e._, `getHtsStorageAt`, assumes that both shard and realm numbers are zero.
-     * Thus, they can be omitted from the account id.
+     * @dev Returns the Account ID and a flag indicating whether the account exists on the forked network (if any).
+     * - `accountId` a `uint32` representing the Account ID (excluding both shard and realm numbers) for the given `address`.
+     *   The storage adapter, _i.e._, `getHtsStorageAt`, assumes that both shard and realm
+     *   numbers are zero, allowing them to be omitted from the Account ID.
+     * - `exists` a boolean flag indicating whether the account exists on the forked network.
      *
      * See https://docs.hedera.com/hedera/core-concepts/accounts/account-properties
      * for more info on account properties.
      */
-    function getAccountId(address account) htsCall external virtual view returns (uint32 accountId) {
+    function getAccountId(address account) htsCall external view returns (uint32 accountId, bool exists) {
+        bytes32 slot = _getAccountIdSlot(account);
+        bytes32 value;
+        assembly { value := sload(slot) }
+        accountId = uint32(uint256(value));
+        exists = uint8(value[0]) == 1;
+    }
+
+    function _getAccountIdSlot(address account) internal virtual view returns (bytes32) {
         bytes4 selector = this.getAccountId.selector;
         uint64 pad = 0x0;
-        bytes32 slot = bytes32(abi.encodePacked(selector, pad, account));
-        assembly { accountId := sload(slot) }
+        return bytes32(abi.encodePacked(selector, pad, account));
     }
 
     function mintToken(address token, int64 amount, bytes[] memory) htsCall external returns (
@@ -845,22 +854,23 @@ contract HtsSystemContract is IHederaTokenService {
     function _balanceOfSlot(address account) internal virtual returns (bytes32) {
         bytes4 selector = IERC20.balanceOf.selector;
         uint192 pad = 0x0;
-        uint32 accountId = HtsSystemContract(HTS_ADDRESS).getAccountId(account);
+        (uint32 accountId, ) = HtsSystemContract(HTS_ADDRESS).getAccountId(account);
         return bytes32(abi.encodePacked(selector, pad, accountId));
     }
 
     function _allowanceSlot(address owner, address spender) internal virtual returns (bytes32) {
         bytes4 selector = IERC20.allowance.selector;
         uint160 pad = 0x0;
-        uint32 ownerId = HtsSystemContract(HTS_ADDRESS).getAccountId(owner);
-        uint32 spenderId = HtsSystemContract(HTS_ADDRESS).getAccountId(spender);
+        (uint32 ownerId, ) = HtsSystemContract(HTS_ADDRESS).getAccountId(owner);
+        (uint32 spenderId, ) = HtsSystemContract(HTS_ADDRESS).getAccountId(spender);
         return bytes32(abi.encodePacked(selector, pad, spenderId, ownerId));
     }
 
     function _isAssociatedSlot(address account) internal virtual returns (bytes32) {
         bytes4 selector = IHRC719.isAssociated.selector;
         uint192 pad = 0x0;
-        uint32 accountId = HtsSystemContract(HTS_ADDRESS).getAccountId(account);
+        (uint32 accountId, bool exists) = HtsSystemContract(HTS_ADDRESS).getAccountId(account);
+        require(exists);
         return bytes32(abi.encodePacked(selector, pad, accountId));
     }
 
@@ -885,8 +895,8 @@ contract HtsSystemContract is IHederaTokenService {
     function _isApprovedForAllSlot(address owner, address operator) internal virtual returns (bytes32) {
         bytes4 selector = IERC721.isApprovedForAll.selector;
         uint160 pad = 0x0;
-        uint32 ownerId = HtsSystemContract(HTS_ADDRESS).getAccountId(owner);
-        uint32 operatorId = HtsSystemContract(HTS_ADDRESS).getAccountId(operator);
+        (uint32 ownerId, ) = HtsSystemContract(HTS_ADDRESS).getAccountId(owner);
+        (uint32 operatorId, ) = HtsSystemContract(HTS_ADDRESS).getAccountId(operator);
         return bytes32(abi.encodePacked(selector, pad, ownerId, operatorId));
     }
 
