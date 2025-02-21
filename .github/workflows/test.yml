@@ -53,11 +53,8 @@ jobs:
       - name: Mock curl
         run: echo "./test/scripts" >> "$GITHUB_PATH"
 
-      - name: Run Forge tests using JSON-RPC Mainnet and Testnet servers (with forking)
-        run: forge test -vvv --fork-url https://testnet.hashio.io/api --fork-block-number 13890397
-
       - name: Run Forge Coverage
-        run: forge coverage --summary --fork-url https://testnet.hashio.io/api --fork-block-number 13890397
+        run: forge coverage --summary --fork-url https://testnet.hashio.io/api --fork-block-number 13890397 > summary.info
 
       - name: Public Coverage
         run: cat summary.info | .github/publish.sh
