@@ -46,7 +46,7 @@ jobs:
           forge build
 
       - name: Run Forge Coverage
-        run: forge coverage --summary > summary.info
+        run: forge coverage --summary
         env:
           FOUNDRY_DISABLE_NIGHTLY_WARNING: true
       - name: Public Coverage
