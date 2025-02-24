@@ -6,6 +6,7 @@ processed_output=$(echo "$input" | awk '/Test Summary:/ {flag=1; next} flag' | t
 line4=$(echo "$processed_output" | sed -n '4p')
 modified_output=$(echo "$processed_output" | awk -v line4="$line4" 'NR==2 {$0=line4} 1')
 final_output=$(echo -e "$modified_output\n\n$(echo "$input" | awk '/-╯/ {flag=1; next} flag')")
+echo "https://api.github.com/repos/hedera-forking/issues/$GITHUB_PR_NUMBER/comments"
 curl -L \
   -X POST \
   -H "Authorization: Bearer $GITHUB_TOKEN" \
