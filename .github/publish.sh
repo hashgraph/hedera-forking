@@ -2,6 +2,8 @@
 
 
 input=$(cat)
+echo "$input"
+echo "\n----\n"
 processed_output=$(echo "$input" | awk '/Test Summary:/ {flag=1; next} flag' | tail -n +3 | awk '!/╰/{print} /╰/ {exit}' | sed 's/+/|/g')
 echo "$processed_output"
 
