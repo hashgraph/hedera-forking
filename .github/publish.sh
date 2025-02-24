@@ -11,4 +11,4 @@ curl -L \
   -X POST \
   -H "Authorization: Bearer $GITHUB_TOKEN" \
   "https://api.github.com/repos/$GITHUB_REPOSITORY/issues/$GITHUB_PR_NUMBER/comments" \
-  -d "{\"body\":\"TEST CONTENT\"}"
+  -d "{\"body\":\"### Coverage: $final_output\"}"
