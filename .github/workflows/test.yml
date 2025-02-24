@@ -50,11 +50,8 @@ jobs:
           forge --version
           forge build
 
-      - name: Mock curl
-        run: echo "./test/scripts" >> "$GITHUB_PATH"
-
       - name: Run Forge Coverage
-        run: forge coverage --summary --fork-url https://testnet.hashio.io/api --fork-block-number 13890397 > summary.info
+        run: forge coverage --summary > summary.info
 
       - name: Public Coverage
         run: cat summary.info | .github/publish.sh
