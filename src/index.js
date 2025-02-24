@@ -248,7 +248,7 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
             tokenId,
             blockNumber,
             nrequestedSlot,
-            atob(metadata),
+            Buffer.from(metadata, 'base64').toString(),
             't_string_storage'
         );
     }
@@ -273,7 +273,7 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
                 `Failed to get the metadata of the NFT ${tokenId}#${serialId}`
             );
         const timestamp = Number(created_timestamp.split('.')[0]).toString(16).padStart(64, '0');
-        const metadataEncoded = Buffer.from(metadata).toString('hex');
+        const metadataEncoded = Buffer.from(metadata, 'utf-8').toString('hex');
         const metadataLength = metadata.length.toString(16).padStart(64, '0');
         const stringTypeIndicator = '40'.padStart(64, '0');
         const bytes = `${timestamp}${stringTypeIndicator}${metadataLength}${metadataEncoded}`;
