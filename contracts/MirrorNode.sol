@@ -30,26 +30,24 @@ abstract contract MirrorNode {
 
     function fetchTokenRelationshipOfAccount(string memory account, address token) external virtual returns (string memory json);
 
-    function fetchNonFungibleToken(address token, uint32 serial) external virtual returns (string memory json);
+    function fetchNonFungibleTokenSerial(address token, uint32 serial) external virtual returns (string memory json);
 
-    function getNftMetadata(address token, uint32 serial) external returns (string memory) {
-        string memory json = this.fetchNonFungibleToken(token, serial);
+    function getNftMetadataAndCreatedTimestamp(address token, uint32 serial) external returns (string memory metadata, string memory createdTimestamp) {
+        string memory json = this.fetchNonFungibleTokenSerial(token, serial);
         if (vm.keyExistsJson(json, ".metadata")) {
-            return vm.parseJsonString(json, ".metadata");
+            metadata = vm.parseJsonString(json, ".metadata");
+        } else {
+            metadata = "";
         }
-        return "";
-    }
-
-    function getNftCreatedTimestamp(address token, uint32 serial) external returns (string memory) {
-        string memory json = this.fetchNonFungibleToken(token, serial);
         if (vm.keyExistsJson(json, ".created_timestamp")) {
-            return vm.parseJsonString(json, ".created_timestamp");
+            createdTimestamp = vm.parseJsonString(json, ".created_timestamp");
+        } else {
+            createdTimestamp = "";
         }
-        return "";
     }
 
     function getNftOwner(address token, uint32 serial) external returns (address) {
-        string memory json = this.fetchNonFungibleToken(token, serial);
+        string memory json = this.fetchNonFungibleTokenSerial(token, serial);
         if (vm.keyExistsJson(json, ".account_id")) {
             string memory owner = vm.parseJsonString(json, ".account_id");
             return getAccountAddress(owner);
@@ -58,7 +56,7 @@ abstract contract MirrorNode {
     }
 
     function getNftSpender(address token, uint32 serial) external returns (address) {
-        string memory json = this.fetchNonFungibleToken(token, serial);
+        string memory json = this.fetchNonFungibleTokenSerial(token, serial);
         if (vm.keyExistsJson(json, ".spender")) {
             string memory spender = vm.parseJsonString(json, ".spender");
             return getAccountAddress(spender);

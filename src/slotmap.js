@@ -316,7 +316,7 @@ class PersistentStorageMap {
      * @param {number} blockNumber
      * @param {bigint} slot
      * @param {Value} value
-     * @param {string} type
+     * @param {'t_string_storage' | 't_bytes_storage'} type
      */
     store(tokenId, blockNumber, slot, value, type) {
         visit(

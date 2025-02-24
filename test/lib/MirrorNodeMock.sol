@@ -58,7 +58,7 @@ contract MirrorNodeMock is MirrorNode {
         return vm.readFile(path);
     }
 
-    function fetchNonFungibleToken(address token, uint32 serial) external override view returns (string memory) {
+    function fetchNonFungibleTokenSerial(address token, uint32 serial) external override view returns (string memory) {
         string memory symbol = _symbolOf[token];
         string memory serialId = vm.toString(serial);
         string memory path = string.concat("./test/data/", symbol, "/getNonFungibleToken_", serialId, ".json");
