@@ -23,6 +23,8 @@ const sinon = require('sinon');
 const { JsonRpcProvider } = require('ethers');
 const hre = require('hardhat');
 
+const IERC20 = require('../../../out/IERC20.sol/IERC20.json');
+
 describe('hedera-fork-project', function () {
     const tokenAddress = '0x000000000000000000000000000000000047b52a';
     const accountAddress = '0x292c4acf9ec49af888d4051eb4a4dc53694d1380';
@@ -39,7 +41,7 @@ describe('hedera-fork-project', function () {
             tokenAddress,
             getHIP719Code(tokenAddress),
         ]);
-        ft = await hre.ethers.getContractAt('IERC20', tokenAddress);
+        ft = await hre.ethers.getContractAt(IERC20.abi, tokenAddress);
         fetchStub = sinon.stub(global, 'fetch');
         for (const { endpoint, response } of require('./mirrorNodeResponses.json')) {
             fetchStub

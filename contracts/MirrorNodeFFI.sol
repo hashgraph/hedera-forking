@@ -2,10 +2,10 @@
 pragma solidity ^0.8.0;
 
 import {Vm} from "forge-std/Vm.sol";
-import {Surl} from "surl/src/Surl.sol";
 import {MirrorNode} from "./MirrorNode.sol";
 import {HtsSystemContract, HTS_ADDRESS} from "./HtsSystemContract.sol";
 import {storeString} from "./StrStore.sol";
+import {Surl} from "./Surl.sol";
 
 /**
  * Fetches Token data from the Mirror Node through Foundry's FFI.

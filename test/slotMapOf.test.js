@@ -16,9 +16,10 @@
  * limitations under the License.
  */
 
+const { strict: assert } = require('assert');
 const { expect } = require('chai');
 
-const { slotMapOf, packValues } = require('../src/slotmap');
+const { slotMapOf, packValues, setLedgerId } = require('../src/slotmap');
 const { toIntHex256 } = require('../src/utils');
 
 const mirrorNode =
@@ -81,6 +82,36 @@ describe('::slotmap', function () {
         ].forEach(({ values, result }) => {
             it(`should pack ${JSON.stringify(values)} into 0x${result.toString(16)}`, function () {
                 expect(packValues(values)).to.be.equal(toIntHex256(result));
+            });
+        });
+    });
+
+    describe('setLedgerId', function () {
+        const getLedgerId = () => {
+            const map = slotMapOf(require(`../test/data/USDC/getToken.json`));
+            const [[{ offset, value }]] = [...map._map.values()].filter(
+                a => a.length === 1 && a[0].path.endsWith('.ledgerId')
+            );
+            assert(offset === 0);
+            assert(typeof value === 'string');
+            return Buffer.from(value.slice(0, -2), 'hex').toString().replaceAll('\u0000', '');
+        };
+
+        it('should return default ledgerId when no ledgedId has been set', function () {
+            expect(getLedgerId()).to.be.equal('0x00');
+        });
+
+        [
+            { chainId: undefined, ledgerId: '0x00' },
+            { chainId: 1, ledgerId: '0x00' },
+            { chainId: 295, ledgerId: '0x00' },
+            { chainId: 296, ledgerId: '0x01' },
+            { chainId: 297, ledgerId: '0x02' },
+            { chainId: 298, ledgerId: '0x03' },
+        ].forEach(({ chainId, ledgerId }) => {
+            it(`should set ledgerId=${ledgerId} when chainId is ${chainId}`, function () {
+                setLedgerId(chainId);
+                expect(getLedgerId()).to.be.equal(ledgerId);
             });
         });
     });

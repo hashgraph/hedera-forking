@@ -16,9 +16,6 @@
  * limitations under the License.
  */
 
-/* eslint-disable mocha/no-skipped-tests */
-const { inspect } = require('util');
-
 const { strict: assert } = require('assert');
 const { expect } = require('chai');
 const { Contract, JsonRpcProvider, Wallet } = require('ethers');
@@ -168,7 +165,7 @@ describe('::e2e', function () {
             expect('_status' in token, `Token "${title}" \`${tokenId}\` not found`).to.be.false;
         }
 
-        const { host: forwarderUrl } = await jsonRPCForwarder(jsonRpcRelayUrl, mirrorNodeUrl);
+        const { host: forwarderUrl } = await jsonRPCForwarder(jsonRpcRelayUrl, mirrorNodeUrl, 298);
         anvilHost = await anvil(forwarderUrl);
 
         // Ensure HTS emulation is reachable
@@ -228,23 +225,24 @@ describe('::e2e', function () {
 
                 // These reverts instead of returning `false`.
                 // Should we have the same behavior in emulated HTS?
-                it.skip('should get not `isAssociated` for non-existing non-associated accounts', async function () {
-                    expect(await ERC20['isAssociated']({ from: nonAssocAddress0 })).to.be.equal(
-                        false
+                it('should get not `isAssociated` for non-existing non-associated accounts', async function () {
+                    await assert.rejects(
+                        () => ERC20['isAssociated']({ from: nonAssocAddress0 }),
+                        Error
                     );
-                    expect(await ERC20['isAssociated']({ from: nonAssocAddress1 })).to.be.equal(
-                        false
+                    await assert.rejects(
+                        () => ERC20['isAssociated']({ from: nonAssocAddress1 }),
+                        Error
                     );
                 });
 
                 // To enable this, we need to change `getTokenInfo` to a `view` function
-                it.skip("should retrieve token's metadata through `getTokenInfo`", async function () {
-                    const info = await HTS['getTokenInfo'](tokenAddress);
-                    console.log(inspect(info, { depth: null }));
+                it("should retrieve token's metadata through `getTokenInfo`", async function () {
+                    const tokenInfo = await HTS['getTokenInfo'](tokenAddress);
                     if (self.tokenInfo === undefined) {
-                        self.tokenInfo = info;
+                        self.tokenInfo = tokenInfo;
                     } else {
-                        expect(info).to.be.deep.equal(self.tokenInfo);
+                        expect(self.tokenInfo).to.be.deep.equal(tokenInfo);
                     }
                 });
 
@@ -304,8 +302,7 @@ describe('::e2e', function () {
             title: 'with Fungible Token with no supply key',
             create: () => createToken({ noSupplyKey: true }),
             tests: () => {
-                // https://github.com/hashgraph/hedera-forking/issues/167
-                it.skip('should not mint because there is no supply key', async function () {
+                it('should not mint because there is no supply key', async function () {
                     const preTreasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
                     const preTotalSupply = await ERC20['totalSupply']();
 

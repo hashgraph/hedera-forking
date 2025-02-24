@@ -146,7 +146,7 @@ describe('::getHtsStorageAt', function () {
                 ...mirrorNodeClientStub,
                 getAccount,
             });
-            expect(result).to.be.equal(`0x${'58d'.padStart(64, '0')}`);
+            expect(result).to.be.equal(`0x01${'58d'.padStart(62, '0')}`);
         });
     });
     /**

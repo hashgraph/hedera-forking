@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import {Vm} from "forge-std/Vm.sol";
 import {decode} from './Base64.sol';
+import {IHederaTokenService} from "./IHederaTokenService.sol";
 import {HtsSystemContract, HTS_ADDRESS} from "./HtsSystemContract.sol";
 import {IERC20} from "./IERC20.sol";
 import {MirrorNode} from "./MirrorNode.sol";
@@ -57,9 +58,30 @@ contract HtsSystemContractJson is HtsSystemContract {
      * @dev For testing, we support accounts created with `makeAddr`.
      * These accounts will not exist on the mirror node,
      * so we calculate a deterministic (but unique) ID at runtime as a fallback.
+     * The call to the Mirror Node verifies the existence of the account.
      */
-    function getAccountId(address account) htsCall external view override returns (uint32) {
-        return uint32(bytes4(keccak256(abi.encodePacked(account))));
+    function _getAccountIdSlot(address account) internal view override returns (bytes32) {
+        bytes32 slot = super._getAccountIdSlot(account);
+        if (_shouldFetch(slot)) {
+            uint32 accountId = uint32(bytes4(keccak256(abi.encodePacked(account))));
+            bytes32 value = bytes32(uint256(accountId));
+
+            // It uses low-level `statiscall`s to enable this function to be `view`.
+            bool success;
+            bytes memory json;
+            (success, json) = address(mirrorNode()).staticcall(abi.encodeWithSignature("fetchAccount(string)", vm.toString(account)));
+            if (success) {
+                if (vm.keyExistsJson(abi.decode(json, (string)), ".evm_address")) {
+                    value |= bytes32(uint256(1) << 248);
+                }
+            }
+
+            (success, ) = address(vm).staticcall(abi.encodeWithSignature("store(address,bytes32,bytes32)", address(this), slot, value));
+            require(success);
+            (success, ) = address(vm).staticcall(abi.encodeWithSignature("store(address,bytes32,bytes32)", _scratchAddr(), slot, bytes32(uint(1))));
+            require(success);
+        }
+        return slot;
     }
 
     function __redirectForToken() internal override returns (bytes memory) {
@@ -73,19 +95,24 @@ contract HtsSystemContractJson is HtsSystemContract {
         return MirrorNode(address(uint160(uint256(vm.load(HTS_ADDRESS, slot)))));
     }
 
-    function deploySetTokenInfo(address tokenAddress) override internal {
-        bytes memory creationCode = vm.getCode("SetTokenInfo.sol");
-        vm.etch(tokenAddress, creationCode);
-        (bool success, bytes memory runtimeBytecode) = tokenAddress.call("");
-        require(success, "deploySetTokenInfo: Failed to create runtime bytecode");
-        vm.etch(tokenAddress, runtimeBytecode);
-    }
-
     function deployHIP719Proxy(address tokenAddress) override internal {
         string memory placeholder = "fefefefefefefefefefefefefefefefefefefefe";
         string memory addressString = vm.replace(vm.toString(tokenAddress), "0x", "");
         string memory proxyBytecode = vm.replace(_HIP719TemplateBytecode, placeholder, addressString);
         vm.etch(tokenAddress, vm.parseBytes(proxyBytecode));
+    }
+
+    function __setTokenInfo(string memory tokenType_, IHederaTokenService.TokenInfo memory tokenInfo, int32 decimals_) public override {
+        // Marks the `_tokenInfo` as initialized.
+        // This avoids fetching token data from the Mirror Node.
+        // It is needed because the token only exists in the local EVM state,
+        // not in the remote network.
+        bytes32 initSlot = _initSlot;
+        assembly { sstore(initSlot, 1) }
+        bytes32 isLocalTokenSlot = _isLocalTokenSlot;
+        assembly { sstore(isLocalTokenSlot , 1) }
+
+        super.__setTokenInfo(tokenType_, tokenInfo, decimals_);
     }
 
     /**
@@ -217,13 +244,23 @@ contract HtsSystemContractJson is HtsSystemContract {
         tokenInfo.token = _getHederaToken(json);
         tokenInfo.fixedFees = _getFixedFees(json);
         tokenInfo.fractionalFees = _getFractionalFees(json);
-        tokenInfo.royaltyFees = _getRoyaltyFees(json);
+        tokenInfo.royaltyFees = _getRoyaltyFees(_sanitizeFeesStructure(json));
         tokenInfo.ledgerId = _getLedgerId();
         tokenInfo.defaultKycStatus = false; // not available in the fetched JSON from mirror node
         tokenInfo.totalSupply = int64(vm.parseInt(vm.parseJsonString(json, ".total_supply")));
         tokenInfo.deleted = vm.parseJsonBool(json, ".deleted");
         tokenInfo.pauseStatus = keccak256(bytes(vm.parseJsonString(json, ".pause_status"))) == keccak256(bytes("PAUSED"));
         return tokenInfo;
+    }
+
+    // In order to properly decode the bytes returned by the parseJson into the Solidity Structure, the full,
+    // correct structure has to be provided in the input json, with all of the corresponding fields.
+    function _sanitizeFeesStructure(string memory json) private pure returns (string memory) {
+        return vm.replace(
+            json,
+            "\"fallback_fee\":null}",
+            "\"fallback_fee\":{\"amount\":0,\"denominating_token_id\":\"\"}}"
+        );
     }
 
     function _getHederaToken(string memory json) private returns (HederaToken memory token) {
@@ -234,7 +271,7 @@ contract HtsSystemContractJson is HtsSystemContract {
         token.tokenSupplyType = keccak256(bytes(vm.parseJsonString(json, ".supply_type"))) == keccak256(bytes("FINITE"));
         token.maxSupply = int64(vm.parseInt(vm.parseJsonString(json, ".max_supply")));
         token.freezeDefault = vm.parseJsonBool(json, ".freeze_default");
-        token.expiry.second = abi.decode(vm.parseJson(json, ".expiry_timestamp"), (int64));
+        token.expiry.second = abi.decode(vm.parseJson(json, ".expiry_timestamp"), (int64)) / 1_000_000_000;
 
         try vm.parseJsonString(json, ".auto_renew_account") returns (string memory autoRenewAccount) {
             if (keccak256(bytes(autoRenewAccount)) != keccak256(bytes("null"))) {
@@ -394,7 +431,6 @@ contract HtsSystemContractJson is HtsSystemContract {
         if (!vm.keyExistsJson(json, ".custom_fees.royalty_fees")) {
             return new RoyaltyFee[](0);
         }
-
         try vm.parseJson(json, ".custom_fees.royalty_fees") returns (bytes memory royaltyFeesBytes) {
             if (royaltyFeesBytes.length == 0) {
                 return new RoyaltyFee[](0);
@@ -404,11 +440,16 @@ contract HtsSystemContractJson is HtsSystemContract {
             for (uint i = 0; i < fees.length; i++) {
                 string memory path = vm.replace(".custom_fees.royalty_fees[{i}]", "{i}", vm.toString(i));
                 address collectorAccount = mirrorNode().getAccountAddress(vm.parseJsonString(json, string.concat(path, ".collector_account_id")));
+                bytes memory denominatingTokenBytes = vm.parseJson(json, string.concat(path, ".denominating_token_id"));
+                address denominatingToken;
+                if (keccak256(denominatingTokenBytes) != keccak256("")) {
+                    denominatingToken = mirrorNode().getAccountAddress(vm.parseJsonString(json, string.concat(path, ".denominating_token_id")));
+                }
                 royaltyFees[i] = RoyaltyFee(
                     int64(vm.parseJsonInt(json, string.concat(path, ".amount.numerator"))),
                     int64(vm.parseJsonInt(json, string.concat(path, ".amount.denominator"))),
                     int64(vm.parseJsonInt(json, string.concat(path, ".fallback_fee.amount"))),
-                    mirrorNode().getAccountAddress(vm.parseJsonString(json, string.concat(path, ".denominating_token_id"))),
+                    denominatingToken,
                     collectorAccount == address(0),
                     collectorAccount
                 );
@@ -423,6 +464,7 @@ contract HtsSystemContractJson is HtsSystemContract {
         if (block.chainid == 295) return "0x00"; // Mainnet
         if (block.chainid == 296) return "0x01"; // Testnet
         if (block.chainid == 297) return "0x02"; // Previewnet
+        if (block.chainid == 298) return "0x03"; // Localhost
         return "0x00"; // Default to Mainnet
     }
 

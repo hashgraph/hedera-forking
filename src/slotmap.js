@@ -25,6 +25,19 @@ const {
 } = require('../out/HtsSystemContract.sol/HtsSystemContract.json');
 
 /**
+ * The `ledgerId` used when retrieving fungible and non-fungible tokens.
+ */
+let ledgerId = '0x00';
+
+/**
+ * @param {number=} chainId
+ */
+function setLedgerId(chainId) {
+    const chainIdToLedgerId = { 295: '0x00', 296: '0x01', 297: '0x02', 298: '0x03' };
+    ledgerId = chainIdToLedgerId[/**@type{keyof typeof chainIdToLedgerId}*/ (chainId)] ?? '0x00';
+}
+
+/**
  * Represents the value in the `SlotMap`.
  * This can be either a `string`, or a function that returns a `string`.
  * The latter was introduced to support "lazy-loading" of values that
@@ -227,10 +240,10 @@ function slotMapOf(token) {
     // token['inherit_account_key'] = ZERO_HEX_32_BYTE;
     // token['delegatable_contract_id'] = zeroAddress();
     token['treasury'] = token['treasury_account_id'];
-    token['ledger_id'] = '0x00';
+    token['ledger_id'] = ledgerId;
     // Every inner `struct` will be flattened by `visit`,
     // so it uses the last part of the field path, _i.e._, `.second`.
-    token['second'] = `${token['expiry_timestamp']}`;
+    token['second'] = `${BigInt(`${token['expiry_timestamp']}`) / 1_000_000_000n}`;
     token['pause_status'] = token['pause_status'] === 'PAUSED';
     token['token_keys'] = /**@type {const}*/ ([
         ['admin_key', 0x1],
@@ -267,7 +280,17 @@ function slotMapOf(token) {
         maximum_amount: fee['maximum'],
         fee_collector: fee['collector_account_id'],
     }));
-    token['royalty_fees'] = customFees['royalty_fees'] ?? [];
+    token['royalty_fees'] = (customFees['royalty_fees'] ?? []).map(fee => ({
+        all_collectors_are_exempt: fee['all_collectors_are_exempt'],
+        numerator: /**@type{{numerator: unknown}}*/ (fee['amount'])['numerator'],
+        denominator: /**@type{{denominator: unknown}}*/ (fee['amount'])['denominator'],
+        collector_account_id: fee['collector_account_id'],
+        amount: /**@type{{amount: unknown}}*/ (fee['fallback_fee'] || {})['amount'],
+        tokenId: /**@type{{denominating_token_id: unknown}}*/ (fee['fallback_fee'] || {})[
+            'denominating_token_id'
+        ],
+        fee_collector: fee['collector_account_id'],
+    }));
 
     const map = new SlotMap();
     storage.forEach(slot => visit(slot, 0n, token, '', map));
@@ -340,4 +363,4 @@ class PersistentStorageMap {
     }
 }
 
-module.exports = { packValues, slotMapOf, PersistentStorageMap };
+module.exports = { packValues, slotMapOf, PersistentStorageMap, setLedgerId };
