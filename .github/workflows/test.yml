@@ -264,13 +264,16 @@ jobs:
           forge --version
           forge build
 
-      - name: Public Coverage Report
-        run: forge coverage --summary | .github/publish_coverage.sh
+      - name: Publish Coverage Report
+        run: |
+          set -o pipefail
+          forge coverage --summary | tee coverage.out
+          [ "${PIPESTATUS[0]}" -eq 0 ] || exit 1
+          .github/publish_coverage.sh < coverage.out
         env:
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   e2e-test:
     name: 'NPM e2e validation tests'
     runs-on: smart-contracts-linux-medium
