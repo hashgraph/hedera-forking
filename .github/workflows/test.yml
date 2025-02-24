@@ -11,6 +11,9 @@ on:
     branches:
       - main
 
+permissions:
+  pull-requests: write
+
 env:
   FOUNDRY_PROFILE: ci
 
