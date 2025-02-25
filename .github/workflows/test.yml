@@ -264,16 +264,28 @@ jobs:
           forge --version
           forge build
 
-      - name: Publish Coverage Report
+      - name: Generate Coverage Report
         run: |
-          set -o pipefail
-          forge coverage --summary | tee coverage.out
-          [ "${PIPESTATUS[0]}" -eq 0 ] || exit 1
-          .github/publish_coverage.sh < coverage.out
-        env:
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          forge coverage --report lcov
+          cat lcov.info
+
+      - name: Convert LCOV to Istanbul Text Format
+        run: |
+          .github/lcovtoistanbul lcov.info > istanbul.txt
+          cat istanbul.txt
+
+      - name: Prepare coverage report in markdown
+        uses: fingerprintjs/action-coverage-report-md@72dfb7de7581612640a8e599e918b2eda98f9bba
+        id: coverage
+        with:
+          textReportPath: istanbul.txt
+          srcBasePath: .
+
+      - name: Add coverage comment to the PR
+        uses: marocchino/sticky-pull-request-comment@52423e01640425a022ef5fd42c6fb5f633a02728
+        with:
+          message: ${{ steps.coverage.outputs.markdownReport }}
+
   e2e-test:
     name: 'NPM e2e validation tests'
     runs-on: smart-contracts-linux-medium
