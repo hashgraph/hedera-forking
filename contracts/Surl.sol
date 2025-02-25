@@ -30,7 +30,7 @@ library Surl {
      * @return data The response body as raw bytes.
      */
     function get(string memory url) internal returns (uint256, bytes memory) {
-        if (!_isWindowsOS()) _bash(url);
+        if (!_isWindowsOS()) return _bash(url);
         if (_isPowerShellAvailable()) return _powershell(url);
         return _cmd(url);
     }
@@ -85,22 +85,19 @@ library Surl {
         try vm.ffi(inputs) returns (bytes memory output) {
             res = output;
             string memory osName = string(res);
-            if (keccak256(bytes(osName)) == keccak256(bytes("Windows_NT"))) {
-                return true;
-            }
+            if (keccak256(bytes(osName)) == keccak256(bytes("Windows_NT"))) return true;
         } catch {}
         inputs[2] = "ver";
         try vm.ffi(inputs) returns (bytes memory output) {
             res = output;
             string memory osVersion = string(res);
-            return bytes(osVersion).length >= bytes("Windows").length &&
-                (bytes(osVersion).length - bytes("Windows").length) >= 0;
+            return _containsSubstring(osVersion, "Windows ");
         } catch {}
         return false;
     }
 
     function _isPowerShellAvailable() internal returns (bool available) {
-        string memory inputs = new string[](3);
+        string[] memory inputs = new string[](3);
         inputs[0] = "cmd";
         inputs[1] = "/C";
         inputs[2] = "powershell -Command \"$PSVersionTable.PSVersion.Major\"";
@@ -111,5 +108,31 @@ library Surl {
         } catch {
             available = false;
         }
+    }
+
+    function _containsSubstring(string memory str, string memory sub) internal pure returns (bool) {
+        bytes memory strBytes = bytes(str);
+        bytes memory subBytes = bytes(sub);
+
+        if (subBytes.length > strBytes.length) {
+            return false;
+        }
+
+        bool found = false;
+        for (uint256 i = 0; i <= strBytes.length - subBytes.length; i++) {
+            bool matchFound = true;
+            for (uint256 j = 0; j < subBytes.length; j++) {
+                if (strBytes[i + j] != subBytes[j]) {
+                    matchFound = false;
+                    break;
+                }
+            }
+            if (matchFound) {
+                found = true;
+                break;
+            }
+        }
+
+        return found;
     }
 }
