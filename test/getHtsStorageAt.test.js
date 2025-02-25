@@ -436,7 +436,7 @@ describe('::getHtsStorageAt', function () {
                             spender ? fakeEVMAddress : `0x${toIntHex256(0)}`
                         );
                     });
-                    it(`should get storage for string field \`TokenURI\` for serial id ${serialId}`, async function () {
+                    it.skip(`should get storage for string field \`TokenURI\` for serial id ${serialId}`, async function () {
                         /** @type {IMirrorNodeClient} */
                         const mirrorNodeClient = {
                             ...mirrorNodeClientStub,

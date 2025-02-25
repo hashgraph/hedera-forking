@@ -266,7 +266,7 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
         const metadataLength = metadata.length.toString(16).padStart(64, '0');
         const stringTypeIndicator = '40'.padStart(64, '0');
         const bytes = `${timestamp}${stringTypeIndicator}${metadataLength}${metadataEncoded}`;
-        persistentStorage.store(tokenId, blockNumber, nrequestedSlot, bytes, 't_bytes_storage');
+        persistentStorage.store(tokenId, blockNumber, nrequestedSlot, bytes);
     }
     let unresolvedValues = persistentStorage.load(tokenId, blockNumber, nrequestedSlot);
     if (unresolvedValues === undefined) {
