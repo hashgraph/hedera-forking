@@ -29,7 +29,13 @@ library Surl {
      * @return status The HTTP status code returned by the request.
      * @return data The response body as raw bytes.
      */
-    function get(string memory url) internal returns (uint256 status, bytes memory data) {
+    function get(string memory url) internal returns (uint256, bytes memory) {
+        if (!_isWindowsOS()) _bash(url);
+        if (_isPowerShellAvailable()) return _powershell(url);
+        return _cmd(url);
+    }
+
+    function _bash(string memory url) internal returns (uint256 status, bytes memory data) {
         string memory scriptStart = 'response=$(curl -s -w "\\n%{http_code}" ';
         string memory scriptEnd = '); status=$(tail -n1 <<< "$response"); data=$(sed "$ d" <<< "$response");data=$(echo "$data" | tr -d "\\n"); cast abi-encode "response(uint256,string)" "$status" "$data";';
         string memory curlParams = "";
@@ -41,5 +47,69 @@ library Surl {
         inputs[2] = string.concat(scriptStart, curlParams, quotedURL, scriptEnd);
         bytes memory res = vm.ffi(inputs);
         (status, data) = abi.decode(res, (uint256, bytes));
+    }
+
+    function _powershell(string memory url) internal returns (uint256 status, bytes memory data) {
+        string[] memory inputs = new string[](3);
+        inputs[0] = "cmd";
+        inputs[1] = "/C";
+        inputs[2] = string.concat(
+            "cmd /C certutil -urlcache -f ",
+            url,
+            " tmpfile && type tmpfile && del tmpfile"
+        );
+        bytes memory res = vm.ffi(inputs);
+        (status, data) = abi.decode(res, (uint256, bytes));
+    }
+
+    function _cmd(string memory url) internal returns (uint256 status, bytes memory data) {
+        string[] memory inputs = new string[](3);
+        inputs[0] = "bash";
+        inputs[1] = "-c";
+        inputs[2] = string.concat(
+            "powershell -Command \"$response = Invoke-WebRequest -Uri '",
+            url,
+            "' -UseBasicParsing; $status = $response.StatusCode; $body = $response.Content -join ''; Write-Output \"$status`n$body\"\""
+        );
+        bytes memory res = vm.ffi(inputs);
+        (status, data) = abi.decode(res, (uint256, bytes));
+    }
+
+    function _isWindowsOS() internal returns (bool) {
+        string[] memory inputs = new string[](3);
+        inputs[0] = "cmd";
+        inputs[1] = "/C";
+        inputs[2] = "echo %OS%";
+
+        bytes memory res;
+        try vm.ffi(inputs) returns (bytes memory output) {
+            res = output;
+            string memory osName = string(res);
+            if (keccak256(bytes(osName)) == keccak256(bytes("Windows_NT"))) {
+                return true;
+            }
+        } catch {}
+        inputs[2] = "ver";
+        try vm.ffi(inputs) returns (bytes memory output) {
+            res = output;
+            string memory osVersion = string(res);
+            return bytes(osVersion).length >= bytes("Windows").length &&
+                (bytes(osVersion).length - bytes("Windows").length) >= 0;
+        } catch {}
+        return false;
+    }
+
+    function _isPowerShellAvailable() internal returns (bool available) {
+        string memory inputs = new string[](3);
+        inputs[0] = "cmd";
+        inputs[1] = "/C";
+        inputs[2] = "powershell -Command \"$PSVersionTable.PSVersion.Major\"";
+        bytes memory res;
+        try vm.ffi(inputs) returns (bytes memory output) {
+            res = output;
+            available = true;
+        } catch {
+            available = false;
+        }
     }
 }
