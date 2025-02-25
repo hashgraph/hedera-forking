@@ -241,33 +241,6 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
         );
     }
 
-    // Encoded `address(tokenId).tokenURI(serialId)` slot
-    // slot(256) = `tokenURI`selector(32) + padding(192) + serialId(32)
-    if (
-        nrequestedSlot >> 32n ===
-        0xc87b56dd_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000n
-    ) {
-        const serialId = parseInt(requestedSlot.slice(-8), 16);
-        const { metadata } = (await mirrorNodeClient.getNftByTokenIdAndSerial(
-            tokenId,
-            serialId,
-            blockNumber
-        )) ?? {
-            metadata: null,
-        };
-        if (typeof metadata !== 'string')
-            return ret(
-                ZERO_HEX_32_BYTE,
-                `Failed to get the metadata of the NFT ${tokenId}#${serialId}`
-            );
-        persistentStorage.store(
-            tokenId,
-            blockNumber,
-            nrequestedSlot,
-            Buffer.from(metadata, 'base64').toString(),
-            't_string_storage'
-        );
-    }
     // Encoded `address(tokenId).getNonFungibleTokenInfo(token,serialId)` slot
     // slot(256) = `getNonFungibleTokenInfo`selector(32) + padding(192) + serialId(32)
     if (
