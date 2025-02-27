@@ -49,12 +49,12 @@ library Surl {
         (status, data) = abi.decode(res, (uint256, bytes));
     }
 
-    function _powershell(string memory url) internal returns (uint256 status, bytes memory data) {
+    function _cmd(string memory url) internal returns (uint256 status, bytes memory data) {
         string[] memory inputs = new string[](3);
         inputs[0] = "cmd";
         inputs[1] = "/C";
         inputs[2] = string.concat(
-            "cmd /C certutil -urlcache -f ",
+            "certutil -urlcache -f ",
             url,
             " tmpfile && type tmpfile && del tmpfile"
         );
@@ -62,10 +62,10 @@ library Surl {
         (status, data) = abi.decode(res, (uint256, bytes));
     }
 
-    function _cmd(string memory url) internal returns (uint256 status, bytes memory data) {
+    function _powershell(string memory url) internal returns (uint256 status, bytes memory data) {
         string[] memory inputs = new string[](3);
-        inputs[0] = "bash";
-        inputs[1] = "-c";
+        inputs[0] = "cmd";
+        inputs[1] = "/C";
         inputs[2] = string.concat(
             "powershell -Command \"$response = Invoke-WebRequest -Uri '",
             url,
@@ -75,7 +75,7 @@ library Surl {
         (status, data) = abi.decode(res, (uint256, bytes));
     }
 
-    function _isWindowsOS() internal returns (bool) {
+    function _isWindowsOS() internal returns (bool isWindows) {
         string[] memory inputs = new string[](3);
         inputs[0] = "cmd";
         inputs[1] = "/C";
@@ -84,16 +84,10 @@ library Surl {
         bytes memory res;
         try vm.ffi(inputs) returns (bytes memory output) {
             res = output;
-            string memory osName = string(res);
-            if (keccak256(bytes(osName)) == keccak256(bytes("Windows_NT"))) return true;
-        } catch {}
-        inputs[2] = "ver";
-        try vm.ffi(inputs) returns (bytes memory output) {
-            res = output;
-            string memory osVersion = string(res);
-            return _containsSubstring(osVersion, "Windows ");
-        } catch {}
-        return false;
+            isWindows = true;
+        } catch {
+            isWindows = false;
+        }
     }
 
     function _isPowerShellAvailable() internal returns (bool available) {
@@ -108,31 +102,5 @@ library Surl {
         } catch {
             available = false;
         }
-    }
-
-    function _containsSubstring(string memory str, string memory sub) internal pure returns (bool) {
-        bytes memory strBytes = bytes(str);
-        bytes memory subBytes = bytes(sub);
-
-        if (subBytes.length > strBytes.length) {
-            return false;
-        }
-
-        bool found = false;
-        for (uint256 i = 0; i <= strBytes.length - subBytes.length; i++) {
-            bool matchFound = true;
-            for (uint256 j = 0; j < subBytes.length; j++) {
-                if (strBytes[i + j] != subBytes[j]) {
-                    matchFound = false;
-                    break;
-                }
-            }
-            if (matchFound) {
-                found = true;
-                break;
-            }
-        }
-
-        return found;
     }
 }
