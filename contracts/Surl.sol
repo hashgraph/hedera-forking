@@ -56,9 +56,9 @@ library Surl {
         inputs[0] = "powershell";
         inputs[1] = "-Command";
         inputs[2] = string.concat(
-            "$r = Invoke-WebRequest -Uri '",
+            "try { $r = Invoke-WebRequest -Uri '",
             url,
-            "' -Method GET; $status = $r.StatusCode; $data = $r.Content; Invoke-Expression \"cast abi-encode 'response(uint256,string)' '$status' '$data'\""
+            "' -Method GET; $status = $r.StatusCode; $data = $r.Content } catch { $status = $_.Exception.Response.StatusCode.Value__; $data = $_.ErrorDetails.Message }; Invoke-Expression \"cast abi-encode 'response(uint256,string)' '$status' '$data'\""
         );
         bytes memory res = vm.ffi(inputs);
         (status, data) = abi.decode(res, (uint256, bytes));
