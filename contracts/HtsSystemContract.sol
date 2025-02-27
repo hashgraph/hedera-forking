@@ -1193,14 +1193,14 @@ contract HtsSystemContract is IHederaTokenService {
     function _isFrozenSlot(address account) internal virtual returns (bytes32) {
         bytes4 selector = IHederaTokenService.isFrozen.selector;
         uint192 pad = 0x0;
-        uint32 accountId = HtsSystemContract(HTS_ADDRESS).getAccountId(account);
+        (uint32 accountId, ) = HtsSystemContract(HTS_ADDRESS).getAccountId(account);
         return bytes32(abi.encodePacked(selector, pad, accountId));
     }
 
     function _hasKycGrantedSlot(address account) internal virtual returns (bytes32) {
         bytes4 selector = IHederaTokenService.isKyc.selector;
         uint192 pad = 0x0;
-        uint32 accountId = HtsSystemContract(HTS_ADDRESS).getAccountId(account);
+        (uint32 accountId, ) = HtsSystemContract(HTS_ADDRESS).getAccountId(account);
         return bytes32(abi.encodePacked(selector, pad, accountId));
     }
 
