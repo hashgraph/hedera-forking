@@ -51,17 +51,25 @@ library Surl {
         (status, data) = abi.decode(res, (uint256, bytes));
     }
 
-    function _powershell(string memory url) internal returns (uint256 status, bytes memory data) {
+    function _powershell(string memory url) internal returns (uint256, bytes memory) {
         string[] memory inputs = new string[](3);
         inputs[0] = "powershell";
         inputs[1] = "-Command";
         inputs[2] = string.concat(
             "try { $r = Invoke-WebRequest -Uri '",
             url,
-            "' -Method GET; $status = $r.StatusCode; $data = $r.Content | ConvertTo-Json -Compress } catch { $status = $_.Exception.Response.StatusCode.Value__; $data = $_.ErrorDetails.Message }; $output = cast abi-encode 'response(uint256,string)' $status ($data -replace ' ', '_'); Write-Output $output"
+            "' -Method GET; $status = $r.StatusCode; $data = $r.Content | ConvertTo-Json -Compress } catch { $status = $_.Exception.Response.StatusCode.Value__; $data = $_.ErrorDetails.Message }; $output = cast abi-encode 'response(uint256,string)' $status ($data -replace ' ', '@'); Write-Output $output"
         );
         bytes memory res = vm.ffi(inputs);
-        (status, data) = abi.decode(res, (uint256, bytes));
+        (uint256 status, bytes memory data) = abi.decode(res, (uint256, bytes));
+
+        for (uint i = 0; i < data.length; i++) {
+            if (data[i] == bytes1("@")) {
+                data[i] = " ";
+            }
+        }
+
+        return (status, data);
     }
 
     function _isPowerShellAvailable() internal returns (bool available) {
