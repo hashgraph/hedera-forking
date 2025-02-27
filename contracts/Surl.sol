@@ -66,9 +66,9 @@ library Surl {
 
     function _isPowerShellAvailable() internal returns (bool available) {
         string[] memory inputs = new string[](3);
-        inputs[0] = "cmd";
-        inputs[1] = "/C";
-        inputs[2] = "powershell -Command \"$PSVersionTable.PSVersion.Major\"";
+        inputs[0] = "powershell";
+        inputs[1] = "-Command";
+        inputs[2] = "$PSVersionTable.PSVersion.Major";
         bytes memory res;
         try vm.ffi(inputs) returns (bytes memory output) {
             res = output;
