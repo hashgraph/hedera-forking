@@ -30,9 +30,11 @@ library Surl {
      * @return data The response body as raw bytes.
      */
     function get(string memory url) internal returns (uint256, bytes memory) {
-        if (!_isWindowsOS()) return _bash(url);
-        if (_isPowerShellAvailable()) return _powershell(url);
-        return _cmd(url);
+        if (_isPowerShellAvailable()) {
+            return _powershell(url);
+        } else {
+            return _bash(url);
+        }
     }
 
     function _bash(string memory url) internal returns (uint256 status, bytes memory data) {
@@ -49,45 +51,17 @@ library Surl {
         (status, data) = abi.decode(res, (uint256, bytes));
     }
 
-    function _cmd(string memory url) internal returns (uint256 status, bytes memory data) {
-        string[] memory inputs = new string[](3);
-        inputs[0] = "cmd";
-        inputs[1] = "/C";
-        inputs[2] = string.concat(
-            "certutil -urlcache -f ",
-            url,
-            " tmpfile && type tmpfile && del tmpfile"
-        );
-        bytes memory res = vm.ffi(inputs);
-        (status, data) = abi.decode(res, (uint256, bytes));
-    }
-
     function _powershell(string memory url) internal returns (uint256 status, bytes memory data) {
         string[] memory inputs = new string[](3);
-        inputs[0] = "cmd";
-        inputs[1] = "/C";
+        inputs[0] = "powershell";
+        inputs[1] = "-Command";
         inputs[2] = string.concat(
-            "powershell -Command \"$response = Invoke-WebRequest -Uri '",
+            "$r = Invoke-WebRequest -Uri '",
             url,
-            "' -UseBasicParsing; $status = $response.StatusCode; $body = $response.Content -join ''; Write-Output \"$status`n$body\"\""
+            "' -Method GET; $status = $r.StatusCode; $data = $r.Content; Invoke-Expression \"cast abi-encode 'response(uint256,string)' '$status' '$data'\""
         );
         bytes memory res = vm.ffi(inputs);
         (status, data) = abi.decode(res, (uint256, bytes));
-    }
-
-    function _isWindowsOS() internal returns (bool isWindows) {
-        string[] memory inputs = new string[](3);
-        inputs[0] = "cmd";
-        inputs[1] = "/C";
-        inputs[2] = "echo %OS%";
-
-        bytes memory res;
-        try vm.ffi(inputs) returns (bytes memory output) {
-            res = output;
-            isWindows = true;
-        } catch {
-            isWindows = false;
-        }
     }
 
     function _isPowerShellAvailable() internal returns (bool available) {
