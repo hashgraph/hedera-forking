@@ -232,3 +232,18 @@ jobs:
 
       - name: Run Forge example tests using remote network with a pinned block number
         run: forge test --remappings hedera-forking=. -vv --fork-url https://mainnet.hashio.io/api --fork-block-number 72433403
+
+  analyze:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+      - name: Run Slither
+        uses: crytic/slither-action@f197989dea5b53e986d0f88c60a034ddd77ec9a8 # v0.4.0
+        id: slither
+        with:
+          target: './contracts'
