@@ -12,7 +12,7 @@ Enable either the [Foundry library](./README.md#foundry-library) or the [Hardhat
 The reason of error `EvmError: InvalidEFOpcode` is related to how Foundry executes scripts.
 It first runs the script on its local network.
 It records the operations made to be replayed in the remote network.
-See <https://book.getfoundry.sh/tutorials/solidity-scripting#high-level-overview> for more info.
+See <https://book.getfoundry.sh/guides/scripting-with-solidity#overview> for more info.
 Given Foundry's local network does not have a System Contract implementation,
 the error is thrown.
 This is not Hedera specific actually.
