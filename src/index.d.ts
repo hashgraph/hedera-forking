@@ -64,6 +64,8 @@ interface IMirrorNodeClient {
         tokens: {
             token_id: string;
             automatic_association: boolean;
+            kyc_status: 'NOT_APPLICABLE' | 'GRANTED' | 'REVOKED';
+            frozen_status: 'NOT_APPLICABLE' | 'FROZEN' | 'UNFROZEN';
         }[];
     } | null>;
 

@@ -125,7 +125,6 @@ contract HtsSystemContract is IHederaTokenService {
             "associateTokens: Must be signed by the provided Account's key or called from the accounts contract key"
         );
         for (uint256 i = 0; i < tokens.length; i++) {
-            require(tokens[i] != address(0), "associateTokens: invalid token");
             int64 associationResponseCode = IHederaTokenService(tokens[i]).associateToken(account, tokens[i]);
             require(
                 associationResponseCode == HederaResponseCodes.SUCCESS,
@@ -136,6 +135,8 @@ contract HtsSystemContract is IHederaTokenService {
     }
 
     function associateToken(address account, address token) htsCall external returns (int64 responseCode) {
+        int64 tokenStatus = _checkToken(token);
+        if (tokenStatus != HederaResponseCodes.SUCCESS) return tokenStatus;
         address[] memory tokens = new address[](1);
         tokens[0] = token;
         return associateTokens(account, tokens);
@@ -145,7 +146,6 @@ contract HtsSystemContract is IHederaTokenService {
         require(tokens.length > 0, "dissociateTokens: missing tokens");
         require(account == msg.sender, "dissociateTokens: Must be signed by the provided Account's key or called from the accounts contract key");
         for (uint256 i = 0; i < tokens.length; i++) {
-            require(tokens[i] != address(0), "dissociateTokens: invalid token");
             int64 dissociationResponseCode = IHederaTokenService(tokens[i]).dissociateToken(account, tokens[i]);
             require(dissociationResponseCode == HederaResponseCodes.SUCCESS, "dissociateTokens: Failed to dissociate token");
         }
@@ -153,6 +153,8 @@ contract HtsSystemContract is IHederaTokenService {
     }
 
     function dissociateToken(address account, address token) htsCall external returns (int64 responseCode) {
+        int64 tokenStatus = _checkToken(token);
+        if (tokenStatus != HederaResponseCodes.SUCCESS) return tokenStatus;
         address[] memory tokens = new address[](1);
         tokens[0] = token;
         return dissociateTokens(account, tokens);
@@ -263,7 +265,8 @@ contract HtsSystemContract is IHederaTokenService {
         address[] memory accountId,
         int64[] memory amount
     ) htsCall external returns (int64 responseCode) {
-        require(token != address(0), "transferTokens: invalid token");
+        int64 tokenStatus = _checkToken(token);
+        if (tokenStatus != HederaResponseCodes.SUCCESS) return tokenStatus;
         require(accountId.length > 0, "transferTokens: missing recipients");
         require(amount.length == accountId.length, "transferTokens: inconsistent input");
         for (uint256 i = 0; i < accountId.length; i++) {
@@ -279,6 +282,8 @@ contract HtsSystemContract is IHederaTokenService {
         address[] memory receiver,
         int64[] memory serialNumber
     ) htsCall external returns (int64 responseCode) {
+        int64 tokenStatus = _checkToken(token);
+        if (tokenStatus != HederaResponseCodes.SUCCESS) return tokenStatus;
         require(token != address(0), "transferNFTs: invalid token");
         require(sender.length > 0, "transferNFTs: missing recipients");
         require(receiver.length == sender.length, "transferNFTs: inconsistent input");
@@ -295,7 +300,8 @@ contract HtsSystemContract is IHederaTokenService {
         address recipient,
         int64 amount
     ) htsCall public returns (int64 responseCode) {
-        require(token != address(0), "transferToken: invalid token");
+        int64 tokenStatus = _checkToken(token);
+        if (tokenStatus != HederaResponseCodes.SUCCESS) return tokenStatus;
         address from = sender;
         address to = recipient;
         if (amount < 0) {
@@ -318,12 +324,17 @@ contract HtsSystemContract is IHederaTokenService {
         address recipient,
         int64 serialNumber
     ) htsCall public returns (int64 responseCode) {
+        int64 tokenStatus = _checkToken(token);
+        if (tokenStatus != HederaResponseCodes.SUCCESS) return tokenStatus;
         uint256 serialId = uint256(uint64(serialNumber));
         HtsSystemContract(token).transferFromNFT(msg.sender, sender, recipient, serialId);
         responseCode = HederaResponseCodes.SUCCESS;
     }
 
-    function approve(address token, address spender, uint256 amount) htsCall public returns (int64 responseCode) {
+    function approve(address token, address spender, uint256 amount) htsCall
+        public returns (int64 responseCode) {
+        int64 tokenStatus = _checkToken(token);
+        if (tokenStatus != HederaResponseCodes.SUCCESS) return tokenStatus;
         HtsSystemContract(token).approve(msg.sender, spender, amount);
         responseCode = HederaResponseCodes.SUCCESS;
     }
@@ -334,6 +345,8 @@ contract HtsSystemContract is IHederaTokenService {
         address recipient,
         uint256 amount
     ) htsCall external returns (int64) {
+        int64 tokenStatus = _checkToken(token);
+        if (tokenStatus != HederaResponseCodes.SUCCESS) return tokenStatus;
         return transferToken(token, sender, recipient, int64(int256(amount)));
     }
 
@@ -346,6 +359,8 @@ contract HtsSystemContract is IHederaTokenService {
         address approved,
         uint256 serialNumber
     ) htsCall public returns (int64 responseCode) {
+        int64 tokenStatus = _checkToken(token);
+        if (tokenStatus != HederaResponseCodes.SUCCESS) return tokenStatus;
         HtsSystemContract(token).approveNFT(msg.sender, approved, serialNumber);
         responseCode = HederaResponseCodes.SUCCESS;
     }
@@ -356,6 +371,8 @@ contract HtsSystemContract is IHederaTokenService {
         address to,
         uint256 serialNumber
     ) htsCall external returns (int64) {
+        int64 tokenStatus = _checkToken(token);
+        if (tokenStatus != HederaResponseCodes.SUCCESS) return tokenStatus;
         return transferNFT(token, from, to, int64(int256(serialNumber)));
     }
 
@@ -370,6 +387,8 @@ contract HtsSystemContract is IHederaTokenService {
         address operator,
         bool approved
     ) htsCall external returns (int64 responseCode) {
+        int64 tokenStatus = _checkToken(token);
+        if (tokenStatus != HederaResponseCodes.SUCCESS) return tokenStatus;
         HtsSystemContract(token).setApprovalForAll(msg.sender, operator, approved);
         responseCode = HederaResponseCodes.SUCCESS;
     }
@@ -381,6 +400,39 @@ contract HtsSystemContract is IHederaTokenService {
     ) htsCall external view returns (int64, bool) {
         require(token != address(0), "isApprovedForAll: invalid token");
         return (HederaResponseCodes.SUCCESS, IERC721(token).isApprovedForAll(owner, operator));
+    }
+
+    function isKyc(address token, address account) htsCall public view returns (int64, bool) {
+        return IHederaTokenService(token).isKyc(msg.sender, account);
+    }
+
+    function isFrozen(address token, address account) htsCall public view returns (int64, bool) {
+        if (token == address(0)) return (HederaResponseCodes.SUCCESS, false);
+        return IHederaTokenService(token).isFrozen(token, account);
+    }
+
+    function _checkToken(address token) private view returns (int64 tokenStatus) {
+        if (address(0) == token) return HederaResponseCodes.INVALID_TOKEN_ID;
+        (int64 responseCode, TokenInfo memory info) = getTokenInfo(token);
+        if (responseCode != HederaResponseCodes.SUCCESS) return HederaResponseCodes.INVALID_TOKEN_ID;
+        if (KeyLib.keyExists(0x4, info)) {
+            (, bool frozen) = isFrozen(token, msg.sender);
+            if (frozen) return HederaResponseCodes.ACCOUNT_FROZEN_FOR_TOKEN;
+        }
+        if (KeyLib.keyExists(0x2, info)) {
+            (, bool hasKyc) = isKyc(token, msg.sender);
+            if (!hasKyc) return HederaResponseCodes.ACCOUNT_KYC_NOT_GRANTED_FOR_TOKEN;
+        }
+        if (info.pauseStatus) return HederaResponseCodes.TOKEN_IS_PAUSED;
+        return HederaResponseCodes.SUCCESS;
+    }
+
+    function _checkTokenKey(address token, uint256 requiredKey, int32 missingKeyCode) private view returns (int32) {
+        if (token == address(0)) return HederaResponseCodes.INVALID_TOKEN_ID;
+        (int64 responseCode, TokenInfo memory info) = getTokenInfo(token);
+        if (responseCode != HederaResponseCodes.SUCCESS) return HederaResponseCodes.INVALID_TOKEN_ID;
+        if (!KeyLib.keyExists(requiredKey, info)) return missingKeyCode;
+        return HederaResponseCodes.SUCCESS;
     }
 
     function getTokenCustomFees(
@@ -455,6 +507,42 @@ contract HtsSystemContract is IHederaTokenService {
         bytes memory payload = abi.encodeWithSignature("getTokenType(address)", token);
         (bool success, bytes memory returnData) = token.staticcall(payload);
         return (HederaResponseCodes.SUCCESS, success && returnData.length > 0);
+    }
+
+    function freezeToken(address token, address account) htsCall external returns (int64 responseCode) {
+        int32 tokenStatus = _checkTokenKey(token, 0x4, HederaResponseCodes.TOKEN_HAS_NO_FREEZE_KEY);
+        if (tokenStatus != HederaResponseCodes.SUCCESS) return tokenStatus;
+        responseCode = IHederaTokenService(token).freezeToken(token, account);
+    }
+
+    function unfreezeToken(address token, address account) htsCall external returns (int64 responseCode) {
+        int32 tokenStatus = _checkTokenKey(token, 0x4, HederaResponseCodes.TOKEN_HAS_NO_FREEZE_KEY);
+        if (tokenStatus != HederaResponseCodes.SUCCESS) return tokenStatus;
+        responseCode = IHederaTokenService(token).unfreezeToken(token, account);
+    }
+
+    function grantTokenKyc(address token, address account) htsCall external returns (int64 responseCode) {
+        int32 tokenStatus = _checkTokenKey(token, 0x2, HederaResponseCodes.TOKEN_HAS_NO_KYC_KEY);
+        if (tokenStatus != HederaResponseCodes.SUCCESS) return tokenStatus;
+        responseCode = IHederaTokenService(token).grantTokenKyc(token, account);
+    }
+
+    function revokeTokenKyc(address token, address account) htsCall external returns (int64 responseCode) {
+        int32 tokenStatus = _checkTokenKey(token, 0x2, HederaResponseCodes.TOKEN_HAS_NO_KYC_KEY);
+        if (tokenStatus != HederaResponseCodes.SUCCESS) return tokenStatus;
+        responseCode = IHederaTokenService(token).revokeTokenKyc(token, account);
+    }
+
+    function pauseToken(address token) htsCall external returns (int64 responseCode) {
+        int32 tokenStatus = _checkTokenKey(token, 0x40, HederaResponseCodes.TOKEN_HAS_NO_PAUSE_KEY);
+        if (tokenStatus != HederaResponseCodes.SUCCESS) return tokenStatus;
+        responseCode = IHederaTokenService(token).pauseToken(token);
+    }
+
+    function unpauseToken(address token) htsCall external returns (int64 responseCode) {
+        int32 tokenStatus = _checkTokenKey(token, 0x40, HederaResponseCodes.TOKEN_HAS_NO_PAUSE_KEY);
+        if (tokenStatus != HederaResponseCodes.SUCCESS) return tokenStatus;
+        responseCode = IHederaTokenService(token).unpauseToken(token);
     }
 
     function getTokenType(address token) htsCall external view returns (int64, int32) {
@@ -579,6 +667,11 @@ contract HtsSystemContract is IHederaTokenService {
                 }
                 return abi.encode(HederaResponseCodes.SUCCESS, int32(-1));
             }
+            if (selector == this.isFrozen.selector) {
+                require(msg.data.length >= 92, "isFrozen: Not enough calldata");
+                address account = address(bytes20(msg.data[72:92]));
+                return abi.encode(HederaResponseCodes.SUCCESS, __isFrozen(account));
+            }
             if (selector == this.transferFrom.selector) {
                 require(msg.data.length >= 156, "transferFrom: Not enough calldata");
                 address sender = address(bytes20(msg.data[40:60]));
@@ -617,6 +710,11 @@ contract HtsSystemContract is IHederaTokenService {
                 _approve(from, to, serialId, true);
                 return abi.encode(true);
             }
+            if (selector == this.isKyc.selector) {
+                require(msg.data.length >= 48, "associateToken: Not enough calldata");
+                address account = address(bytes20(msg.data[40:60]));
+                return abi.encode(HederaResponseCodes.SUCCESS, __hasKycGranted(account));
+            }
             if (selector == this.setApprovalForAll.selector) {
                 require(msg.data.length >= 124, "setApprovalForAll: Not enough calldata");
                 address from = address(bytes20(msg.data[40:60]));
@@ -624,6 +722,38 @@ contract HtsSystemContract is IHederaTokenService {
                 bool approved = uint256(bytes32(msg.data[92:124])) == 1;
                 _setApprovalForAll(from, to, approved);
                 return abi.encode(true);
+            }
+            if (selector == this.freezeToken.selector) {
+                require(msg.data.length >= 92, "freezeToken: Not enough calldata");
+                address account = address(bytes20(msg.data[72:92]));
+                _updateFreeze(account, true);
+                return abi.encode(HederaResponseCodes.SUCCESS);
+            }
+            if (selector == this.unfreezeToken.selector) {
+                require(msg.data.length >= 92, "unfreezeToken: Not enough calldata");
+                address account = address(bytes20(msg.data[72:92]));
+                _updateFreeze(account, false);
+                return abi.encode(HederaResponseCodes.SUCCESS);
+            }
+            if (selector == this.grantTokenKyc.selector) {
+                require(msg.data.length >= 92, "grantTokenKyc: Not enough calldata");
+                address account = address(bytes20(msg.data[72:92]));
+                _updateKyc(account, true);
+                return abi.encode(HederaResponseCodes.SUCCESS);
+            }
+            if (selector == this.revokeTokenKyc.selector) {
+                require(msg.data.length >= 92, "revokeTokenKyc: Not enough calldata");
+                address account = address(bytes20(msg.data[72:92]));
+                _updateKyc(account, false);
+                return abi.encode(HederaResponseCodes.SUCCESS);
+            }
+            if (selector == this.pauseToken.selector) {
+                _tokenInfo.pauseStatus = true;
+                return abi.encode(HederaResponseCodes.SUCCESS);
+            }
+            if (selector == this.unpauseToken.selector) {
+                _tokenInfo.pauseStatus = false;
+                return abi.encode(HederaResponseCodes.SUCCESS);
             }
             if (selector == this._update.selector) {
                 require(msg.data.length >= 124, "update: Not enough calldata");
@@ -633,6 +763,14 @@ contract HtsSystemContract is IHederaTokenService {
                 _update(from, to, amount);
                 return abi.encode(true);
             }
+        }
+        if (_isTokenInteraction(selector)) {
+            require(!__isFrozen(msg.sender), "__redirectForToken: frozen");
+            require(
+                !KeyLib.keyExists(0x2, _tokenInfo) || __hasKycGranted(msg.sender),
+                "__redirectForToken: no kyc granted"
+            );
+            require(!_tokenInfo.pauseStatus, "__redirectForToken: paused");
         }
 
         // Redirect to the appropriate ERC20 method if the token type is fungible.
@@ -646,6 +784,15 @@ contract HtsSystemContract is IHederaTokenService {
         }
 
         revert ("redirectForToken: token type not supported");
+    }
+
+    function _isTokenInteraction(bytes4 selector) private pure returns (bool)  {
+        return selector == IERC20.transfer.selector ||
+            selector == IERC20.transferFrom.selector ||
+            selector == IERC20.approve.selector ||
+            selector == IERC721.transferFrom.selector ||
+            selector == IERC721.approve.selector ||
+            selector == IERC721.setApprovalForAll.selector;
     }
 
     function _redirectForERC20(bytes4 selector) private returns (bytes memory) {
@@ -900,6 +1047,20 @@ contract HtsSystemContract is IHederaTokenService {
         return bytes32(abi.encodePacked(selector, pad, ownerId, operatorId));
     }
 
+    function _isFrozenSlot(address account) internal virtual returns (bytes32) {
+        bytes4 selector = IHederaTokenService.isFrozen.selector;
+        uint192 pad = 0x0;
+        (uint32 accountId, ) = HtsSystemContract(HTS_ADDRESS).getAccountId(account);
+        return bytes32(abi.encodePacked(selector, pad, accountId));
+    }
+
+    function _hasKycGrantedSlot(address account) internal virtual returns (bytes32) {
+        bytes4 selector = IHederaTokenService.isKyc.selector;
+        uint192 pad = 0x0;
+        (uint32 accountId, ) = HtsSystemContract(HTS_ADDRESS).getAccountId(account);
+        return bytes32(abi.encodePacked(selector, pad, accountId));
+    }
+
     function __balanceOf(address account) private returns (uint256 amount) {
         bytes32 slot = _balanceOfSlot(account);
         assembly { amount := sload(slot) }
@@ -930,6 +1091,16 @@ contract HtsSystemContract is IHederaTokenService {
     function __isApprovedForAll(address owner, address operator) private returns (bool approvedForAll) {
         bytes32 slot = _isApprovedForAllSlot(owner, operator);
         assembly { approvedForAll := sload(slot) }
+    }
+
+    function __isFrozen(address account) private returns (bool frozenStatus) {
+        bytes32 slot = _isFrozenSlot(account);
+        assembly { frozenStatus := sload(slot) }
+    }
+
+    function __hasKycGranted(address account) private returns (bool hasKycGranted) {
+        bytes32 slot = _hasKycGrantedSlot(account);
+        assembly { hasKycGranted := sload(slot) }
     }
 
     function _transfer(address from, address to, uint256 amount) private {
@@ -965,6 +1136,16 @@ contract HtsSystemContract is IHederaTokenService {
         // Set the new owner
         assembly { sstore(slot, to) }
         emit IERC721.Transfer(from, to, serialId);
+    }
+
+    function _updateKyc(address account, bool hasKycGranted) public {
+        bytes32 kycSlot = _hasKycGrantedSlot(account);
+        assembly { sstore(kycSlot, hasKycGranted) }
+    }
+
+    function _updateFreeze(address account, bool frozenStatus) public {
+        bytes32 isFrozenSlot = _isFrozenSlot(account);
+        assembly { sstore(isFrozenSlot, frozenStatus) }
     }
 
     function _update(address from, address to, uint256 amount) public {
