@@ -55,20 +55,18 @@ library Surl {
         string[] memory inputs = new string[](3);
         inputs[0] = "powershell";
         inputs[1] = "-Command";
+        string memory encode = "| ConvertTo-Json -Compress | % { Start-Process -NoNewWindow -Wait -FilePath \"cast\" -ArgumentList @(\"abi-encode\", \"response(uint256,string)\", $status, $_)  }";
         inputs[2] = string.concat(
             "try { $r = Invoke-WebRequest -Uri '",
             url,
-            "' -Method GET; $status = $r.StatusCode; $data = $r.Content | ConvertTo-Json -Compress } catch { $status = $_.Exception.Response.StatusCode.Value__; $data = $_.ErrorDetails.Message }; $output = cast abi-encode 'response(uint256,string)' $status ($data -replace ' ', '@'); Write-Output $output"
+            "' -Method GET; $status = $r.StatusCode; $data = $r.Content ",
+            encode,
+            " } catch { $status = $_.Exception.Response.StatusCode.Value__; $data = $_.ErrorDetails.Message ",
+            encode,
+            " }; Write-Output $data"
         );
         bytes memory res = vm.ffi(inputs);
-        (uint256 status, bytes memory data) = abi.decode(res, (uint256, bytes));
-
-        for (uint i = 0; i < data.length; i++) {
-            if (data[i] == bytes1("@")) {
-                data[i] = " ";
-            }
-        }
-
+        (uint256 status,  bytes memory data) = abi.decode(res, (uint256, bytes));
         return (status, data);
     }
 
