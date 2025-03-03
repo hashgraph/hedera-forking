@@ -30,11 +30,8 @@ library Surl {
      * @return data The response body as raw bytes.
      */
     function get(string memory url) internal returns (uint256, bytes memory) {
-        if (_isPowerShellAvailable()) {
-            return _powershell(url);
-        } else {
-            return _bash(url);
-        }
+        if (_isPowerShellAvailable())  return _powershell(url);
+        return _bash(url);
     }
 
     function _bash(string memory url) internal returns (uint256 status, bytes memory data) {
