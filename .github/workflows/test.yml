@@ -235,7 +235,7 @@ jobs:
 
   analyze:
     name: 'Slither static code analysis'
-    runs-on: ubuntu-latest
+    runs-on: smart-contracts-linux-medium
     permissions:
       contents: read
       security-events: write
