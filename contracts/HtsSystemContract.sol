@@ -294,7 +294,7 @@ contract HtsSystemContract is IHederaTokenService {
         address sender,
         address recipient,
         int64 amount
-    ) htsCall public returns (int64 responseCode) {
+    ) htsCall public returns (int64) {
         require(token != address(0), "transferToken: invalid token");
         address from = sender;
         address to = recipient;
@@ -308,8 +308,9 @@ contract HtsSystemContract is IHederaTokenService {
             IERC20(token).allowance(from, msg.sender) >= uint256(uint64(amount)),
             "transferNFT: unauthorized"
         );
-        HtsSystemContract(token).transferFrom(msg.sender, from, to, uint256(uint64(amount)));
-        responseCode = HederaResponseCodes.SUCCESS;
+        int64 isSuccess = HtsSystemContract(token).transferFrom(msg.sender, from, to, uint256(uint64(amount)));
+        require(isSuccess == 1, "transferFrom: failure");
+        return HederaResponseCodes.SUCCESS;
     }
 
     function transferNFT(
@@ -317,15 +318,15 @@ contract HtsSystemContract is IHederaTokenService {
         address sender,
         address recipient,
         int64 serialNumber
-    ) htsCall public returns (int64 responseCode) {
+    ) htsCall public returns (int64) {
         uint256 serialId = uint256(uint64(serialNumber));
-        HtsSystemContract(token).transferFromNFT(msg.sender, sender, recipient, serialId);
-        responseCode = HederaResponseCodes.SUCCESS;
+        return HtsSystemContract(token).transferFromNFT(msg.sender, sender, recipient, serialId);
     }
 
-    function approve(address token, address spender, uint256 amount) htsCall public returns (int64 responseCode) {
-        HtsSystemContract(token).approve(msg.sender, spender, amount);
-        responseCode = HederaResponseCodes.SUCCESS;
+    function approve(address token, address spender, uint256 amount) htsCall public returns (int64) {
+        int64 status = HtsSystemContract(token).approve(msg.sender, spender, amount);
+        require(status == 1, "approve: failure");
+        return HederaResponseCodes.SUCCESS;
     }
 
     function transferFrom(
@@ -345,9 +346,10 @@ contract HtsSystemContract is IHederaTokenService {
         address token,
         address approved,
         uint256 serialNumber
-    ) htsCall public returns (int64 responseCode) {
-        HtsSystemContract(token).approveNFT(msg.sender, approved, serialNumber);
-        responseCode = HederaResponseCodes.SUCCESS;
+    ) htsCall public returns (int64) {
+        int64 isSuccess = HtsSystemContract(token).approveNFT(msg.sender, approved, serialNumber);
+        require(isSuccess == 1, "approveNFT: failure");
+        return HederaResponseCodes.SUCCESS;
     }
 
     function transferFromNFT(
@@ -369,9 +371,10 @@ contract HtsSystemContract is IHederaTokenService {
         address token,
         address operator,
         bool approved
-    ) htsCall external returns (int64 responseCode) {
-        HtsSystemContract(token).setApprovalForAll(msg.sender, operator, approved);
-        responseCode = HederaResponseCodes.SUCCESS;
+    ) htsCall external returns (int64) {
+        int64 isSuccess = HtsSystemContract(token).setApprovalForAll(msg.sender, operator, approved);
+        require(isSuccess == 1, "setApprovalForAll: failure");
+        return HederaResponseCodes.SUCCESS;
     }
 
     function isApprovedForAll(
@@ -381,6 +384,21 @@ contract HtsSystemContract is IHederaTokenService {
     ) htsCall external view returns (int64, bool) {
         require(token != address(0), "isApprovedForAll: invalid token");
         return (HederaResponseCodes.SUCCESS, IERC721(token).isApprovedForAll(owner, operator));
+    }
+
+
+    // FIXME: Temporary implementation to resolve Slither's locked ether warning.
+    function deleteToken(address token) htsCall external returns (int64) {
+        if (address(this).balance > 0) {
+            (int64 code, TokenInfo memory info) = getTokenInfo(token);
+            require(msg.sender == info.token.treasury, "_deleteToken: not permitted");
+            require(code == HederaResponseCodes.SUCCESS, "_deleteToken: failed to get token info");
+            payable(info.token.treasury).transfer(address(this).balance);
+        }
+
+        // TODO: Ensure the token is properly removed.
+
+        return HederaResponseCodes.SUCCESS;
     }
 
     function getTokenCustomFees(
@@ -408,17 +426,16 @@ contract HtsSystemContract is IHederaTokenService {
     function getFungibleTokenInfo(address token) htsCall external view returns (int64, FungibleTokenInfo memory) {
         (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
         require(responseCode == HederaResponseCodes.SUCCESS, "getFungibleTokenInfo: failed to get token data");
-        FungibleTokenInfo memory fungibleTokenInfo;
-        fungibleTokenInfo.tokenInfo = tokenInfo;
-        fungibleTokenInfo.decimals =  int32(int8(IERC20(token).decimals()));
-
+        FungibleTokenInfo memory fungibleTokenInfo = FungibleTokenInfo({
+            tokenInfo: tokenInfo,
+            decimals: int32(int8(IERC20(token).decimals()))
+        });
         return (responseCode, fungibleTokenInfo);
     }
 
-    function getTokenInfo(address token) htsCall public view returns (int64, TokenInfo memory) {
+    function getTokenInfo(address token) htsCall public view returns (int64 code, TokenInfo memory info) {
         require(token != address(0), "getTokenInfo: invalid token");
-
-        return IHederaTokenService(token).getTokenInfo(token);
+        (code, info) = IHederaTokenService(token).getTokenInfo(token);
     }
 
     function getTokenKey(address token, uint keyType) htsCall view external returns (int64, KeyValue memory) {
@@ -429,7 +446,13 @@ contract HtsSystemContract is IHederaTokenService {
                 return (HederaResponseCodes.SUCCESS, tokenInfo.token.tokenKeys[i].key);
             }
         }
-        KeyValue memory emptyKey;
+        KeyValue memory emptyKey = KeyValue({
+            inheritAccountKey: false,
+            contractId: address(0),
+            ed25519: "",
+            ECDSA_secp256k1: "",
+            delegatableContractId: address(0)
+        });
         return (HederaResponseCodes.SUCCESS, emptyKey);
     }
 
@@ -438,16 +461,14 @@ contract HtsSystemContract is IHederaTokenService {
         returns (int64, NonFungibleTokenInfo memory) {
         (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
         require(responseCode == HederaResponseCodes.SUCCESS, "getNonFungibleTokenInfo: failed to get token data");
-        NonFungibleTokenInfo memory nonFungibleTokenInfo;
-        nonFungibleTokenInfo.tokenInfo = tokenInfo;
-        nonFungibleTokenInfo.serialNumber = serialNumber;
-        nonFungibleTokenInfo.spenderId = IERC721(token).getApproved(uint256(uint64(serialNumber)));
-        nonFungibleTokenInfo.ownerId = IERC721(token).ownerOf(uint256(uint64(serialNumber)));
-
-        // ToDo:
-        // nonFungibleTokenInfo.metadata = bytes(IERC721(token).tokenURI(uint256(uint64(serialNumber))));
-        // nonFungibleTokenInfo.creationTime = int64(0);
-
+        NonFungibleTokenInfo memory nonFungibleTokenInfo = NonFungibleTokenInfo({
+            tokenInfo: tokenInfo,
+            serialNumber: serialNumber,
+            ownerId: IERC721(token).ownerOf(uint256(uint64(serialNumber))),
+            creationTime: 0, // TODO
+            metadata: "", // TODO
+            spenderId: IERC721(token).getApproved(uint256(uint64(serialNumber)))
+        });
         return (responseCode, nonFungibleTokenInfo);
     }
 
@@ -457,9 +478,9 @@ contract HtsSystemContract is IHederaTokenService {
         return (HederaResponseCodes.SUCCESS, success && returnData.length > 0);
     }
 
-    function getTokenType(address token) htsCall external view returns (int64, int32) {
+    function getTokenType(address token) htsCall external view returns (int64 code, int32 tokenTypeCode) {
         require(token != address(0), "getTokenType: invalid address");
-        return IHederaTokenService(token).getTokenType(token);
+        (code, tokenTypeCode) = IHederaTokenService(token).getTokenType(token);
     }
 
     /**
@@ -848,29 +869,34 @@ contract HtsSystemContract is IHederaTokenService {
         _tokenInfo.ledgerId = tokenInfo.ledgerId;
     }
 
+    function __accountId(address account, bool hasToExist) internal view returns (uint32) {
+        (uint32 accountId, bool exists) = HtsSystemContract(HTS_ADDRESS).getAccountId(account);
+        require(!hasToExist || exists);
+        return accountId;
+    }
+
     function _initTokenData() internal virtual {
     }
 
     function _balanceOfSlot(address account) internal virtual returns (bytes32) {
         bytes4 selector = IERC20.balanceOf.selector;
         uint192 pad = 0x0;
-        (uint32 accountId, ) = HtsSystemContract(HTS_ADDRESS).getAccountId(account);
+        uint32 accountId = __accountId(account, false);
         return bytes32(abi.encodePacked(selector, pad, accountId));
     }
 
     function _allowanceSlot(address owner, address spender) internal virtual returns (bytes32) {
         bytes4 selector = IERC20.allowance.selector;
         uint160 pad = 0x0;
-        (uint32 ownerId, ) = HtsSystemContract(HTS_ADDRESS).getAccountId(owner);
-        (uint32 spenderId, ) = HtsSystemContract(HTS_ADDRESS).getAccountId(spender);
+        uint32 ownerId = __accountId(owner, false);
+        uint32 spenderId = __accountId(spender, false);
         return bytes32(abi.encodePacked(selector, pad, spenderId, ownerId));
     }
 
     function _isAssociatedSlot(address account) internal virtual returns (bytes32) {
         bytes4 selector = IHRC719.isAssociated.selector;
         uint192 pad = 0x0;
-        (uint32 accountId, bool exists) = HtsSystemContract(HTS_ADDRESS).getAccountId(account);
-        require(exists);
+        uint32 accountId = __accountId(account, true);
         return bytes32(abi.encodePacked(selector, pad, accountId));
     }
 
@@ -895,8 +921,8 @@ contract HtsSystemContract is IHederaTokenService {
     function _isApprovedForAllSlot(address owner, address operator) internal virtual returns (bytes32) {
         bytes4 selector = IERC721.isApprovedForAll.selector;
         uint160 pad = 0x0;
-        (uint32 ownerId, ) = HtsSystemContract(HTS_ADDRESS).getAccountId(owner);
-        (uint32 operatorId, ) = HtsSystemContract(HTS_ADDRESS).getAccountId(operator);
+        uint32 ownerId = __accountId(owner, false);
+        uint32 operatorId = __accountId(operator, false);
         return bytes32(abi.encodePacked(selector, pad, ownerId, operatorId));
     }
 

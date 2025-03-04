@@ -441,7 +441,7 @@ contract HtsSystemContractJson is HtsSystemContract {
                 string memory path = vm.replace(".custom_fees.royalty_fees[{i}]", "{i}", vm.toString(i));
                 address collectorAccount = mirrorNode().getAccountAddress(vm.parseJsonString(json, string.concat(path, ".collector_account_id")));
                 bytes memory denominatingTokenBytes = vm.parseJson(json, string.concat(path, ".denominating_token_id"));
-                address denominatingToken;
+                address denominatingToken = address(0);
                 if (keccak256(denominatingTokenBytes) != keccak256("")) {
                     denominatingToken = mirrorNode().getAccountAddress(vm.parseJsonString(json, string.concat(path, ".denominating_token_id")));
                 }
