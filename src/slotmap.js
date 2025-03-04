@@ -339,11 +339,10 @@ class PersistentStorageMap {
      * @param {number} blockNumber
      * @param {bigint} slot
      * @param {Value} value
-     * @param {'t_string_storage' | 't_bytes_storage'} type
      */
-    store(tokenId, blockNumber, slot, value, type) {
+    store(tokenId, blockNumber, slot, value) {
         visit(
-            { label: 'value', slot: slot.toString(), type, offset: 0 },
+            { label: 'value', slot: slot.toString(), type: 't_bytes_storage', offset: 0 },
             0n,
             { value },
             '',

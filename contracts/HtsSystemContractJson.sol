@@ -2,7 +2,6 @@
 pragma solidity ^0.8.0;
 
 import {Vm} from "forge-std/Vm.sol";
-import {decode} from './Base64.sol';
 import {IHederaTokenService} from "./IHederaTokenService.sol";
 import {HtsSystemContract, HTS_ADDRESS} from "./HtsSystemContract.sol";
 import {IERC20} from "./IERC20.sol";
@@ -491,17 +490,6 @@ contract HtsSystemContractJson is HtsSystemContract {
         if (_shouldFetch(slot)) {
             bool associated = mirrorNode().isAssociated(address(this), account);
             _setValue(slot, bytes32(uint256(associated ? 1 : 0)));
-        }
-        return slot;
-    }
-
-    function _tokenUriSlot(uint32 serialId) internal override virtual returns (bytes32) {
-        bytes32 slot = super._tokenUriSlot(serialId);
-        if (_shouldFetch(slot)) {
-            (string memory metadata, ) = mirrorNode().getNftMetadataAndCreatedTimestamp(address(this), serialId);
-            string memory uri = string(decode(metadata));
-            storeString(address(this), uint256(slot), uri);
-            vm.store(_scratchAddr(), slot, bytes32(uint(1)));
         }
         return slot;
     }
