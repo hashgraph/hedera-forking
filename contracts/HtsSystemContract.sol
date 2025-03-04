@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
+import {decode} from './Base64.sol';
 import {IERC20} from "./IERC20.sol";
 import {IERC721} from "./IERC721.sol";
 import {IHRC719} from "./IHRC719.sol";
@@ -879,12 +880,6 @@ contract HtsSystemContract is IHederaTokenService {
         return bytes32(abi.encodePacked(selector, pad, accountId));
     }
 
-    function _tokenUriSlot(uint32 serialId) internal virtual returns (bytes32) {
-        bytes4 selector = IERC721.tokenURI.selector;
-        uint192 pad = 0x0;
-        return bytes32(abi.encodePacked(selector, pad, serialId));
-    }
-
     function __nftInfoSlot(uint32 serialId) internal virtual returns (bytes32) {
         bytes4 selector = IHederaTokenService.getNonFungibleTokenInfo.selector;
         uint192 pad = 0x0;
@@ -921,11 +916,9 @@ contract HtsSystemContract is IHederaTokenService {
         assembly { amount := sload(slot) }
     }
 
-    function __tokenURI(uint256 serialId) private returns (string memory uri) {
-        bytes32 slot = _tokenUriSlot(uint32(serialId));
-        string storage _uri;
-        assembly { _uri.slot := slot }
-        uri = _uri;
+    function __tokenURI(uint256 serialId) private returns (string memory) {
+        (, bytes memory metadata) = __nftInfo(serialId);
+        return string(decode(string(metadata)));
     }
 
     function __nftInfo(uint256 serialId) private returns (int64, bytes memory) {

@@ -225,33 +225,6 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
         );
     }
 
-    // Encoded `address(tokenId).tokenURI(serialId)` slot
-    // slot(256) = `tokenURI`selector(32) + padding(192) + serialId(32)
-    if (
-        nrequestedSlot >> 32n ===
-        0xc87b56dd_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000n
-    ) {
-        const serialId = parseInt(requestedSlot.slice(-8), 16);
-        const { metadata } = (await mirrorNodeClient.getNftByTokenIdAndSerial(
-            tokenId,
-            serialId,
-            blockNumber
-        )) ?? {
-            metadata: null,
-        };
-        if (typeof metadata !== 'string')
-            return ret(
-                ZERO_HEX_32_BYTE,
-                `Failed to get the metadata of the NFT ${tokenId}#${serialId}`
-            );
-        persistentStorage.store(
-            tokenId,
-            blockNumber,
-            nrequestedSlot,
-            Buffer.from(metadata, 'base64').toString(),
-            't_string_storage'
-        );
-    }
     // Encoded `address(tokenId).getNonFungibleTokenInfo(token,serialId)` slot
     // slot(256) = `getNonFungibleTokenInfo`selector(32) + padding(192) + serialId(32)
     if (
@@ -275,9 +248,12 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
         const timestamp = Number(created_timestamp.split('.')[0]).toString(16).padStart(64, '0');
         const metadataEncoded = Buffer.from(metadata, 'utf-8').toString('hex');
         const metadataLength = metadata.length.toString(16).padStart(64, '0');
+
+        // 0x40 represents an offset of 64 bytes (0x40 in hex) within the ABI-encoded data.
+        // It is indicating the start of the bytes content.
         const stringTypeIndicator = '40'.padStart(64, '0');
         const bytes = `${timestamp}${stringTypeIndicator}${metadataLength}${metadataEncoded}`;
-        persistentStorage.store(tokenId, blockNumber, nrequestedSlot, bytes, 't_bytes_storage');
+        persistentStorage.store(tokenId, blockNumber, nrequestedSlot, bytes);
     }
     let unresolvedValues = persistentStorage.load(tokenId, blockNumber, nrequestedSlot);
     if (unresolvedValues === undefined) {
