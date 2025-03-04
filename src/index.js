@@ -264,6 +264,9 @@ async function getHtsStorageAt(address, requestedSlot, blockNumber, mirrorNodeCl
         const timestamp = Number(created_timestamp.split('.')[0]).toString(16).padStart(64, '0');
         const metadataEncoded = Buffer.from(metadata, 'utf-8').toString('hex');
         const metadataLength = metadata.length.toString(16).padStart(64, '0');
+
+        // 0x40 represents an offset of 64 bytes (0x40 in hex) within the ABI-encoded data.
+        // It is indicating the start of the bytes content.
         const stringTypeIndicator = '40'.padStart(64, '0');
         const bytes = `${timestamp}${stringTypeIndicator}${metadataLength}${metadataEncoded}`;
         persistentStorage.store(tokenId, blockNumber, nrequestedSlot, bytes);

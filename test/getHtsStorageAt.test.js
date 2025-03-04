@@ -157,44 +157,6 @@ describe('::getHtsStorageAt', function () {
      */
     const padAccountId = accountId => accountId.toString(16).padStart(8, '0');
 
-    /**
-     * Pads `accountId` to be encoded within a storage slot.
-     *
-     * @param {string|null} result Response returned by eth_getStorageAt
-     * @param {string} expectedString Expected string.
-     * @param {IMirrorNodeClient} client Mirror node client, to compare all slots taken by long strings
-     * @param {string} slot Base slot, to compare all slots taken by long string
-     * @param {string} address Address, to compare all slots taken by long string
-     */
-    const expectCorrectString = async (result, expectedString, client, slot, address) => {
-        if (expectedString.length > 31) {
-            const len = (expectedString.length * 2 + 1).toString(16).padStart(2, '0');
-            assert(result !== null);
-            expect(result.slice(2)).to.be.equal('0'.repeat(62) + len);
-
-            const baseSlot = BigInt(keccak256('0x' + toIntHex256(slot)));
-            let value = '';
-            for (let i = 0; i < (expectedString.length >> 5) + 1; i++) {
-                const result = await _getHtsStorageAt(
-                    address,
-                    `0x${(baseSlot + BigInt(i)).toString(16)}`,
-                    client
-                );
-                assert(result !== null);
-                value += result.slice(2);
-            }
-            const decoded = Buffer.from(value, 'hex')
-                .subarray(0, expectedString.length)
-                .toString('utf8');
-            expect(decoded).to.be.equal(expectedString);
-        } else {
-            const value = Buffer.from(expectedString).toString('hex').padEnd(62, '0');
-            const len = (expectedString.length * 2).toString(16).padStart(2, '0');
-            assert(result !== null);
-            expect(result.slice(2)).to.be.equal(value + len);
-        }
-    };
-
     Object.values(tokens)
         .filter(t => ['USDC', 'MFCT', 'CFNFTFF'].includes(t.symbol))
         .forEach(({ symbol, address }) => {
@@ -436,7 +398,7 @@ describe('::getHtsStorageAt', function () {
                             spender ? fakeEVMAddress : `0x${toIntHex256(0)}`
                         );
                     });
-                    it.skip(`should get storage for string field \`TokenURI\` for serial id ${serialId}`, async function () {
+                    it(`should get storage for packed field with \`created_timestamp\` and \`metadata\` for serial id ${serialId}`, async function () {
                         /** @type {IMirrorNodeClient} */
                         const mirrorNodeClient = {
                             ...mirrorNodeClientStub,
@@ -448,17 +410,52 @@ describe('::getHtsStorageAt', function () {
                                 );
                                 return nftResult;
                             },
+                            getTokenById: async () => require(`./data/USDC/getToken.json`),
                         };
-                        const selector = id('tokenURI(uint256)').slice(0, 10);
+                        const selector = id('getNonFungibleTokenInfo(address,int64)').slice(0, 10);
                         const padding = '0'.repeat(64 - 8 - `${serialId}`.length);
                         const slot = `${selector}${padding}${serialId.toString(16)}`;
-                        const result = await _getHtsStorageAt(address, slot, mirrorNodeClient);
-                        const str = atob(nftResult['metadata']);
-                        if (str.length > 31) {
-                            assert(this.test !== undefined);
-                            this.test.title += ' (large string)';
-                        }
-                        await expectCorrectString(result, str, mirrorNodeClient, slot, address);
+                        const baseResult =
+                            (await _getHtsStorageAt(address, slot, mirrorNodeClient)) || '0';
+
+                        // The total number of bytes occupied by this tuple cannot be smaller.
+                        // While the size of the metadata string is unknown, we must store a uint256,
+                        // followed by the offset and string length fields.
+                        expect(parseInt(baseResult, 16)).to.be.greaterThan(96);
+                        const baseSlotOfPackedValue = BigInt(keccak256('0x' + toIntHex256(slot)));
+                        const createdSlot = baseSlotOfPackedValue + BigInt(0);
+                        const createdSlotResult =
+                            (await _getHtsStorageAt(
+                                address,
+                                `0x${createdSlot.toString(16)}`,
+                                mirrorNodeClient
+                            )) || 0;
+                        const expectedTimestamp = BigInt(
+                            nftResult['created_timestamp'].split('.')[0]
+                        );
+                        expect(BigInt(createdSlotResult)).to.be.equal(expectedTimestamp);
+                        const offsetSlot = baseSlotOfPackedValue + BigInt(1);
+                        const offsetResult =
+                            (await _getHtsStorageAt(
+                                address,
+                                `0x${offsetSlot.toString(16)}`,
+                                mirrorNodeClient
+                            )) || 0;
+
+                        // Our encoded data will always have the same structure:
+                        //      (uint256,string)
+                        // so the offset for string should be 64 bytes
+                        expect(BigInt(offsetResult)).to.be.equal(BigInt(64));
+                        const metadataSlot = baseSlotOfPackedValue + BigInt(2);
+                        const metadataResult =
+                            (await _getHtsStorageAt(
+                                address,
+                                `0x${metadataSlot.toString(16)}`,
+                                mirrorNodeClient
+                            )) || 0;
+                        expect(BigInt(metadataResult)).to.be.equal(
+                            BigInt(nftResult['metadata'].length)
+                        );
                     });
                 });
             });
