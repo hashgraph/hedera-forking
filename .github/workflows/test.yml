@@ -272,7 +272,7 @@ jobs:
       - name: Moving build output to the plugin directory, where it's missing
         run: mv out examples/hardhat-hts/node_modules/@hashgraph/system-contracts-forking
 
-      - name: Run Example tests
+      - name: Run Hardhat example tests
         run: npx hardhat test --grep USDC && npx hardhat test --grep NFT
         working-directory: examples/hardhat-hts
 
