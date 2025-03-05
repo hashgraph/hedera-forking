@@ -102,16 +102,6 @@ contract MirrorNodeFFI is MirrorNode {
     }
 
     /**
-     * @dev Clears the cached response for the given endpoint. This ensures that future requests retrieve fresh data
-     *      from the Mirror Node, which may be useful when waiting for state changes to be reflected in the network.
-     *      It additionally satisfies Slither analysis. Slither does not recognize storage modifications made via
-     *      inline assembly, so this explicit initialization helps prevent false positives.
-     */
-    function clearCache(string memory endpoint) external {
-        _responses[endpoint] = "";
-    }
-
-    /**
      * @dev Returns the timestamp query filter according to the current `block.number`.
      */
     function _getBlockQueryParam() private returns (string memory) {
