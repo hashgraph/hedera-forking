@@ -22,6 +22,8 @@ contract MirrorNodeFFI is MirrorNode {
      * @dev Cache of responses by `endpoint`.
      * See `_get` method for details.
      */
+    // State is initialized using `vm.store` to avoid `EvmError: StateChangeDuringStaticCall`
+    // slither-disable-next-line uninitialized-state
     mapping (string endpoint => string response) private _responses;
 
     function fetchTokenData(address token) isValid(token) external override returns (string memory) {
@@ -99,16 +101,6 @@ contract MirrorNodeFFI is MirrorNode {
             "blocks/",
             vm.toString(blockNumber)
         ));
-    }
-
-    /**
-     * @dev Clears the cached response for the given endpoint. This ensures that future requests retrieve fresh data
-     *      from the Mirror Node, which may be useful when waiting for state changes to be reflected in the network.
-     *      It additionally satisfies Slither analysis. Slither does not recognize storage modifications made via
-     *      inline assembly, so this explicit initialization helps prevent false positives.
-     */
-    function clearCache(string memory endpoint) external {
-        _responses[endpoint] = "";
     }
 
     /**
