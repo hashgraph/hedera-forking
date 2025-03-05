@@ -265,7 +265,7 @@ jobs:
         working-directory: examples/hardhat-hts
 
       - name: Run Hardhat example tests
-        run: npn run test
+        run: npm run test
         working-directory: examples/hardhat-hts
 
   sol-tests-coverage:
