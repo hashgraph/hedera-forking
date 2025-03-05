@@ -17,6 +17,7 @@ import {Surl} from "./Surl.sol";
  * But it is always a valid block in the forked network.
  */
 contract MirrorNodeFFI is MirrorNode {
+
     /**
      * @dev Cache of responses by `endpoint`.
      * See `_get` method for details.
@@ -131,9 +132,8 @@ contract MirrorNodeFFI is MirrorNode {
             (uint256 status, bytes memory result) = Surl.get(string.concat(_mirrorNodeUrl(), endpoint));
             json = string(result);
 
-            // Allowed statuses: 2XX and 404.
-            // Written in this way to satisfy Slither's incorrect strict equality warning.
-            require(((status >= 200 && status < 300) || status > 403) && status < 405, json);
+            // slither-disable-next-line incorrect-equality
+            require(status == 200 || status == 404, json);
 
             // `_responses[endpoint] = json;`
             // To avoid `EvmError: StateChangeDuringStaticCall`

@@ -10,6 +10,10 @@ import {KeyLib} from "./KeyLib.sol";
 
 address constant HTS_ADDRESS = address(0x167);
 
+// The deleteToken method must be implemented to allow the withdrawal of Ether associated with this Smart Contract.
+// Alternatively, it can be paid out directly using the HTS system's cryptoTransfer method, bypassing the payable method
+// of this Smart Contract. Therefore, we can ignore this check for the Hedera infrastructure.
+// slither-disable-start locked-ether
 contract HtsSystemContract is IHederaTokenService {
 
     /**
@@ -384,21 +388,6 @@ contract HtsSystemContract is IHederaTokenService {
     ) htsCall external view returns (int64, bool) {
         require(token != address(0), "isApprovedForAll: invalid token");
         return (HederaResponseCodes.SUCCESS, IERC721(token).isApprovedForAll(owner, operator));
-    }
-
-
-    // FIXME: Temporary implementation to resolve Slither's locked ether warning.
-    function deleteToken(address token) htsCall external returns (int64) {
-        if (address(this).balance > 0) {
-            (int64 code, TokenInfo memory info) = getTokenInfo(token);
-            require(msg.sender == info.token.treasury, "_deleteToken: not permitted");
-            require(code == HederaResponseCodes.SUCCESS, "_deleteToken: failed to get token info");
-            payable(info.token.treasury).transfer(address(this).balance);
-        }
-
-        // TODO: Ensure the token is properly removed.
-
-        return HederaResponseCodes.SUCCESS;
     }
 
     function getTokenCustomFees(
@@ -1059,3 +1048,4 @@ contract HtsSystemContract is IHederaTokenService {
         emit IERC721.ApprovalForAll(sender, operator, approved);
     }
 }
+// slither-disable-end locked-ether
