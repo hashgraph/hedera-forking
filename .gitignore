@@ -18,4 +18,3 @@
 
 # Contains Mirror Node request logs created when mocking `curl`
 /test/scripts/curl.log
-
