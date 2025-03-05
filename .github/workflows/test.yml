@@ -234,8 +234,8 @@ jobs:
         run: forge test --remappings hedera-forking=. -vv --fork-url https://mainnet.hashio.io/api --fork-block-number 72433403
 
   e2e-test:
-    name: 'NPM E2E Tests'
-    runs-on: smart-contracts-linux-large
+    name: 'NPM e2e validation tests'
+    runs-on: smart-contracts-linux-medium
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@5c7944e73c4c2a096b17a9cb74d65b6c2bbafbde # v2.9.1
@@ -267,7 +267,7 @@ jobs:
         run: npx hedera start -d --verbose=trace
         timeout-minutes: 5
 
-      - name: Run E2E Tests
+      - name: Run e2e Validation Tests
         run: npm run test:e2e
         env:
           FOUNDRY_DISABLE_NIGHTLY_WARNING: true
