@@ -21,7 +21,7 @@
     ],
     "files": [
         "src/",
-        "out/HtsSystemContract.sol/HtsSystemContract.json",
+        "out/",
         "contracts/",
         "*.md"
     ],
