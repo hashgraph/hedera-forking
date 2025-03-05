@@ -44,7 +44,7 @@ library Surl {
         }
     }
 
-    function _bashCommand(string memory url) internal returns (string memory) {
+    function _bashCommand(string memory url) internal pure returns (string memory) {
         string memory scriptStart = 'response=$(curl -s -w "\\n%{http_code}" ';
         string memory scriptEnd = '); status=$(tail -n1 <<< "$response"); data=$(sed "$ d" <<< "$response");data=$(echo "$data" | tr -d "\\n"); cast abi-encode "response(uint256,string)" "$status" "$data";';
         string memory curlParams = "";
@@ -53,7 +53,7 @@ library Surl {
         return string.concat(scriptStart, curlParams, quotedURL, scriptEnd);
     }
 
-    function _powershellCommand(string memory url) internal returns (string memory) {
+    function _powershellCommand(string memory url) internal pure returns (string memory) {
         string memory encode = "| ConvertTo-Json -Compress | % { Start-Process -NoNewWindow -Wait -FilePath \"cast\" -ArgumentList @(\"abi-encode\", \"response(uint256,string)\", $status, $_)  }";
         return string.concat(
             "try { $r = Invoke-WebRequest -Uri '",
