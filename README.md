@@ -57,7 +57,7 @@ ffi = true
 
 Alternatively, you can add the `--ffi` flag to your execution script.
 
-This is necessary because:
+This is necessary because
 
 - On Unix-like operating systems, the library relies on [`curl`](https://curl.se/) to make HTTP requests to the Hedera remote network. This allows the library to fetch token state from the remote network. Since `curl` is an external command, `ffi` must be enabled.
 - On Windows, if PowerShell is available, the library uses the `Invoke-WebRequest` command to handle HTTP requests, which also requires `ffi` to be enabled.
@@ -66,7 +66,7 @@ This is necessary because:
 > The Foundry library assumes it is running on either a Windows system with PowerShell or a Unix-like operating system.
 >
 > - On Unix-like systems, it uses `curl`, `bash`, `tail`, `sed`, and `tr` to make requests and parse responses.
-> - On Windows, it uses `Invoke-WebRequest` and `Start-Process` in PowerShell for similar operations.
+> - On Windows, it uses `Invoke-WebRequest` and `Start-Process` in PowerShell for a similar effect.
 
 To activate HTS emulation in your tests, you need to add the following setup code in your test files.
 Import our wrapper function to deploy HTS emulation and enable cheat codes for it.
