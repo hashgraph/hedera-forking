@@ -264,14 +264,6 @@ jobs:
       - name: Run Forge build
         run: forge build
 
-      - name: Making sure the contracts are up to date
-        run: |
-          rm -rf examples/hardhat-hts/node_modules/@hashgraph/system-contracts-forking/contracts
-          mv contracts examples/hardhat-hts/node_modules/@hashgraph/system-contracts-forking/contracts
-
-      - name: Moving build output to the plugin directory, where it's missing
-        run: mv out examples/hardhat-hts/node_modules/@hashgraph/system-contracts-forking
-
       - name: Run Hardhat example tests
         run: npx hardhat test --grep USDC && npx hardhat test --grep NFT
         working-directory: examples/hardhat-hts
