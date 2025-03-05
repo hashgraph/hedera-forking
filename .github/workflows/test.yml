@@ -265,7 +265,7 @@ jobs:
         working-directory: examples/hardhat-hts
 
       - name: Run Hardhat example tests
-        run: npx hardhat test --grep USDC && npx hardhat test --grep NFT
+        run: npn run test
         working-directory: examples/hardhat-hts
 
   sol-tests-coverage:
