@@ -252,10 +252,6 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Run Forge example tests using remote network with a pinned block number
-        run: npm install
-        working-directory: examples/hardhat-hts
-
       - name: Install Foundry
         uses: step-security/foundry-toolchain@01e2d127ea061e2ce8fa34340de71ca8518f093e # v1.2.1
         with:
@@ -263,6 +259,10 @@ jobs:
 
       - name: Run Forge build
         run: forge build
+
+      - name: Install Dependencies
+        run: npm install
+        working-directory: examples/hardhat-hts
 
       - name: Run Hardhat example tests
         run: npx hardhat test --grep USDC && npx hardhat test --grep NFT
