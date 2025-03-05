@@ -253,7 +253,8 @@ jobs:
           node-version: '20'
 
       - name: Run Forge example tests using remote network with a pinned block number
-        run: cd examples/hardhat-hts && npm install
+        run: npm install
+        working-directory: examples/hardhat-hts
 
       - name: Install Foundry
         uses: step-security/foundry-toolchain@01e2d127ea061e2ce8fa34340de71ca8518f093e # v1.2.1
@@ -272,7 +273,8 @@ jobs:
         run: mv out examples/hardhat-hts/node_modules/@hashgraph/system-contracts-forking
 
       - name: Run Example tests
-        run: cd examples/hardhat-hts && npx hardhat test --grep USDC && npx hardhat test --grep NFT
+        run: npx hardhat test --grep USDC && npx hardhat test --grep NFT
+        working-directory: examples/hardhat-hts
 
   sol-tests-coverage:
     name: 'Solidity Coverage test'
