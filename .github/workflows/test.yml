@@ -260,8 +260,11 @@ jobs:
       - name: Run Forge build
         run: forge build
 
+      - name: Install Library Dependencies
+        run: npm ci
+
       - name: Install Dependencies
-        run: npm install
+        run: npm ci
         working-directory: examples/hardhat-hts
 
       - name: Run Hardhat example tests
