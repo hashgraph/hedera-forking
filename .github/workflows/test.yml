@@ -258,9 +258,7 @@ jobs:
           version: nightly
 
       - name: Run Forge build
-        run: |
-          forge --version
-          forge build
+        run: forge build
 
       - name: Install Dependencies
         run: npm ci
