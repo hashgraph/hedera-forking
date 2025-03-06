@@ -249,6 +249,11 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Set up Node.js
+        uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
+        with:
+          node-version: '20'
+
       - name: Install Foundry
         uses: step-security/foundry-toolchain@01e2d127ea061e2ce8fa34340de71ca8518f093e # v1.2.1
         with:
