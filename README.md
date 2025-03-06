@@ -57,13 +57,16 @@ ffi = true
 
 Alternatively, you can add the `--ffi` flag to your execution script.
 
-This is necessary because our library relies on [`curl`](https://curl.se/) to make HTTP requests to the Hedera remote network.
-This enables the library to fetch token state in the remote network.
-Given `curl` is an external command, `ffi` needs to be enabled.
+This is necessary because
 
-> [!NOTE]
-> The Foundry library assumes it is running on a Unix-like operating system.
-> In addition to `curl`, it uses `bash`, `tail`, `sed` and `tr` and to make requests and parse responses.
+- On Unix-like operating systems, the library relies on [`curl`](https://curl.se/) to make HTTP requests to the Hedera remote network. This allows the library to fetch token state from the remote network. Since `curl` is an external command, `ffi` must be enabled.
+- On Windows, if PowerShell is available, the library uses the `Invoke-WebRequest` command to handle HTTP requests, which also requires `ffi` to be enabled.
+
+> [!NOTE]  
+> The Foundry library assumes it is running on either a Windows system with PowerShell or a Unix-like operating system.
+>
+> - On Unix-like systems, it uses `curl`, `bash`, `tail`, `sed`, and `tr` to make requests and parse responses.
+> - On Windows, it uses `Invoke-WebRequest` and `Start-Process` in PowerShell for a similar effect.
 
 To activate HTS emulation in your tests, you need to add the following setup code in your test files.
 Import our wrapper function to deploy HTS emulation and enable cheat codes for it.
@@ -581,6 +584,10 @@ In case needed, there is a trace log of requests made by mocked `curl` in `scrip
 ```console
 cat test/scripts/curl.log
 ```
+
+> [!NOTE]
+> Since the Windows-based solution does not use `curl`, the mocked `curl` behavior will have no effect on it.
+> Mocked `curl` is designed exclusively for Unix-like operating systems.
 
 ### `HtsSystemContract` Solidity tests + JSON-RPC mock server for storage emulation (_with_ forking)
 

@@ -29,17 +29,40 @@ library Surl {
      * @return status The HTTP status code returned by the request.
      * @return data The response body as raw bytes.
      */
-    function get(string memory url) internal returns (uint256 status, bytes memory data) {
+    function get(string memory url) internal returns (uint256, bytes memory) {
+        string[] memory inputs = new string[](3);
+        inputs[0] = "bash";
+        inputs[1] = "-c";
+        inputs[2] = _bashCommand(url);
+        try vm.ffi(inputs) returns (bytes memory result) {
+            return abi.decode(result, (uint256, bytes));
+        } catch {
+            inputs[0] = "powershell";
+            inputs[1] = "-Command";
+            inputs[2] = _powershellCommand(url);
+            return abi.decode(vm.ffi(inputs), (uint256, bytes));
+        }
+    }
+
+    function _bashCommand(string memory url) internal pure returns (string memory) {
         string memory scriptStart = 'response=$(curl -s -w "\\n%{http_code}" ';
         string memory scriptEnd = '); status=$(tail -n1 <<< "$response"); data=$(sed "$ d" <<< "$response");data=$(echo "$data" | tr -d "\\n"); cast abi-encode "response(uint256,string)" "$status" "$data";';
         string memory curlParams = "";
         curlParams = string.concat(curlParams, " -X  GET ");
         string memory quotedURL = string.concat('"', url, '"');
-        string[] memory inputs = new string[](3);
-        inputs[0] = "bash";
-        inputs[1] = "-c";
-        inputs[2] = string.concat(scriptStart, curlParams, quotedURL, scriptEnd);
-        bytes memory res = vm.ffi(inputs);
-        (status, data) = abi.decode(res, (uint256, bytes));
+        return string.concat(scriptStart, curlParams, quotedURL, scriptEnd);
+    }
+
+    function _powershellCommand(string memory url) internal pure returns (string memory) {
+        string memory encode = "| ConvertTo-Json -Compress | % { Start-Process -NoNewWindow -Wait -FilePath \"cast\" -ArgumentList @(\"abi-encode\", \"response(uint256,string)\", $status, $_)  }";
+        return string.concat(
+            "try { $r = Invoke-WebRequest -Uri '",
+            url,
+            "' -Method GET; $status = $r.StatusCode; $data = $r.Content ",
+            encode,
+            " } catch { $status = $_.Exception.Response.StatusCode.Value__; $data = $_.ErrorDetails.Message ",
+            encode,
+            " }; Write-Output $data"
+        );
     }
 }
