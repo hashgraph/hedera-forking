@@ -249,11 +249,6 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Set up Node.js
-        uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
-        with:
-          node-version: '20'
-
       - name: Install Foundry
         uses: step-security/foundry-toolchain@01e2d127ea061e2ce8fa34340de71ca8518f093e # v1.2.1
         with:
@@ -265,26 +260,7 @@ jobs:
           forge build
 
       - name: Generate Coverage Report
-        run: |
-          forge coverage --report lcov
-          cat lcov.info
-
-      - name: Convert LCOV to Istanbul Text Format
-        run: |
-          .github/lcovtoistanbul lcov.info > istanbul.txt
-          cat istanbul.txt
-
-      - name: Prepare coverage report in markdown
-        uses: fingerprintjs/action-coverage-report-md@72dfb7de7581612640a8e599e918b2eda98f9bba
-        id: coverage
-        with:
-          textReportPath: istanbul.txt
-          srcBasePath: .
-
-      - name: Add coverage comment to the PR
-        uses: marocchino/sticky-pull-request-comment@52423e01640425a022ef5fd42c6fb5f633a02728
-        with:
-          message: ${{ steps.coverage.outputs.markdownReport }}
+        run: forge coverage
 
   e2e-test:
     name: 'NPM e2e validation tests'
