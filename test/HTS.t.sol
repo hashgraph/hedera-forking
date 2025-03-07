@@ -793,8 +793,8 @@ contract HTSTest is Test, TestSetup {
         int64[] memory amounts = new int64[](1);
         amounts[0] = 4_000000;
         vm.prank(owner);
-        vm.expectRevert("transferTokens: invalid token");
-        IHederaTokenService(HTS_ADDRESS).transferTokens(address(0), to, amounts);
+        (int64 code) = IHederaTokenService(HTS_ADDRESS).transferTokens(address(0), to, amounts);
+        assertEq(code, HederaResponseCodes.INVALID_TOKEN_ID);
     }
 
     function test_HTS_transferTokens_inconsistent_input() public {
