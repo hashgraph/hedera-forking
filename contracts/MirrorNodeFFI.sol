@@ -82,7 +82,7 @@ contract MirrorNodeFFI is MirrorNode {
         ));
     }
 
-    function fetchNonFungibleToken(address token, uint32 serial) isValid(token) external override returns (string memory) {
+    function fetchNonFungibleTokenSerial(address token, uint32 serial) isValid(token) external override returns (string memory) {
         return _get(string.concat(
             "tokens/0.0.",
             vm.toString(uint160(token)),
