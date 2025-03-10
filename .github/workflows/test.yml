@@ -291,8 +291,8 @@ jobs:
       - name: Generate Coverage Report
         run: forge coverage --report lcov -vvv
 
-      - name: Send the coverage results to Codecov
-        uses: codecov/codecov-action@v4
+      - name: Send the coverage results to Codecov and comment coverage changes
+        uses: codecov/codecov-action@5c47607acb93fed5485fdbf7232e8a31425f672a # v5.0.2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./lcov.info
