@@ -9,7 +9,7 @@ Enable either the [Foundry library](./README.md#foundry-library) or the [Hardhat
 
 ### What causes the error `EvmError: InvalidFEOpcode`?
 
-The reason of error `EvmError: InvalidEFOpcode` is related to how Foundry executes scripts.
+The reason of error `EvmError: InvalidFEOpcode` is related to how Foundry executes scripts.
 It first runs the script on its local network.
 It records the operations made to be replayed in the remote network.
 See <https://book.getfoundry.sh/guides/scripting-with-solidity#overview> for more info.
