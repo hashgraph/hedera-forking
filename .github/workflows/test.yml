@@ -296,7 +296,6 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./lcov.info
-          # Required when using the org token
           slug: hashgraph/hedera-forking
 
   e2e-test:
