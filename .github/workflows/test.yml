@@ -47,9 +47,7 @@ jobs:
           version: nightly
 
       - name: Run Forge build
-        run: |
-          forge --version
-          forge build
+        run: forge build
 
       - name: Install Dependencies
         run: npm ci
@@ -85,9 +83,7 @@ jobs:
           version: nightly
 
       - name: Run Forge build
-        run: |
-          forge --version
-          forge build
+        run: forge build
 
       - name: Install Dependencies
         run: npm ci
@@ -122,9 +118,7 @@ jobs:
           version: nightly
 
       - name: Run Forge build
-        run: |
-          forge --version
-          forge build
+        run: forge build
 
       - name: Run Forge tests using local storage emulation (without forking)
         run: forge test -vvv
@@ -154,9 +148,7 @@ jobs:
           version: nightly
 
       - name: Run Forge build
-        run: |
-          forge --version
-          forge build
+        run: forge build
 
       - name: Mock curl
         run: echo "./test/scripts" >> "$GITHUB_PATH"
@@ -195,9 +187,7 @@ jobs:
           version: nightly
 
       - name: Run Forge build
-        run: |
-          forge --version
-          forge build
+        run: forge build
 
       - name: Start JSON-RPC mock server
         run: node test/scripts/json-rpc-mock.js &
@@ -299,7 +289,14 @@ jobs:
         run: forge build
 
       - name: Generate Coverage Report
-        run: forge coverage
+        run: forge coverage --report lcov -vvv
+
+      - name: Send the coverage results to Codecov and comment coverage changes
+        uses: codecov/codecov-action@5c47607acb93fed5485fdbf7232e8a31425f672a # v5.0.2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./lcov.info
+          slug: hashgraph/hedera-forking
 
   e2e-test:
     name: 'NPM e2e validation tests'
