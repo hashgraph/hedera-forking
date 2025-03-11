@@ -2,11 +2,12 @@
 
 # Hedera Forking for System Contracts
 
-[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/hashgraph/hedera-forking/test.yml?style=flat-square)](https://github.com/hashgraph/hedera-forking/actions/workflows/test.yml)
-[![npm](https://img.shields.io/npm/v/@hashgraph/system-contracts-forking?style=flat-square)](https://www.npmjs.com/package/@hashgraph/system-contracts-forking)
-![downloads](https://img.shields.io/npm/dt/@hashgraph/system-contracts-forking?style=flat-square)
-[![License](https://img.shields.io/github/license/hashgraph/hedera-forking?style=flat-square)](LICENSE)
-[![Discord](https://img.shields.io/badge/discord-join%20chat-blue.svg)](https://hedera.com/discord)
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/hashgraph/hedera-forking/test.yml?style=flat&logo=githubactions)](https://github.com/hashgraph/hedera-forking/actions/workflows/test.yml)
+[![npm](https://img.shields.io/npm/v/@hashgraph/system-contracts-forking?style=flat&logo=npm)](https://www.npmjs.com/package/@hashgraph/system-contracts-forking)
+![NPM Downloads](https://img.shields.io/npm/dt/@hashgraph/system-contracts-forking?style=flat&logo=npm)
+[![Codecov](https://img.shields.io/codecov/c/github/hashgraph/hedera-forking?style=flat&logo=codecov)](https://codecov.io/gh/hashgraph/hedera-forking)
+[![License](https://img.shields.io/github/license/hashgraph/hedera-forking?style=flat)](LICENSE)
+[![Discord](https://img.shields.io/badge/discord-join%20chat-blue.svg?style=flat&logo=discord)](https://hedera.com/discord)
 
 </div>
 
