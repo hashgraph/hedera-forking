@@ -45,7 +45,7 @@ function main() {
         ['Function', 'methods'],
         ['Event', 'events'],
     ].forEach(([kind, prop]) => {
-        const members = [...data(kind.toLowerCase(), abi, userdoc[prop] ?? {}, devdoc[prop] ?? {})];
+        const members = [...data(kind.toLowerCase(), abi, userdoc ?? {}, devdoc ?? {})];
         if (members.length > 0) {
             write();
             write(`| ${kind} | Comment |`);
