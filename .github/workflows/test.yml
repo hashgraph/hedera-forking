@@ -91,6 +91,9 @@ jobs:
       - name: Embed tables and code examples into README
         run: npm run make:readme
 
+      - name: Format README tables to perform diff check
+        run: npx prettier README.md --write
+
       - name: Check that README is up-to-date
         run: git --no-pager diff --exit-code README.md
 
