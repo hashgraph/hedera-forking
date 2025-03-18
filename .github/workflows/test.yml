@@ -80,7 +80,7 @@ jobs:
       - name: Install Foundry
         uses: step-security/foundry-toolchain@01e2d127ea061e2ce8fa34340de71ca8518f093e # v1.2.1
         with:
-          version: nightly
+          version: stable
 
       - name: Run Forge build
         run: forge build
@@ -116,7 +116,7 @@ jobs:
       - name: Install Foundry
         uses: step-security/foundry-toolchain@01e2d127ea061e2ce8fa34340de71ca8518f093e # v1.2.1
         with:
-          version: nightly
+          version: stable
 
       - name: Run Forge build
         run: forge build
@@ -126,8 +126,6 @@ jobs:
 
       - name: Run Unit Tests
         run: npm run test
-        env:
-          FOUNDRY_DISABLE_NIGHTLY_WARNING: true
 
   sol-tests-local-storage:
     name: 'Forge tests w/storage emulation'
@@ -151,7 +149,7 @@ jobs:
       - name: Install Foundry
         uses: step-security/foundry-toolchain@01e2d127ea061e2ce8fa34340de71ca8518f093e # v1.2.1
         with:
-          version: nightly
+          version: stable
 
       - name: Run Forge build
         run: forge build
@@ -181,7 +179,7 @@ jobs:
       - name: Install Foundry
         uses: step-security/foundry-toolchain@01e2d127ea061e2ce8fa34340de71ca8518f093e # v1.2.1
         with:
-          version: nightly
+          version: stable
 
       - name: Run Forge build
         run: forge build
@@ -220,7 +218,7 @@ jobs:
       - name: Install Foundry
         uses: step-security/foundry-toolchain@01e2d127ea061e2ce8fa34340de71ca8518f093e # v1.2.1
         with:
-          version: nightly
+          version: stable
 
       - name: Run Forge build
         run: forge build
@@ -248,7 +246,7 @@ jobs:
       - name: Install Foundry
         uses: step-security/foundry-toolchain@01e2d127ea061e2ce8fa34340de71ca8518f093e # v1.2.1
         with:
-          version: nightly
+          version: stable
 
       - name: Patch Foundry's config file to run only Foundry HTS examples
         run: echo 'test="examples/foundry-hts"' >> foundry.toml
@@ -281,7 +279,7 @@ jobs:
       - name: Install Foundry
         uses: step-security/foundry-toolchain@01e2d127ea061e2ce8fa34340de71ca8518f093e # v1.2.1
         with:
-          version: nightly
+          version: stable
 
       - name: Run Forge build
         run: forge build
@@ -356,7 +354,7 @@ jobs:
       - name: Install Foundry
         uses: step-security/foundry-toolchain@01e2d127ea061e2ce8fa34340de71ca8518f093e # v1.2.1
         with:
-          version: nightly
+          version: stable
 
       - name: Run Forge build
         run: forge build
@@ -370,8 +368,6 @@ jobs:
 
       - name: Run e2e Validation Tests
         run: npm run test:e2e
-        env:
-          FOUNDRY_DISABLE_NIGHTLY_WARNING: true
 
       - name: Stop the local node
         if: ${{ !cancelled() }}
