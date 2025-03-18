@@ -30,20 +30,16 @@ jobs:
       - name: Install Foundry
         uses: step-security/foundry-toolchain@01e2d127ea061e2ce8fa34340de71ca8518f093e # v1.2.1
         with:
-          version: nightly
+          version: stable
 
       - name: Run Forge build
-        run: |
-          forge --version
-          forge build
+        run: forge build
 
       - name: Install Dependencies
         run: npm ci
 
       - name: Run Unit Tests
         run: npm run test
-        env:
-          FOUNDRY_DISABLE_NIGHTLY_WARNING: true
 
       - name: Publish NPM package
         run: npm publish --access public
