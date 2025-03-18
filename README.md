@@ -92,7 +92,6 @@ For example
 ```solidity examples/foundry-hts/USDC.t.sol
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
-
 import {Test} from "forge-std/Test.sol";
 import {htsSetup} from "hedera-forking/contracts/htsSetup.sol";
 import {IERC20} from "hedera-forking/contracts/IERC20.sol";

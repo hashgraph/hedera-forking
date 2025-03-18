@@ -95,7 +95,7 @@ jobs:
         run: npx prettier README.md --write
 
       - name: Check that README is up-to-date
-        run: git --no-pager diff --exit-code README.md
+        run: git --no-pager diff --exit-code README.md || (echo "==== README is not up to date, run 'npm run make:readme' and include changes made to 'README.md' ====" && false)
 
   npm-test:
     name: 'NPM Unit and Hardhat plugin Tests'
