@@ -347,7 +347,7 @@ The following methods and events are applicable to Fungible Tokens.
 
 #### ERC20 Interface
 
-<!-- !./scripts/abi-table.js out/IERC20.sol/IERC20.json out/IERC20.sol/IERC20Events.json -->
+<!-- !./scripts/abi-table.js out/IERC20.sol/IERC20.json -->
 
 | Function                                                          | Comment                                                                                                                                                                                                              |
 | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -384,7 +384,7 @@ The following methods and events are applicable to Fungible Tokens.
 
 The following methods and events are applicable to Non-Fungible Tokens.
 
-<!-- !./scripts/abi-table.js out/IERC721.sol/IERC721.json out/IERC721.sol/IERC721Events.json -->
+<!-- !./scripts/abi-table.js out/IERC721.sol/IERC721.json -->
 
 | Function                                                                    | Comment                                                                                                                                                                                                                                                                                                                                                                       |
 | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -514,7 +514,7 @@ Code fences that contains a file name after the language definition, _e.g._,
 or comments such as
 
 ```markdown
-  <!-- !./scripts/abi-table.js out/IERC20.sol/IERC20.json out/IERC20.sol/IERC20Events.json -->
+  <!-- !./scripts/abi-table.js out/IERC20.sol/IERC20.json -->
   <!-- -->
 ```
 
