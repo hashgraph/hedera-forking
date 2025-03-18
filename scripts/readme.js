@@ -4,16 +4,10 @@
 
 const { strict: assert } = require('assert');
 const { readFileSync, writeFileSync } = require('fs');
-const path = require('path');
 const c = require('ansi-colors');
 const { execSync } = require('child_process');
 
 function main() {
-    const license = readFileSync(
-        path.join(__dirname, '..', 'resources', 'license.js.header'),
-        'utf8'
-    );
-
     const MARKERS = /**@type{const}*/ ([
         { begin: /^```\w+ (.+)$/, end: '```' },
         { begin: /^<!-- (.+) -->$/, end: '<!-- -->' },
@@ -52,7 +46,6 @@ function main() {
             } else {
                 content = readFileSync(marker.file, 'utf8');
                 content = content
-                    .replace(license, '')
                     .replace(/\/\* eslint-.+ \*\//g, '')
                     .replace(/^\s*\/\/\s*prettier-ignore$\n/gm, '')
                     .trim();
