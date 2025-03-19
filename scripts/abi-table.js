@@ -26,19 +26,10 @@ function* data(kind, abi, userdoc, devdoc) {
 }
 
 function main() {
-    const jsonPaths = process.argv.slice(2);
-    if (jsonPaths.length === 0) throw new Error('Invalid json path(s) to extract ABI from');
+    const jsonPath = process.argv.slice(2);
+    if (jsonPath.length !== 1) throw new Error('Invalid json path to extract ABI from');
 
-    const { abi, userdoc, devdoc } = jsonPaths
-        .map(jsonPath => JSON.parse(readFileSync(jsonPath, 'utf8')))
-        .reduce(
-            ({ abi, userdoc, devdoc }, json) => ({
-                abi: [...json.abi, ...abi],
-                userdoc: { ...json.userdoc, ...userdoc },
-                devdoc: { ...json.devdoc, ...devdoc },
-            }),
-            { abi: [], userdoc: {}, devdoc: {} }
-        );
+    const { abi, userdoc, devdoc } = JSON.parse(readFileSync(jsonPath[0], 'utf8'));
 
     const write = console.info;
     [
