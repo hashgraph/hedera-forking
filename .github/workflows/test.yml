@@ -158,7 +158,14 @@ jobs:
         run: forge build
 
       - name: Run Forge tests using local storage emulation (without forking)
-        run: forge test -vvv
+        run: forge coverage --report lcov --report-file sol-tests-local-storage-lcov.info -vvv
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: sol-tests-local-storage-lcov
+          path: sol-tests-local-storage-lcov.info
+          retention-days: 1
 
   sol-tests-ffi-mock:
     name: 'Forge tests w/FFI curl process mock'
@@ -191,10 +198,17 @@ jobs:
         run: echo "./test/scripts" >> "$GITHUB_PATH"
 
       - name: Run Forge tests using JSON-RPC Mainnet and Testnet servers (with forking)
-        run: forge test -vvv --fork-url https://testnet.hashio.io/api --fork-block-number 13890397
+        run: forge coverage --report lcov --report-file sol-tests-ffi-mock-lcov.info -vvv --fork-url https://testnet.hashio.io/api --fork-block-number 13890397
 
       - name: Show Mocked curl Requests
         run: cat test/scripts/curl.log
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: sol-tests-ffi-mock-lcov
+          path: sol-tests-ffi-mock-lcov.info
+          retention-days: 1
 
   sol-tests-json-rpc-mock:
     name: 'Forge tests w/RPC mock server'
@@ -230,7 +244,14 @@ jobs:
         run: node test/scripts/json-rpc-mock.js &
 
       - name: Run Forge tests using JSON-RPC mock server for storage emulation (with forking)
-        run: forge test -vvv --fork-url http://localhost:7546 --no-storage-caching
+        run: forge coverage --report lcov --report-file sol-tests-json-rpc-mock-lcov.info -vvv --fork-url http://localhost:7546 --no-storage-caching
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: sol-tests-json-rpc-mock-lcov
+          path: sol-tests-json-rpc-mock-lcov.info
+          retention-days: 1
 
   foundry-example-tests:
     name: 'Foundry example tests w/mainnet'
@@ -301,6 +322,7 @@ jobs:
   sol-tests-coverage:
     name: 'Solidity Coverage test'
     runs-on: smart-contracts-linux-medium
+    needs: [sol-tests-local-storage, sol-tests-ffi-mock, sol-tests-json-rpc-mock]
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@5c7944e73c4c2a096b17a9cb74d65b6c2bbafbde # v2.9.1
@@ -334,6 +356,16 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./lcov.info
           slug: hashgraph/hedera-forking
+
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          # path: my-artifact
+          pattern: *-lcov
+          merge-multiple: true
+
+      - name: Display structure of downloaded files
+        run: ls -R .
 
   e2e-test:
     name: 'NPM e2e validation tests'
