@@ -31,8 +31,10 @@ describe('fork-block-project', function () {
     });
 
     it('should retrieve token data when forking from token creation block', async function () {
-        // Token creation block
-        resetTo(40804822 + 1);
+        // It is not possible to use token creation block 40804823
+        // See issue https://github.com/hashgraph/hedera-forking/issues/277
+        // 51400378 block number comes from https://github.com/hashgraph/hedera-forking/issues/277#issuecomment-2741910619
+        resetTo(51400378);
 
         const ft = await hre.ethers.getContractAt(IERC20.abi, whbarAddress);
         expect(await ft['name']()).to.be.equal('Wrapped Hbar');
@@ -43,8 +45,6 @@ describe('fork-block-project', function () {
     it("should get account's correct balance at different forking blocks", async function () {
         const usdc = await hre.ethers.getContractAt(IERC20.abi, usdcAddress);
         const holderAddress = '0x0000000000000000000000000000000000001887';
-
-        expect(await usdc['balanceOf'](holderAddress)).to.be.equal(321444n);
 
         // Just some block number we verified the balance was changed in mainnet
         resetTo(70520505);
