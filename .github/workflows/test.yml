@@ -244,13 +244,13 @@ jobs:
         run: node test/scripts/json-rpc-mock.js &
 
       - name: Run Forge tests using JSON-RPC mock server for storage emulation (with forking)
-        run: forge coverage --report lcov --report-file sol-tests-json-rpc-mock-lcov.info -vvv --fork-url http://localhost:7546 --no-storage-caching
+        run: forge coverage --report lcov --report-file ${{ github.job }}-lcov.info -vvv --fork-url http://localhost:7546 --no-storage-caching
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
-          name: sol-tests-json-rpc-mock-lcov
-          path: sol-tests-json-rpc-mock-lcov.info
+          name: ${{ github.job }}-lcov
+          path: ${{ github.job }}-lcov.info
           retention-days: 1
 
   foundry-example-tests:
@@ -320,7 +320,7 @@ jobs:
         working-directory: examples/hardhat-hts
 
   sol-tests-coverage:
-    name: 'Solidity Coverage test'
+    name: Solidity Coverage Report
     runs-on: smart-contracts-linux-medium
     needs: [sol-tests-local-storage, sol-tests-ffi-mock, sol-tests-json-rpc-mock]
     steps:
@@ -334,36 +334,16 @@ jobs:
         with:
           submodules: recursive
 
-      # - name: Set up Node.js
-      #   uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
-      #   with:
-      #     node-version: '20'
-
-      # - name: Install Foundry
-      #   uses: step-security/foundry-toolchain@01e2d127ea061e2ce8fa34340de71ca8518f093e # v1.2.1
-      #   with:
-      #     version: stable
-
-      # - name: Run Forge build
-      #   run: forge build
-
-      # - name: Generate Coverage Report
-      #   run: forge coverage --report lcov -vvv
-
-      - name: Download All Artifacts
+      - name: Download coverage reports from test runs
         uses: actions/download-artifact@v4
         with:
           pattern: sol-tests-*-lcov
           merge-multiple: true
 
-      - name: Display structure of downloaded files
-        run: ls -R .
-
       - name: Send the coverage results to Codecov and comment coverage changes
         uses: codecov/codecov-action@5c47607acb93fed5485fdbf7232e8a31425f672a # v5.0.2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          # files: ./lcov.info
           files: ./sol-tests-local-storage-lcov.info,./sol-tests-ffi-mock-lcov.info,./sol-tests-json-rpc-mock-lcov.info
           slug: hashgraph/hedera-forking
 
