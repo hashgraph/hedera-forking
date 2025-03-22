@@ -257,7 +257,7 @@ jobs:
           path: lcov.info
 
   coverage-report:
-    name: Solidity Coverage Report
+    name: Coverage Report
     runs-on: smart-contracts-linux-medium
     needs: [npm-test, sol-tests-local-storage, sol-tests-ffi-mock, sol-tests-json-rpc-mock]
     steps:
@@ -282,7 +282,6 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./lcov-npm-test/lcov.info,./lcov-sol-tests-local-storage/lcov.info,./lcov-sol-tests-ffi-mock/lcov.info,./lcov-sol-tests-json-rpc-mock/lcov.info
           slug: hashgraph/hedera-forking
-          disable_search: true
 
   foundry-example-tests:
     name: 'Foundry example tests w/mainnet'
