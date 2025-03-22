@@ -134,7 +134,7 @@ jobs:
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
           name: report-${{ github.job }}-lcov
-          path: coverage/lcov.info
+          path: coverage/
 
   sol-tests-local-storage:
     name: 'Forge tests w/storage emulation'
@@ -276,6 +276,8 @@ jobs:
         with:
           pattern: report-*-lcov
           merge-multiple: true
+      
+      - run: ls -R
 
       - name: Send the coverage results to Codecov and comment coverage changes
         uses: codecov/codecov-action@5c47607acb93fed5485fdbf7232e8a31425f672a # v5.0.2
