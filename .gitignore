@@ -4,8 +4,6 @@
 /cache/
 /out/
 
-.idea/
-
 # Ignore `.env` that contains account details for the `create-token` script
 /scripts/.env
 
