@@ -672,6 +672,26 @@ Once Local Node is up and running, run the validation tests with
 npm run test:e2e
 ```
 
+## Coverage
+
+Run NPM tests with coverage using
+
+```console
+npm run coverage
+```
+
+Similarly, Solidity test coverage can be obtained using the [`forge coverage`](https://book.getfoundry.sh/reference/forge/forge-coverage) command, for example
+
+```console
+forge coverage
+```
+
+The [&sect; _Tests_](#tests) describes different test execution settings depending on the contracts to be tested.
+
+Test coverage reports based on [_&sect; Tests_](#tests) are uploaded to [Codecov](https://codecov.io/gh/hashgraph/hedera-forking)
+
+[![codecov Sunburst](https://codecov.io/gh/hashgraph/hedera-forking/graphs/sunburst.svg?token=NNW96R6VIE)](https://codecov.io/gh/hashgraph/hedera-forking)
+
 ## Support
 
 If you have a question on how to use the product, please see our
