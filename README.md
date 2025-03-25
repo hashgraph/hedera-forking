@@ -672,6 +672,38 @@ Once Local Node is up and running, run the validation tests with
 npm run test:e2e
 ```
 
+## Coverage
+
+Run NPM tests with coverage using
+
+```console
+npm run coverage
+```
+
+Similarly, Solidity test coverage can be obtained using the [`forge coverage`](https://book.getfoundry.sh/reference/forge/forge-coverage) command, for example
+
+```console
+forge coverage
+```
+
+The [&sect; _Tests_](#tests) describes different test execution settings depending on the contracts to be tested.
+
+> [!IMPORTANT]
+> To obtain accurate coverage reports remember to clean up any cache related data.
+>
+> Both Foundry and Hardhat cache successful JSON-RPC calls when running tests.
+> This means that when RPC calls are cached, there are fewer calls made to the forking library.
+> This in turn make coverage reports provide inaccurate results.
+>
+> Foundry's JSON-RPC cache can be displayed and cleaned up using the [`forge cache`](https://book.getfoundry.sh/reference/forge/forge-cache) command.
+> Its cache it is usually located in `~/.foundry/cache/`.
+>
+> On the other hand, Hardhat cache is located under each plugin tests, _i.e_, `test/plugin/*/cache`.
+
+Test coverage reports based on [_&sect; Tests_](#tests) are uploaded to [Codecov](https://codecov.io/gh/hashgraph/hedera-forking)
+
+[![codecov Sunburst](https://codecov.io/gh/hashgraph/hedera-forking/graphs/sunburst.svg?token=NNW96R6VIE)](https://codecov.io/gh/hashgraph/hedera-forking)
+
 ## Support
 
 If you have a question on how to use the product, please see our
