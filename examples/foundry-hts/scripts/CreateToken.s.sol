@@ -7,6 +7,14 @@ import {IHederaTokenService} from "hedera-forking/IHederaTokenService.sol";
 import {HederaResponseCodes} from "hedera-forking/HederaResponseCodes.sol";
 import {htsSetup} from "hedera-forking/htsSetup.sol";
 
+/**
+ * Given how Foundry script works, the flag `--skip-simulation` is necessary.
+ * For example
+ *
+ * ```
+ * forge script scripts/CreateToken.s.sol -vvv --rpc-url testnet --skip-simulation --broadcast
+ * ```
+ */
 contract CreateTokenScript is Script {
     uint256 PRIVATE_KEY = vm.envUint("PRIVATE_KEY");
 
