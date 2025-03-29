@@ -2,10 +2,10 @@
 pragma solidity ^0.8.0;
 
 import {Test} from "forge-std/Test.sol";
-import {htsSetup} from "hedera-forking/contracts/htsSetup.sol";
-import {IERC20} from "hedera-forking/contracts/IERC20.sol";
-import {IHederaTokenService} from "hedera-forking/contracts/IHederaTokenService.sol";
-import {HederaResponseCodes} from "hedera-forking/contracts/HederaResponseCodes.sol";
+import {htsSetup} from "hedera-forking/htsSetup.sol";
+import {IERC20} from "hedera-forking/IERC20.sol";
+import {IHederaTokenService} from "hedera-forking/IHederaTokenService.sol";
+import {HederaResponseCodes} from "hedera-forking/HederaResponseCodes.sol";
 
 contract USDCExampleTest is Test {
     // https://hashscan.io/mainnet/token/0.0.456858

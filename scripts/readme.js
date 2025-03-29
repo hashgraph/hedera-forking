@@ -22,7 +22,9 @@ function main() {
     let output = '';
     const write = (/** @type string */ line) => (output += line + '\n');
 
+    let lineNum = 0;
     for (const line of readme.split('\n')) {
+        lineNum++;
         const trimmedLine = line.trimEnd();
         const found = MARKERS.map(marker => ({
             ...marker,
@@ -31,7 +33,9 @@ function main() {
         if (found !== undefined && marker === null) {
             assert(found.match !== null);
             marker = { line: trimmedLine, file: found.match[1], end: found.end };
-            process.stdout.write(`Opening marker ${c.magenta(marker.file)} .. `);
+            process.stdout.write(
+                `${c.blue(`[Line ${lineNum}]`)} Opening marker ${c.magenta(marker.file)} .. `
+            );
         } else if (marker !== null && trimmedLine === marker.end) {
             write(marker.line);
             let content;
