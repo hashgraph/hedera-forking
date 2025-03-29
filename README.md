@@ -89,15 +89,15 @@ and then invoke it in your [test setup](https://book.getfoundry.sh/forge/writing
 Now you can use Hedera Token Services and remote tokens as if they were deployed locally when fork testing.
 For example
 
-```solidity examples/foundry-hts/USDC.t.sol
+```solidity examples/foundry-hts/src/USDC.t.sol
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
 import {Test} from "forge-std/Test.sol";
-import {htsSetup} from "hedera-forking/contracts/htsSetup.sol";
-import {IERC20} from "hedera-forking/contracts/IERC20.sol";
-import {IHederaTokenService} from "hedera-forking/contracts/IHederaTokenService.sol";
-import {HederaResponseCodes} from "hedera-forking/contracts/HederaResponseCodes.sol";
+import {htsSetup} from "hedera-forking/htsSetup.sol";
+import {IERC20} from "hedera-forking/IERC20.sol";
+import {IHederaTokenService} from "hedera-forking/IHederaTokenService.sol";
+import {HederaResponseCodes} from "hedera-forking/HederaResponseCodes.sol";
 
 contract USDCExampleTest is Test {
     // https://hashscan.io/mainnet/token/0.0.456858
@@ -148,13 +148,13 @@ forge test --fork-url https://mainnet.hashio.io/api --fork-block-number 72433403
 
 You can use all the tools and cheatcodes Foundry provides, _e.g._, `console.log`
 
-```solidity examples/foundry-hts/USDCConsole.t.sol
+```solidity examples/foundry-hts/src/USDCConsole.t.sol
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
 import {Test, console} from "forge-std/Test.sol";
-import {htsSetup} from "hedera-forking/contracts/htsSetup.sol";
-import {IERC20} from "hedera-forking/contracts/IERC20.sol";
+import {htsSetup} from "hedera-forking/htsSetup.sol";
+import {IERC20} from "hedera-forking/IERC20.sol";
 
 contract USDCConsoleExampleTest is Test {
     function setUp() external {
@@ -527,7 +527,7 @@ This allow us to ensure that all examples and tables are never outdated (if we c
 Code fences that contains a file name after the language definition, _e.g._,
 
 ````markdown
-  ```solidity examples/foundry-hts/USDC.t.sol
+  ```solidity examples/foundry-hts/src/USDC.t.sol
   ```
 ````
 
