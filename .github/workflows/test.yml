@@ -302,14 +302,22 @@ jobs:
         with:
           version: stable
 
-      - name: Patch Foundry's config file to run only Foundry HTS examples
-        run: echo 'test="examples/foundry-hts"' >> foundry.toml
+      # - name: Patch Foundry's config file to run only Foundry HTS examples
+      #   run: echo 'test="examples/foundry-hts"' >> foundry.toml
 
-      - name: Run Forge build with custom remappings
-        run: forge build --remappings hedera-forking=.
+      # - name: Run Forge build with custom remappings
+      #   run: forge build --remappings hedera-forking=.
 
-      - name: Run Forge example tests using remote network with a pinned block number
-        run: forge test --remappings hedera-forking=. -vv --fork-url https://mainnet.hashio.io/api --fork-block-number 72433403
+      # - name: Run Forge example tests using remote network with a pinned block number
+      #   run: forge test --remappings hedera-forking=. -vv --fork-url https://mainnet.hashio.io/api --fork-block-number 72433403
+
+      - name: Run Forge build on Foundry HTS example
+        run: forge build
+        working-directory: examples/foundry-hts
+
+      - name: Run Forge HTS example tests using remote network with a pinned block number
+        run: forge test -vv --fork-url mainnet --fork-block-number 72433403
+        working-directory: examples/foundry-hts
 
   hardhat-example-tests:
     name: 'Hardhat example tests w/mainnet'
