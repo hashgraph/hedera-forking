@@ -15,7 +15,7 @@ function* data(kind, abi, userdoc, devdoc) {
     for (const entry of abi) {
         const frag = Fragment.from(entry);
         if (frag.type === kind) {
-            const sighash = frag.format('sighash');
+            const sighash = kind === 'function' ? frag.format('sighash') : frag.format('topicHash');
             const [member] = frag.format('full').replace(`${kind} `, '').split(' returns ');
             const notice = (userdoc[sighash]?.notice ?? '').trim();
             const dev = (devdoc[sighash]?.details ?? '').trim();
