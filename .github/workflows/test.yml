@@ -386,6 +386,10 @@ jobs:
         run: forge build
         working-directory: examples/foundry-hts
 
+      - name: Set up Local Node's account Private Key
+        run: echo "PRIVATE_KEY=0x105d050185ccb907fba04dd92d8de9e32c18305e097ab41dadda21489a211524" > .env
+        working-directory: examples/foundry-hts
+
       - name: Run Foundry script on local node
         run: forge script scripts/CreateToken.s.sol -vvv --rpc-url localnode --skip-simulation --broadcast
         working-directory: examples/foundry-hts
