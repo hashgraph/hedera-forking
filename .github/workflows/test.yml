@@ -400,7 +400,9 @@ jobs:
       - name: Verify the token was created
         run: |
           TOKEN_ADDR=`cat broadcast/CreateToken.s.sol/298/run-latest.json | jq '.receipts[0].contractAddress' --raw-output`
+          echo "Token Address: $TOKEN_ADDR"
           TOKEN_CODE=`cast code --rpc-url localnode $TOKEN_ADDR`
+          echo "Token Code: $TOKEN_CODE"
           test $TOKEN_CODE != "0x"
         working-directory: examples/foundry-hts
 
