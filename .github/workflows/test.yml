@@ -394,6 +394,13 @@ jobs:
         run: forge script scripts/CreateToken.s.sol -vvv --rpc-url localnode --skip-simulation --broadcast
         working-directory: examples/foundry-hts
 
+      - name: Verify the token was created
+        run: |
+          TOKEN_ADDR=`cat broadcast/CreateToken.s.sol/296/run-latest.json | jq '.receipts[0].contractAddress' --raw-output`
+          TOKEN_CODE=`cast code --rpc-url localnode $TOKEN_ADDR`
+          test $TOKEN_CODE != "0x"
+        working-directory: examples/foundry-hts
+
       - name: Stop the local node
         if: ${{ !cancelled() }}
         run: npx hedera stop
