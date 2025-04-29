@@ -386,6 +386,8 @@ jobs:
         run: forge build
         working-directory: examples/foundry-hts
 
+      # Uses a local node's account private key
+      # https://github.com/hiero-ledger/hiero-local-node?tab=readme-ov-file#hedera-start-options
       - name: Set up Local Node's account Private Key
         run: echo "PRIVATE_KEY=0x105d050185ccb907fba04dd92d8de9e32c18305e097ab41dadda21489a211524" > .env
         working-directory: examples/foundry-hts
@@ -394,9 +396,10 @@ jobs:
         run: forge script scripts/CreateToken.s.sol -vvv --rpc-url localnode --skip-simulation --broadcast
         working-directory: examples/foundry-hts
 
+      # https://book.getfoundry.sh/guides/scripting-with-solidity
       - name: Verify the token was created
         run: |
-          TOKEN_ADDR=`cat broadcast/CreateToken.s.sol/296/run-latest.json | jq '.receipts[0].contractAddress' --raw-output`
+          TOKEN_ADDR=`cat broadcast/CreateToken.s.sol/298/run-latest.json | jq '.receipts[0].contractAddress' --raw-output`
           TOKEN_CODE=`cast code --rpc-url localnode $TOKEN_ADDR`
           test $TOKEN_CODE != "0x"
         working-directory: examples/foundry-hts

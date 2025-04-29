@@ -11,7 +11,7 @@
 
 </div>
 
-**This projects allows Smart Contract developers working on Hedera to use fork testing while using Hedera System Contracts.**
+**This project allows Smart Contract developers working on Hedera to use fork testing while using Hedera System Contracts.**
 It does so by providing an emulation layer for the [Hedera Token Service](https://hedera.com/token-service) _(more System Contracts to come)_ written in Solidity.
 Given it is written in Solidity, it can be executed in a forked network environment, such as
 [Foundry](https://book.getfoundry.sh/forge/fork-testing) or
