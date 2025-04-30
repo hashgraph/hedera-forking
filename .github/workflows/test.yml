@@ -302,14 +302,13 @@ jobs:
         with:
           version: stable
 
-      - name: Patch Foundry's config file to run only Foundry HTS examples
-        run: echo 'test="examples/foundry-hts"' >> foundry.toml
+      - name: Run Forge build on Foundry HTS example
+        run: forge build
+        working-directory: examples/foundry-hts
 
-      - name: Run Forge build with custom remappings
-        run: forge build --remappings hedera-forking=.
-
-      - name: Run Forge example tests using remote network with a pinned block number
-        run: forge test --remappings hedera-forking=. -vv --fork-url https://mainnet.hashio.io/api --fork-block-number 72433403
+      - name: Run Forge HTS example tests using remote network with a pinned block number
+        run: forge test -vv --fork-url mainnet --fork-block-number 72433403
+        working-directory: examples/foundry-hts
 
   hardhat-example-tests:
     name: 'Hardhat example tests w/mainnet'
@@ -348,6 +347,68 @@ jobs:
       - name: Run Hardhat example tests
         run: npm run test
         working-directory: examples/hardhat-hts
+
+  foundry-example-scripts:
+    name: Foundry example scripts w/local node
+    runs-on: smart-contracts-linux-medium
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@5c7944e73c4c2a096b17a9cb74d65b6c2bbafbde # v2.9.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout Code
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          submodules: recursive
+
+      - name: Set up Node.js
+        uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
+        with:
+          node-version: 20
+
+      - name: Install Foundry
+        uses: step-security/foundry-toolchain@01e2d127ea061e2ce8fa34340de71ca8518f093e # v1.2.1
+        with:
+          version: stable
+
+      - name: Run Forge build
+        run: forge build
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Start the local node
+        run: npx hedera start --detach --verbose=trace
+        timeout-minutes: 5
+
+      - name: Run Forge build on Foundry HTS example
+        run: forge build
+        working-directory: examples/foundry-hts
+
+      # Uses a local node's account private key
+      # https://github.com/hiero-ledger/hiero-local-node?tab=readme-ov-file#hedera-start-options
+      - name: Set up Local Node's account Private Key
+        run: echo "PRIVATE_KEY=0x105d050185ccb907fba04dd92d8de9e32c18305e097ab41dadda21489a211524" > .env
+        working-directory: examples/foundry-hts
+
+      - name: Run Foundry script on local node
+        run: forge script scripts/CreateToken.s.sol -vvv --rpc-url localnode --skip-simulation --broadcast
+        working-directory: examples/foundry-hts
+
+      # https://book.getfoundry.sh/guides/scripting-with-solidity
+      - name: Verify the token was created
+        run: |
+          TOKEN_ADDR=`cat broadcast/CreateToken.s.sol/298/run-latest.json | jq '.receipts[0].contractAddress' --raw-output`
+          echo "Token Address: $TOKEN_ADDR"
+          TOKEN_CODE=`cast code --rpc-url localnode $TOKEN_ADDR`
+          echo "Token Code: $TOKEN_CODE"
+          test $TOKEN_CODE != "0x"
+        working-directory: examples/foundry-hts
+
+      - name: Stop the local node
+        if: ${{ !cancelled() }}
+        run: npx hedera stop
 
   e2e-test:
     name: 'NPM e2e validation tests'

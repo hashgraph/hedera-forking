@@ -2,8 +2,8 @@
 pragma solidity ^0.8.0;
 
 import {Test, console} from "forge-std/Test.sol";
-import {htsSetup} from "hedera-forking/contracts/htsSetup.sol";
-import {IERC20} from "hedera-forking/contracts/IERC20.sol";
+import {htsSetup} from "hedera-forking/htsSetup.sol";
+import {IERC20} from "hedera-forking/IERC20.sol";
 
 contract USDCConsoleExampleTest is Test {
     function setUp() external {
