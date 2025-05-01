@@ -284,7 +284,7 @@ jobs:
           slug: hashgraph/hedera-forking
 
   foundry-example-tests:
-    name: 'Foundry example tests w/mainnet'
+    name: 'Foundry example tests'
     strategy:
       fail-fast: false
       matrix:

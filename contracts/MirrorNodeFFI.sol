@@ -24,7 +24,7 @@ contract MirrorNodeFFI is MirrorNode {
      */
     // State is initialized using `vm.store` to avoid `EvmError: StateChangeDuringStaticCall`
     // slither-disable-next-line uninitialized-state
-    mapping (string endpoint => string response) private _responses;
+    mapping (string => string) private _responses;
 
     function fetchTokenData(address token) isValid(token) external override returns (string memory) {
         return _get(string.concat(
