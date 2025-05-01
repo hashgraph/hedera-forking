@@ -89,7 +89,7 @@ and then invoke it in your [test setup](https://book.getfoundry.sh/forge/writing
 Now you can use Hedera Token Services and remote tokens as if they were deployed locally when fork testing.
 For example
 
-```solidity examples/foundry-hts/src/USDC.t.sol
+```solidity examples/foundry-hts/test/USDC.t.sol
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
@@ -148,7 +148,7 @@ forge test --fork-url https://mainnet.hashio.io/api --fork-block-number 72433403
 
 You can use all the tools and cheatcodes Foundry provides, _e.g._, `console.log`
 
-```solidity examples/foundry-hts/src/USDCConsole.t.sol
+```solidity examples/foundry-hts/test/USDCConsole.t.sol
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
@@ -604,7 +604,7 @@ This allow us to ensure that all examples and tables are never outdated (if we c
 Code fences that contains a file name after the language definition, _e.g._,
 
 ````markdown
-  ```solidity examples/foundry-hts/src/USDC.t.sol
+  ```solidity examples/foundry-hts/test/USDC.t.sol
   ```
 ````
 
