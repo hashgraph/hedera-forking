@@ -16,7 +16,7 @@ import {Vm} from "forge-std/Vm.sol";
  * By inlining the required code, we reduce dependency bloat and improve maintainability.
  */
 library Surl {
-    Vm internal constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
+    Vm private constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
     /**
      * @notice Performs an HTTP GET request to the specified URL.

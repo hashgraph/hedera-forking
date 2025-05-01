@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import {Vm} from "forge-std/Vm.sol";
 import {MirrorNode} from "./MirrorNode.sol";
 import {HtsSystemContract, HTS_ADDRESS} from "./HtsSystemContract.sol";
-import {storeString} from "./StrStore.sol";
+import {Store} from "./Store.sol";
 import {Surl} from "./Surl.sol";
 
 /**
@@ -129,7 +129,7 @@ contract MirrorNodeFFI is MirrorNode {
             // To avoid `EvmError: StateChangeDuringStaticCall`
             uint256 slot;
             assembly { slot := _responses.slot }
-            storeString(address(this), uint256(keccak256(abi.encodePacked(endpoint, slot))), json);
+            Store.storeString(address(this), uint256(keccak256(abi.encodePacked(endpoint, slot))), json);
         }
     }
 
