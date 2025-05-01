@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {Test} from "forge-std/Test.sol";
-import {HtsSetup} from "hedera-forking/htsSetup.sol";
+import {HtsSetup} from "hedera-forking/HtsSetup.sol";
 import {IERC20} from "hedera-forking/IERC20.sol";
 import {IHederaTokenService} from "hedera-forking/IHederaTokenService.sol";
 import {HederaResponseCodes} from "hedera-forking/HederaResponseCodes.sol";

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {Test, console} from "forge-std/Test.sol";
-import {HtsSetup} from "hedera-forking/htsSetup.sol";
+import {HtsSetup} from "hedera-forking/HtsSetup.sol";
 import {IERC721} from "hedera-forking/IERC721.sol";
 
 contract NFTExampleTest is Test {
