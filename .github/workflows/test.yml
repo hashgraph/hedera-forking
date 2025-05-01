@@ -286,6 +286,7 @@ jobs:
   foundry-example-tests:
     name: 'Foundry example tests w/mainnet'
     strategy:
+      fail-fast: false
       matrix:
         solc: [
           # Ensure we do not use "named parameters in mapping types"
