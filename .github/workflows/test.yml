@@ -285,6 +285,9 @@ jobs:
 
   foundry-example-tests:
     name: 'Foundry example tests w/mainnet'
+    strategy:
+      matrix:
+        solc: ['0.8.19', '0.8.24']
     runs-on: smart-contracts-linux-medium
     steps:
       - name: Harden Runner
@@ -305,6 +308,8 @@ jobs:
       - name: Run Forge build on Foundry HTS example
         run: forge build
         working-directory: examples/foundry-hts
+        env:
+          FOUNDRY_SOLC_VERSION: ${{ matrix.solc }}
 
       - name: Run Forge HTS example tests using remote network with a pinned block number
         run: forge test -vv --fork-url mainnet --fork-block-number 72433403
