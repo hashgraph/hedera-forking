@@ -309,6 +309,7 @@ jobs:
         run: forge build
         working-directory: examples/foundry-hts
         env:
+          # https://book.getfoundry.sh/reference/config/solidity-compiler#solc_version
           FOUNDRY_SOLC_VERSION: ${{ matrix.solc }}
 
       - name: Run Forge HTS example tests using remote network with a pinned block number
