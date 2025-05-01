@@ -289,6 +289,10 @@ jobs:
       fail-fast: false
       matrix:
         solc: [
+          # Ensures we do not overload/use free functions
+          # https://soliditylang.org/blog/2022/03/16/solidity-0.8.13-release-announcement/
+          '0.8.12',
+
           # Ensures we do not use "named parameters in mapping types"
           # See _Language Features_ https://soliditylang.org/blog/2023/02/01/solidity-0.8.18-release-announcement/
           '0.8.17',
