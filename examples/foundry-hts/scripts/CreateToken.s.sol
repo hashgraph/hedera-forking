@@ -11,9 +11,7 @@ import {HtsSetup} from "hedera-forking/HtsSetup.sol";
  * Given how Foundry script works, the flag `--skip-simulation` is necessary.
  * For example
  *
- * ```
  * forge script scripts/CreateToken.s.sol -vvv --rpc-url testnet --skip-simulation --broadcast
- * ```
  */
 contract CreateTokenScript is Script {
     uint256 PRIVATE_KEY = vm.envUint("PRIVATE_KEY");

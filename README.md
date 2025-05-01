@@ -70,17 +70,17 @@ This is necessary because
 > - On Windows, it uses `Invoke-WebRequest` and `Start-Process` in PowerShell for a similar effect.
 
 To activate HTS emulation in your tests, you need to add the following setup code in your test files.
-Import our wrapper function to deploy HTS emulation and enable cheat codes for it.
+Import our wrapper `library` to deploy HTS emulation and enable cheat codes for it.
 
 ```solidity
-import {htsSetup} from "hedera-forking/contracts/htsSetup.sol";
+import {HtsSetup} from "hedera-forking/HtsSetup.sol";
 ```
 
 and then invoke it in your [test setup](https://book.getfoundry.sh/forge/writing-tests)
 
 ```solidity
     function setUp() public {
-        htsSetup();
+        HtsSetup.htsSetup();
     }
 ```
 
@@ -186,7 +186,7 @@ To enable Foundry Scripts to work with HTS, you can use `htsSetup()` as describe
 You can include
 For example
 
-````solidity examples/foundry-hts/scripts/CreateToken.s.sol
+```solidity examples/foundry-hts/scripts/CreateToken.s.sol
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
@@ -194,21 +194,19 @@ import {Script, console} from "forge-std/Script.sol";
 import {HTS_ADDRESS} from "hedera-forking/HtsSystemContract.sol";
 import {IHederaTokenService} from "hedera-forking/IHederaTokenService.sol";
 import {HederaResponseCodes} from "hedera-forking/HederaResponseCodes.sol";
-import {htsSetup} from "hedera-forking/htsSetup.sol";
+import {HtsSetup} from "hedera-forking/HtsSetup.sol";
 
 /**
  * Given how Foundry script works, the flag `--skip-simulation` is necessary.
  * For example
  *
- * ```
  * forge script scripts/CreateToken.s.sol -vvv --rpc-url testnet --skip-simulation --broadcast
- * ```
  */
 contract CreateTokenScript is Script {
     uint256 PRIVATE_KEY = vm.envUint("PRIVATE_KEY");
 
     function run() public {
-        htsSetup();
+        HtsSetup.htsSetup();
 
         address signer = vm.addr(PRIVATE_KEY);
         console.log("Signer address %s", signer);
@@ -241,7 +239,7 @@ contract CreateTokenScript is Script {
         vm.stopBroadcast();
     }
 }
-````
+```
 
 where `testnet` is an [RPC endpoint](https://book.getfoundry.sh/reference/config/testing#rpc_endpoints) declared in `foundry.toml`.
 For example
