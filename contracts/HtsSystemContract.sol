@@ -10,6 +10,32 @@ import {KeyLib} from "./KeyLib.sol";
 
 address constant HTS_ADDRESS = address(0x167);
 
+// Event definitions from both `IERC20` and `IERC721` cannot be used here because
+// `solc` does not permit to use qualified access to events in foreign interfaces.
+// This feature was added in `solc` `0.8.21`.
+// See _Qualified access to foreign events_ https://soliditylang.org/blog/2023/07/19/solidity-0.8.21-release-announcement/.
+// However, we cannot use this feature because library users might not be able to use this version.
+//
+// On the other hand, the `Transfer` and `Approval` events from ERC20 and ERC721 only differ
+// in the `amount` not being `indexed` whereas `tokenId` argument is `indexed`.
+// `indexed` arguments are not part of the `event` signature,
+// meaning that for `solc` both events are the same definition.
+// That is why we cannot put these events in the `HtsSystemContract` directly.
+//
+// We cannot remove these events from `IERC20` and `IERC721` interfaces because that would violate their definition.
+// Event definitions must be duplicated here and put in libraries so they can be reused by tests.
+
+library IERC20Events {
+    event Transfer(address indexed from, address indexed to, uint256 amount);
+    event Approval(address indexed owner, address indexed spender, uint256 amount);
+}
+
+library IERC721Events {
+    event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
+    event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId);
+    event ApprovalForAll(address indexed owner, address indexed operator, bool approved);
+}
+
 contract HtsSystemContract is IHederaTokenService {
 
     /**
@@ -606,7 +632,7 @@ contract HtsSystemContract is IHederaTokenService {
                 address to = address(bytes20(msg.data[72:92]));
                 uint256 amount = uint256(bytes32(msg.data[92:124]));
                 _approve(from, to, amount);
-                emit IERC20.Approval(from, to, amount);
+                emit IERC20Events.Approval(from, to, amount);
                 return abi.encode(true);
             }
             if (selector == this.approveNFT.selector) {
@@ -702,7 +728,7 @@ contract HtsSystemContract is IHederaTokenService {
             uint256 amount = uint256(bytes32(msg.data[60:92]));
             address owner = msg.sender;
             _approve(owner, spender, amount);
-            emit IERC20.Approval(owner, spender, amount);
+            emit IERC20Events.Approval(owner, spender, amount);
             return abi.encode(true);
         }
         return _redirectForHRC719(selector);
@@ -936,7 +962,7 @@ contract HtsSystemContract is IHederaTokenService {
         require(from != address(0), "hts: invalid sender");
         require(to != address(0), "hts: invalid receiver");
         _update(from, to, amount);
-        emit IERC20.Transfer(from, to, amount);
+        emit IERC20Events.Transfer(from, to, amount);
     }
 
     function _transferNFT(address sender, address from, address to, uint256 serialId) private {
@@ -964,7 +990,7 @@ contract HtsSystemContract is IHederaTokenService {
 
         // Set the new owner
         assembly { sstore(slot, to) }
-        emit IERC721.Transfer(from, to, serialId);
+        emit IERC721Events.Transfer(from, to, serialId);
     }
 
     function _update(address from, address to, uint256 amount) public {
@@ -1009,7 +1035,7 @@ contract HtsSystemContract is IHederaTokenService {
         bytes32 slot = _getApprovedSlot(uint32(serialId));
         address newApproved = isApproved ? spender : address(0);
         assembly { sstore(slot, newApproved) }
-        emit IERC721.Approval(owner, spender, serialId);
+        emit IERC721Events.Approval(owner, spender, serialId);
     }
 
     /**
@@ -1030,6 +1056,6 @@ contract HtsSystemContract is IHederaTokenService {
         require(operator != address(0) && operator != sender, "setApprovalForAll: invalid operator");
         bytes32 slot = _isApprovedForAllSlot(sender, operator);
         assembly { sstore(slot, approved) }
-        emit IERC721.ApprovalForAll(sender, operator, approved);
+        emit IERC721Events.ApprovalForAll(sender, operator, approved);
     }
 }
