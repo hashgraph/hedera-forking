@@ -186,7 +186,7 @@ To enable Foundry Scripts to work with HTS, you can use `htsSetup()` as describe
 You can include
 For example
 
-```solidity examples/foundry-hts/scripts/CreateToken.s.sol
+```solidity examples/foundry-hts/script/CreateToken.s.sol
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
@@ -194,7 +194,7 @@ import {Script, console} from "forge-std/Script.sol";
 import {HTS_ADDRESS} from "hedera-forking/HtsSystemContract.sol";
 import {IHederaTokenService} from "hedera-forking/IHederaTokenService.sol";
 import {HederaResponseCodes} from "hedera-forking/HederaResponseCodes.sol";
-import {HtsSetup} from "hedera-forking/HtsSetup.sol";
+import {Hsc} from "hedera-forking/Hsc.sol";
 
 /**
  * Given how Foundry script works, the flag `--skip-simulation` is necessary.
@@ -206,7 +206,7 @@ contract CreateTokenScript is Script {
     uint256 PRIVATE_KEY = vm.envUint("PRIVATE_KEY");
 
     function run() public {
-        HtsSetup.htsSetup();
+        Hsc.htsSetup();
 
         address signer = vm.addr(PRIVATE_KEY);
         console.log("Signer address %s", signer);
