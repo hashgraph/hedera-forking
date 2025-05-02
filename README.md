@@ -70,17 +70,17 @@ This is necessary because
 > - On Windows, it uses `Invoke-WebRequest` and `Start-Process` in PowerShell for a similar effect.
 
 To activate HTS emulation in your tests, you need to add the following setup code in your test files.
-Import our wrapper `library` to deploy HTS emulation and enable cheat codes for it.
+Import our System Contracts `library` to deploy HTS emulation and enable cheat codes for it.
 
 ```solidity
-import {HtsSetup} from "hedera-forking/HtsSetup.sol";
+import {Hsc} from "hedera-forking/Hsc.sol";
 ```
 
 and then invoke it in your [test setup](https://book.getfoundry.sh/forge/writing-tests)
 
 ```solidity
     function setUp() public {
-        HtsSetup.htsSetup();
+        Hsc.htsSetup();
     }
 ```
 
@@ -94,7 +94,7 @@ For example
 pragma solidity ^0.8.0;
 
 import {Test} from "forge-std/Test.sol";
-import {HtsSetup} from "hedera-forking/HtsSetup.sol";
+import {Hsc} from "hedera-forking/Hsc.sol";
 import {IERC20} from "hedera-forking/IERC20.sol";
 import {IHederaTokenService} from "hedera-forking/IHederaTokenService.sol";
 import {HederaResponseCodes} from "hedera-forking/HederaResponseCodes.sol";
@@ -106,7 +106,7 @@ contract USDCExampleTest is Test {
     address private user1;
 
     function setUp() external {
-        HtsSetup.htsSetup();
+        Hsc.htsSetup();
 
         user1 = makeAddr("user1");
         deal(USDC_mainnet, user1, 1000 * 10e8);
@@ -153,12 +153,12 @@ You can use all the tools and cheatcodes Foundry provides, _e.g._, `console.log`
 pragma solidity ^0.8.0;
 
 import {Test, console} from "forge-std/Test.sol";
-import {HtsSetup} from "hedera-forking/HtsSetup.sol";
+import {Hsc} from "hedera-forking/Hsc.sol";
 import {IERC20} from "hedera-forking/IERC20.sol";
 
 contract USDCConsoleExampleTest is Test {
     function setUp() external {
-        HtsSetup.htsSetup();
+        Hsc.htsSetup();
     }
 
     function test_using_console_log() view external {

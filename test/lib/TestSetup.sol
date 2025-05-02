@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import {console} from "forge-std/console.sol";
 
-import {HtsSetup} from "../../contracts/HtsSetup.sol";
+import {Hsc} from "../../contracts/Hsc.sol";
 import {HTS_ADDRESS} from "../../contracts/HtsSystemContractJson.sol";
 import {MirrorNode} from "../../contracts/MirrorNode.sol";
 import {MirrorNodeFFI} from "../../contracts/MirrorNodeFFI.sol";
@@ -79,12 +79,12 @@ abstract contract TestSetup {
             mirrorNodeMock.deployHIP719Proxy(CTCF, "CTCF");
             mirrorNodeMock.deployHIP719Proxy(CFNFTFF, "CFNFTFF");
             mirrorNode = mirrorNodeMock;
-            HtsSetup.htsSetup(mirrorNode);
+            Hsc.htsSetup(mirrorNode);
             testMode = TestMode.NonFork;
         } else if (HTS_ADDRESS.code.length == 1) {
             console.log("HTS code length is 1, forking from a remote Hedera network, HTS/FFI code with Mirror Node backend is deployed here");
             mirrorNode = new MirrorNodeFFI();
-            HtsSetup.htsSetup(mirrorNode);
+            Hsc.htsSetup(mirrorNode);
             testMode = TestMode.FFI;
         } else {
             console.log("HTS code length is greater than 1 (%d), HTS code comes from forked network", HTS_ADDRESS.code.length);

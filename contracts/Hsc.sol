@@ -7,7 +7,10 @@ import {HtsSystemContractJson, HTS_ADDRESS} from "./HtsSystemContractJson.sol";
 import {MirrorNode} from "./MirrorNode.sol";
 import {MirrorNodeFFI} from "./MirrorNodeFFI.sol";
 
-library HtsSetup {
+/**
+ * Library to deploy and setup System Contracts.
+ */
+library Hsc {
     Vm private constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
     /**

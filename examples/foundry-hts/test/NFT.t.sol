@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {Test, console} from "forge-std/Test.sol";
-import {HtsSetup} from "hedera-forking/HtsSetup.sol";
+import {Hsc} from "hedera-forking/Hsc.sol";
 import {IERC721} from "hedera-forking/IERC721.sol";
 
 contract NFTExampleTest is Test {
@@ -12,7 +12,7 @@ contract NFTExampleTest is Test {
     address private user;
 
     function setUp() external {
-        HtsSetup.htsSetup();
+        Hsc.htsSetup();
 
         user = makeAddr("user");
         dealERC721(NFT_mainnet, user, 3);
