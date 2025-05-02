@@ -414,7 +414,7 @@ jobs:
         working-directory: examples/foundry-hts
 
       - name: Run Foundry script on local node
-        run: forge script scripts/CreateToken.s.sol -vvv --rpc-url localnode --skip-simulation --broadcast
+        run: forge script script/CreateToken.s.sol -vvv --rpc-url localnode --skip-simulation --broadcast
         working-directory: examples/foundry-hts
 
       # https://book.getfoundry.sh/guides/scripting-with-solidity
