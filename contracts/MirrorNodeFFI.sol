@@ -5,6 +5,7 @@ import {Vm} from "forge-std/Vm.sol";
 import {MirrorNode} from "./MirrorNode.sol";
 import {HtsSystemContract, HTS_ADDRESS} from "./HtsSystemContract.sol";
 import {Store} from "./Store.sol";
+import {Str} from "./Str.sol";
 import {Surl} from "./Surl.sol";
 
 /**
@@ -27,14 +28,14 @@ contract MirrorNodeFFI is MirrorNode {
     mapping (string => string) private _responses;
 
     function fetchTokenData(address token) isValid(token) external override returns (string memory) {
-        return _get(string.concat(
+        return _get(Str.concat(
             "tokens/0.0.",
             vm.toString(uint160(token))
         ));
     }
 
     function fetchBalance(address token, uint32 accountNum) isValid(token) external override returns (string memory) {
-        return _get(string.concat(
+        return _get(Str.concat(
             "tokens/0.0.",
             vm.toString(uint160(token)),
             "/balances?account.id=0.0.",
@@ -44,7 +45,7 @@ contract MirrorNodeFFI is MirrorNode {
     }
 
     function fetchAllowance(address token, uint32 ownerNum, uint32 spenderNum) isValid(token) external override returns (string memory) {
-        return _get(string.concat(
+        return _get(Str.concat(
             "accounts/0.0.",
             vm.toString(ownerNum),
             "/allowances/tokens?token.id=0.0.",
@@ -55,7 +56,7 @@ contract MirrorNodeFFI is MirrorNode {
     }
 
     function fetchNftAllowance(address token, uint32 ownerNum, uint32 operatorNum) isValid(token) external override returns (string memory) {
-        return _get(string.concat(
+        return _get(Str.concat(
             "accounts/0.0.",
             vm.toString(ownerNum),
             "/allowances/nfts?token.id=0.0.",
@@ -66,7 +67,7 @@ contract MirrorNodeFFI is MirrorNode {
     }
 
     function fetchAccount(string memory idOrAliasOrEvmAddress) external override returns (string memory) {
-        return _get(string.concat(
+        return _get(Str.concat(
             "accounts/",
             idOrAliasOrEvmAddress,
             "?transactions=false"
@@ -74,7 +75,7 @@ contract MirrorNodeFFI is MirrorNode {
     }
 
     function fetchTokenRelationshipOfAccount(string memory idOrAliasOrEvmAddress, address token) external override returns (string memory) {
-        return _get(string.concat(
+        return _get(Str.concat(
             "accounts/",
             idOrAliasOrEvmAddress,
             "/tokens?token.id=0.0.",
@@ -83,7 +84,7 @@ contract MirrorNodeFFI is MirrorNode {
     }
 
     function fetchNonFungibleToken(address token, uint32 serial) isValid(token) external override returns (string memory) {
-        return _get(string.concat(
+        return _get(Str.concat(
             "tokens/0.0.",
             vm.toString(uint160(token)),
             "/nfts/",
@@ -97,7 +98,7 @@ contract MirrorNodeFFI is MirrorNode {
      * Uses Mirror Node `/api/v1/blocks/` endpoint.
      */
     function fetchBlock(uint256 blockNumber) external returns (string memory) {
-        return _get(string.concat(
+        return _get(Str.concat(
             "blocks/",
             vm.toString(blockNumber)
         ));
@@ -109,7 +110,7 @@ contract MirrorNodeFFI is MirrorNode {
     function _getBlockQueryParam() private returns (string memory) {
         string memory json = this.fetchBlock(block.number);
         string memory timestamp = vm.parseJsonString(json, ".timestamp.to");
-        return string.concat("&timestamp=", timestamp);
+        return Str.concat("&timestamp=", timestamp);
     }
 
     /**
@@ -121,7 +122,7 @@ contract MirrorNodeFFI is MirrorNode {
     function _get(string memory endpoint) private returns (string memory json) {
         json = _responses[endpoint];
         if (bytes(json).length == 0) {
-            (uint256 status, bytes memory result) = Surl.get(string.concat(_mirrorNodeUrl(), endpoint));
+            (uint256 status, bytes memory result) = Surl.get(Str.concat(_mirrorNodeUrl(), endpoint));
             json = string(result);
             require(status == 200 || status == 404, json);
 

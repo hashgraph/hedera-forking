@@ -8,6 +8,7 @@ import {HtsSystemContract, HTS_ADDRESS} from "./HtsSystemContract.sol";
 import {IERC20} from "./IERC20.sol";
 import {MirrorNode} from "./MirrorNode.sol";
 import {IMirrorNodeResponses} from "./IMirrorNodeResponses.sol";
+import {Str} from "./Str.sol";
 import {Store} from "./Store.sol";
 
 contract HtsSystemContractJson is HtsSystemContract {
@@ -382,13 +383,13 @@ contract HtsSystemContractJson is HtsSystemContract {
             FixedFee[] memory fixedFees = new FixedFee[](fees.length);
             for (uint i = 0; i < fees.length; i++) {
                 string memory path = vm.replace(".custom_fees.fixed_fees[{i}]", "{i}", vm.toString(i));
-                address denominatingToken = mirrorNode().getAccountAddress(vm.parseJsonString(json, string.concat(path, ".denominating_token_id")));
+                address denominatingToken = mirrorNode().getAccountAddress(vm.parseJsonString(json, Str.concat(path, ".denominating_token_id")));
                 fixedFees[i] = FixedFee(
-                    int64(vm.parseJsonInt(json, string.concat(path, ".amount"))),
+                    int64(vm.parseJsonInt(json, Str.concat(path, ".amount"))),
                     denominatingToken,
                     denominatingToken == address(0),
                     denominatingToken == address(this),
-                    mirrorNode().getAccountAddress(vm.parseJsonString(json, string.concat(path, ".collector_account_id")))
+                    mirrorNode().getAccountAddress(vm.parseJsonString(json, Str.concat(path, ".collector_account_id")))
                 );
             }
             return fixedFees;
@@ -412,12 +413,12 @@ contract HtsSystemContractJson is HtsSystemContract {
             for (uint i = 0; i < fees.length; i++) {
                 string memory path = vm.replace(".custom_fees.fractional_fees[{i}]", "{i}", vm.toString(i));
                 fractionalFees[i] = FractionalFee(
-                    int64(vm.parseJsonInt(json, string.concat(path, ".amount.numerator"))),
-                    int64(vm.parseJsonInt(json, string.concat(path, ".amount.denominator"))),
-                    int64(vm.parseJsonInt(json, string.concat(path, ".minimum"))),
-                    int64(vm.parseJsonInt(json, string.concat(path, ".maximum"))),
-                    vm.parseJsonBool(json, string.concat(path, ".net_of_transfers")),
-                    mirrorNode().getAccountAddress(vm.parseJsonString(json, string.concat(path, ".collector_account_id")))
+                    int64(vm.parseJsonInt(json, Str.concat(path, ".amount.numerator"))),
+                    int64(vm.parseJsonInt(json, Str.concat(path, ".amount.denominator"))),
+                    int64(vm.parseJsonInt(json, Str.concat(path, ".minimum"))),
+                    int64(vm.parseJsonInt(json, Str.concat(path, ".maximum"))),
+                    vm.parseJsonBool(json, Str.concat(path, ".net_of_transfers")),
+                    mirrorNode().getAccountAddress(vm.parseJsonString(json, Str.concat(path, ".collector_account_id")))
                 );
             }
             return fractionalFees;
@@ -439,16 +440,16 @@ contract HtsSystemContractJson is HtsSystemContract {
             RoyaltyFee[] memory royaltyFees = new RoyaltyFee[](fees.length);
             for (uint i = 0; i < fees.length; i++) {
                 string memory path = vm.replace(".custom_fees.royalty_fees[{i}]", "{i}", vm.toString(i));
-                address collectorAccount = mirrorNode().getAccountAddress(vm.parseJsonString(json, string.concat(path, ".collector_account_id")));
-                bytes memory denominatingTokenBytes = vm.parseJson(json, string.concat(path, ".denominating_token_id"));
+                address collectorAccount = mirrorNode().getAccountAddress(vm.parseJsonString(json, Str.concat(path, ".collector_account_id")));
+                bytes memory denominatingTokenBytes = vm.parseJson(json, Str.concat(path, ".denominating_token_id"));
                 address denominatingToken;
                 if (keccak256(denominatingTokenBytes) != keccak256("")) {
-                    denominatingToken = mirrorNode().getAccountAddress(vm.parseJsonString(json, string.concat(path, ".denominating_token_id")));
+                    denominatingToken = mirrorNode().getAccountAddress(vm.parseJsonString(json, Str.concat(path, ".denominating_token_id")));
                 }
                 royaltyFees[i] = RoyaltyFee(
-                    int64(vm.parseJsonInt(json, string.concat(path, ".amount.numerator"))),
-                    int64(vm.parseJsonInt(json, string.concat(path, ".amount.denominator"))),
-                    int64(vm.parseJsonInt(json, string.concat(path, ".fallback_fee.amount"))),
+                    int64(vm.parseJsonInt(json, Str.concat(path, ".amount.numerator"))),
+                    int64(vm.parseJsonInt(json, Str.concat(path, ".amount.denominator"))),
+                    int64(vm.parseJsonInt(json, Str.concat(path, ".fallback_fee.amount"))),
                     denominatingToken,
                     collectorAccount == address(0),
                     collectorAccount
