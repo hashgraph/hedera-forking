@@ -289,6 +289,10 @@ jobs:
       fail-fast: false
       matrix:
         solc: [
+          # Ensures we use the `override` specifier
+          # https://soliditylang.org/blog/2021/09/27/solidity-0.8.8-release-announcement/
+          '0.8.7', 
+
           # Ensures we do not use `string.concat`
           # > General: string.concat now properly takes strings as arguments and returns string memory.
           # > It was accidentally introduced as a copy of bytes.concat before.
