@@ -289,6 +289,12 @@ jobs:
       fail-fast: false
       matrix:
         solc: [
+          # Ensures we do not use `string.concat`
+          # > General: string.concat now properly takes strings as arguments and returns string memory.
+          # > It was accidentally introduced as a copy of bytes.concat before.
+          # https://soliditylang.org/blog/2022/02/16/solidity-0.8.12-release-announcement/
+          '0.8.11', 
+
           # Ensures we do not overload/use free functions
           # https://soliditylang.org/blog/2022/03/16/solidity-0.8.13-release-announcement/
           '0.8.12',
