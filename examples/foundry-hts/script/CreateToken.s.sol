@@ -16,7 +16,7 @@ import {Hsc} from "hedera-forking/Hsc.sol";
 contract CreateTokenScript is Script {
     uint256 PRIVATE_KEY = vm.envUint("PRIVATE_KEY");
 
-    function run() public {
+    function run() external returns (int64 responseCode, address tokenAddress) {
         Hsc.htsSetup();
 
         address signer = vm.addr(PRIVATE_KEY);
@@ -43,7 +43,7 @@ contract CreateTokenScript is Script {
         token.tokenKeys = keys;
         token.expiry = expiry;
 
-        (int64 responseCode, address tokenAddress) = IHederaTokenService(HTS_ADDRESS).createFungibleToken{value: 10 ether}(token, 10000, 4);
+        (responseCode, tokenAddress) = IHederaTokenService(HTS_ADDRESS).createFungibleToken{value: 10 ether}(token, 10000, 4);
         console.log("Response code %d", int(responseCode));
         console.log("Token address %s", tokenAddress);
 

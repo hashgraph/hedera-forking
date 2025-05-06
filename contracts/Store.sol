@@ -3,6 +3,19 @@ pragma solidity ^0.8.0;
 
 import {Vm} from "forge-std/Vm.sol";
 
+/**
+ * @dev This library provides utility functions to store values of different types
+ * to an address' storage slot.
+ * 
+ * Values are stored using `vm.store`.
+ * This allows `view` functions to modify the state.
+ * Most notably this is used when fetching remote data and
+ * stored in the address' storage slot before it can be returned.
+ * 
+ * For types smaller than 32 bytes,
+ * it support storing them in a non-zero `offset`.
+ * A non-zero `offset` is used by Solidity to pack many fields into a single storage slot.
+ */
 library Store {
     Vm private constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
@@ -46,7 +59,7 @@ library Store {
     }
 
     function storeInt64(address target, uint256 slot, int64 value) internal {
-        bytes32 data = bytes32(abi.encodePacked(value));
+        bytes32 data = bytes32(uint256(uint64(value)));
         storeBytes32(target, slot, data);
     }
 

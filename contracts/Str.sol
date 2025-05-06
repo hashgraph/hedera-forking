@@ -1,6 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity >=0.6.0;
 
+/**
+ * @dev This library provides utility functions that operate on `string`s.
+ *
+ * Notice we cannot use the `string.concat` function provided by Solidity because they have changed its signature.
+ * From https://soliditylang.org/blog/2022/02/16/solidity-0.8.12-release-announcement/
+ *
+ * > General: `string.concat` now properly takes strings as arguments and returns string memory.
+ * > It was accidentally introduced as a copy of `bytes.concat` before.
+ * 
+ * Therefore this library provides a `concat` function with support for different arities.
+ */
 library Str {
     function concat(string memory s1, string memory s2) internal pure returns (string memory) {
         return string(abi.encodePacked(s1, s2));
