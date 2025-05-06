@@ -46,6 +46,12 @@ First, install our library in your Foundry project
 forge install hashgraph/hedera-forking
 ```
 
+#### Requirements
+
+Ensure your project meets the following requirements
+
+- `forge-std` [`>= v1.8.0`](https://github.com/foundry-rs/forge-std/releases/tag/v1.8.0)
+
 ### Set up
 
 To use this library in your tests, you need to enable [`ffi`](https://book.getfoundry.sh/cheatcodes/ffi).
