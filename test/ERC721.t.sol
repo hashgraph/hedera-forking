@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
-import {HtsSystemContract} from "../contracts/HtsSystemContract.sol";
+import {IERC721Events} from "../contracts/HtsSystemContract.sol";
 import {Test, console} from "forge-std/Test.sol";
 import {IERC721} from "../contracts/IERC721.sol";
 import {TestSetup} from "./lib/TestSetup.sol";
@@ -38,7 +38,7 @@ contract ERC721TokenTest is Test, TestSetup {
         uint256 tokenId = 1;
         vm.startPrank(CFNFTFF_TREASURY);
         vm.expectEmit(CFNFTFF);
-        emit IERC721.Transfer(CFNFTFF_TREASURY, to, tokenId);
+        emit IERC721Events.Transfer(CFNFTFF_TREASURY, to, tokenId);
         IERC721(CFNFTFF).transferFrom(CFNFTFF_TREASURY, to, tokenId);
         vm.stopPrank();
         assertEq(IERC721(CFNFTFF).ownerOf(tokenId), to);
@@ -49,7 +49,7 @@ contract ERC721TokenTest is Test, TestSetup {
         uint256 tokenId = 1;
         vm.startPrank(CFNFTFF_TREASURY);
         vm.expectEmit(CFNFTFF);
-        emit IERC721.Approval(CFNFTFF_TREASURY, spender, tokenId);
+        emit IERC721Events.Approval(CFNFTFF_TREASURY, spender, tokenId);
         IERC721(CFNFTFF).approve(spender, tokenId);
         vm.stopPrank();
         assertEq(IERC721(CFNFTFF).getApproved(tokenId), spender);
@@ -59,7 +59,7 @@ contract ERC721TokenTest is Test, TestSetup {
         address operator = makeAddr("operator");
         vm.prank(CFNFTFF_TREASURY);
         vm.expectEmit(CFNFTFF);
-        emit IERC721.ApprovalForAll(CFNFTFF_TREASURY, operator, true);
+        emit IERC721Events.ApprovalForAll(CFNFTFF_TREASURY, operator, true);
         IERC721(CFNFTFF).setApprovalForAll(operator, true);
         assertTrue(IERC721(CFNFTFF).isApprovedForAll(CFNFTFF_TREASURY, operator));
     }

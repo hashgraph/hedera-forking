@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {Test, console} from "forge-std/Test.sol";
-import {storeString, storeBytes, storeUint, storeInt64, storeBool, storeAddress, storeBytes32} from "../contracts/StrStore.sol";
+import {Store} from "../contracts/Store.sol";
 
 contract StrStoreTest is Test {
 
@@ -13,48 +13,48 @@ contract StrStoreTest is Test {
     }
 
     function storeStringTest(string memory value) private {
-        storeString(address(_c), 0, value);
+        Store.storeString(address(_c), 0, value);
         assertEq(_c.name(), value);
 
-        storeString(address(_c), 2, value);
+        Store.storeString(address(_c), 2, value);
         assertEq(_c.symbol(), value);
 
         assertEq(_c.gap1(), 0);
     }
 
     function storeBytesTest(bytes memory value) private {
-        storeBytes(address(_c), 3, value);
+        Store.storeBytes(address(_c), 3, value);
         assertEq(_c.someBytes(), value);
 
         assertEq(_c.gap2(), 0);
 
-        storeBytes(address(_c), 5, value);
+        Store.storeBytes(address(_c), 5, value);
         assertEq(_c.someOtherBytes(), value);
     }
 
     function storeUintTest(uint256 value) private {
-        storeUint(address(_c), 1, value);
+        Store.storeUint(address(_c), 1, value);
         assertEq(_c.gap1(), value);
         assertEq(_c.name(), "");
         assertEq(_c.symbol(), "");
     }
 
     function storeBoolTest(bool value) private {
-        storeBool(address(_c), 6, value);
+        Store.storeBool(address(_c), 6, value);
         assertEq(_c.someBool(), value);
         assertEq(_c.someBytes32(), bytes32(0));
         assertEq(_c.someOtherBytes(), new bytes(0));
     }
 
     function storeAddressTest(address value) private {
-        storeAddress(address(_c), 8, value);
+        Store.storeAddress(address(_c), 8, value);
         assertEq(_c.someAddress(), value);
         assertEq(_c.gap3(), 0);
         assertEq(_c.someBytes32(), bytes32(0));
     }
 
     function storeBytes32Test(bytes32 value) private {
-        storeBytes32(address(_c), 7, value);
+        Store.storeBytes32(address(_c), 7, value);
         assertEq(_c.someBytes32(), value);
         assertEq(_c.someBool(), false);
         assertEq(_c.someAddress(), address(0));
@@ -162,31 +162,31 @@ contract StrStoreTest is Test {
 
         assert_offset_values(false, false, address(0), 0);
 
-        storeBool(address(_c), offsetBool1.slot, offsetBool1.offset, true);
+        Store.storeBool(address(_c), offsetBool1.slot, offsetBool1.offset, true);
         assert_offset_values(true, false, address(0), 0);
 
-        storeBool(address(_c), offsetBool2.slot, offsetBool2.offset, true);
+        Store.storeBool(address(_c), offsetBool2.slot, offsetBool2.offset, true);
         assert_offset_values(true, true, address(0), 0);
 
-        storeBool(address(_c), offsetBool1.slot, offsetBool1.offset, false);
+        Store.storeBool(address(_c), offsetBool1.slot, offsetBool1.offset, false);
         assert_offset_values(false, true, address(0), 0);
 
-        storeAddress(address(_c), offsetAddress.slot, offsetAddress.offset, address(0x1234567890));
+        Store.storeAddress(address(_c), offsetAddress.slot, offsetAddress.offset, address(0x1234567890));
         assert_offset_values(false, true, address(0x1234567890), 0);
 
-        storeAddress(address(_c), offsetAddress.slot, offsetAddress.offset, address(0x12345));
+        Store.storeAddress(address(_c), offsetAddress.slot, offsetAddress.offset, address(0x12345));
         assert_offset_values(false, true, address(0x12345), 0);
 
-        storeAddress(address(_c), offsetAddress.slot, offsetAddress.offset, address(0x12345));
+        Store.storeAddress(address(_c), offsetAddress.slot, offsetAddress.offset, address(0x12345));
         assert_offset_values(false, true, address(0x12345), 0);
 
-        storeInt64(address(_c), offsetInt64.slot, offsetInt64.offset, 0x1122334455667788);
+        Store.storeInt64(address(_c), offsetInt64.slot, offsetInt64.offset, 0x1122334455667788);
         assert_offset_values(false, true, address(0x12345), 0x1122334455667788);
 
-        storeInt64(address(_c), offsetInt64.slot, offsetInt64.offset, 0x12345678);
+        Store.storeInt64(address(_c), offsetInt64.slot, offsetInt64.offset, 0x12345678);
         assert_offset_values(false, true, address(0x12345), 0x12345678);
 
-        storeInt64(address(_c), offsetInt64.slot, offsetInt64.offset, 0x0);
+        Store.storeInt64(address(_c), offsetInt64.slot, offsetInt64.offset, 0x0);
         assert_offset_values(false, true, address(0x12345), 0x0);
     }
 
@@ -196,7 +196,7 @@ contract StrStoreTest is Test {
 
         assertEq(_c.offset12(), address(0));
 
-        storeAddress(address(_c), offset12.slot, offset12.offset, address(0x1234567890));
+        Store.storeAddress(address(_c), offset12.slot, offset12.offset, address(0x1234567890));
         assertEq(_c.offset12(), address(0x1234567890));
     }
 }

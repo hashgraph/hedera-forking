@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {Test} from "forge-std/Test.sol";
-import {htsSetup} from "hedera-forking/htsSetup.sol";
+import {Hsc} from "hedera-forking/Hsc.sol";
 import {IERC20} from "hedera-forking/IERC20.sol";
 import {IHederaTokenService} from "hedera-forking/IHederaTokenService.sol";
 import {HederaResponseCodes} from "hedera-forking/HederaResponseCodes.sol";
@@ -14,7 +14,7 @@ contract USDCExampleTest is Test {
     address private user1;
 
     function setUp() external {
-        htsSetup();
+        Hsc.htsSetup();
 
         user1 = makeAddr("user1");
         deal(USDC_mainnet, user1, 1000 * 10e8);

@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {Test, console} from "forge-std/Test.sol";
+import {IERC20Events} from "../contracts/HtsSystemContract.sol";
 import {IERC20} from "../contracts/IERC20.sol";
 import {TestSetup} from "./lib/TestSetup.sol";
 
@@ -114,7 +115,7 @@ contract ERC20TokenTest is Test, TestSetup {
 
         vm.prank(owner);
         vm.expectEmit(USDC);
-        emit IERC20.Approval(owner, spender, amount);
+        emit IERC20Events.Approval(owner, spender, amount);
         IERC20(USDC).approve(spender, amount);
 
         assertEq(IERC20(USDC).allowance(owner, spender), amount);
@@ -142,7 +143,7 @@ contract ERC20TokenTest is Test, TestSetup {
 
         vm.prank(owner); // https://book.getfoundry.sh/cheatcodes/prank
         vm.expectEmit(USDC);
-        emit IERC20.Transfer(owner, to, amount);
+        emit IERC20Events.Transfer(owner, to, amount);
         IERC20(USDC).transfer(to, amount);
 
         assertEq(IERC20(USDC).balanceOf(owner), balanceOfOwner - amount);
@@ -186,7 +187,7 @@ contract ERC20TokenTest is Test, TestSetup {
 
         vm.prank(bob);
         vm.expectEmit(USDC);
-        emit IERC20.Transfer(alice, charlie, transferAmount);
+        emit IERC20Events.Transfer(alice, charlie, transferAmount);
         IERC20(USDC).transferFrom(alice, charlie, transferAmount);
 
         assertEq(IERC20(USDC).balanceOf(alice), 54_300000 - 4_000000);
