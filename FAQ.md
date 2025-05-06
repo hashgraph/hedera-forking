@@ -26,6 +26,26 @@ That is why when trying to get the code, for example using `cast code --rpc-url 
 address of the HTS System Contract, you get `0xfe`.
 That leads to the error `EvmError: InvalidFEOpcode` mentioned in the question.
 
+### Why am I getting error "`Member "keyExistsJson" not found or not visible`" when compiling my project?
+
+If you get the following error when compiling your project
+
+```console
+$ forge build
+[...]
+Error: Compiler run failed:
+Error (9582): Member "keyExistsJson" not found or not visible after argument-dependent lookup in contract Vm.
+```
+
+it is because your `forge-std` dependency is outdated.
+You can [update](https://book.getfoundry.sh/reference/forge/forge-update) `forge-std` with
+
+```sh
+forge update lib/forge-std
+```
+
+See [_&sect; Requirements_](./README.md#requirements) for the full list of requirements needed to compile your project.
+
 ## Hardhat
 
 ### What causes the error `ProviderError: No known hardfork for execution`
