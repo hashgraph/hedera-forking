@@ -46,7 +46,7 @@ library Store {
     }
 
     function storeInt64(address target, uint256 slot, int64 value) internal {
-        bytes32 data = bytes32(abi.encodePacked(value));
+        bytes32 data = bytes32(uint256(uint64(value)));
         storeBytes32(target, slot, data);
     }
 
