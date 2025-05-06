@@ -189,7 +189,6 @@ Foundry allows you to run Solidity Scripts to interact with a remote network usi
 See [_Scripting with Solidity_](https://book.getfoundry.sh/guides/scripting-with-solidity) for more information on the topic.
 
 To enable Foundry Scripts to work with HTS, you can use `htsSetup()` as described in the previous section.
-You can include
 For example
 
 ```solidity examples/foundry-hts/script/CreateToken.s.sol
@@ -257,6 +256,10 @@ testnet = "https://testnet.hashio.io/api"
 previewnet = "https://previewnet.hashio.io/api"
 localnode = "http://localhost:7546"
 ```
+
+> [!IMPORTANT]
+> Make sure to include the `--skip-simulation` flag when running `forge script`.
+> Otherwise you will get [`EvmError: InvalidFEOpcode`](./FAQ.md#what-causes-the-error-evmerror-invalidfeopcode).
 
 ## Hardhat plugin
 
