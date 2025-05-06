@@ -7,12 +7,13 @@ import {Str} from "./Str.sol";
 /**
  * @dev This library provides utility functions originally from the Surl library.
  *
- * The original Surl library can be found at: https://github.com/memester-xyz/surl
+ * The original Surl library can be found at https://github.com/memester-xyz/surl.
  *
  * We have inlined the necessary functionality from Surl instead of using it as a submodule
- * to keep dependencies lean and avoid unnecessary submodule cloning. Using Surl as a submodule
- * previously required pulling multiple additional dependencies, including an outdated version of
- * Foundry (v1.3.0) and other libraries such as forge-std, solidity-stringutils, and ds-test.
+ * to keep dependencies lean and avoid unnecessary submodule cloning.
+ * Using Surl as a submodule previously required pulling multiple additional dependencies,
+ * including an outdated version of Foundry (v1.3.0) and other libraries such as
+ * `forge-std`, `solidity-stringutils`, and `ds-test`.
  *
  * By inlining the required code, we reduce dependency bloat and improve maintainability.
  */
