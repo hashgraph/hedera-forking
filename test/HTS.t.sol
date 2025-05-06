@@ -107,6 +107,13 @@ contract HTSTest is Test, TestSetup {
         assertEq(tokenInfo.ledgerId, testMode == TestMode.FFI ? "0x01" : "0x00");
     }
 
+    function test_HTS_getTokenInfo_should_return_token_autoRenewPeriod_for_valid_token() external view {
+        address token = MFCT;
+        (int64 responseCode, IHederaTokenService.TokenInfo memory tokenInfo) = IHederaTokenService(HTS_ADDRESS).getTokenInfo(token);
+        assertEq(responseCode, HederaResponseCodes.SUCCESS);
+        assertEq(tokenInfo.token.expiry.autoRenewPeriod, 7776000);
+    }
+
     function test_HTS_getTokenInfo_should_return_custom_fees_for_valid_token() external view {
         (int64 responseCode, IHederaTokenService.TokenInfo memory tokenInfo) = IHederaTokenService(HTS_ADDRESS).getTokenInfo(CTCF);
         assertEq(responseCode, HederaResponseCodes.SUCCESS);
