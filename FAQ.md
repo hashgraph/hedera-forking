@@ -28,7 +28,7 @@ That leads to the error `EvmError: InvalidFEOpcode` mentioned in the question.
 
 ### Why am I getting error "`Member "keyExistsJson" not found or not visible`" when compiling my project?
 
-You get the following error when compiling your project
+If you get the following error when compiling your project
 
 ```console
 $ forge build
@@ -37,14 +37,14 @@ Error: Compiler run failed:
 Error (9582): Member "keyExistsJson" not found or not visible after argument-dependent lookup in contract Vm.
 ```
 
-This is because `forge-std` is outdated.
-The [_&sect; Requirements_](./README.md#requirements) lists the versions needed to properly compile your project.
-
-You can [update](https://book.getfoundry.sh/reference/forge/forge-update) your `forge-std` dependency with
+it is because your `forge-std` dependency is outdated.
+You can [update](https://book.getfoundry.sh/reference/forge/forge-update) `forge-std` with
 
 ```sh
 forge update lib/forge-std
 ```
+
+See [_&sect; Requirements_](./README.md#requirements) for the full list of requirements needed to compile your project.
 
 ## Hardhat
 
