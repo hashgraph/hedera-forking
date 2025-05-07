@@ -9,7 +9,7 @@ import {Hsc} from "hedera-forking/Hsc.sol";
 /**
  * Replace the variables `$TOKEN_ADDR` and `$AMOUNT` with the desired values.
  *
- * forge script MintTokenScript --sig "run(address,uint)" $TOKEN_ADDR $AMOUNT --rpc-url testnet --skip-simulation --broadcast
+ * forge script MintTokenScript --sig "run(address,uint)" $TOKEN_ADDR $AMOUNT --rpc-url testnet --broadcast --skip-simulation
  */
 contract MintTokenScript is Script {
     function run(address tokenAddress, uint256 amount) external returns (int64 responseCode, int64 newTotalSupply) {

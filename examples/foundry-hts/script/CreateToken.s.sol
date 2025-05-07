@@ -10,7 +10,7 @@ import {Hsc} from "hedera-forking/Hsc.sol";
  * Given how Foundry script works, the flag `--skip-simulation` is necessary.
  * For example
  *
- * forge script CreateTokenScript --rpc-url testnet --skip-simulation --broadcast
+ * forge script CreateTokenScript --rpc-url testnet --broadcast --skip-simulation
  */
 contract CreateTokenScript is Script {
     function run() external returns (address signer, int64 responseCode, address tokenAddress) {
