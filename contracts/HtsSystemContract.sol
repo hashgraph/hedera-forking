@@ -584,14 +584,14 @@ contract HtsSystemContract is IHederaTokenService {
             if (selector == this.associateToken.selector) {
                 require(msg.data.length >= 48, "associateToken: Not enough calldata");
                 address account = address(bytes20(msg.data[40:60]));
-                bytes32 slot = _isAssociatedSlot(account);
+                bytes32 slot = _isAssociatedSlot(account, false);
                 assembly { sstore(slot, true) }
                 return abi.encode(HederaResponseCodes.SUCCESS);
             }
             if (selector == this.dissociateToken.selector) {
                 require(msg.data.length >= 48, "dissociateToken: Not enough calldata");
                 address account = address(bytes20(msg.data[40:60]));
-                bytes32 slot = _isAssociatedSlot(account);
+                bytes32 slot = _isAssociatedSlot(account, false);
                 assembly { sstore(slot, false) }
                 return abi.encode(HederaResponseCodes.SUCCESS);
             }
@@ -797,17 +797,17 @@ contract HtsSystemContract is IHederaTokenService {
 
     function _redirectForHRC719(bytes4 selector) private returns (bytes memory) {
         if (selector == IHRC719.associate.selector) {
-            bytes32 slot = _isAssociatedSlot(msg.sender);
+            bytes32 slot = _isAssociatedSlot(msg.sender, false);
             assembly { sstore(slot, true) }
             return abi.encode(true);
         }
         if (selector == IHRC719.dissociate.selector) {
-            bytes32 slot = _isAssociatedSlot(msg.sender);
+            bytes32 slot = _isAssociatedSlot(msg.sender, false);
             assembly { sstore(slot, false) }
             return abi.encode(true);
         }
         if (selector == IHRC719.isAssociated.selector) {
-            bytes32 slot = _isAssociatedSlot(msg.sender);
+            bytes32 slot = _isAssociatedSlot(msg.sender, true);
             bool res;
             assembly { res := sload(slot) }
             return abi.encode(res);
@@ -892,11 +892,11 @@ contract HtsSystemContract is IHederaTokenService {
         return bytes32(abi.encodePacked(selector, pad, spenderId, ownerId));
     }
 
-    function _isAssociatedSlot(address account) internal virtual returns (bytes32) {
+    function _isAssociatedSlot(address account, bool revertIfNotExists) internal virtual returns (bytes32) {
         bytes4 selector = IHRC719.isAssociated.selector;
         uint192 pad = 0x0;
         (uint32 accountId, bool exists) = HtsSystemContract(HTS_ADDRESS).getAccountId(account);
-        require(exists);
+        require(!revertIfNotExists || exists, "_isAssociatedSlot: account does not exist");
         return bytes32(abi.encodePacked(selector, pad, accountId));
     }
 
