@@ -487,8 +487,8 @@ contract HtsSystemContractJson is HtsSystemContract {
         return slot;
     }
 
-    function _isAssociatedSlot(address account) internal override returns (bytes32) {
-        bytes32 slot = super._isAssociatedSlot(account);
+    function _isAssociatedSlot(address account, bool revertIfNotExists) internal override returns (bytes32) {
+        bytes32 slot = super._isAssociatedSlot(account, revertIfNotExists);
         if (_shouldFetch(slot)) {
             bool associated = mirrorNode().isAssociated(address(this), account);
             _setValue(slot, bytes32(uint256(associated ? 1 : 0)));

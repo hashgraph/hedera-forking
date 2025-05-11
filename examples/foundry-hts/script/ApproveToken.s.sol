@@ -7,32 +7,24 @@ import {Hsc} from "hedera-forking/Hsc.sol";
 import {Approver} from "../src/Approver.sol";
 
 /**
- * Usage
- *
- * forge script ApproveTokenScript --sig "deployApprover()" --rpc-url testnet --broadcast
+ * Usage 
  * 
- * Notice that the `--skip-simulation` is not needed because there is no HTS involved in this step.
- * 
- * forge script ApproveTokenScript --sig "run(address,address)" $TOKEN_ADDR $APPROVER --rpc-url testnet --broadcast --skip-simulation
- * 
- * where $APPROVER is the address returned in the previous step.
+ * forge script ApproveTokenScript --sig "run(address)" $TOKEN_ADDR --rpc-url testnet --broadcast --skip-simulation --slow
  */
 contract ApproveTokenScript is Script {
-    uint256 private PRIVATE_KEY = vm.envUint("PRIVATE_KEY");
+    function run(address tokenAddress) external returns (Approver approver, address payable account) {
+        Hsc.htsSetup();
 
-    function deployApprover() external returns (Approver approver) {
+        uint256 PRIVATE_KEY = vm.envUint("PRIVATE_KEY");
+
         vm.startBroadcast(PRIVATE_KEY);
         approver = new Approver();
         vm.stopBroadcast();
-    }
-
-    function run(address tokenAddress, address approver) external returns (address payable account) {
-        Hsc.htsSetup();
 
         vm.startBroadcast(PRIVATE_KEY);
         Approver(approver).associate(tokenAddress);
 
-        IERC20(tokenAddress).transfer(approver, 50000);
+        IERC20(tokenAddress).transfer(address(approver), 50000);
 
         VmSafe.Wallet memory wallet = vm.createWallet("wallet");
         account = payable(wallet.addr);
