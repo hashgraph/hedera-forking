@@ -3,8 +3,18 @@ pragma solidity ^0.8.0;
 
 import {Script, VmSafe} from "forge-std/Script.sol";
 import {IERC20} from "hedera-forking/IERC20.sol";
+import {IHRC719} from "hedera-forking/IHRC719.sol";
 import {Hsc} from "hedera-forking/Hsc.sol";
-import {Approver} from "../src/Approver.sol";
+
+contract Approver {
+    function associate(address tokenAddress) external {
+        IHRC719(tokenAddress).associate();
+    }
+
+    function approve(address tokenAddress, address account, uint256 amount) external {
+        IERC20(tokenAddress).approve(account, amount);
+    }
+}
 
 /**
  * Usage 
