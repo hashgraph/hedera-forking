@@ -18,3 +18,7 @@
 # `reports-dir`: directory where coverage reports will be output to	
 # https://github.com/bcoe/c8?tab=readme-ov-file#cli-options--configuration
 /coverage/
+
+# IDEA
+**/.DS_Store
+**/.idea/
