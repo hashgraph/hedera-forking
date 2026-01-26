@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
-const { HDKey } = require('ethereum-cryptography/hdkey');
-const { mnemonicToSeedSync } = require('ethereum-cryptography/bip39');
+const { HDKey } = require('@scure/bip32');
+const { mnemonicToSeedSync } = require('@scure/bip39');
 const { privateToAddress } = require('@nomicfoundation/ethereumjs-util');
 
 /**
