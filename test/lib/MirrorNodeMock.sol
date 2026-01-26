@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {Vm} from "forge-std/Vm.sol";
+import {Str} from "../../contracts/Str.sol";
 import {MirrorNode} from "../../contracts/MirrorNode.sol";
 
 contract MirrorNodeMock is MirrorNode {
@@ -20,14 +21,14 @@ contract MirrorNodeMock is MirrorNode {
 
     function fetchTokenData(address token) isValid(token) external override view returns (string memory) {
         string memory symbol = _symbolOf[token];
-        string memory path = string.concat("./test/data/", symbol, "/getToken.json");
+        string memory path = Str.concat("./test/data/", symbol, "/getToken.json");
         return vm.readFile(path);
     }
 
     function fetchBalance(address token, uint32 accountNum) isValid(token) external override view returns (string memory) {
         string memory symbol = _symbolOf[token];
         string memory accountId = vm.toString(accountNum);
-        string memory path = string.concat("./test/data/", symbol, "/getBalanceOfToken_0.0.", accountId, ".json");
+        string memory path = Str.concat("./test/data/", symbol, "/getBalanceOfToken_0.0.", accountId, ".json");
         return vm.readFile(path);
     }
 
@@ -35,7 +36,7 @@ contract MirrorNodeMock is MirrorNode {
         string memory symbol = _symbolOf[token];
         string memory ownerId = vm.toString(ownerNum);
         string memory spenderId = vm.toString(spenderNum);
-        string memory path = string.concat("./test/data/", symbol, "/getAllowanceForToken_0.0.", ownerId, "_0.0.", spenderId, ".json");
+        string memory path = Str.concat("./test/data/", symbol, "/getAllowanceForToken_0.0.", ownerId, "_0.0.", spenderId, ".json");
         return vm.readFile(path);
     }
 
@@ -43,25 +44,25 @@ contract MirrorNodeMock is MirrorNode {
         string memory symbol = _symbolOf[token];
         string memory ownerId = vm.toString(ownerNum);
         string memory operatorId = vm.toString(operatorNum);
-        string memory path = string.concat("./test/data/", symbol, "/getAllowanceForToken_0.0.", ownerId, "_0.0.", operatorId, ".json");
+        string memory path = Str.concat("./test/data/", symbol, "/getAllowanceForToken_0.0.", ownerId, "_0.0.", operatorId, ".json");
         return vm.readFile(path);
     }
 
     function fetchAccount(string memory account) external override view returns (string memory) {
-        string memory path = string.concat("./test/data/getAccount_", vm.toLowercase(account), ".json");
+        string memory path = Str.concat("./test/data/getAccount_", vm.toLowercase(account), ".json");
         return vm.readFile(path);
     }
 
     function fetchTokenRelationshipOfAccount(string memory idOrAliasOrEvmAddress, address token) external override view returns (string memory) {
         string memory symbol = _symbolOf[token];
-        string memory path = string.concat("./test/data/", symbol, "/getTokenRelationship_", vm.toLowercase(idOrAliasOrEvmAddress), ".json");
+        string memory path = Str.concat("./test/data/", symbol, "/getTokenRelationship_", vm.toLowercase(idOrAliasOrEvmAddress), ".json");
         return vm.readFile(path);
     }
 
     function fetchNonFungibleToken(address token, uint32 serial) external override view returns (string memory) {
         string memory symbol = _symbolOf[token];
         string memory serialId = vm.toString(serial);
-        string memory path = string.concat("./test/data/", symbol, "/getNonFungibleToken_", serialId, ".json");
+        string memory path = Str.concat("./test/data/", symbol, "/getNonFungibleToken_", serialId, ".json");
         return vm.readFile(path);
     }
 }

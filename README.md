@@ -11,7 +11,7 @@
 
 </div>
 
-**This projects allows Smart Contract developers working on Hedera to use fork testing while using Hedera System Contracts.**
+**This project allows Smart Contract developers working on Hedera to use fork testing while using Hedera System Contracts.**
 It does so by providing an emulation layer for the [Hedera Token Service](https://hedera.com/token-service) _(more System Contracts to come)_ written in Solidity.
 Given it is written in Solidity, it can be executed in a forked network environment, such as
 [Foundry](https://book.getfoundry.sh/forge/fork-testing) or
@@ -46,6 +46,12 @@ First, install our library in your Foundry project
 forge install hashgraph/hedera-forking
 ```
 
+#### Requirements
+
+Ensure your project meets the following requirements
+
+- `forge-std` [`>= v1.8.0`](https://github.com/foundry-rs/forge-std/releases/tag/v1.8.0)
+
 ### Set up
 
 To use this library in your tests, you need to enable [`ffi`](https://book.getfoundry.sh/cheatcodes/ffi).
@@ -70,17 +76,17 @@ This is necessary because
 > - On Windows, it uses `Invoke-WebRequest` and `Start-Process` in PowerShell for a similar effect.
 
 To activate HTS emulation in your tests, you need to add the following setup code in your test files.
-Import our wrapper function to deploy HTS emulation and enable cheat codes for it.
+Import our System Contracts `library` to deploy HTS emulation and enable cheat codes for it.
 
 ```solidity
-import {htsSetup} from "hedera-forking/contracts/htsSetup.sol";
+import {Hsc} from "hedera-forking/Hsc.sol";
 ```
 
 and then invoke it in your [test setup](https://book.getfoundry.sh/forge/writing-tests)
 
 ```solidity
     function setUp() public {
-        htsSetup();
+        Hsc.htsSetup();
     }
 ```
 
@@ -89,15 +95,15 @@ and then invoke it in your [test setup](https://book.getfoundry.sh/forge/writing
 Now you can use Hedera Token Services and remote tokens as if they were deployed locally when fork testing.
 For example
 
-```solidity examples/foundry-hts/USDC.t.sol
+```solidity examples/foundry-hts/test/USDC.t.sol
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
 import {Test} from "forge-std/Test.sol";
-import {htsSetup} from "hedera-forking/contracts/htsSetup.sol";
-import {IERC20} from "hedera-forking/contracts/IERC20.sol";
-import {IHederaTokenService} from "hedera-forking/contracts/IHederaTokenService.sol";
-import {HederaResponseCodes} from "hedera-forking/contracts/HederaResponseCodes.sol";
+import {Hsc} from "hedera-forking/Hsc.sol";
+import {IERC20} from "hedera-forking/IERC20.sol";
+import {IHederaTokenService} from "hedera-forking/IHederaTokenService.sol";
+import {HederaResponseCodes} from "hedera-forking/HederaResponseCodes.sol";
 
 contract USDCExampleTest is Test {
     // https://hashscan.io/mainnet/token/0.0.456858
@@ -106,7 +112,7 @@ contract USDCExampleTest is Test {
     address private user1;
 
     function setUp() external {
-        htsSetup();
+        Hsc.htsSetup();
 
         user1 = makeAddr("user1");
         deal(USDC_mainnet, user1, 1000 * 10e8);
@@ -148,17 +154,17 @@ forge test --fork-url https://mainnet.hashio.io/api --fork-block-number 72433403
 
 You can use all the tools and cheatcodes Foundry provides, _e.g._, `console.log`
 
-```solidity examples/foundry-hts/USDCConsole.t.sol
+```solidity examples/foundry-hts/test/USDCConsole.t.sol
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
 import {Test, console} from "forge-std/Test.sol";
-import {htsSetup} from "hedera-forking/contracts/htsSetup.sol";
-import {IERC20} from "hedera-forking/contracts/IERC20.sol";
+import {Hsc} from "hedera-forking/Hsc.sol";
+import {IERC20} from "hedera-forking/IERC20.sol";
 
 contract USDCConsoleExampleTest is Test {
     function setUp() external {
-        htsSetup();
+        Hsc.htsSetup();
     }
 
     function test_using_console_log() view external {
@@ -176,6 +182,71 @@ contract USDCConsoleExampleTest is Test {
     }
 }
 ```
+
+### Running your Scripts
+
+Foundry allows you to run Solidity Scripts to interact with a remote network using the `--broadcast` flag.
+See [_Scripting with Solidity_](https://book.getfoundry.sh/guides/scripting-with-solidity) for more information on the topic.
+
+To enable Foundry Scripts to work with HTS, you can use `htsSetup()` as described in the previous section.
+For example
+
+```solidity examples/foundry-hts/script/CreateToken.s.sol
+// SPDX-License-Identifier: Apache-2.0
+pragma solidity ^0.8.0;
+
+import {Script} from "forge-std/Script.sol";
+import {HTS_ADDRESS} from "hedera-forking/HtsSystemContract.sol";
+import {IHederaTokenService} from "hedera-forking/IHederaTokenService.sol";
+import {Hsc} from "hedera-forking/Hsc.sol";
+
+/**
+ * Given how Foundry script works, the flag `--skip-simulation` is necessary.
+ * For example
+ *
+ * forge script CreateTokenScript --rpc-url testnet --broadcast --skip-simulation
+ */
+contract CreateTokenScript is Script {
+    function run() external returns (address signer, int64 responseCode, address tokenAddress) {
+        Hsc.htsSetup();
+
+        uint256 PRIVATE_KEY = vm.envUint("PRIVATE_KEY");
+        signer = vm.addr(PRIVATE_KEY);
+
+        IHederaTokenService.KeyValue memory keyValue;
+        keyValue.inheritAccountKey = true;
+
+        IHederaTokenService.HederaToken memory token;
+        token.name = "HTS Token Example Created with Foundry";
+        token.symbol = "FDRY";
+        token.treasury = signer;
+        token.memo = "This HTS Token was created using `forge script` together with HTS emulation";
+        token.tokenKeys = new IHederaTokenService.TokenKey[](2);
+        token.tokenKeys[0] = IHederaTokenService.TokenKey(0x1, keyValue); // Admin Key
+        token.tokenKeys[1] = IHederaTokenService.TokenKey(0x10, keyValue); // Supply Key enables minting
+        token.expiry = IHederaTokenService.Expiry(0, signer, 8000000);
+
+        vm.startBroadcast(PRIVATE_KEY);
+        (responseCode, tokenAddress) = IHederaTokenService(HTS_ADDRESS).createFungibleToken{value: 10 ether}(token, 10000, 4);
+        vm.stopBroadcast();
+    }
+}
+```
+
+where `testnet` is an [RPC endpoint](https://book.getfoundry.sh/reference/config/testing#rpc_endpoints) declared in `foundry.toml`.
+For example
+
+```toml
+[rpc_endpoints]
+mainnet = "https://mainnet.hashio.io/api"
+testnet = "https://testnet.hashio.io/api"
+previewnet = "https://previewnet.hashio.io/api"
+localnode = "http://localhost:7546"
+```
+
+> [!IMPORTANT]
+> Make sure to include the `--skip-simulation` flag when running `forge script`.
+> Otherwise you will get [`EvmError: InvalidFEOpcode`](./FAQ.md#what-causes-the-error-evmerror-invalidfeopcode).
 
 ## Hardhat plugin
 
@@ -527,7 +598,7 @@ This allow us to ensure that all examples and tables are never outdated (if we c
 Code fences that contains a file name after the language definition, _e.g._,
 
 ````markdown
-  ```solidity examples/foundry-hts/USDC.t.sol
+  ```solidity examples/foundry-hts/test/USDC.t.sol
   ```
 ````
 

@@ -10,6 +10,32 @@ import {KeyLib} from "./KeyLib.sol";
 
 address constant HTS_ADDRESS = address(0x167);
 
+// Event definitions from both `IERC20` and `IERC721` cannot be used here because
+// `solc` does not permit to use qualified access to events in foreign interfaces.
+// This feature was added in `solc` `0.8.21`.
+// See _Qualified access to foreign events_ https://soliditylang.org/blog/2023/07/19/solidity-0.8.21-release-announcement/.
+// However, we cannot use this feature because library users might not be able to use this version.
+//
+// On the other hand, the `Transfer` and `Approval` events from ERC20 and ERC721 only differ
+// in the `amount` not being `indexed` whereas `tokenId` argument is `indexed`.
+// `indexed` arguments are not part of the `event` signature,
+// meaning that for `solc` both events are the same definition.
+// That is why we cannot put these events in the `HtsSystemContract` directly.
+//
+// We cannot remove these events from `IERC20` and `IERC721` interfaces because that would violate their definition.
+// Event definitions must be duplicated here and put in libraries so they can be reused by tests.
+
+library IERC20Events {
+    event Transfer(address indexed from, address indexed to, uint256 amount);
+    event Approval(address indexed owner, address indexed spender, uint256 amount);
+}
+
+library IERC721Events {
+    event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
+    event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId);
+    event ApprovalForAll(address indexed owner, address indexed operator, bool approved);
+}
+
 contract HtsSystemContract is IHederaTokenService {
 
     /**
@@ -62,7 +88,7 @@ contract HtsSystemContract is IHederaTokenService {
         return bytes32(abi.encodePacked(selector, pad, account));
     }
 
-    function mintToken(address token, int64 amount, bytes[] memory) htsCall external returns (
+    function mintToken(address token, int64 amount, bytes[] memory) htsCall external override returns (
         int64 responseCode,
         int64 newTotalSupply,
         int64[] memory serialNumbers
@@ -95,7 +121,7 @@ contract HtsSystemContract is IHederaTokenService {
         require(newTotalSupply >= 0, "mintToken: invalid total supply");
     }
 
-    function burnToken(address token, int64 amount, int64[] memory) htsCall external returns (
+    function burnToken(address token, int64 amount, int64[] memory) htsCall external override returns (
         int64 responseCode,
         int64 newTotalSupply
     ) {
@@ -118,7 +144,7 @@ contract HtsSystemContract is IHederaTokenService {
         require(newTotalSupply >= 0, "burnToken: invalid total supply");
     }
 
-    function associateTokens(address account, address[] memory tokens) htsCall public returns (int64 responseCode) {
+    function associateTokens(address account, address[] memory tokens) htsCall public override returns (int64 responseCode) {
         require(tokens.length > 0, "associateTokens: missing tokens");
         require(
             account == msg.sender,
@@ -135,13 +161,13 @@ contract HtsSystemContract is IHederaTokenService {
         responseCode = HederaResponseCodes.SUCCESS;
     }
 
-    function associateToken(address account, address token) htsCall external returns (int64 responseCode) {
+    function associateToken(address account, address token) htsCall external override returns (int64 responseCode) {
         address[] memory tokens = new address[](1);
         tokens[0] = token;
         return associateTokens(account, tokens);
     }
 
-    function dissociateTokens(address account, address[] memory tokens) htsCall public returns (int64 responseCode) {
+    function dissociateTokens(address account, address[] memory tokens) htsCall public override returns (int64 responseCode) {
         require(tokens.length > 0, "dissociateTokens: missing tokens");
         require(account == msg.sender, "dissociateTokens: Must be signed by the provided Account's key or called from the accounts contract key");
         for (uint256 i = 0; i < tokens.length; i++) {
@@ -152,7 +178,7 @@ contract HtsSystemContract is IHederaTokenService {
         responseCode = HederaResponseCodes.SUCCESS;
     }
 
-    function dissociateToken(address account, address token) htsCall external returns (int64 responseCode) {
+    function dissociateToken(address account, address token) htsCall external override returns (int64 responseCode) {
         address[] memory tokens = new address[](1);
         tokens[0] = token;
         return dissociateTokens(account, tokens);
@@ -222,7 +248,7 @@ contract HtsSystemContract is IHederaTokenService {
         HederaToken memory token,
         int64 initialTotalSupply,
         int32 decimals_
-    ) htsCall external payable returns (int64 responseCode, address tokenAddress) {
+    ) htsCall external override payable returns (int64 responseCode, address tokenAddress) {
         FixedFee[] memory fixedFees = new FixedFee[](0);
         FractionalFee[] memory fractionalFees = new FractionalFee[](0);
         RoyaltyFee[] memory royaltyFees = new RoyaltyFee[](0);
@@ -235,14 +261,14 @@ contract HtsSystemContract is IHederaTokenService {
         int32 decimals_,
         FixedFee[] memory fixedFees,
         FractionalFee[] memory fractionalFees
-    ) htsCall external payable returns (int64 responseCode, address tokenAddress) {
+    ) htsCall external override payable returns (int64 responseCode, address tokenAddress) {
         RoyaltyFee[] memory royaltyFees = new RoyaltyFee[](0);
         return _createToken("FUNGIBLE_COMMON", token, initialTotalSupply, decimals_, fixedFees, fractionalFees, royaltyFees);
     }
 
     function createNonFungibleToken(
         HederaToken memory token
-    ) htsCall external payable returns (int64 responseCode, address tokenAddress) {
+    ) htsCall external override payable returns (int64 responseCode, address tokenAddress) {
         FixedFee[] memory fixedFees = new FixedFee[](0);
         FractionalFee[] memory fractionalFees = new FractionalFee[](0);
         RoyaltyFee[] memory royaltyFees = new RoyaltyFee[](0);
@@ -253,7 +279,7 @@ contract HtsSystemContract is IHederaTokenService {
         HederaToken memory token,
         FixedFee[] memory fixedFees,
         RoyaltyFee[] memory royaltyFees
-    ) htsCall external payable returns (int64 responseCode, address tokenAddress) {
+    ) htsCall external override payable returns (int64 responseCode, address tokenAddress) {
         FractionalFee[] memory fractionalFees = new FractionalFee[](0);
         return _createToken("NON_FUNGIBLE_UNIQUE", token, 0, 0, fixedFees, fractionalFees, royaltyFees);
     }
@@ -262,7 +288,7 @@ contract HtsSystemContract is IHederaTokenService {
         address token,
         address[] memory accountId,
         int64[] memory amount
-    ) htsCall external returns (int64 responseCode) {
+    ) htsCall external override returns (int64 responseCode) {
         require(token != address(0), "transferTokens: invalid token");
         require(accountId.length > 0, "transferTokens: missing recipients");
         require(amount.length == accountId.length, "transferTokens: inconsistent input");
@@ -278,7 +304,7 @@ contract HtsSystemContract is IHederaTokenService {
         address[] memory sender,
         address[] memory receiver,
         int64[] memory serialNumber
-    ) htsCall external returns (int64 responseCode) {
+    ) htsCall external override returns (int64 responseCode) {
         require(token != address(0), "transferNFTs: invalid token");
         require(sender.length > 0, "transferNFTs: missing recipients");
         require(receiver.length == sender.length, "transferNFTs: inconsistent input");
@@ -294,7 +320,7 @@ contract HtsSystemContract is IHederaTokenService {
         address sender,
         address recipient,
         int64 amount
-    ) htsCall public returns (int64 responseCode) {
+    ) htsCall public override returns (int64 responseCode) {
         require(token != address(0), "transferToken: invalid token");
         address from = sender;
         address to = recipient;
@@ -317,13 +343,13 @@ contract HtsSystemContract is IHederaTokenService {
         address sender,
         address recipient,
         int64 serialNumber
-    ) htsCall public returns (int64 responseCode) {
+    ) htsCall public override returns (int64 responseCode) {
         uint256 serialId = uint256(uint64(serialNumber));
         HtsSystemContract(token).transferFromNFT(msg.sender, sender, recipient, serialId);
         responseCode = HederaResponseCodes.SUCCESS;
     }
 
-    function approve(address token, address spender, uint256 amount) htsCall public returns (int64 responseCode) {
+    function approve(address token, address spender, uint256 amount) htsCall public override returns (int64 responseCode) {
         HtsSystemContract(token).approve(msg.sender, spender, amount);
         responseCode = HederaResponseCodes.SUCCESS;
     }
@@ -333,11 +359,11 @@ contract HtsSystemContract is IHederaTokenService {
         address sender,
         address recipient,
         uint256 amount
-    ) htsCall external returns (int64) {
+    ) htsCall external override returns (int64) {
         return transferToken(token, sender, recipient, int64(int256(amount)));
     }
 
-    function allowance(address token, address owner, address spender) htsCall external view returns (int64, uint256) {
+    function allowance(address token, address owner, address spender) htsCall external override view returns (int64, uint256) {
         return (HederaResponseCodes.SUCCESS, IERC20(token).allowance(owner, spender));
     }
 
@@ -345,7 +371,7 @@ contract HtsSystemContract is IHederaTokenService {
         address token,
         address approved,
         uint256 serialNumber
-    ) htsCall public returns (int64 responseCode) {
+    ) htsCall public override returns (int64 responseCode) {
         HtsSystemContract(token).approveNFT(msg.sender, approved, serialNumber);
         responseCode = HederaResponseCodes.SUCCESS;
     }
@@ -355,12 +381,12 @@ contract HtsSystemContract is IHederaTokenService {
         address from,
         address to,
         uint256 serialNumber
-    ) htsCall external returns (int64) {
+    ) htsCall external override returns (int64) {
         return transferNFT(token, from, to, int64(int256(serialNumber)));
     }
 
     function getApproved(address token, uint256 serialNumber)
-        htsCall external view returns (int64 responseCode, address approved) {
+        htsCall external override view returns (int64 responseCode, address approved) {
         require(token != address(0), "getApproved: invalid token");
         (responseCode, approved) = (HederaResponseCodes.SUCCESS, IERC721(token).getApproved(serialNumber));
     }
@@ -369,7 +395,7 @@ contract HtsSystemContract is IHederaTokenService {
         address token,
         address operator,
         bool approved
-    ) htsCall external returns (int64 responseCode) {
+    ) htsCall external override returns (int64 responseCode) {
         HtsSystemContract(token).setApprovalForAll(msg.sender, operator, approved);
         responseCode = HederaResponseCodes.SUCCESS;
     }
@@ -378,34 +404,34 @@ contract HtsSystemContract is IHederaTokenService {
         address token,
         address owner,
         address operator
-    ) htsCall external view returns (int64, bool) {
+    ) htsCall external override view returns (int64, bool) {
         require(token != address(0), "isApprovedForAll: invalid token");
         return (HederaResponseCodes.SUCCESS, IERC721(token).isApprovedForAll(owner, operator));
     }
 
     function getTokenCustomFees(
         address token
-    ) htsCall external view returns (int64, FixedFee[] memory, FractionalFee[] memory, RoyaltyFee[] memory) {
+    ) htsCall external override view returns (int64, FixedFee[] memory, FractionalFee[] memory, RoyaltyFee[] memory) {
         (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
         return (responseCode, tokenInfo.fixedFees, tokenInfo.fractionalFees, tokenInfo.royaltyFees);
     }
 
-    function getTokenDefaultFreezeStatus(address token) htsCall external view returns (int64, bool) {
+    function getTokenDefaultFreezeStatus(address token) htsCall external override view returns (int64, bool) {
         (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
         return (responseCode, tokenInfo.token.freezeDefault);
     }
 
-    function getTokenDefaultKycStatus(address token) htsCall external view returns (int64, bool) {
+    function getTokenDefaultKycStatus(address token) htsCall external override view returns (int64, bool) {
         (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
         return (responseCode, tokenInfo.defaultKycStatus);
     }
 
-    function getTokenExpiryInfo(address token) htsCall external view returns (int64, Expiry memory expiry) {
+    function getTokenExpiryInfo(address token) htsCall external override view returns (int64, Expiry memory expiry) {
         (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
         return (responseCode, tokenInfo.token.expiry);
     }
 
-    function getFungibleTokenInfo(address token) htsCall external view returns (int64, FungibleTokenInfo memory) {
+    function getFungibleTokenInfo(address token) htsCall external override view returns (int64, FungibleTokenInfo memory) {
         (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
         require(responseCode == HederaResponseCodes.SUCCESS, "getFungibleTokenInfo: failed to get token data");
         FungibleTokenInfo memory fungibleTokenInfo;
@@ -415,13 +441,13 @@ contract HtsSystemContract is IHederaTokenService {
         return (responseCode, fungibleTokenInfo);
     }
 
-    function getTokenInfo(address token) htsCall public view returns (int64, TokenInfo memory) {
+    function getTokenInfo(address token) htsCall public override view returns (int64, TokenInfo memory) {
         require(token != address(0), "getTokenInfo: invalid token");
 
         return IHederaTokenService(token).getTokenInfo(token);
     }
 
-    function getTokenKey(address token, uint keyType) htsCall view external returns (int64, KeyValue memory) {
+    function getTokenKey(address token, uint keyType) htsCall external override view returns (int64, KeyValue memory) {
         (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
         require(responseCode == HederaResponseCodes.SUCCESS, "getTokenKey: failed to get token data");
         for (uint256 i = 0; i < tokenInfo.token.tokenKeys.length; i++) {
@@ -434,7 +460,7 @@ contract HtsSystemContract is IHederaTokenService {
     }
 
     function getNonFungibleTokenInfo(address token, int64 serialNumber)
-        htsCall external view
+        htsCall external override view
         returns (int64, NonFungibleTokenInfo memory) {
         (int64 responseCode, TokenInfo memory tokenInfo) = getTokenInfo(token);
         require(responseCode == HederaResponseCodes.SUCCESS, "getNonFungibleTokenInfo: failed to get token data");
@@ -451,13 +477,13 @@ contract HtsSystemContract is IHederaTokenService {
         return (responseCode, nonFungibleTokenInfo);
     }
 
-    function isToken(address token) htsCall external view returns (int64, bool) {
+    function isToken(address token) htsCall external override view returns (int64, bool) {
         bytes memory payload = abi.encodeWithSignature("getTokenType(address)", token);
         (bool success, bytes memory returnData) = token.staticcall(payload);
         return (HederaResponseCodes.SUCCESS, success && returnData.length > 0);
     }
 
-    function getTokenType(address token) htsCall external view returns (int64, int32) {
+    function getTokenType(address token) htsCall external override view returns (int64, int32) {
         require(token != address(0), "getTokenType: invalid address");
         return IHederaTokenService(token).getTokenType(token);
     }
@@ -558,14 +584,14 @@ contract HtsSystemContract is IHederaTokenService {
             if (selector == this.associateToken.selector) {
                 require(msg.data.length >= 48, "associateToken: Not enough calldata");
                 address account = address(bytes20(msg.data[40:60]));
-                bytes32 slot = _isAssociatedSlot(account);
+                bytes32 slot = _isAssociatedSlot(account, false);
                 assembly { sstore(slot, true) }
                 return abi.encode(HederaResponseCodes.SUCCESS);
             }
             if (selector == this.dissociateToken.selector) {
                 require(msg.data.length >= 48, "dissociateToken: Not enough calldata");
                 address account = address(bytes20(msg.data[40:60]));
-                bytes32 slot = _isAssociatedSlot(account);
+                bytes32 slot = _isAssociatedSlot(account, false);
                 assembly { sstore(slot, false) }
                 return abi.encode(HederaResponseCodes.SUCCESS);
             }
@@ -606,7 +632,7 @@ contract HtsSystemContract is IHederaTokenService {
                 address to = address(bytes20(msg.data[72:92]));
                 uint256 amount = uint256(bytes32(msg.data[92:124]));
                 _approve(from, to, amount);
-                emit IERC20.Approval(from, to, amount);
+                emit IERC20Events.Approval(from, to, amount);
                 return abi.encode(true);
             }
             if (selector == this.approveNFT.selector) {
@@ -702,7 +728,7 @@ contract HtsSystemContract is IHederaTokenService {
             uint256 amount = uint256(bytes32(msg.data[60:92]));
             address owner = msg.sender;
             _approve(owner, spender, amount);
-            emit IERC20.Approval(owner, spender, amount);
+            emit IERC20Events.Approval(owner, spender, amount);
             return abi.encode(true);
         }
         return _redirectForHRC719(selector);
@@ -771,17 +797,17 @@ contract HtsSystemContract is IHederaTokenService {
 
     function _redirectForHRC719(bytes4 selector) private returns (bytes memory) {
         if (selector == IHRC719.associate.selector) {
-            bytes32 slot = _isAssociatedSlot(msg.sender);
+            bytes32 slot = _isAssociatedSlot(msg.sender, false);
             assembly { sstore(slot, true) }
             return abi.encode(true);
         }
         if (selector == IHRC719.dissociate.selector) {
-            bytes32 slot = _isAssociatedSlot(msg.sender);
+            bytes32 slot = _isAssociatedSlot(msg.sender, false);
             assembly { sstore(slot, false) }
             return abi.encode(true);
         }
         if (selector == IHRC719.isAssociated.selector) {
-            bytes32 slot = _isAssociatedSlot(msg.sender);
+            bytes32 slot = _isAssociatedSlot(msg.sender, true);
             bool res;
             assembly { res := sload(slot) }
             return abi.encode(res);
@@ -866,11 +892,11 @@ contract HtsSystemContract is IHederaTokenService {
         return bytes32(abi.encodePacked(selector, pad, spenderId, ownerId));
     }
 
-    function _isAssociatedSlot(address account) internal virtual returns (bytes32) {
+    function _isAssociatedSlot(address account, bool revertIfNotExists) internal virtual returns (bytes32) {
         bytes4 selector = IHRC719.isAssociated.selector;
         uint192 pad = 0x0;
         (uint32 accountId, bool exists) = HtsSystemContract(HTS_ADDRESS).getAccountId(account);
-        require(exists);
+        require(!revertIfNotExists || exists, "_isAssociatedSlot: account does not exist");
         return bytes32(abi.encodePacked(selector, pad, accountId));
     }
 
@@ -936,7 +962,7 @@ contract HtsSystemContract is IHederaTokenService {
         require(from != address(0), "hts: invalid sender");
         require(to != address(0), "hts: invalid receiver");
         _update(from, to, amount);
-        emit IERC20.Transfer(from, to, amount);
+        emit IERC20Events.Transfer(from, to, amount);
     }
 
     function _transferNFT(address sender, address from, address to, uint256 serialId) private {
@@ -964,7 +990,7 @@ contract HtsSystemContract is IHederaTokenService {
 
         // Set the new owner
         assembly { sstore(slot, to) }
-        emit IERC721.Transfer(from, to, serialId);
+        emit IERC721Events.Transfer(from, to, serialId);
     }
 
     function _update(address from, address to, uint256 amount) public {
@@ -1009,7 +1035,7 @@ contract HtsSystemContract is IHederaTokenService {
         bytes32 slot = _getApprovedSlot(uint32(serialId));
         address newApproved = isApproved ? spender : address(0);
         assembly { sstore(slot, newApproved) }
-        emit IERC721.Approval(owner, spender, serialId);
+        emit IERC721Events.Approval(owner, spender, serialId);
     }
 
     /**
@@ -1030,6 +1056,6 @@ contract HtsSystemContract is IHederaTokenService {
         require(operator != address(0) && operator != sender, "setApprovalForAll: invalid operator");
         bytes32 slot = _isApprovedForAllSlot(sender, operator);
         assembly { sstore(slot, approved) }
-        emit IERC721.ApprovalForAll(sender, operator, approved);
+        emit IERC721Events.ApprovalForAll(sender, operator, approved);
     }
 }
