@@ -38,6 +38,7 @@ function sendAs(contract, signer) {
 async function waitForTx(promise) {
     const tx = await promise;
     await tx.wait();
+    await new Promise(r => setTimeout(r, 1000));
     // console.log(tx)
 }
 
