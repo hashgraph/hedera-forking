@@ -24,7 +24,7 @@ contract NFTExampleTest is Test {
 
         // The assertion below cannot be guaranteed, since we can only query the current owner of the NFT,
         // Note that the ownership of the NFT may change over time.
-        assertEq(owner, 0x000000000000000000000000000000000006889a);
+        assertEq(owner, 0x00000000000000000000000000000000000CFCdB);
     }
 
     function test_dealt_nft_assigned_to_local_account() view external {
