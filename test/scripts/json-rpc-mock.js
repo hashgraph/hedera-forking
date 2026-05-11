@@ -192,8 +192,10 @@ const eth = {
      * https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_getblockbynumber
      * @type {EthHandler}
      */
-    eth_getBlockByNumber: async ([blockNumber, _transactionDetails]) =>
-        require(`./eth_getBlockByNumber_${blockNumber}.json`),
+    eth_getBlockByNumber: async ([blockNumber, _transactionDetails]) => {
+        if (blockNumber === 'latest') blockNumber = await eth.eth_blockNumber([]);
+        return require(`./eth_getBlockByNumber_${blockNumber}.json`);
+    },
 
     /**
      * https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_gettransactioncount
@@ -211,6 +213,19 @@ const eth = {
             : typeof address === 'string' && isHIP719Contract(address)
               ? getHIP719Code(address)
               : '0x',
+
+
+    /**
+     * Anvil asks fork providers for aggregate account data during fork setup.
+     *
+     * https://github.com/foundry-rs/foundry/pull/10496
+     * @type {EthHandler}
+     */
+    eth_getAccountInfo: async ([address, blockNumber]) => ({
+        balance: await eth.eth_getBalance([address, blockNumber]),
+        nonce: await eth.eth_getTransactionCount([address, blockNumber]),
+        code: await eth.eth_getCode([address, blockNumber]),
+    }),
 
     /**
      * https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_getbalance
