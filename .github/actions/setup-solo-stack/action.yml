@@ -7,23 +7,17 @@ inputs:
         required: false
         default: '0.72.0'
     network-tag:
-        description: Optional consensus node release tag.
+        description: Consensus / network node container image tag (--release-tag).
         required: false
-        # Blank by default so the pinned Solo CLI version controls its bundled
-        # consensus node version unless a workflow explicitly overrides it.
-        default: ''
+        default: 'v0.72.0'
     mirror-tag:
-        description: Optional mirror node release tag.
+        description: Mirror node chart/image version (--mirror-node-version).
         required: false
-        # Blank by default so the pinned Solo CLI version controls its bundled
-        # mirror node version unless a workflow explicitly overrides it.
-        default: ''
+        default: 'v0.151.0'
     relay-tag:
-        description: Optional JSON-RPC relay release tag.
+        description: JSON-RPC relay image/chart tag (--relay-release).
         required: false
-        # Blank by default so the pinned Solo CLI version controls its bundled
-        # relay version unless a workflow explicitly overrides it.
-        default: ''
+        default: '0.76.2'
     external-address:
         description: Bind address for Solo kubectl port-forwards.
         required: false
@@ -40,51 +34,28 @@ outputs:
 runs:
     using: composite
     steps:
-        - name: Generate Falcon values
+        - name: Generate falcon-values config file
           shell: bash
-          env:
-              NETWORK_TAG: ${{ inputs.network-tag }}
-              MIRROR_TAG: ${{ inputs.mirror-tag }}
-              RELAY_TAG: ${{ inputs.relay-tag }}
           run: |
-              set -euo pipefail
-
-              falcon_values=".github/falcon.yml"
-              : > "$falcon_values"
-
-              if [ -n "$NETWORK_TAG" ]; then
-                {
-                  echo "network:"
-                  echo "  --release-tag: \"$NETWORK_TAG\""
-                  echo "setup:"
-                  echo "  --release-tag: \"$NETWORK_TAG\""
-                } >> "$falcon_values"
-              fi
-
-              {
-                echo "consensusNode:"
-                echo "  --force-port-forward: true"
-                echo "  --node-aliases: \"node1\""
-                echo "mirrorNode:"
-                echo "  --enable-ingress: true"
-                echo "  --pinger: true"
-                echo "  --values-file: .github/mirror-node-values.yaml"
-                echo "  --force-port-forward: true"
-              } >> "$falcon_values"
-
-              if [ -n "$MIRROR_TAG" ]; then
-                echo "  --mirror-node-version: \"$MIRROR_TAG\"" >> "$falcon_values"
-              fi
-
-              {
-                echo "relayNode:"
-                echo "  --node-aliases: \"node1\""
-                echo "  --force-port-forward: true"
-              } >> "$falcon_values"
-
-              if [ -n "$RELAY_TAG" ]; then
-                echo "  --relay-release: \"$RELAY_TAG\"" >> "$falcon_values"
-              fi
+              cat > .github/falcon.yml <<EOF
+              network:
+                --release-tag: "${{ inputs.network-tag }}"
+              setup:
+                --release-tag: "${{ inputs.network-tag }}"
+              consensusNode:
+                --force-port-forward: true
+                --node-aliases: "node1"
+              mirrorNode:
+                --enable-ingress: true
+                --pinger: true
+                --mirror-node-version: "${{ inputs.mirror-tag }}"
+                --values-file: .github/mirror-node-values.yaml
+                --force-port-forward: true
+              relayNode:
+                --relay-release: "${{ inputs.relay-tag }}"
+                --node-aliases: "node1"
+                --force-port-forward: true
+              EOF
 
         - name: Setup Kind
           uses: helm/kind-action@v1.12.0
