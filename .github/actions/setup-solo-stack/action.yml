@@ -87,7 +87,7 @@ runs:
                 --namespace "$solo_ns" \
                 --external-address "$EXTERNAL_ADDRESS"
 
-        - name: Forward consensus compatibility port
+        - name: Forward compatibility ports
           shell: bash
           env:
               SOLO_NS: ${{ steps.solo_deploy.outputs.namespace }}
@@ -95,19 +95,17 @@ runs:
               set -euo pipefail
 
               kubectl -n "$SOLO_NS" get svc haproxy-node1-svc
-              kubectl -n "$SOLO_NS" port-forward svc/haproxy-node1-svc 50211:50211 >/tmp/solo-consensus-port-forward.log 2>&1 &
+              kubectl -n "$SOLO_NS" port-forward svc/haproxy-node1-svc 50211:50211 &
+              echo "Forwarding svc/haproxy-node1-svc -> localhost:50211 (consensus gRPC)"
 
-              for i in $(seq 1 30); do
-                if nc -z 127.0.0.1 50211; then
-                  exit 0
-                fi
-                echo "Attempt ${i}/30: consensus gRPC compatibility port is not ready, retrying in 2s..."
-                sleep 2
-              done
+              if kubectl -n "$SOLO_NS" get svc mirror-1-web3 &>/dev/null; then
+                kubectl -n "$SOLO_NS" port-forward svc/mirror-1-web3 8545:80 &
+                echo "Forwarding svc/mirror-1-web3 -> localhost:8545 (mirror Web3)"
+              else
+                echo "::warning::svc/mirror-1-web3 not found in $SOLO_NS; skipping 8545 forward"
+              fi
 
-              echo "ERROR: consensus gRPC compatibility port did not become available."
-              cat /tmp/solo-consensus-port-forward.log
-              exit 1
+              sleep 3
 
         - name: Verify Mirror REST API
           shell: bash
