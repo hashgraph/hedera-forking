@@ -72,7 +72,7 @@ const ft = {
     decimals: 3,
     treasury: {
         id: '0.0.1011',
-        evmAddress: '0x17b2b8c63fa35402088640e426c6709a254c7ffb',
+        evmAddress: toAddress('0.0.1011'),
         privateKey: '0xeae4e00ece872dd14fb6dc7a04f390563c7d69d16326f2a703ec8e0934060cc7',
     },
 };
@@ -212,9 +212,9 @@ describe('::e2e', function () {
                     expect(value).to.be.equal(BigInt(ft.totalSupply));
                 });
 
-                it('should retrieve zero `balanceOf` for non-associated accounts', async function () {
-                    expect(await ERC20['balanceOf'](nonAssocAddress0)).to.be.equal(0n);
-                    expect(await ERC20['balanceOf'](nonAssocAddress1)).to.be.equal(0n);
+                it('should retrieve zero `balanceOf` for existing non-associated accounts', async function () {
+                    expect(await ERC20['balanceOf'](toAddress('0.0.1002'))).to.be.equal(0n);
+                    expect(await ERC20['balanceOf'](wallets[1002].address)).to.be.equal(0n);
                 });
 
                 it('should get it `isAssociated` for treasury account', async function () {
@@ -263,6 +263,7 @@ describe('::e2e', function () {
                     expect(await ERC20['balanceOf'](alice.address)).to.be.equal(0n);
                     const preTotalSupply = await ERC20['totalSupply']();
 
+                    await waitForTx(sendAs(ERC20, alice)['associate'](OPTS));
                     await waitForTx(
                         sendAs(ERC20, treasury)['transfer'](alice.address, amount, OPTS)
                     );
