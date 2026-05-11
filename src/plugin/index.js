@@ -10,7 +10,7 @@ const chains = {
     295: 'https://mainnet-public.mirrornode.hedera.com/api/v1/',
     296: 'https://testnet.mirrornode.hedera.com/api/v1/',
     297: 'https://previewnet.mirrornode.hedera.com/api/v1/',
-    298: 'http://localhost:5551/api/v1/',
+    298: 'http://localhost:38081/api/v1/',
 };
 
 /**

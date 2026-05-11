@@ -1,0 +1,158 @@
+name: Setup Solo Stack
+description: Deploy a Solo Falcon stack for local Hedera network tests.
+
+inputs:
+    solo-version:
+        description: Solo CLI version used for Falcon deploy.
+        required: false
+        default: '0.72.0'
+    network-tag:
+        description: Optional consensus node release tag.
+        required: false
+        # Blank by default so the pinned Solo CLI version controls its bundled
+        # consensus node version unless a workflow explicitly overrides it.
+        default: ''
+    mirror-tag:
+        description: Optional mirror node release tag.
+        required: false
+        # Blank by default so the pinned Solo CLI version controls its bundled
+        # mirror node version unless a workflow explicitly overrides it.
+        default: ''
+    relay-tag:
+        description: Optional JSON-RPC relay release tag.
+        required: false
+        # Blank by default so the pinned Solo CLI version controls its bundled
+        # relay version unless a workflow explicitly overrides it.
+        default: ''
+    external-address:
+        description: Bind address for Solo kubectl port-forwards.
+        required: false
+        default: '127.0.0.1'
+
+outputs:
+    deployment_name:
+        description: Solo deployment name.
+        value: ${{ steps.solo_deploy.outputs.deployment_name }}
+    namespace:
+        description: Kubernetes namespace used by the Solo deployment.
+        value: ${{ steps.solo_deploy.outputs.namespace }}
+
+runs:
+    using: composite
+    steps:
+        - name: Generate Falcon values
+          shell: bash
+          env:
+              NETWORK_TAG: ${{ inputs.network-tag }}
+              MIRROR_TAG: ${{ inputs.mirror-tag }}
+              RELAY_TAG: ${{ inputs.relay-tag }}
+          run: |
+              set -euo pipefail
+
+              falcon_values=".github/falcon.yml"
+              : > "$falcon_values"
+
+              if [ -n "$NETWORK_TAG" ]; then
+                {
+                  echo "network:"
+                  echo "  --release-tag: \"$NETWORK_TAG\""
+                  echo "setup:"
+                  echo "  --release-tag: \"$NETWORK_TAG\""
+                } >> "$falcon_values"
+              fi
+
+              {
+                echo "consensusNode:"
+                echo "  --force-port-forward: true"
+                echo "  --node-aliases: \"node1\""
+                echo "mirrorNode:"
+                echo "  --enable-ingress: true"
+                echo "  --pinger: true"
+                echo "  --values-file: .github/mirror-node-values.yaml"
+                echo "  --force-port-forward: true"
+              } >> "$falcon_values"
+
+              if [ -n "$MIRROR_TAG" ]; then
+                echo "  --mirror-node-version: \"$MIRROR_TAG\"" >> "$falcon_values"
+              fi
+
+              {
+                echo "relayNode:"
+                echo "  --node-aliases: \"node1\""
+                echo "  --force-port-forward: true"
+              } >> "$falcon_values"
+
+              if [ -n "$RELAY_TAG" ]; then
+                echo "  --relay-release: \"$RELAY_TAG\"" >> "$falcon_values"
+              fi
+
+        - name: Setup Kind
+          uses: helm/kind-action@v1.12.0
+          with:
+              install_only: true
+              wait: 120s
+
+        - name: Start Solo stack
+          id: solo_deploy
+          shell: bash
+          env:
+              SOLO_VERSION: ${{ inputs.solo-version }}
+              EXTERNAL_ADDRESS: ${{ inputs.external-address }}
+          run: |
+              set -euo pipefail
+
+              ns_base="sc-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${GITHUB_JOB}"
+              solo_ns="$(echo "$ns_base" | tr '[:upper:]_' '[:lower:]-' | cut -c1-63)"
+              solo_deployment="$solo_ns"
+
+              echo "deployment_name=$solo_deployment" >> "$GITHUB_OUTPUT"
+              echo "namespace=$solo_ns" >> "$GITHUB_OUTPUT"
+
+              npx "@hashgraph/solo@$SOLO_VERSION" one-shot falcon deploy \
+                --values-file .github/falcon.yml \
+                --dev \
+                --deploy-explorer=false \
+                --deployment "$solo_deployment" \
+                --namespace "$solo_ns" \
+                --external-address "$EXTERNAL_ADDRESS"
+
+        - name: Forward consensus compatibility port
+          shell: bash
+          env:
+              SOLO_NS: ${{ steps.solo_deploy.outputs.namespace }}
+          run: |
+              set -euo pipefail
+
+              kubectl -n "$SOLO_NS" get svc haproxy-node1-svc
+              kubectl -n "$SOLO_NS" port-forward svc/haproxy-node1-svc 50211:50211 >/tmp/solo-consensus-port-forward.log 2>&1 &
+
+              for i in $(seq 1 30); do
+                if nc -z 127.0.0.1 50211; then
+                  exit 0
+                fi
+                echo "Attempt ${i}/30: consensus gRPC compatibility port is not ready, retrying in 2s..."
+                sleep 2
+              done
+
+              echo "ERROR: consensus gRPC compatibility port did not become available."
+              cat /tmp/solo-consensus-port-forward.log
+              exit 1
+
+        - name: Verify Mirror REST API
+          shell: bash
+          run: |
+              set -euo pipefail
+
+              echo "Waiting for mirror node REST API..."
+              for i in $(seq 1 30); do
+                response=$(curl -sf http://localhost:38081/api/v1/accounts 2>/dev/null || true)
+                if echo "$response" | grep -q '"accounts"'; then
+                  echo "Mirror REST API is up."
+                  exit 0
+                fi
+                echo "Attempt ${i}/30: not ready, retrying in 10s..."
+                sleep 10
+              done
+
+              echo "ERROR: Mirror REST API did not become available."
+              exit 1

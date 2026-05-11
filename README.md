@@ -241,7 +241,7 @@ For example
 mainnet = "https://mainnet.hashio.io/api"
 testnet = "https://testnet.hashio.io/api"
 previewnet = "https://previewnet.hashio.io/api"
-localnode = "http://localhost:7546"
+solo = "http://localhost:37546"
 ```
 
 > [!IMPORTANT]
@@ -686,7 +686,7 @@ cat test/scripts/curl.log
 These Solidity tests are used to test both the `HtsSystemContract` and the `npm` package.
 It is the implementation used by Hardhat users.
 
-Instead of starting a `local-node` or using a remote network,
+Instead of starting Solo or using a remote network,
 they use the [`json-rpc-mock.js`](./test/scripts/json-rpc-mock.js) script as a backend without the need for any additional services,
 thus making the tests more robust.
 This is the network Foundry's Anvil is forking from.
@@ -712,9 +712,9 @@ forge test --fork-url http://localhost:7546 --no-storage-caching
 
 The goal of this test is to validate that our HTS emulation matches the behavior of the real HTS (provided by Hedera Services).
 The test works as follow.
-It first creates an HTS token on a Local Node.
-Then, it proceeds to start a local network (Foundry's Anvil) forked from the Local Node after token creation.
-The same test cases are executed on both networks, first on Anvil, and then on Local Node, where they yield the same result.
+It first creates an HTS token on a Solo network.
+Then, it proceeds to start a local network (Foundry's Anvil) forked from Solo after token creation.
+The same test cases are executed on both networks, first on Anvil, and then on Solo, where they yield the same result.
 
 > [!NOTE]
 > The test sets the `DEBUG_DISABLE_BALANCE_BLOCKNUMBER` environment variable used by the Mirror Node client.
@@ -723,21 +723,27 @@ The same test cases are executed on both networks, first on Anvil, and then on L
 > This in turn fetches the correct balance in the case where the Mirror Node did not get the latest balance snapshot from the Consensus Node.
 > This simplifies the validation tests considerably, and allows to compare behavior of real HTS and emulated HTS more easily.
 
-You need a Local Node running in order to execute this test.
-See [Hedera Local Node, _&sect; Requirements_](https://github.com/hashgraph/hedera-local-node?tab=readme-ov-file#requirements) for tools needed to run it.
-To do so, run the following
+You need a Solo network running in order to execute this test.
+Install [Kind](https://kind.sigs.k8s.io/) and `kubectl`, then deploy Solo with
 
 ```console
-npm run hedera:start
+npm run solo:deploy -- --deployment hedera-forking --namespace hedera-forking
 ```
 
-> Alternatively, once you are done with this test, you can stop the Local Node using
+Solo exposes JSON-RPC relay at `http://localhost:37546` and Mirror REST at `http://localhost:38081/api/v1/`.
+The e2e test also uses a compatibility consensus gRPC port for the Hedera SDK; expose it with
+
+```console
+kubectl -n hedera-forking port-forward svc/haproxy-node1-svc 50211:50211
+```
+
+> Alternatively, once you are done with this test, you can stop Solo using
 >
 > ```console
-> npm run hedera:stop
+> npm run solo:destroy -- --deployment hedera-forking --quiet-mode
 > ```
 
-Once Local Node is up and running, run the validation tests with
+Once Solo is up and running, run the validation tests with
 
 ```console
 npm run test:e2e

@@ -22,7 +22,7 @@ async function main() {
 
     // Create your Hedera Testnet client and set the operator
     const client = Client.forTestnet();
-    // Uncomment the following to create the token in a Local Network
+    // Uncomment the following to create the token on Solo's SDK compatibility consensus port.
     // const client = Client.forNetwork({
     //   '127.0.0.1:50211': new AccountId(3),
     // });

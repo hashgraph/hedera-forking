@@ -14,7 +14,7 @@ const { spawn } = require('child_process');
  * ### Examples
  *
  * ```javascript
- * const anvilHost = await anvil('localhost:7546');
+ * const anvilHost = await anvil('http://localhost:37546');
  * console.log(anvilHost); // http://127.0.0.1:51319
  * ```
  *

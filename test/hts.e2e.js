@@ -46,6 +46,18 @@ const OPTS = {
     gasLimit: 500_000,
 };
 
+const network = {
+    consensusEndpoint: process.env['HEDERA_CONSENSUS_ENDPOINT'] ?? '127.0.0.1:50211',
+    nodeAccountId: process.env['HEDERA_NODE_ACCOUNT_ID'] ?? '0.0.3',
+    operatorId: process.env['OPERATOR_ID'] ?? '0.0.2',
+    operatorKey:
+        process.env['OPERATOR_KEY'] ??
+        '302e020100300506032b65700422042091132178e72057a1d7528025956fe39b0b847f200ab59b2fdd367017f3087137',
+    jsonRpcRelayUrl: process.env['HEDERA_JSON_RPC_RELAY_URL'] ?? 'http://localhost:37546',
+    mirrorNodeUrl: process.env['MIRROR_NODE_URL'] ?? 'http://localhost:38081/api/v1/',
+    chainId: Number(process.env['HEDERA_CHAIN_ID'] ?? '298'),
+};
+
 /**
  * @param {string} accountId
  * @returns
@@ -59,23 +71,23 @@ const ft = {
     totalSupply: 5_000_000,
     decimals: 3,
     treasury: {
-        id: '0.0.1021',
+        id: '0.0.1011',
         evmAddress: '0x17b2b8c63fa35402088640e426c6709a254c7ffb',
         privateKey: '0xeae4e00ece872dd14fb6dc7a04f390563c7d69d16326f2a703ec8e0934060cc7',
     },
 };
 
 const aliasKeys = /**@type{const}*/ ([
-    [1012, '0x105d050185ccb907fba04dd92d8de9e32c18305e097ab41dadda21489a211524'],
-    [1013, '0x2e1d968b041d84dd120a5860cee60cd83f9374ef527ca86996317ada3d0d03e7'],
-    [1014, '0x45a5a7108a18dd5013cf2d5857a28144beadc9c70b3bdbd914e38df4e804b8d8'],
-    [1015, '0x6e9d61a325be3f6675cf8b7676c70e4a004d2308e3e182370a41f5653d52c6bd'],
-    [1016, '0x0b58b1bd44469ac9f813b5aeaf6213ddaea26720f0b2f133d08b6f234130a64f'],
-    [1017, '0x95eac372e0f0df3b43740fa780e62458b2d2cc32d6a440877f1cc2a9ad0c35cc'],
-    [1018, '0x6c6e6727b40c8d4b616ab0d26af357af09337299f09c66704146e14236972106'],
-    [1019, '0x5072e7aa1b03f531b4731a32a021f6a5d20d5ddc4e55acbb71ae202fc6f3a26d'],
-    [1020, '0x60fe891f13824a2c1da20fb6a14e28fa353421191069ba6b6d09dd6c29b90eff'],
-    [1021, '0xeae4e00ece872dd14fb6dc7a04f390563c7d69d16326f2a703ec8e0934060cc7'],
+    [1002, '0x105d050185ccb907fba04dd92d8de9e32c18305e097ab41dadda21489a211524'],
+    [1003, '0x2e1d968b041d84dd120a5860cee60cd83f9374ef527ca86996317ada3d0d03e7'],
+    [1004, '0x45a5a7108a18dd5013cf2d5857a28144beadc9c70b3bdbd914e38df4e804b8d8'],
+    [1005, '0x6e9d61a325be3f6675cf8b7676c70e4a004d2308e3e182370a41f5653d52c6bd'],
+    [1006, '0x0b58b1bd44469ac9f813b5aeaf6213ddaea26720f0b2f133d08b6f234130a64f'],
+    [1007, '0x95eac372e0f0df3b43740fa780e62458b2d2cc32d6a440877f1cc2a9ad0c35cc'],
+    [1008, '0x6c6e6727b40c8d4b616ab0d26af357af09337299f09c66704146e14236972106'],
+    [1009, '0x5072e7aa1b03f531b4731a32a021f6a5d20d5ddc4e55acbb71ae202fc6f3a26d'],
+    [1010, '0x60fe891f13824a2c1da20fb6a14e28fa353421191069ba6b6d09dd6c29b90eff'],
+    [1011, '0xeae4e00ece872dd14fb6dc7a04f390563c7d69d16326f2a703ec8e0934060cc7'],
 ]);
 
 /**
@@ -84,13 +96,10 @@ const aliasKeys = /**@type{const}*/ ([
  * @returns
  */
 async function createToken({ noSupplyKey } = {}) {
-    // https://github.com/hashgraph/hedera-local-node?tab=readme-ov-file#network-variables
-    const accountId = '0.0.2';
-    const privateKey =
-        '302e020100300506032b65700422042091132178e72057a1d7528025956fe39b0b847f200ab59b2fdd367017f3087137';
-
-    const client = Client.forNetwork({ '127.0.0.1:50211': '0.0.3' })
-        .setOperator(accountId, PrivateKey.fromStringDer(privateKey))
+    const client = Client.forNetwork({
+        [network.consensusEndpoint]: network.nodeAccountId,
+    })
+        .setOperator(network.operatorId, PrivateKey.fromStringDer(network.operatorKey))
         .setDefaultMaxTransactionFee(new Hbar(100))
         .setDefaultMaxQueryPayment(new Hbar(50));
     let transaction = new TokenCreateTransaction()
@@ -99,7 +108,7 @@ async function createToken({ noSupplyKey } = {}) {
         .setTreasuryAccountId(ft.treasury.id)
         .setInitialSupply(ft.totalSupply)
         .setDecimals(ft.decimals)
-        .setAdminKey(PrivateKey.fromStringDer(privateKey));
+        .setAdminKey(PrivateKey.fromStringDer(network.operatorKey));
     if (!noSupplyKey) {
         transaction = transaction.setSupplyKey(PrivateKey.fromStringECDSA(ft.treasury.privateKey));
     }
@@ -125,11 +134,23 @@ function sleep(time, why) {
     return new Promise(resolve => setTimeout(resolve, time));
 }
 
-describe('::e2e', function () {
-    this.timeout(60000);
+/**
+ * @param {string} title
+ * @param {string} tokenId
+ * @returns {Promise<any>}
+ */
+async function waitForMirrorToken(title, tokenId) {
+    for (let i = 1; i <= 30; i++) {
+        const token = await (await fetch(`${network.mirrorNodeUrl}tokens/${tokenId}`)).json();
+        if (!('_status' in token)) return token;
+        await sleep(2000, `Waiting for token "${title}" to propagate to Mirror Node`);
+    }
 
-    const jsonRpcRelayUrl = 'http://localhost:7546';
-    const mirrorNodeUrl = 'http://localhost:5551/api/v1/';
+    return (await fetch(`${network.mirrorNodeUrl}tokens/${tokenId}`)).json();
+}
+
+describe('::e2e', function () {
+    this.timeout(120000);
 
     /** @type {string} */
     let anvilHost;
@@ -143,14 +164,16 @@ describe('::e2e', function () {
             console.info(`Token "${suite.title}" ${suite.tokenId} @ ${suite.tokenAddress} created`);
         }
 
-        await sleep(2000, `Waiting for tokens to propagate to Mirror Node`);
-
         for (const { title, tokenId } of suites) {
-            const token = await (await fetch(`${mirrorNodeUrl}tokens/${tokenId}`)).json();
+            const token = await waitForMirrorToken(title, tokenId);
             expect('_status' in token, `Token "${title}" \`${tokenId}\` not found`).to.be.false;
         }
 
-        const { host: forwarderUrl } = await jsonRPCForwarder(jsonRpcRelayUrl, mirrorNodeUrl, 298);
+        const { host: forwarderUrl } = await jsonRPCForwarder(
+            network.jsonRpcRelayUrl,
+            network.mirrorNodeUrl,
+            network.chainId
+        );
         anvilHost = await anvil(forwarderUrl);
 
         // Ensure HTS emulation is reachable
@@ -204,7 +227,7 @@ describe('::e2e', function () {
                         await ERC20['isAssociated']({ from: toAddress('0.0.1002') })
                     ).to.be.equal(false);
                     expect(
-                        await ERC20['isAssociated']({ from: wallets[1012].address })
+                        await ERC20['isAssociated']({ from: wallets[1002].address })
                     ).to.be.equal(false);
                 });
 
@@ -233,7 +256,7 @@ describe('::e2e', function () {
 
                 it('should transfer from treasury to account and leave total supply untouched', async function () {
                     const amount = 200_000n;
-                    const alice = wallets[1012];
+                    const alice = wallets[1002];
 
                     const preTreasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
                     expect(preTreasuryBalance).to.be.equal(BigInt(ft.totalSupply));
@@ -308,10 +331,10 @@ describe('::e2e', function () {
     suites.forEach(suite =>
         describe(suite.title, function () {
             [
-                /**@type{const}*/ (['anvil/local-node', () => anvilHost]),
-                /**@type{const}*/ (['local-node', () => jsonRpcRelayUrl]),
-            ].forEach(([network, host]) => {
-                describe(network, function () {
+                /**@type{const}*/ (['anvil/solo', () => anvilHost]),
+                /**@type{const}*/ (['solo', () => network.jsonRpcRelayUrl]),
+            ].forEach(([networkName, host]) => {
+                describe(networkName, function () {
                     before(async function () {
                         tokenAddress = suite.tokenAddress;
                         const rpc = new JsonRpcProvider(host(), undefined, { batchMaxCount: 1 });
