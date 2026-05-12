@@ -411,7 +411,7 @@ jobs:
         run: npm ci
 
       - name: Set up Solo stack
-        id: solo_stack
+        id: solo_stack_foundry_example
         uses: ./.github/actions/setup-solo-stack
         with:
           solo-version: ${{ env.SOLO_VERSION }}
@@ -486,7 +486,7 @@ jobs:
         run: npm ci
 
       - name: Set up Solo stack
-        id: solo_stack
+        id: solo_stack_e2e
         uses: ./.github/actions/setup-solo-stack
         with:
           solo-version: ${{ env.SOLO_VERSION }}
