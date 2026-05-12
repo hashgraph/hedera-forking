@@ -381,7 +381,7 @@ jobs:
         working-directory: examples/hardhat-hts
 
   foundry-example-scripts:
-    name: Foundry example scripts w/Solo
+    name: Foundry example scripts with Solo
     runs-on: smart-contracts-linux-medium
     steps:
       - name: Harden Runner

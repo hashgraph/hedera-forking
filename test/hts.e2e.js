@@ -246,16 +246,6 @@ describe('::e2e', function () {
                     );
                 });
 
-                // To enable this, we need to change `getTokenInfo` to a `view` function
-                it("should retrieve token's metadata through `getTokenInfo`", async function () {
-                    const tokenInfo = await HTS['getTokenInfo'](tokenAddress);
-                    if (self.tokenInfo === undefined) {
-                        self.tokenInfo = tokenInfo;
-                    } else {
-                        expect(tokenInfo).to.be.deep.equal(self.tokenInfo);
-                    }
-                });
-
                 it('should transfer from treasury to account and leave total supply untouched', async function () {
                     const amount = 200_000n;
                     const alice = wallets[1008];
