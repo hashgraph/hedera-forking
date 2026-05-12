@@ -43,7 +43,7 @@ async function waitForTx(promise) {
 }
 
 const OPTS = {
-    gasLimit: 500_000,
+    gasLimit: 1_000_000,
 };
 
 const network = {
@@ -65,16 +65,18 @@ const network = {
 const toAddress = accountId =>
     '0x' + parseInt(accountId.replace('0.0.', '')).toString(16).padStart(40, '0');
 
+const treasuryAccount = {
+    id: '0.0.1002',
+    evmAddress: '0x67d8d32e9bf1a9968a5ff53b87d777aa8ebbee69',
+    privateKey: '0x105d050185ccb907fba04dd92d8de9e32c18305e097ab41dadda21489a211524',
+};
+
 const ft = {
     name: 'Random FT Token',
     symbol: 'RFT',
     totalSupply: 5_000_000,
     decimals: 3,
-    treasury: {
-        id: '0.0.1011',
-        evmAddress: toAddress('0.0.1011'),
-        privateKey: '0xeae4e00ece872dd14fb6dc7a04f390563c7d69d16326f2a703ec8e0934060cc7',
-    },
+    treasury: treasuryAccount,
 };
 
 const aliasKeys = /**@type{const}*/ ([
@@ -212,9 +214,9 @@ describe('::e2e', function () {
                     expect(value).to.be.equal(BigInt(ft.totalSupply));
                 });
 
-                it('should retrieve zero `balanceOf` for existing non-associated accounts', async function () {
-                    expect(await ERC20['balanceOf'](toAddress('0.0.1002'))).to.be.equal(0n);
-                    expect(await ERC20['balanceOf'](wallets[1002].address)).to.be.equal(0n);
+                it('should retrieve zero `balanceOf` for non-associated accounts', async function () {
+                    expect(await ERC20['balanceOf'](wallets[1004].address)).to.be.equal(0n);
+                    expect(await ERC20['balanceOf'](wallets[1005].address)).to.be.equal(0n);
                 });
 
                 it('should get it `isAssociated` for treasury account', async function () {
@@ -224,10 +226,10 @@ describe('::e2e', function () {
 
                 it('should get not `isAssociated` for existing non-associated account', async function () {
                     expect(
-                        await ERC20['isAssociated']({ from: toAddress('0.0.1002') })
+                        await ERC20['isAssociated']({ from: toAddress('0.0.1004') })
                     ).to.be.equal(false);
                     expect(
-                        await ERC20['isAssociated']({ from: wallets[1002].address })
+                        await ERC20['isAssociated']({ from: wallets[1005].address })
                     ).to.be.equal(false);
                 });
 
@@ -250,13 +252,13 @@ describe('::e2e', function () {
                     if (self.tokenInfo === undefined) {
                         self.tokenInfo = tokenInfo;
                     } else {
-                        expect(self.tokenInfo).to.be.deep.equal(tokenInfo);
+                        expect(tokenInfo).to.be.deep.equal(self.tokenInfo);
                     }
                 });
 
                 it('should transfer from treasury to account and leave total supply untouched', async function () {
                     const amount = 200_000n;
-                    const alice = wallets[1002];
+                    const alice = wallets[1008];
 
                     const preTreasuryBalance = await ERC20['balanceOf'](ft.treasury.evmAddress);
                     expect(preTreasuryBalance).to.be.equal(BigInt(ft.totalSupply));
