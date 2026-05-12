@@ -199,8 +199,6 @@ describe('::e2e', function () {
             tests() {
                 const nonAssocAddress0 = '0x0000000000000000000000000000000001234567';
                 const nonAssocAddress1 = '0xdadB0d80178819F2319190D340ce9A924f783711';
-                // eslint-disable-next-line @typescript-eslint/no-this-alias
-                const self = this;
 
                 it("should retrieve token's `name`, `symbol` and `totalSupply`", async function () {
                     expect(await ERC20['name']()).to.be.equal(ft.name);
