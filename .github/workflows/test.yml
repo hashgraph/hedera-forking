@@ -411,10 +411,31 @@ jobs:
         run: npm ci
 
       - name: Set up Solo stack
-        id: solo_stack_foundry_example
+        id: solo_stack
         uses: ./.github/actions/setup-solo-stack
         with:
           solo-version: ${{ env.SOLO_VERSION }}
+
+      - name: Diagnose Solo relay failure
+        if: failure() && steps.solo_stack.outcome == 'failure'
+        env:
+          SOLO_NS: ${{ steps.solo_stack.outputs.namespace }}
+        run: |
+          set +e
+
+          if [ -z "${SOLO_NS:-}" ]; then
+            ns_base="sc-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${GITHUB_JOB}"
+            SOLO_NS="$(echo "$ns_base" | tr '[:upper:]_' '[:lower:]-' | cut -c1-63)"
+          fi
+
+          echo "Diagnosing Solo relay failure in namespace: $SOLO_NS"
+          kubectl config current-context || true
+          kubectl get namespace "$SOLO_NS" -o wide || true
+          kubectl -n "$SOLO_NS" get all -o wide || true
+          kubectl -n "$SOLO_NS" get pods -o wide --show-labels || true
+          kubectl -n "$SOLO_NS" get events --sort-by='.lastTimestamp' || true
+          kubectl -n "$SOLO_NS" describe deploy,rs,pod,svc -l app.kubernetes.io/instance=relay-1 || true
+          kubectl -n "$SOLO_NS" logs -l app.kubernetes.io/instance=relay-1 --all-containers --tail=200 --prefix || true
 
       - name: Run Forge build on Foundry HTS example
         run: forge build
@@ -486,7 +507,7 @@ jobs:
         run: npm ci
 
       - name: Set up Solo stack
-        id: solo_stack_e2e
+        id: solo_stack
         uses: ./.github/actions/setup-solo-stack
         with:
           solo-version: ${{ env.SOLO_VERSION }}
