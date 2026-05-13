@@ -121,7 +121,7 @@ It would save a lot of time for Hedera developers to have the ability to use for
 
 In the following, _Development fork_ refers to the Ethereum Development Environment used to simulate EVM state locally, _e.g._, Ganache, Hardhat's EDR or Foundry's Anvil.
 _Remote network_ refers to the Hedera network to pull EVM bytecode and state from.
-It can be either `mainnet`, `testnet`, `previewnet` or any local network, like local-node or solo.
+It can be either `mainnet`, `testnet`, `previewnet` or a local Solo network.
 
 We need to enable fork testing when any of the Hedera Services, _e.g._, Hedera Token Service, are involved.
 
@@ -155,7 +155,7 @@ In a nutshell, this bytecode does not have any state and redirects all incoming 
 ### Constraints
 
 - Code returned for HTS Tokens should **not** be changed. This will allow us to use the same mechanism and state for existing tokens in the remote network, or newly created tokens in the local network.
-- Avoid the need for developers to initiate extra processes, _e.g._, start `local-node` to enable forking.
+- Avoid the need for developers to initiate extra processes, _e.g._, start Solo to enable forking.
 - Storage slots need to be consistent with existing tooling. For example, Foundry supports the `deal` cheatcode <https://book.getfoundry.sh/reference/forge-std/deal>, which allows users to change the balance of _any_ ERC20 token. Our forking support should be compatible with this use case.
 
   ```solidity

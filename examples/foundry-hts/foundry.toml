@@ -12,4 +12,4 @@ ffi = true
 mainnet = "https://mainnet.hashio.io/api"
 testnet = "https://testnet.hashio.io/api"
 previewnet = "https://previewnet.hashio.io/api"
-localnode = "http://localhost:7546"
+solo = "http://localhost:37546"
