@@ -4,10 +4,6 @@
 # Deploys Solo Falcon one-shot on Kind. Expects repo root as cwd and Kind tooling
 # already installed (e.g. via helm/kind-action). Writes deployment_name and
 # namespace to GITHUB_OUTPUT when set (GitHub Actions).
-#
-# Replaces the previous .github/actions/setup-solo-stack composite action so we
-# can keep workflows free of in-line composite actions and instead drive Solo
-# provisioning from `workflow_call`/`workflow_dispatch` triggered flows.
 
 set -euo pipefail
 
