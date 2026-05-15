@@ -397,7 +397,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
         with:
-          node-version: 20
+          node-version: '20'
 
       - name: Install Foundry
         uses: step-security/foundry-toolchain@01e2d127ea061e2ce8fa34340de71ca8518f093e # v1.2.1
@@ -410,11 +410,23 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Set up Solo stack
-        id: solo_stack
-        uses: ./.github/actions/setup-solo-stack
+      - name: Setup Kind
+        uses: helm/kind-action@v1.12.0
         with:
-          solo-version: ${{ env.SOLO_VERSION }}
+          install_only: true
+          wait: 120s
+
+      - name: Deploy local Hiero network (Solo / Kind)
+        id: solo_stack
+        run: bash .github/workflows/support/scripts/setup-solo-stack.sh
+        env:
+          SOLO_VERSION: ${{ env.SOLO_VERSION }}
+        timeout-minutes: 15
+
+      - name: Solo kubectl port forwards (50211 / 8545)
+        run: bash .github/workflows/support/scripts/solo-kubectl-port-forward.sh
+        env:
+          SOLO_NAMESPACE: ${{ steps.solo_stack.outputs.namespace }}
 
       - name: Run Forge build on Foundry HTS example
         run: forge build
@@ -439,7 +451,7 @@ jobs:
           test $TOKEN_CODE != "0x"
         working-directory: examples/foundry-hts
 
-      - name: Destroy Solo stack
+      - name: One-shot Falcon destroy
         if: always()
         run: |
           npx @hashgraph/solo@${{ env.SOLO_VERSION }} one-shot falcon destroy \
@@ -485,16 +497,28 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Set up Solo stack
-        id: solo_stack
-        uses: ./.github/actions/setup-solo-stack
+      - name: Setup Kind
+        uses: helm/kind-action@v1.12.0
         with:
-          solo-version: ${{ env.SOLO_VERSION }}
+          install_only: true
+          wait: 120s
+
+      - name: Deploy local Hiero network (Solo / Kind)
+        id: solo_stack
+        run: bash .github/workflows/support/scripts/setup-solo-stack.sh
+        env:
+          SOLO_VERSION: ${{ env.SOLO_VERSION }}
+        timeout-minutes: 15
+
+      - name: Solo kubectl port forwards (50211 / 8545)
+        run: bash .github/workflows/support/scripts/solo-kubectl-port-forward.sh
+        env:
+          SOLO_NAMESPACE: ${{ steps.solo_stack.outputs.namespace }}
 
       - name: Run e2e Validation Tests
         run: npm run test:e2e
 
-      - name: Destroy Solo stack
+      - name: One-shot Falcon destroy
         if: always()
         run: |
           npx @hashgraph/solo@${{ env.SOLO_VERSION }} one-shot falcon destroy \
