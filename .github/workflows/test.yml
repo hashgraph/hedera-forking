@@ -40,7 +40,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
         with:
-          node-version: '20'
+          node-version: 24
 
       - name: Install Foundry
         uses: step-security/foundry-toolchain@01e2d127ea061e2ce8fa34340de71ca8518f093e # v1.2.1
@@ -76,7 +76,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
         with:
-          node-version: '20'
+          node-version: 24
 
       - name: Install Foundry
         uses: step-security/foundry-toolchain@01e2d127ea061e2ce8fa34340de71ca8518f093e # v1.2.1
@@ -115,7 +115,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
         with:
-          node-version: '20'
+          node-version: 24
 
       - name: Install Foundry
         uses: step-security/foundry-toolchain@01e2d127ea061e2ce8fa34340de71ca8518f093e # v1.2.1
@@ -154,7 +154,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
         with:
-          node-version: '20'
+          node-version: 24
 
       - name: Install Foundry
         uses: step-security/foundry-toolchain@01e2d127ea061e2ce8fa34340de71ca8518f093e # v1.2.1
@@ -190,7 +190,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
         with:
-          node-version: '20'
+          node-version: 24
 
       - name: Install Foundry
         uses: step-security/foundry-toolchain@01e2d127ea061e2ce8fa34340de71ca8518f093e # v1.2.1
@@ -232,7 +232,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
         with:
-          node-version: '20'
+          node-version: 24
 
       - name: Install Dependencies
         run: npm ci
@@ -359,7 +359,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
         with:
-          node-version: '20'
+          node-version: 24
 
       - name: Install Foundry
         uses: step-security/foundry-toolchain@01e2d127ea061e2ce8fa34340de71ca8518f093e # v1.2.1
@@ -397,7 +397,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
         with:
-          node-version: '20'
+          node-version: 24
 
       - name: Install Foundry
         uses: step-security/foundry-toolchain@01e2d127ea061e2ce8fa34340de71ca8518f093e # v1.2.1
@@ -411,9 +411,13 @@ jobs:
         run: npm ci
 
       - name: Setup Kind
-        uses: helm/kind-action@v1.12.0
+        uses: helm/kind-action@ef37e7f390d99f746eb8b610417061a60e82a6cc # v1.14.0
         with:
           install_only: true
+          node_image: kindest/node:v1.32.5@sha256:e3b2327e3a5ab8c76f5ece68936e4cafaa82edf58486b769727ab0b3b97a5b0d
+          version: v0.29.0
+          kubectl_version: v1.32.5
+          verbosity: 3
           wait: 120s
 
       - name: Deploy local Hiero network (Solo / Kind)
@@ -484,7 +488,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
         with:
-          node-version: '20'
+          node-version: 24
 
       - name: Install Foundry
         uses: step-security/foundry-toolchain@01e2d127ea061e2ce8fa34340de71ca8518f093e # v1.2.1
@@ -498,9 +502,13 @@ jobs:
         run: npm ci
 
       - name: Setup Kind
-        uses: helm/kind-action@v1.12.0
+        uses: helm/kind-action@ef37e7f390d99f746eb8b610417061a60e82a6cc # v1.14.0
         with:
           install_only: true
+          node_image: kindest/node:v1.32.5@sha256:e3b2327e3a5ab8c76f5ece68936e4cafaa82edf58486b769727ab0b3b97a5b0d
+          version: v0.29.0
+          kubectl_version: v1.32.5
+          verbosity: 3
           wait: 120s
 
       - name: Deploy local Hiero network (Solo / Kind)
