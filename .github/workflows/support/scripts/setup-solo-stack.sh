@@ -13,8 +13,6 @@ RELAY_TAG="${RELAY_TAG:-0.76.2}"
 SOLO_VERSION="${SOLO_VERSION:-0.72.0}"
 EXTERNAL_ADDRESS="${EXTERNAL_ADDRESS:-127.0.0.1}"
 
-mkdir -p .github
-
 cat >.github/falcon.yml <<EOF
 network:
   --release-tag: "${NETWORK_TAG}"
